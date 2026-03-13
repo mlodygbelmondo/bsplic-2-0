@@ -154,7 +154,7 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
 
           <div className="space-y-2">
             <Label>
-              Opcje <span className="text-xs text-muted-foreground ml-1">(stała liczba dla typu)</span>
+              Opcje {hasFixedOptionCount(betType) && <span className="text-xs text-muted-foreground ml-1">(stała liczba dla typu)</span>}
             </Label>
 
             {options.map((option, index) => (
@@ -182,8 +182,32 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
                   className="w-24"
                   placeholder="Kurs"
                 />
+                {!hasFixedOptionCount(betType) && options.length > 2 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setOptions(options.filter((_, i) => i !== index))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             ))}
+
+            {!hasFixedOptionCount(betType) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setOptions([...options, { name: '', odds: 2 }])}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Dodaj opcję
+              </Button>
+            )}
+          </div>
           </div>
 
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground font-bold">
