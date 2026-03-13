@@ -109,14 +109,14 @@ function CreateBetTab() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('bets').insert({
+      const { error } = await supabase.from('bets').insert([{
         title,
         category_id: categoryId || null,
         bet_type: betType,
-        options: options.filter(o => o.name.trim()),
+        options: options.filter(o => o.name.trim()) as unknown as any,
         ends_at: new Date(endsAt).toISOString(),
         is_live: isLive,
-      });
+      }]);
       if (error) throw error;
       toast.success('Zakład utworzony!');
       setTitle('');
