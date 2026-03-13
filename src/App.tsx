@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import ProfilePage from "./pages/ProfilePage";
 import RankingsPage from "./pages/RankingsPage";
 import AdminPage from "./pages/AdminPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/rankings" element={<RankingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </CouponProvider>
