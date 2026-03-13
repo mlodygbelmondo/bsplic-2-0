@@ -13,7 +13,8 @@ export function LoginPage() {
   const [username, setUsername] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, resetPassword } = useAuth();
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const { signIn, signUp, resetPassword, signInWithMagicLink } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
