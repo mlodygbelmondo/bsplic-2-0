@@ -25,15 +25,13 @@ export function BetList({ selectedCategory }: BetListProps) {
   };
 
   useEffect(() => {
-    const fetchCats = async () => {
-      const { data } = await supabase.from('categories').select('*');
+    supabase.from('categories').select('*').then(({ data }) => {
       if (data) {
         const map: Record<string, Category> = {};
         (data as Category[]).forEach(c => map[c.id] = c);
         setCategories(map);
       }
-    };
-    fetchCats();
+    });
   }, []);
 
   useEffect(() => {
@@ -63,11 +61,11 @@ export function BetList({ selectedCategory }: BetListProps) {
 
   return (
     <div className="flex-1 min-w-0">
-      {/* Tabs: Popularne / Live */}
-      <div className="flex items-center gap-1 mb-4 border-b border-border">
+      {/* Tabs */}
+      <div className="flex items-center border-b border-border mb-3">
         <button
           onClick={() => setSort('popular')}
-          className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors',
+          className={cn('px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
             sort === 'popular' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
@@ -75,41 +73,36 @@ export function BetList({ selectedCategory }: BetListProps) {
         </button>
         <button
           onClick={() => setSort('newest')}
-          className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors',
+          className={cn('px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
             sort === 'newest' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          Najnowsze
+          Live
         </button>
-        {liveBets.length > 0 && (
-          <div className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary">
-            <span className="h-2 w-2 rounded-full bg-primary pulse-live" />
-            Live ({liveBets.length})
-          </div>
-        )}
       </div>
 
-      {/* Category filter chips */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
-        {Object.values(categories).slice(0, 5).map(cat => (
+      {/* Category chips */}
+      <div className="flex gap-1.5 mb-3 overflow-x-auto scrollbar-hide pb-1">
+        {Object.values(categories).map((cat, i) => (
           <button
             key={cat.id}
-            onClick={() => {}}
-            className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-muted hover:bg-muted/80 transition-colors"
+            onClick={() => onCatChipClick(cat.id)}
+            className={cn(
+              'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors',
+              i === 0
+                ? 'bg-foreground text-card border-foreground'
+                : 'bg-card text-foreground border-border hover:border-foreground/30'
+            )}
           >
-            <span>{cat.emoji}</span> {cat.name}
+            <span className="text-sm">{cat.emoji}</span> {cat.name}
           </button>
         ))}
       </div>
 
       {/* Live section */}
       {liveBets.length > 0 && (
-        <div className="mb-5">
-          <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-primary pulse-live" />
-            Na żywo
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="mb-4">
+          <div className="grid gap-2 sm:grid-cols-2">
             {liveBets.map(bet => (
               <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
             ))}
@@ -118,11 +111,11 @@ export function BetList({ selectedCategory }: BetListProps) {
       )}
 
       {/* Regular bets */}
-      <div className="grid gap-3">
+      <div className="space-y-2">
         {sorted.length === 0 && liveBets.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            <p className="text-lg font-medium">Brak dostępnych zakładów</p>
-            <p className="text-sm mt-1">Wróć później lub zmień kategorię</p>
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-base font-medium">Brak dostępnych zakładów</p>
+            <p className="text-[13px] mt-1">Wróć później lub zmień kategorię</p>
           </div>
         ) : (
           sorted.map(bet => (
@@ -132,4 +125,8 @@ export function BetList({ selectedCategory }: BetListProps) {
       </div>
     </div>
   );
+}
+
+function onCatChipClick(_id: string) {
+  // handled by parent, chips are visual only for now
 }

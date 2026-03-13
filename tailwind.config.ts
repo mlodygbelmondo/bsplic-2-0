@@ -8,9 +8,7 @@ export default {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      screens: { "2xl": "1400px" },
     },
     extend: {
       fontFamily: {
@@ -58,6 +56,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        navbar: {
+          DEFAULT: "hsl(var(--navbar))",
+          foreground: "hsl(var(--navbar-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -67,16 +69,6 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
-        },
-        navbar: {
-          DEFAULT: "hsl(var(--navbar))",
-          foreground: "hsl(var(--navbar-foreground))",
-        },
-        "odds-button": {
-          DEFAULT: "hsl(var(--odds-button))",
-          foreground: "hsl(var(--odds-button-foreground))",
-          selected: "hsl(var(--odds-button-selected))",
-          "selected-foreground": "hsl(var(--odds-button-selected-foreground))",
         },
       },
       borderRadius: {

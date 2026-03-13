@@ -6,95 +6,60 @@
 
 @layer base {
   :root {
-    --background: 0 0% 97%;
-    --foreground: 220 20% 10%;
+    --background: 0 0% 96%;
+    --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 220 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 220 15% 15%;
 
-    --primary: 0 78% 52%;
+    --primary: 0 78% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 8% 50%;
 
     --accent: 220 14% 96%;
-    --accent-foreground: 220 20% 10%;
+    --accent-foreground: 220 15% 15%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 72% 40%;
+    --success: 145 65% 42%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 0 78% 52%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 0 78% 50%;
+    --radius: 0.5rem;
 
-    --radius: 0.75rem;
+    --navbar: 225 25% 12%;
+    --navbar-foreground: 0 0% 92%;
 
-    --sidebar-background: 220 20% 10%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 78% 52%;
+    /* Betclic-style odds button colors */
+    --odds-bg: 145 55% 48%;
+    --odds-fg: 0 0% 100%;
+    --odds-bg-alt: 45 90% 52%;
+    --odds-fg-alt: 0 0% 100%;
+    --odds-selected: 0 78% 50%;
+    --odds-selected-fg: 0 0% 100%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 15%;
+    --sidebar-primary: 0 78% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 18%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: 0 78% 52%;
-
-    --navbar: 220 20% 10%;
-    --navbar-foreground: 0 0% 95%;
-
-    --bet-card: 0 0% 100%;
-    --bet-card-live: 220 20% 12%;
-    --bet-card-live-foreground: 0 0% 95%;
-
-    --odds-button: 220 14% 96%;
-    --odds-button-foreground: 220 20% 10%;
-    --odds-button-selected: 0 78% 52%;
-    --odds-button-selected-foreground: 0 0% 100%;
-
-    --coupon: 0 0% 100%;
-    --coupon-foreground: 220 20% 10%;
-  }
-
-  .dark {
-    --background: 220 20% 7%;
-    --foreground: 0 0% 95%;
-    --card: 220 20% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 220 20% 10%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 78% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 220 15% 18%;
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 0 78% 52%;
-    --sidebar-background: 220 20% 7%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 78% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 14%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 14%;
-    --sidebar-ring: 0 78% 52%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 15% 15%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 0 78% 50%;
   }
 }
 
@@ -102,31 +67,46 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(0 78% 52%), hsl(0 78% 42%));
+    background: linear-gradient(135deg, hsl(0 78% 55%), hsl(0 78% 45%));
   }
-
   .gradient-navbar {
-    background: linear-gradient(180deg, hsl(220 20% 10%), hsl(220 20% 8%));
+    background: hsl(225 25% 12%);
   }
-
+  .gradient-banner {
+    background: linear-gradient(135deg, hsl(0 78% 50%), hsl(340 70% 45%));
+  }
   .pulse-live {
     animation: pulse-dot 1.5s ease-in-out infinite;
   }
-
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    50% { opacity: 0.3; }
   }
-
-  .countdown-glow {
-    text-shadow: 0 0 8px hsl(0 78% 52% / 0.5);
+  .odds-green {
+    background: hsl(var(--odds-bg));
+    color: hsl(var(--odds-fg));
+  }
+  .odds-yellow {
+    background: hsl(var(--odds-bg-alt));
+    color: hsl(var(--odds-fg-alt));
+  }
+  .odds-selected {
+    background: hsl(var(--odds-selected));
+    color: hsl(var(--odds-selected-fg));
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

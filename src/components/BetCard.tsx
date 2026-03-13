@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
-import { Clock, Users } from 'lucide-react';
+import { Clock, Users, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface BetCardProps {
   bet: Bet;
@@ -17,8 +17,7 @@ function useCountdown(endsAt: string) {
       if (diff <= 0) { setTimeLeft('Zakończony'); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${h}h ${m}min ${s}s`);
+      setTimeLeft(`${h}:${m.toString().padStart(2, '0')}`);
     };
     update();
     const interval = setInterval(update, 1000);
@@ -43,44 +42,52 @@ export function BetCard({ bet, category }: BetCardProps) {
     }
   };
 
+  // Betclic-style: match card with two teams displayed prominently
+  // For 1x2: Team A vs Team B with time between
+  // Options shown as colored buttons below
+
   return (
     <div className={cn(
-      'rounded-xl border transition-all',
-      bet.is_live
-        ? 'bg-[hsl(220,20%,12%)] text-[hsl(0,0%,95%)] border-primary/20'
-        : 'bg-card border-border'
+      'bg-card rounded-lg border border-border overflow-hidden',
+      bet.is_live && 'ring-1 ring-primary/30'
     )}>
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
-        <div className="flex items-center gap-2">
+      {/* Top bar: category + live badge */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-muted/50 border-b border-border">
+        <div className="flex items-center gap-1.5">
           {category && (
-            <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: category.color }}>
-              {category.emoji} {category.name}
+            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <span>{category.emoji}</span> {category.name}
             </span>
           )}
           {bet.is_live && (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-primary ml-2">
-              <span className="h-2 w-2 rounded-full bg-primary pulse-live" />
+            <span className="flex items-center gap-1 text-[10px] font-bold text-primary ml-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-live" />
               LIVE
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {bet.bet_count}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            <span className={cn(bet.is_live && 'text-primary font-semibold')}>{countdown}</span>
-          </span>
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5"><Users className="h-3 w-3" /> {bet.bet_count}</span>
         </div>
       </div>
 
-      {/* Match info */}
-      <div className="px-4 py-3">
-        <h3 className="font-bold text-sm mb-3">{bet.title}</h3>
+      {/* Match content */}
+      <div className="px-3 py-2.5">
+        {/* Title as match display */}
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <span className="font-bold text-[13px] text-foreground text-right flex-1">{options[0]?.name || ''}</span>
+          <span className="text-[11px] text-muted-foreground font-medium px-1.5">{countdown}</span>
+          <span className="font-bold text-[13px] text-foreground text-left flex-1">{options.length >= 2 ? options[options.length - 1]?.name : ''}</span>
+        </div>
 
-        {/* Odds buttons - Betclic style */}
-        <div className={cn('grid gap-2', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
-          {options.map((opt) => {
+        {/* If it's not just 2 teams, show the title */}
+        {(bet.bet_type === 'multi' || options.length > 3) && (
+          <p className="text-[12px] text-muted-foreground text-center mb-2">{bet.title}</p>
+        )}
+
+        {/* Odds buttons - Betclic green/yellow style */}
+        <div className={cn('grid gap-1.5', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+          {options.map((opt, i) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
             return (
               <button
@@ -88,20 +95,32 @@ export function BetCard({ bet, category }: BetCardProps) {
                 onClick={() => handleSelect(opt)}
                 disabled={isExpired || !bet.is_active}
                 className={cn(
-                  'flex flex-col items-center py-2.5 px-2 rounded-lg text-sm font-medium transition-all border',
+                  'flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
                   isSelected
-                    ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/30'
-                    : bet.is_live
-                      ? 'bg-[hsl(220,15%,18%)] border-[hsl(220,15%,22%)] hover:border-primary/50 text-[hsl(0,0%,95%)]'
-                      : 'bg-muted border-border hover:border-primary/50',
+                    ? 'odds-selected shadow-md'
+                    : 'odds-green hover:brightness-110',
                   (isExpired || !bet.is_active) && 'opacity-40 cursor-not-allowed'
                 )}
               >
-                <span className={cn('text-[10px] mb-0.5 truncate w-full text-center', 
-                  isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                )}>{opt.name}</span>
-                <span className="text-base font-bold">{opt.odds.toFixed(2)}</span>
+                <span className="text-[10px] opacity-80 mb-0.5 truncate w-full text-center">{opt.name}</span>
+                <span className="text-[15px] font-bold">{opt.odds.toFixed(2)}</span>
               </button>
+            );
+          })}
+        </div>
+
+        {/* Colored progress bar under odds (Betclic-style) */}
+        <div className="flex mt-2 h-[3px] rounded-full overflow-hidden gap-0.5">
+          {options.map((opt, i) => {
+            const totalOdds = options.reduce((sum, o) => sum + (1 / o.odds), 0);
+            const probability = (1 / opt.odds) / totalOdds;
+            const colors = ['bg-primary', 'bg-muted-foreground/30', 'bg-success'];
+            return (
+              <div
+                key={i}
+                className={cn('rounded-full', colors[i % colors.length])}
+                style={{ width: `${probability * 100}%` }}
+              />
             );
           })}
         </div>

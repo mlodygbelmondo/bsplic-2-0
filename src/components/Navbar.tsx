@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
-import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User, Trophy, ShieldCheck, Wallet, Receipt } from 'lucide-react';
+import { LogOut, User, ShieldCheck, Plus } from 'lucide-react';
 
 export function Navbar() {
   const { user, profile, isAdmin, signOut } = useAuth();
@@ -12,55 +11,55 @@ export function Navbar() {
 
   return (
     <nav className="gradient-navbar sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 h-12">
-        {/* Left: Logo + Nav links */}
-        <div className="flex items-center gap-6">
-          <Link to="/" className="text-lg font-black text-primary tracking-tight mr-2">
+      <div className="flex items-center justify-between px-4 h-11 max-w-[1600px] mx-auto">
+        {/* Left */}
+        <div className="flex items-center gap-5">
+          <Link to="/" className="text-[15px] font-black text-primary italic tracking-tight">
             BSPLIC 2.0
           </Link>
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/" className="text-navbar-foreground/80 hover:text-navbar-foreground text-[13px] font-semibold transition-colors">
+            <Link to="/" className="text-[13px] font-semibold text-navbar-foreground hover:text-primary-foreground transition-colors">
               Zakłady sportowe
             </Link>
-            <Link to="/rankings" className="text-navbar-foreground/80 hover:text-navbar-foreground text-[13px] font-semibold transition-colors">
+            <Link to="/rankings" className="text-[13px] font-semibold text-navbar-foreground/70 hover:text-navbar-foreground transition-colors">
               Rankingi
             </Link>
             {isAdmin && (
-              <Link to="/admin" className="text-navbar-foreground/80 hover:text-navbar-foreground text-[13px] font-semibold flex items-center gap-1 transition-colors">
+              <Link to="/admin" className="text-[13px] font-semibold text-navbar-foreground/70 hover:text-navbar-foreground transition-colors flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" /> Admin
               </Link>
             )}
           </div>
         </div>
 
-        {/* Right: Balance + User */}
-        <div className="flex items-center gap-3">
+        {/* Right */}
+        <div className="flex items-center gap-2">
           {profile && (
-            <button 
+            <button
               onClick={() => navigate('/profile')}
-              className="flex items-center gap-1.5 bg-sidebar-accent hover:bg-sidebar-accent/80 px-3 py-1.5 rounded-full transition-colors"
+              className="flex items-center gap-1 bg-[hsl(145,60%,40%)] hover:bg-[hsl(145,60%,35%)] text-[hsl(0,0%,100%)] px-2.5 py-1 rounded-full text-[12px] font-bold transition-colors"
             >
-              <Wallet className="h-3.5 w-3.5 text-success" />
-              <span className="text-[13px] font-bold text-navbar-foreground">{Number(profile.balance).toFixed(0)} zł</span>
+              <Plus className="h-3 w-3" />
+              {Number(profile.balance).toFixed(0)} zł
             </button>
           )}
           {profile && (
-            <Link 
-              to="/profile" 
-              className="flex items-center gap-1.5 text-navbar-foreground/80 hover:text-navbar-foreground text-[13px] transition-colors"
+            <Link
+              to="/profile"
+              className="flex items-center gap-1.5 text-navbar-foreground text-[12px] font-medium"
             >
-              <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <User className="h-3.5 w-3.5" />
+              <div className="h-6 w-6 rounded-full bg-[hsl(220,15%,25%)] flex items-center justify-center text-[10px] font-bold text-navbar-foreground">
+                {profile.username.charAt(0).toUpperCase()}
               </div>
-              <span className="hidden sm:inline font-medium">{profile.username}</span>
+              <span className="hidden sm:inline">{profile.username}</span>
             </Link>
           )}
-          <button 
-            onClick={() => signOut()} 
-            className="text-navbar-foreground/50 hover:text-navbar-foreground transition-colors"
+          <button
+            onClick={() => signOut()}
+            className="text-navbar-foreground/50 hover:text-navbar-foreground transition-colors ml-1"
             title="Wyloguj"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
