@@ -197,12 +197,45 @@ export function LoginPage() {
           </form>
 
           {isLogin && (
-            <button
-              onClick={() => setView("forgot")}
-              className="w-full text-center mt-3 text-sm font-semibold text-primary hover:underline"
-            >
-              Nie pamiętasz hasła?
-            </button>
+            <div className="mt-4 space-y-3">
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-border" />
+                <span className="mx-3 text-xs text-muted-foreground">lub</span>
+                <div className="flex-grow border-t border-border" />
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={magicLinkLoading || !email}
+                onClick={async () => {
+                  if (!email) {
+                    toast.error("Wpisz adres e-mail");
+                    return;
+                  }
+                  setMagicLinkLoading(true);
+                  try {
+                    await signInWithMagicLink(email);
+                    toast.success("Link do logowania został wysłany na Twój e-mail!");
+                  } catch (err: any) {
+                    toast.error(err.message || "Wystąpił błąd");
+                  } finally {
+                    setMagicLinkLoading(false);
+                  }
+                }}
+                className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                {magicLinkLoading ? "Wysyłanie..." : "Zaloguj przez Magic Link"}
+              </Button>
+
+              <button
+                onClick={() => setView("forgot")}
+                className="w-full text-center text-sm font-semibold text-primary hover:underline"
+              >
+                Nie pamiętasz hasła?
+              </button>
+            </div>
           )}
         </div>
 
