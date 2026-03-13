@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import ProfilePage from "./pages/ProfilePage";
 import RankingsPage from "./pages/RankingsPage";
 import AdminPage from "./pages/AdminPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
