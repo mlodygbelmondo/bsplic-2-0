@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Ticket, Trash2 } from 'lucide-react';
+import { X, Ticket, Trash2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -14,8 +14,10 @@ export function CouponDrawer() {
   const [stake, setStake] = useState('10');
   const [placing, setPlacing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
 
-  const potentialWin = Number(stake) * totalOdds;
+  const effectiveTotalOdds = activeTab === 'ako' ? totalOdds : (items[0]?.odds || 1);
+  const potentialWin = Number(stake) * effectiveTotalOdds;
 
   const placeBet = async () => {
     if (!user || !profile) {
@@ -30,25 +32,17 @@ export function CouponDrawer() {
 
     setPlacing(true);
     try {
-      // Create coupon
       const { data: coupon, error: couponErr } = await supabase
         .from('coupons')
-        .insert({
-          user_id: user.id,
-          total_odds: totalOdds,
-          stake: stakeNum,
-          status: 'pending',
-        })
-        .select()
-        .single();
+        .insert({ user_id: user.id, total_odds: effectiveTotalOdds, stake: stakeNum, status: 'pending' })
+        .select().single();
       if (couponErr) throw couponErr;
 
-      // Create placed bets
       const placedBets = items.map(item => ({
         user_id: user.id,
         bet_id: item.bet.id,
         selected_option: item.selectedOption,
-        stake: couponType === 'single' ? stakeNum : stakeNum / items.length,
+        stake: activeTab === 'single' ? stakeNum : stakeNum / items.length,
         odds_at_time: item.odds,
         coupon_id: coupon.id,
       }));
@@ -56,13 +50,7 @@ export function CouponDrawer() {
       const { error: betsErr } = await supabase.from('placed_bets').insert(placedBets);
       if (betsErr) throw betsErr;
 
-      // Deduct balance
-      const { error: balErr } = await supabase
-        .from('profiles')
-        .update({ balance: Number(profile.balance) - stakeNum })
-        .eq('id', user.id);
-      if (balErr) throw balErr;
-
+      await supabase.from('profiles').update({ balance: Number(profile.balance) - stakeNum }).eq('id', user.id);
       await refreshProfile();
       clearCoupon();
       setStake('10');
@@ -74,93 +62,139 @@ export function CouponDrawer() {
     }
   };
 
-  if (items.length === 0) return null;
-
   return (
     <>
       {/* Mobile floating button */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="lg:hidden fixed bottom-4 right-4 z-50 gradient-primary text-primary-foreground rounded-full p-4 shadow-xl flex items-center gap-2"
-      >
-        <Ticket className="h-5 w-5" />
-        <span className="font-bold">{items.length}</span>
-      </button>
+      {items.length > 0 && (
+        <button
+          onClick={() => setOpen(!open)}
+          className="lg:hidden fixed bottom-4 right-4 z-50 gradient-primary text-primary-foreground rounded-full h-14 w-14 shadow-xl flex items-center justify-center"
+        >
+          <div className="relative">
+            <Ticket className="h-6 w-6" />
+            <span className="absolute -top-2 -right-2 bg-card text-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {items.length}
+            </span>
+          </div>
+        </button>
+      )}
 
-      {/* Drawer / Sidebar */}
-      <div className={cn(
-        'fixed lg:sticky lg:top-[3.5rem] right-0 bottom-0 z-40 w-80 bg-card border-l border-border shadow-xl transition-transform lg:translate-x-0 lg:h-[calc(100vh-3.5rem)]',
-        open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+      {/* Right panel - always visible on desktop */}
+      <aside className={cn(
+        'w-[320px] shrink-0 border-l border-border bg-card',
+        'fixed lg:sticky right-0 top-12 bottom-0 z-40 lg:z-auto transition-transform',
+        'lg:translate-x-0 max-h-[calc(100vh-3rem)] overflow-y-auto',
+        items.length === 0 && !open ? 'translate-x-full' : open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
       )}>
         <div className="p-4 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">
-              {items.length} {items.length === 1 ? 'zdarzenie' : 'zdarzenia'}
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-base">
+              {items.length} {items.length === 1 ? 'zdarzenie' : items.length < 5 ? 'zdarzenia' : 'zdarzeń'}
             </h3>
-            <div className="flex gap-2">
-              <button onClick={clearCoupon} className="text-muted-foreground hover:text-destructive">
+            <div className="flex items-center gap-1">
+              <button onClick={clearCoupon} className="p-1 text-muted-foreground hover:text-destructive rounded">
                 <Trash2 className="h-4 w-4" />
               </button>
-              <button onClick={() => setOpen(false)} className="lg:hidden text-muted-foreground">
+              <button className="p-1 text-muted-foreground rounded">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              <button onClick={() => setOpen(false)} className="lg:hidden p-1 text-muted-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4">
-            <span className={cn('px-3 py-1 rounded-full text-xs font-bold', couponType === 'single' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-              Pojedyncze
-            </span>
-            <span className={cn('px-3 py-1 rounded-full text-xs font-bold', couponType === 'ako' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-              AKO
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-            {items.map(item => (
-              <div key={item.bet.id} className="bg-muted rounded-lg p-3 relative">
-                <button
-                  onClick={() => removeItem(item.bet.id)}
-                  className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-                <p className="text-xs text-muted-foreground truncate pr-6">{item.bet.title}</p>
-                <p className="font-bold text-sm">{item.selectedOption}</p>
-                <p className="text-primary font-bold text-sm">{item.odds.toFixed(2)}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-border pt-4 space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Stawka (zł)</label>
-              <Input
-                type="number"
-                value={stake}
-                onChange={e => setStake(e.target.value)}
-                min={1}
-                className="bg-muted mt-1"
-              />
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Kurs łączny:</span>
-              <span className="font-bold">{totalOdds.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground text-sm">Potencjalna wygrana:</span>
-              <span className="font-bold text-lg text-primary">{potentialWin.toFixed(2)} zł</span>
-            </div>
-            <Button
-              onClick={placeBet}
-              disabled={placing}
-              className="w-full gradient-primary text-primary-foreground font-bold h-12 text-base"
+          {/* Tabs: Pojedyncze / AKO */}
+          <div className="flex border-b border-border mb-4">
+            <button
+              onClick={() => setActiveTab('single')}
+              className={cn('flex-1 pb-2 text-sm font-semibold text-center border-b-2 transition-colors',
+                activeTab === 'single' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground'
+              )}
             >
-              {placing ? 'Stawianie...' : 'Postaw'}
-            </Button>
+              Pojedyncze
+            </button>
+            <button
+              onClick={() => setActiveTab('ako')}
+              className={cn('flex-1 pb-2 text-sm font-semibold text-center border-b-2 transition-colors',
+                activeTab === 'ako' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground'
+              )}
+            >
+              AKO
+            </button>
           </div>
+
+          {/* Items */}
+          {items.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground text-center">Dodaj zdarzenia do kuponu</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+                {items.map(item => (
+                  <div key={item.bet.id} className="relative border-b border-border pb-3 last:border-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0 pr-6">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <span>⚽</span> {item.bet.title}
+                        </p>
+                        <p className="font-bold text-sm mt-1">{item.selectedOption}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.bet.title}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.bet.id)}
+                        className="absolute top-0 right-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="space-y-3 pt-3 border-t border-border">
+                {items.length > 0 && (
+                  <div className="text-xs text-primary text-center">
+                    {activeTab === 'ako' 
+                      ? `Współczynnik ${effectiveTotalOdds.toFixed(2)}`
+                      : `Kurs ${effectiveTotalOdds.toFixed(2)}`
+                    }
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Potencjalna wygrana:</span>
+                  <span className="text-lg font-bold text-success">{potentialWin.toFixed(2)} zł</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={stake}
+                    onChange={e => setStake(e.target.value)}
+                    min={1}
+                    className="bg-muted text-center font-bold"
+                    placeholder="Stawka"
+                  />
+                </div>
+
+                <Button
+                  onClick={placeBet}
+                  disabled={placing || items.length === 0}
+                  className="w-full gradient-primary text-primary-foreground font-bold h-11 text-sm rounded-lg"
+                >
+                  {placing ? 'Stawianie...' : 'Obstaw'}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      </aside>
     </>
   );
 }

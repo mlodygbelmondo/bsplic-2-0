@@ -63,14 +63,53 @@ export function BetList({ selectedCategory }: BetListProps) {
 
   return (
     <div className="flex-1 min-w-0">
+      {/* Tabs: Popularne / Live */}
+      <div className="flex items-center gap-1 mb-4 border-b border-border">
+        <button
+          onClick={() => setSort('popular')}
+          className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors',
+            sort === 'popular' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Popularne
+        </button>
+        <button
+          onClick={() => setSort('newest')}
+          className={cn('px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors',
+            sort === 'newest' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Najnowsze
+        </button>
+        {liveBets.length > 0 && (
+          <div className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-primary">
+            <span className="h-2 w-2 rounded-full bg-primary pulse-live" />
+            Live ({liveBets.length})
+          </div>
+        )}
+      </div>
+
+      {/* Category filter chips */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+        {Object.values(categories).slice(0, 5).map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => {}}
+            className="shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-muted hover:bg-muted/80 transition-colors"
+          >
+            <span>{cat.emoji}</span> {cat.name}
+          </button>
+        ))}
+      </div>
+
       {/* Live section */}
       {liveBets.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-primary pulse-live" />
+        <div className="mb-5">
+          <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary pulse-live" />
             Na żywo
           </h2>
-          <div className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {liveBets.map(bet => (
               <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
             ))}
@@ -78,31 +117,11 @@ export function BetList({ selectedCategory }: BetListProps) {
         </div>
       )}
 
-      {/* Sort tabs */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setSort('popular')}
-          className={cn('px-4 py-2 rounded-full text-sm font-medium transition-colors',
-            sort === 'popular' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
-          )}
-        >
-          🔥 Najpopularniejsze
-        </button>
-        <button
-          onClick={() => setSort('newest')}
-          className={cn('px-4 py-2 rounded-full text-sm font-medium transition-colors',
-            sort === 'newest' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
-          )}
-        >
-          🆕 Najnowsze
-        </button>
-      </div>
-
-      {/* Bet grid */}
+      {/* Regular bets */}
       <div className="grid gap-3">
-        {sorted.length === 0 ? (
+        {sorted.length === 0 && liveBets.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
-            <p className="text-lg">Brak dostępnych zakładów</p>
+            <p className="text-lg font-medium">Brak dostępnych zakładów</p>
             <p className="text-sm mt-1">Wróć później lub zmień kategorię</p>
           </div>
         ) : (

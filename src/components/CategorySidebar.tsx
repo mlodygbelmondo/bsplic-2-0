@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types/database';
 import { cn } from '@/lib/utils';
+import { Search, ChevronDown } from 'lucide-react';
 
 interface CategorySidebarProps {
   selectedCategory: string | null;
@@ -27,30 +28,65 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
   }, []);
 
   return (
-    <aside className="w-64 hidden lg:block shrink-0">
-      <div className="sticky top-[3.5rem] p-4 space-y-1">
-        <h3 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wider">Kategorie</h3>
-        <button
-          onClick={() => onSelectCategory(null)}
-          className={cn(
-            'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-            selectedCategory === null ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-          )}
-        >
-          🏠 Wszystkie
-        </button>
-        {categories.map(cat => (
+    <aside className="w-[260px] hidden lg:block shrink-0 border-r border-border bg-card">
+      <div className="sticky top-12 overflow-y-auto max-h-[calc(100vh-3rem)]">
+        {/* Search */}
+        <div className="p-3">
+          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 text-sm text-muted-foreground">
+            <Search className="h-4 w-4 shrink-0" />
+            <span>Zawodnik, drużyna, turniej...</span>
+          </div>
+        </div>
+
+        {/* Popularne */}
+        <div className="px-3 pb-2">
+          <h3 className="text-sm font-bold mb-2">Popularne</h3>
           <button
-            key={cat.id}
-            onClick={() => onSelectCategory(cat.id)}
+            onClick={() => onSelectCategory(null)}
             className={cn(
-              'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              selectedCategory === cat.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-3',
+              selectedCategory === null
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'hover:bg-muted text-foreground'
             )}
           >
-            {cat.emoji} {cat.name}
+            <span className="text-base">🏠</span>
+            Wszystkie
           </button>
-        ))}
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => onSelectCategory(cat.id)}
+              className={cn(
+                'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-3',
+                selectedCategory === cat.id
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'hover:bg-muted text-foreground'
+              )}
+            >
+              <span className="text-base">{cat.emoji}</span>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Sport section */}
+        <div className="border-t border-border px-3 pt-3">
+          <h3 className="text-sm font-bold mb-2">Sport</h3>
+          {categories.map(cat => (
+            <button
+              key={`sport-${cat.id}`}
+              onClick={() => onSelectCategory(cat.id)}
+              className="w-full text-left px-3 py-2.5 text-[13px] font-medium hover:bg-muted rounded-lg flex items-center justify-between text-foreground"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-base">{cat.emoji}</span>
+                {cat.name}
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
       </div>
     </aside>
   );

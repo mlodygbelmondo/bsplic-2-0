@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
-import { Clock, Users, Zap } from 'lucide-react';
+import { Clock, Users } from 'lucide-react';
 
 interface BetCardProps {
   bet: Bet;
@@ -45,58 +45,66 @@ export function BetCard({ bet, category }: BetCardProps) {
 
   return (
     <div className={cn(
-      'rounded-xl border p-4 transition-all',
+      'rounded-xl border transition-all',
       bet.is_live
-        ? 'bg-[hsl(var(--bet-card-live))] text-[hsl(var(--bet-card-live-foreground))] border-primary/30'
+        ? 'bg-[hsl(220,20%,12%)] text-[hsl(0,0%,95%)] border-primary/20'
         : 'bg-card border-border'
     )}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/50">
         <div className="flex items-center gap-2">
           {category && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: category.color + '22', color: category.color }}>
+            <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: category.color }}>
               {category.emoji} {category.name}
             </span>
           )}
           {bet.is_live && (
-            <span className="flex items-center gap-1 text-xs font-bold text-primary">
+            <span className="flex items-center gap-1 text-[11px] font-bold text-primary ml-2">
               <span className="h-2 w-2 rounded-full bg-primary pulse-live" />
               LIVE
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {bet.bet_count}</span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span className={cn(bet.is_live && 'text-primary font-semibold')}>{countdown}</span>
+          </span>
         </div>
       </div>
 
-      <h3 className="font-bold text-base mb-3">{bet.title}</h3>
+      {/* Match info */}
+      <div className="px-4 py-3">
+        <h3 className="font-bold text-sm mb-3">{bet.title}</h3>
 
-      <div className="flex items-center gap-1 mb-3 text-xs text-muted-foreground">
-        <Clock className="h-3 w-3" />
-        <span>Koniec za: <span className={cn(bet.is_live && 'text-primary font-bold countdown-glow')}>{countdown}</span></span>
-      </div>
-
-      <div className={cn('grid gap-2', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
-        {options.map((opt) => {
-          const isSelected = selectedInCoupon?.selectedOption === opt.name;
-          return (
-            <button
-              key={opt.name}
-              onClick={() => handleSelect(opt)}
-              disabled={isExpired || !bet.is_active}
-              className={cn(
-                'flex flex-col items-center p-3 rounded-lg border text-sm font-medium transition-all',
-                isSelected
-                  ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25'
-                  : 'bg-odds-button text-odds-button-foreground border-border hover:border-primary/50',
-                (isExpired || !bet.is_active) && 'opacity-50 cursor-not-allowed'
-              )}
-            >
-              <span className="text-xs text-muted-foreground mb-1 truncate w-full text-center">{opt.name}</span>
-              <span className="text-lg font-bold">{opt.odds.toFixed(2)}</span>
-            </button>
-          );
-        })}
+        {/* Odds buttons - Betclic style */}
+        <div className={cn('grid gap-2', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+          {options.map((opt) => {
+            const isSelected = selectedInCoupon?.selectedOption === opt.name;
+            return (
+              <button
+                key={opt.name}
+                onClick={() => handleSelect(opt)}
+                disabled={isExpired || !bet.is_active}
+                className={cn(
+                  'flex flex-col items-center py-2.5 px-2 rounded-lg text-sm font-medium transition-all border',
+                  isSelected
+                    ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/30'
+                    : bet.is_live
+                      ? 'bg-[hsl(220,15%,18%)] border-[hsl(220,15%,22%)] hover:border-primary/50 text-[hsl(0,0%,95%)]'
+                      : 'bg-muted border-border hover:border-primary/50',
+                  (isExpired || !bet.is_active) && 'opacity-40 cursor-not-allowed'
+                )}
+              >
+                <span className={cn('text-[10px] mb-0.5 truncate w-full text-center', 
+                  isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                )}>{opt.name}</span>
+                <span className="text-base font-bold">{opt.odds.toFixed(2)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
