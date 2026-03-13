@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,11 +16,12 @@ interface ProposeBetModalProps {
   categories: Category[];
 }
 
-const OPTION_COUNT_BY_TYPE: Record<'1x2' | '12' | 'multi', number> = {
+const FIXED_OPTION_COUNTS: Record<string, number> = {
   '12': 2,
   '1x2': 3,
-  multi: 2,
 };
+
+const hasFixedOptionCount = (type: string) => type in FIXED_OPTION_COUNTS;
 
 const OPTION_DEFAULTS: Record<'1x2' | '12' | 'multi', string[]> = {
   '12': ['1', '2'],
@@ -39,13 +41,24 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setOptions((previous) => {
-      const optionCount = OPTION_COUNT_BY_TYPE[betType];
-      return Array.from({ length: optionCount }, (_, index) => ({
-        name: previous[index]?.name ?? OPTION_DEFAULTS[betType][index] ?? '',
-        odds: previous[index]?.odds ?? (betType === '1x2' && index === 1 ? 3 : 2),
-      }));
-    });
+    if (hasFixedOptionCount(betType)) {
+      const optionCount = FIXED_OPTION_COUNTS[betType];
+      setOptions((previous) =>
+        Array.from({ length: optionCount }, (_, index) => ({
+          name: previous[index]?.name ?? OPTION_DEFAULTS[betType][index] ?? '',
+          odds: previous[index]?.odds ?? (betType === '1x2' && index === 1 ? 3 : 2),
+        })),
+      );
+    } else {
+      setOptions((previous) =>
+        previous.length >= 2
+          ? previous
+          : [
+              { name: '', odds: 2 },
+              { name: '', odds: 2 },
+            ],
+      );
+    }
   }, [betType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +154,7 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
 
           <div className="space-y-2">
             <Label>
-              Opcje <span className="text-xs text-muted-foreground ml-1">(stała liczba dla typu)</span>
+              Opcje {hasFixedOptionCount(betType) && <span className="text-xs text-muted-foreground ml-1">(stała liczba dla typu)</span>}
             </Label>
 
             {options.map((option, index) => (
@@ -169,8 +182,31 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
                   className="w-24"
                   placeholder="Kurs"
                 />
+                {!hasFixedOptionCount(betType) && options.length > 2 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => setOptions(options.filter((_, i) => i !== index))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             ))}
+
+            {!hasFixedOptionCount(betType) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setOptions([...options, { name: '', odds: 2 }])}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Dodaj opcję
+              </Button>
+            )}
           </div>
 
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground font-bold">
