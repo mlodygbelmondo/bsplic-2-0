@@ -2,67 +2,118 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User, ShieldCheck, Plus } from 'lucide-react';
+import { LogOut, User, ShieldCheck, Plus, Wallet } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export function Navbar() {
-  const { user, profile, isAdmin, signOut } = useAuth();
-  const { items } = useCoupon();
+  const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [topupOpen, setTopupOpen] = useState(false);
+  const [topupLoading, setTopupLoading] = useState(false);
+
+  const canTopup = () => {
+    if (!profile?.last_topup_at) return true;
+    const last = new Date(profile.last_topup_at).getTime();
+    return Date.now() - last >= 24 * 60 * 60 * 1000;
+  };
+
+  const handleTopup = async () => {
+    if (!user || !profile) return;
+    if (!canTopup()) {
+      toast.error('Już doładowano dzisiaj. Wróć jutro!');
+      return;
+    }
+    setTopupLoading(true);
+    try {
+      await supabase.from('profiles').update({
+        balance: Number(profile.balance) + 100,
+        last_topup_at: new Date().toISOString(),
+      }).eq('id', user.id);
+      await refreshProfile();
+      toast.success('💰 Doładowano 100 zł. Wróć jutro po więcej!');
+      setTopupOpen(false);
+    } catch {
+      toast.error('Błąd doładowania');
+    } finally {
+      setTopupLoading(false);
+    }
+  };
 
   return (
-    <nav className="gradient-navbar sticky top-0 z-50">
-      <div className="flex items-center justify-between px-4 h-11 max-w-[1600px] mx-auto">
-        {/* Left */}
-        <div className="flex items-center gap-5">
-          <Link to="/" className="text-[15px] font-black text-primary italic tracking-tight">
-            BSPLIC 2.0
-          </Link>
-          <div className="hidden md:flex items-center gap-4">
-            <Link to="/" className="text-[13px] font-semibold text-navbar-foreground hover:text-primary-foreground transition-colors">
-              Zakłady sportowe
+    <>
+      <nav className="gradient-navbar sticky top-0 z-50 shadow-md">
+        <div className="flex items-center justify-between px-4 h-11 max-w-[1600px] mx-auto">
+          {/* Left */}
+          <div className="flex items-center gap-5">
+            <Link to="/" className="text-[15px] font-black text-primary-foreground italic tracking-tight hover:brightness-110 transition">
+              BSPLIC 2.0
             </Link>
-            <Link to="/rankings" className="text-[13px] font-semibold text-navbar-foreground/70 hover:text-navbar-foreground transition-colors">
-              Rankingi
-            </Link>
-            {isAdmin && (
-              <Link to="/admin" className="text-[13px] font-semibold text-navbar-foreground/70 hover:text-navbar-foreground transition-colors flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Admin
+            <div className="hidden md:flex items-center gap-4">
+              <Link to="/" className="text-[13px] font-semibold text-primary-foreground/90 hover:text-primary-foreground hover:brightness-110 transition-colors">
+                Zakłady sportowe
+              </Link>
+              <Link to="/rankings" className="text-[13px] font-semibold text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                Rankingi
+              </Link>
+              {isAdmin && (
+                <Link to="/admin" className="text-[13px] font-semibold text-primary-foreground/70 hover:text-primary-foreground transition-colors flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Admin
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* Right */}
+          <div className="flex items-center gap-2">
+            {profile && (
+              <button
+                onClick={() => canTopup() ? setTopupOpen(true) : toast.error('Już doładowano dzisiaj. Wróć jutro!')}
+                className="flex items-center gap-1 bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground px-2.5 py-1 rounded-full text-[12px] font-bold transition-colors"
+                title={canTopup() ? 'Doładuj portfel' : 'Już doładowano dzisiaj. Wróć jutro!'}
+              >
+                <Wallet className="h-3 w-3" />
+                {Number(profile.balance).toFixed(0)} zł
+              </button>
+            )}
+            {profile && (
+              <Link
+                to="/profile"
+                className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition"
+              >
+                <div className="h-6 w-6 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px] font-bold text-primary-foreground">
+                  {profile.username.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden sm:inline">{profile.username}</span>
               </Link>
             )}
+            <button
+              onClick={() => signOut()}
+              className="text-primary-foreground/60 hover:text-primary-foreground transition-colors ml-1"
+              title="Wyloguj"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
+      </nav>
 
-        {/* Right */}
-        <div className="flex items-center gap-2">
-          {profile && (
-            <button
-              onClick={() => navigate('/profile')}
-              className="flex items-center gap-1 bg-[hsl(145,60%,40%)] hover:bg-[hsl(145,60%,35%)] text-[hsl(0,0%,100%)] px-2.5 py-1 rounded-full text-[12px] font-bold transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              {Number(profile.balance).toFixed(0)} zł
-            </button>
-          )}
-          {profile && (
-            <Link
-              to="/profile"
-              className="flex items-center gap-1.5 text-navbar-foreground text-[12px] font-medium"
-            >
-              <div className="h-6 w-6 rounded-full bg-[hsl(220,15%,25%)] flex items-center justify-center text-[10px] font-bold text-navbar-foreground">
-                {profile.username.charAt(0).toUpperCase()}
-              </div>
-              <span className="hidden sm:inline">{profile.username}</span>
-            </Link>
-          )}
-          <button
-            onClick={() => signOut()}
-            className="text-navbar-foreground/50 hover:text-navbar-foreground transition-colors ml-1"
-            title="Wyloguj"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-    </nav>
+      {/* Topup confirmation modal */}
+      <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">💰 Doładuj portfel</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4 py-2">
+            <p className="text-muted-foreground text-sm">Doładuj swój portfel o <span className="font-bold text-foreground">100 zł</span>. Możesz to zrobić raz dziennie.</p>
+            <Button onClick={handleTopup} disabled={topupLoading} className="w-full gradient-primary text-primary-foreground font-bold h-11">
+              {topupLoading ? 'Ładowanie...' : 'Doładuj 100 zł'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

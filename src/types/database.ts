@@ -5,6 +5,7 @@ export interface Profile {
   current_streak: number;
   longest_streak: number;
   last_bet_date: string | null;
+  last_topup_at: string | null;
   created_at: string;
 }
 

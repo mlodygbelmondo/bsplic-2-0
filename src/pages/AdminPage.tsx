@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Bet, BetOption, BetProposal, Category } from '@/types/database';
+import { Bet, BetOption, Category } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Plus, X, Check, XCircle, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
 
@@ -40,7 +41,7 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={cn('px-4 py-2 rounded-lg text-sm font-medium', tab === key ? 'bg-primary text-primary-foreground' : 'bg-muted')}
+              className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-all', tab === key ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-muted hover:bg-muted/80')}
             >
               {label}
             </button>
@@ -59,6 +60,7 @@ export default function AdminPage() {
 
 function DashboardTab() {
   const [stats, setStats] = useState({ totalBets: 0, totalPool: 0, pendingProposals: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
@@ -67,21 +69,35 @@ function DashboardTab() {
       const totalPool = bets?.reduce((acc, b) => acc + Number(b.stake), 0) || 0;
       const { count: pendingProposals } = await supabase.from('bet_proposals').select('*', { count: 'exact', head: true }).eq('status', 'pending');
       setStats({ totalBets: totalBets || 0, totalPool, pendingProposals: pendingProposals || 0 });
+      setLoading(false);
     };
     fetch();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="bg-card rounded-xl p-6 card-shadow">
+            <Skeleton className="h-4 w-32 mb-2" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="bg-card rounded-xl p-6 border">
+      <div className="bg-card rounded-xl p-6 card-shadow">
         <p className="text-sm text-muted-foreground">Łączna liczba zakładów</p>
         <p className="text-3xl font-bold">{stats.totalBets}</p>
       </div>
-      <div className="bg-card rounded-xl p-6 border">
+      <div className="bg-card rounded-xl p-6 card-shadow">
         <p className="text-sm text-muted-foreground">Łączna pula</p>
         <p className="text-3xl font-bold">{stats.totalPool.toFixed(0)} zł</p>
       </div>
-      <div className="bg-card rounded-xl p-6 border">
+      <div className="bg-card rounded-xl p-6 card-shadow">
         <p className="text-sm text-muted-foreground">Propozycje oczekujące</p>
         <p className="text-3xl font-bold text-primary">{stats.pendingProposals}</p>
       </div>
@@ -95,7 +111,7 @@ function CreateBetTab() {
   const [betType, setBetType] = useState<'1x2' | '12' | 'multi'>('12');
   const [isLive, setIsLive] = useState(false);
   const [endsAt, setEndsAt] = useState('');
-  const [options, setOptions] = useState<BetOption[]>([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
+  const [options, setOptions] = useState<BetOption[]>([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -104,6 +120,19 @@ function CreateBetTab() {
       if (data) setCategories(data as Category[]);
     });
   }, []);
+
+  // Lock options based on bet type
+  useEffect(() => {
+    if (betType === '12') {
+      setOptions([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
+    } else if (betType === '1x2') {
+      setOptions([{ name: '1', odds: 2 }, { name: 'X', odds: 3 }, { name: '2', odds: 2 }]);
+    } else if (betType === 'multi' && options.length < 2) {
+      setOptions([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
+    }
+  }, [betType]);
+
+  const isLocked = betType === '12' || betType === '1x2';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +149,9 @@ function CreateBetTab() {
       if (error) throw error;
       toast.success('Zakład utworzony!');
       setTitle('');
-      setOptions([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
+      if (betType === '12') setOptions([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
+      else if (betType === '1x2') setOptions([{ name: '1', odds: 2 }, { name: 'X', odds: 3 }, { name: '2', odds: 2 }]);
+      else setOptions([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -129,7 +160,7 @@ function CreateBetTab() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-card rounded-xl p-6 border space-y-4 max-w-2xl">
+    <form onSubmit={handleSubmit} className="bg-card rounded-xl p-6 card-shadow space-y-4 max-w-2xl">
       <div className="space-y-2">
         <Label>Tytuł</Label>
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
@@ -165,19 +196,27 @@ function CreateBetTab() {
         <Label>Na żywo 🔴</Label>
       </div>
       <div className="space-y-2">
-        <Label>Opcje</Label>
+        <Label>Opcje {isLocked && <span className="text-muted-foreground text-xs ml-1">(zablokowane dla {betType})</span>}</Label>
         {options.map((opt, i) => (
           <div key={i} className="flex gap-2 items-center">
-            <Input value={opt.name} onChange={e => { const n = [...options]; n[i].name = e.target.value; setOptions(n); }} placeholder={`Opcja ${i+1}`} className="flex-1" />
+            <Input
+              value={opt.name}
+              onChange={e => { const n = [...options]; n[i].name = e.target.value; setOptions(n); }}
+              placeholder={`Opcja ${i+1}`}
+              className="flex-1"
+              disabled={isLocked}
+            />
             <Input type="number" step="0.01" min="1" value={opt.odds} onChange={e => { const n = [...options]; n[i].odds = Number(e.target.value); setOptions(n); }} className="w-24" />
-            {options.length > 2 && (
+            {!isLocked && options.length > 2 && (
               <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))}><X className="h-4 w-4 text-muted-foreground" /></button>
             )}
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: 2 }])}>
-          <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
-        </Button>
+        {!isLocked && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: 2 }])}>
+            <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
+          </Button>
+        )}
       </div>
       <Button type="submit" disabled={submitting} className="gradient-primary text-primary-foreground font-bold">
         {submitting ? 'Tworzenie...' : 'Utwórz zakład'}
@@ -189,18 +228,18 @@ function CreateBetTab() {
 function ManageBetsTab() {
   const [bets, setBets] = useState<Bet[]>([]);
   const [resolveModal, setResolveModal] = useState<Bet | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchBets = async () => {
     const { data } = await supabase.from('bets').select('*').order('created_at', { ascending: false });
     if (data) setBets(data as unknown as Bet[]);
+    setLoading(false);
   };
 
   useEffect(() => { fetchBets(); }, []);
 
   const resolveBet = async (bet: Bet, winningOption: string) => {
-    // Update bet
     await supabase.from('bets').update({ winning_option: winningOption, is_active: false }).eq('id', bet.id);
-    // Update placed bets
     const { data: placedBets } = await supabase.from('placed_bets').select('*').eq('bet_id', bet.id);
     if (placedBets) {
       for (const pb of placedBets) {
@@ -223,45 +262,51 @@ function ManageBetsTab() {
 
   return (
     <>
-      <div className="bg-card rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="p-3">Tytuł</th>
-                <th className="p-3">Typ</th>
-                <th className="p-3">Zakłady</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bets.map(bet => (
-                <tr key={bet.id} className="border-b">
-                  <td className="p-3 font-medium">{bet.title}</td>
-                  <td className="p-3">{bet.bet_type}</td>
-                  <td className="p-3">{bet.bet_count}</td>
-                  <td className="p-3">
-                    {bet.winning_option ? (
-                      <span className="text-xs bg-success/20 text-success px-2 py-1 rounded-full">Rozstrzygnięty</span>
-                    ) : bet.is_active ? (
-                      <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">Aktywny</span>
-                    ) : (
-                      <span className="text-xs bg-muted px-2 py-1 rounded-full">Zamknięty</span>
-                    )}
-                  </td>
-                  <td className="p-3">
-                    {!bet.winning_option && (
-                      <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
-                        <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
-                      </Button>
-                    )}
-                  </td>
+      <div className="bg-card rounded-xl card-shadow overflow-hidden">
+        {loading ? (
+          <div className="p-4 space-y-3">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="p-3">Tytuł</th>
+                  <th className="p-3">Typ</th>
+                  <th className="p-3">Zakłady</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Akcje</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {bets.map(bet => (
+                  <tr key={bet.id} className="border-b">
+                    <td className="p-3 font-medium">{bet.title}</td>
+                    <td className="p-3">{bet.bet_type}</td>
+                    <td className="p-3">{bet.bet_count}</td>
+                    <td className="p-3">
+                      {bet.winning_option ? (
+                        <span className="text-xs bg-success/20 text-success px-2 py-1 rounded-full">Rozstrzygnięty</span>
+                      ) : bet.is_active ? (
+                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">Aktywny</span>
+                      ) : (
+                        <span className="text-xs bg-muted px-2 py-1 rounded-full">Zamknięty</span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {!bet.winning_option && (
+                        <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
+                          <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {resolveModal && (
@@ -287,16 +332,17 @@ function ManageBetsTab() {
 
 function ProposalsTab() {
   const [proposals, setProposals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchProposals = async () => {
     const { data } = await supabase.from('bet_proposals').select('*, profile:profiles(username)').eq('status', 'pending').order('created_at', { ascending: false });
     if (data) setProposals(data);
+    setLoading(false);
   };
 
   useEffect(() => { fetchProposals(); }, []);
 
   const accept = async (p: any) => {
-    // Create bet from proposal
     await supabase.from('bets').insert([{
       title: p.title,
       category_id: p.category_id,
@@ -315,11 +361,19 @@ function ProposalsTab() {
     fetchProposals();
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {proposals.length === 0 && <p className="text-muted-foreground text-center py-8">Brak propozycji</p>}
       {proposals.map(p => (
-        <div key={p.id} className="bg-card rounded-xl p-4 border flex items-center justify-between">
+        <div key={p.id} className="bg-card rounded-xl p-4 card-shadow flex items-center justify-between">
           <div>
             <p className="font-bold">{p.title}</p>
             <p className="text-xs text-muted-foreground">Od: {p.profile?.username || 'Użytkownik'} • {p.bet_type}</p>
@@ -369,7 +423,7 @@ function CategoriesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-card rounded-xl p-4 border">
+      <div className="bg-card rounded-xl p-4 card-shadow">
         <h3 className="font-bold mb-3">Dodaj kategorię</h3>
         <div className="flex gap-2 items-end flex-wrap">
           <div>
@@ -392,7 +446,7 @@ function CategoriesTab() {
         </div>
       </div>
 
-      <div className="bg-card rounded-xl border overflow-hidden">
+      <div className="bg-card rounded-xl card-shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
