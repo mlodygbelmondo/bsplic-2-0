@@ -297,13 +297,13 @@ function ProposalsTab() {
 
   const accept = async (p: any) => {
     // Create bet from proposal
-    await supabase.from('bets').insert({
+    await supabase.from('bets').insert([{
       title: p.title,
       category_id: p.category_id,
       bet_type: p.bet_type,
-      options: p.options,
-      ends_at: new Date(Date.now() + 86400000).toISOString(), // 24h from now
-    });
+      options: p.options as any,
+      ends_at: new Date(Date.now() + 86400000).toISOString(),
+    }]);
     await supabase.from('bet_proposals').update({ status: 'accepted' }).eq('id', p.id);
     toast.success('Propozycja zaakceptowana');
     fetchProposals();
