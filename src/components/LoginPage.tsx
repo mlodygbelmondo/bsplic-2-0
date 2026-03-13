@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-type AuthView = "login" | "register" | "forgot";
+type AuthView = "login" | "register" | "forgot" | "magic";
 
 export function LoginPage() {
   const [view, setView] = useState<AuthView>("login");
@@ -70,6 +70,75 @@ export function LoginPage() {
       />
     </div>
   );
+
+  if (view === "magic") {
+    const handleMagicLink = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!email) {
+        toast.error("Wpisz swój adres e-mail");
+        return;
+      }
+      setMagicLinkLoading(true);
+      try {
+        await signInWithMagicLink(email);
+        toast.success("Link do logowania został wysłany na Twój e-mail!");
+      } catch (err: any) {
+        toast.error(err.message || "Wystąpił błąd");
+      } finally {
+        setMagicLinkLoading(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen gradient-primary relative overflow-hidden flex flex-col items-center justify-center px-4">
+        {backgroundDecoration}
+        <div className="relative z-10 mb-8">
+          <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
+        </div>
+        <div className="relative z-10 w-full max-w-sm">
+          <div className="bg-card rounded-2xl shadow-2xl p-6 sm:p-8">
+            <button
+              onClick={() => setView("login")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Wróć do logowania
+            </button>
+
+            <h2 className="text-xl sm:text-2xl font-bold text-center text-card-foreground mb-2">
+              Zaloguj przez Magic Link
+            </h2>
+            <p className="text-sm text-muted-foreground text-center mb-5">
+              Wpisz swój adres e-mail, a wyślemy Ci link do logowania.
+            </p>
+
+            <form onSubmit={handleMagicLink} className="space-y-3">
+              <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2">
+                <label className="block text-xs text-muted-foreground mb-0.5">E-mail</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-transparent text-foreground text-sm font-medium outline-none"
+                  placeholder="twoj@email.pl"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={magicLinkLoading}
+                className="w-full h-11 rounded-xl text-base font-bold gradient-primary text-primary-foreground shadow-lg hover:brightness-110 transition"
+              >
+                <Mail className="h-4 w-4 mr-1" />
+                {magicLinkLoading ? "Wysyłanie..." : "Wyślij Magic Link"}
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === "forgot") {
     return (
@@ -207,26 +276,11 @@ export function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={magicLinkLoading || !email}
-                onClick={async () => {
-                  if (!email) {
-                    toast.error("Wpisz adres e-mail");
-                    return;
-                  }
-                  setMagicLinkLoading(true);
-                  try {
-                    await signInWithMagicLink(email);
-                    toast.success("Link do logowania został wysłany na Twój e-mail!");
-                  } catch (err: any) {
-                    toast.error(err.message || "Wystąpił błąd");
-                  } finally {
-                    setMagicLinkLoading(false);
-                  }
-                }}
+                onClick={() => setView("magic")}
                 className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
               >
                 <Mail className="h-4 w-4" />
-                {magicLinkLoading ? "Wysyłanie..." : "Zaloguj przez Magic Link"}
+                Zaloguj przez Magic Link
               </Button>
 
               <button
