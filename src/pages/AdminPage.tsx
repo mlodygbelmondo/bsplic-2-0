@@ -132,7 +132,7 @@ function CreateBetTab() {
     }
   }, [betType]);
 
-  const isLocked = betType === '12' || betType === '1x2';
+  const hasFixedOptionCount = betType === '12' || betType === '1x2';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +196,9 @@ function CreateBetTab() {
         <Label>Na żywo 🔴</Label>
       </div>
       <div className="space-y-2">
-        <Label>Opcje {isLocked && <span className="text-muted-foreground text-xs ml-1">(zablokowane dla {betType})</span>}</Label>
+        <Label>
+          Opcje {hasFixedOptionCount && <span className="text-muted-foreground text-xs ml-1">(stała liczba opcji dla {betType})</span>}
+        </Label>
         {options.map((opt, i) => (
           <div key={i} className="flex gap-2 items-center">
             <Input
@@ -204,15 +206,14 @@ function CreateBetTab() {
               onChange={e => { const n = [...options]; n[i].name = e.target.value; setOptions(n); }}
               placeholder={`Opcja ${i+1}`}
               className="flex-1"
-              disabled={isLocked}
             />
             <Input type="number" step="0.01" min="1" value={opt.odds} onChange={e => { const n = [...options]; n[i].odds = Number(e.target.value); setOptions(n); }} className="w-24" />
-            {!isLocked && options.length > 2 && (
+            {!hasFixedOptionCount && options.length > 2 && (
               <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))}><X className="h-4 w-4 text-muted-foreground" /></button>
             )}
           </div>
         ))}
-        {!isLocked && (
+        {!hasFixedOptionCount && (
           <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: 2 }])}>
             <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
           </Button>
@@ -532,7 +533,7 @@ function ProposalsTab() {
     fetchProposals();
   };
 
-  const isLocked = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
+  const hasFixedOptionCount = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
 
   if (loading) {
     return (
@@ -650,7 +651,7 @@ function ProposalsTab() {
 
               <div className="space-y-2">
                 <Label>
-                  Opcje {isLocked && <span className="text-xs text-muted-foreground ml-1">(etykiety zablokowane dla typu)</span>}
+                  Opcje {hasFixedOptionCount && <span className="text-xs text-muted-foreground ml-1">(stała liczba opcji dla typu)</span>}
                 </Label>
 
                 {editing.options.map((option, index) => (
@@ -666,7 +667,6 @@ function ProposalsTab() {
                         })
                       }
                       className="flex-1"
-                      disabled={isLocked}
                     />
                     <Input
                       type="number"
@@ -683,7 +683,7 @@ function ProposalsTab() {
                       }
                       className="w-24"
                     />
-                    {!isLocked && editing.options.length > 2 && (
+                    {!hasFixedOptionCount && editing.options.length > 2 && (
                       <button
                         type="button"
                         onClick={() =>
@@ -703,7 +703,7 @@ function ProposalsTab() {
                   </div>
                 ))}
 
-                {!isLocked && (
+                {!hasFixedOptionCount && (
                   <Button
                     type="button"
                     variant="outline"

@@ -44,11 +44,11 @@
     --navbar: 355 100% 44%;
     --navbar-foreground: 0 0% 100%;
 
-    --odds-bg: 145 55% 48%;
-    --odds-fg: 0 0% 100%;
-    --odds-bg-alt: 45 90% 52%;
-    --odds-fg-alt: 0 0% 100%;
-    --odds-selected: 355 100% 44%;
+    --odds-bg: 46 98% 52%;
+    --odds-fg: 25 6% 10%;
+    --odds-bg-alt: 43 100% 58%;
+    --odds-fg-alt: 30 8% 11%;
+    --odds-selected: 220 14% 8%;
     --odds-selected-fg: 0 0% 100%;
 
     --sidebar-background: 0 0% 100%;
@@ -106,6 +106,35 @@
   .odds-selected {
     background: hsl(var(--odds-selected));
     color: hsl(var(--odds-selected-fg));
+  }
+  .odds-chip {
+    will-change: auto;
+  }
+  .odds-chip-selected {
+    animation: odds-select-in 180ms ease-out;
+  }
+  @keyframes odds-select-in {
+    0% {
+      filter: brightness(0.9);
+      opacity: 0.92;
+    }
+    100% {
+      filter: brightness(1);
+      opacity: 1;
+    }
+  }
+  .coupon-drawer-enter {
+    animation: coupon-drawer-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes coupon-drawer-enter {
+    0% {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

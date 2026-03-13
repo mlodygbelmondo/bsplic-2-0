@@ -1,0 +1,29 @@
+import { supabase } from '@/integrations/supabase/client';
+import { Bet } from '@/types/database';
+
+export async function fetchActiveBets(selectedCategory: string | null) {
+  let query = supabase.from('bets').select('*').eq('is_active', true);
+
+  if (selectedCategory) {
+    query = query.eq('category_id', selectedCategory);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as unknown as Bet[];
+}
+
+export function subscribeToBetsChanges(onChange: () => void) {
+  const channel = supabase
+    .channel('bets-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, onChange)
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

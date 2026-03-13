@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
@@ -9,28 +9,29 @@ interface BetCardProps {
   category?: Category;
 }
 
-function useCountdown(endsAt: string) {
-  const [timeLeft, setTimeLeft] = useState('');
-  useEffect(() => {
-    const update = () => {
-      const diff = new Date(endsAt).getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft('Zakończony'); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      setTimeLeft(`${h}:${m.toString().padStart(2, '0')}`);
-    };
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [endsAt]);
-  return timeLeft;
+function formatBetDate(endsAt: string) {
+  const date = new Date(endsAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return '--.-- --:--';
+  }
+
+  return new Intl.DateTimeFormat('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(date)
+    .replace(',', '');
 }
 
 export function BetCard({ bet, category }: BetCardProps) {
-  const countdown = useCountdown(bet.ends_at);
   const { items, addItem, removeItem } = useCoupon();
   const selectedInCoupon = items.find(i => i.bet.id === bet.id);
-  const isExpired = new Date(bet.ends_at).getTime() <= Date.now();
+  const endTimestamp = useMemo(() => new Date(bet.ends_at).getTime(), [bet.ends_at]);
+  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+  const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = (bet.options as unknown as BetOption[]) || [];
 
   const handleSelect = (option: BetOption) => {
@@ -71,7 +72,7 @@ export function BetCard({ bet, category }: BetCardProps) {
       <div className="px-3 py-2.5">
         <div className="flex items-center justify-center gap-3 mb-3">
           <span className="font-bold text-[13px] text-foreground text-right flex-1">{options[0]?.name || ''}</span>
-          <span className="text-[11px] text-muted-foreground font-medium px-1.5">{countdown}</span>
+          <span className="text-[11px] text-muted-foreground font-medium px-1.5" title={bet.ends_at}>{endsAtLabel}</span>
           <span className="font-bold text-[13px] text-foreground text-left flex-1">{options.length >= 2 ? options[options.length - 1]?.name : ''}</span>
         </div>
 
@@ -81,7 +82,7 @@ export function BetCard({ bet, category }: BetCardProps) {
 
         {/* Odds buttons */}
         <div className={cn('grid gap-1.5', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
-          {options.map((opt) => {
+          {options.map((opt, index) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
             return (
               <button
@@ -89,15 +90,29 @@ export function BetCard({ bet, category }: BetCardProps) {
                 onClick={() => handleSelect(opt)}
                 disabled={isExpired || !bet.is_active}
                 className={cn(
-                  'flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
+                  'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
                   isSelected
-                    ? 'odds-selected shadow-md'
-                    : 'odds-green hover:brightness-110',
+                    ? 'odds-selected odds-chip-selected shadow-md'
+                    : 'odds-yellow hover:brightness-105',
                   (isExpired || !bet.is_active) && 'opacity-40 cursor-not-allowed'
                 )}
               >
-                <span className="text-[10px] opacity-80 mb-0.5 truncate w-full text-center">{opt.name}</span>
-                <span className="text-[15px] font-bold">{opt.odds.toFixed(2)}</span>
+                <span
+                  className={cn(
+                    'text-[10px] mb-0.5 truncate w-full text-center transition-colors duration-200',
+                    isSelected ? 'text-[#f6bf2b]' : index % 2 === 0 ? 'text-zinc-900' : 'text-zinc-800'
+                  )}
+                >
+                  {opt.name}
+                </span>
+                <span
+                  className={cn(
+                    'text-[15px] font-bold transition-colors duration-200',
+                    isSelected ? 'text-[#f6bf2b]' : index % 2 === 0 ? 'text-zinc-950' : 'text-zinc-900'
+                  )}
+                >
+                  {opt.odds.toFixed(2)}
+                </span>
               </button>
             );
           })}

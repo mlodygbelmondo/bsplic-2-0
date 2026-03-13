@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { createBetProposal } from '@/features/home/api/betProposals';
 import { Category } from '@/types/database';
 import { toast } from 'sonner';
 import { Plus, X } from 'lucide-react';
@@ -13,9 +13,10 @@ import { Plus, X } from 'lucide-react';
 interface ProposeBetModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  categories: Category[];
 }
 
-export function ProposeBetModal({ open, onOpenChange }: ProposeBetModalProps) {
+export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetModalProps) {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -24,18 +25,7 @@ export function ProposeBetModal({ open, onOpenChange }: ProposeBetModalProps) {
     { name: '1', odds: 2 },
     { name: '2', odds: 2 },
   ]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data) setCategories(data as Category[]);
-      });
-  }, []);
 
   useEffect(() => {
     if (betType === '12') {
@@ -85,15 +75,13 @@ export function ProposeBetModal({ open, onOpenChange }: ProposeBetModalProps) {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('bet_proposals').insert({
-        user_id: user.id,
+      await createBetProposal({
+        userId: user.id,
         title,
-        category_id: categoryId || null,
-        bet_type: betType,
+        categoryId: categoryId || null,
+        betType,
         options: preparedOptions,
       });
-
-      if (error) throw error;
 
       toast.success('📋 Zakład zaproponowany — czeka na akceptację admina');
       onOpenChange(false);
@@ -104,8 +92,9 @@ export function ProposeBetModal({ open, onOpenChange }: ProposeBetModalProps) {
         { name: '1', odds: 2 },
         { name: '2', odds: 2 },
       ]);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nie udało się wysłać propozycji';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

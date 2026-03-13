@@ -1,66 +1,24 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Bet, Category } from '@/types/database';
+import { useState } from 'react';
 import { BetCard } from './BetCard';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useBets, SortMode } from '@/features/home/hooks/useBets';
+import { Category } from '@/types/database';
 
 interface BetListProps {
   selectedCategory: string | null;
   onSelectCategory?: (id: string | null) => void;
+  categories: Category[];
+  categoryMap: Record<string, Category>;
 }
 
-type SortMode = 'popular' | 'newest';
-
-export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
-  const [bets, setBets] = useState<Bet[]>([]);
-  const [categories, setCategories] = useState<Record<string, Category>>({});
-  const [catList, setCatList] = useState<Category[]>([]);
+export function BetList({ selectedCategory, onSelectCategory, categories, categoryMap }: BetListProps) {
   const [sort, setSort] = useState<SortMode>('popular');
-  const [loading, setLoading] = useState(true);
-
-  const fetchBets = async () => {
-    let query = supabase.from('bets').select('*').eq('is_active', true);
-    if (selectedCategory) query = query.eq('category_id', selectedCategory);
-    const { data } = await query;
-    if (data) setBets(data as unknown as Bet[]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
-      if (data) {
-        const map: Record<string, Category> = {};
-        (data as Category[]).forEach((c) => (map[c.id] = c));
-        setCategories(map);
-        setCatList(data as Category[]);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchBets();
-    const channel = supabase
-      .channel('bets-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, () => fetchBets())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedCategory]);
-
-  const liveBets = bets.filter((b) => b.is_live);
-  const regularBets = bets.filter((b) => !b.is_live);
-
-  const sorted = [...regularBets].sort((a, b) => {
-    if (sort === 'popular') return b.bet_count - a.bet_count;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  const { loading, liveBets, sortedBets } = useBets(selectedCategory, sort);
 
   return (
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center border-b border-border mb-3">
+    <div className="flex-1 min-w-0 h-full flex flex-col">
+      <div className="flex items-center border-b border-border mb-3 shrink-0">
         <button
           onClick={() => setSort('popular')}
           className={cn(
@@ -82,7 +40,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
       </div>
 
       {onSelectCategory && (
-        <div className="lg:hidden mb-3 -mx-3 px-3">
+        <div className="lg:hidden mb-3 -mx-3 px-3 shrink-0">
           <div className="overflow-x-auto scrollbar-hide touch-pan-x">
             <div className="flex min-w-full w-max gap-1.5 pb-1 pr-1">
               <button
@@ -96,7 +54,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
               >
                 🌐 Wszystkie
               </button>
-              {catList.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => onSelectCategory(cat.id)}
@@ -116,7 +74,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
       )}
 
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto pr-1">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-card rounded-lg card-shadow p-4 space-y-3">
               <div className="flex justify-between">
@@ -137,30 +95,30 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
           ))}
         </div>
       ) : (
-        <>
+        <div className="overflow-y-auto pr-1 min-h-0">
           {liveBets.length > 0 && (
             <div className="mb-4">
               <div className="grid gap-2 sm:grid-cols-2">
                 {liveBets.map((bet) => (
-                  <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
+                  <BetCard key={bet.id} bet={bet} category={bet.category_id ? categoryMap[bet.category_id] : undefined} />
                 ))}
               </div>
             </div>
           )}
 
           <div className="space-y-2">
-            {sorted.length === 0 && liveBets.length === 0 ? (
+            {sortedBets.length === 0 && liveBets.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <p className="text-base font-medium">Brak dostępnych zakładów</p>
                 <p className="text-[13px] mt-1">Wróć później lub zmień kategorię</p>
               </div>
             ) : (
-              sorted.map((bet) => (
-                <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
+              sortedBets.map((bet) => (
+                <BetCard key={bet.id} bet={bet} category={bet.category_id ? categoryMap[bet.category_id] : undefined} />
               ))
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
