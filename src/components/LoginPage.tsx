@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-type AuthView = "login" | "register" | "forgot";
+type AuthView = "login" | "register" | "forgot" | "magic";
 
 export function LoginPage() {
   const [view, setView] = useState<AuthView>("login");
