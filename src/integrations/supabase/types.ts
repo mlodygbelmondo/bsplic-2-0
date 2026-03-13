@@ -237,6 +237,7 @@ export type Database = {
           current_streak: number
           id: string
           last_bet_date: string | null
+          last_topup_at: string | null
           longest_streak: number
           username: string
         }
@@ -246,6 +247,7 @@ export type Database = {
           current_streak?: number
           id: string
           last_bet_date?: string | null
+          last_topup_at?: string | null
           longest_streak?: number
           username: string
         }
@@ -255,6 +257,7 @@ export type Database = {
           current_streak?: number
           id?: string
           last_bet_date?: string | null
+          last_topup_at?: string | null
           longest_streak?: number
           username?: string
         }
