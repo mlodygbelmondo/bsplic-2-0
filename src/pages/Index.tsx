@@ -29,19 +29,36 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex">
+
+      {/* Promo banner */}
+      <div className="max-w-[1600px] mx-auto px-3 pt-3">
+        <div className="gradient-banner rounded-xl p-4 flex items-center justify-between overflow-hidden relative">
+          <div className="relative z-10">
+            <p className="text-primary-foreground/80 text-[11px] font-medium uppercase tracking-wider">Promocja</p>
+            <h2 className="text-primary-foreground text-xl font-black">Multiboost 400%</h2>
+            <p className="text-primary-foreground/70 text-[12px] mt-0.5">Wygrywaj jeszcze więcej — z Multiboost i bez podatku</p>
+          </div>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20">
+            <div className="text-[80px]">🏆</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex max-w-[1600px] mx-auto">
         <CategorySidebar selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
-        <main className="flex-1 min-w-0 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div />
-            <Button onClick={() => setProposeOpen(true)} variant="outline" size="sm" className="text-xs font-semibold">
-              <Lightbulb className="h-3.5 w-3.5 mr-1.5" /> Zaproponuj zakład
+
+        <main className="flex-1 min-w-0 px-3 py-3">
+          <div className="flex items-center justify-end mb-2">
+            <Button onClick={() => setProposeOpen(true)} variant="outline" size="sm" className="text-[11px] font-semibold h-7 border-border">
+              <Lightbulb className="h-3 w-3 mr-1" /> Zaproponuj zakład
             </Button>
           </div>
           <BetList selectedCategory={selectedCategory} />
         </main>
+
         <CouponDrawer />
       </div>
+
       <ProposeBetModal open={proposeOpen} onOpenChange={setProposeOpen} />
     </div>
   );
