@@ -74,7 +74,7 @@ export function BetList({ selectedCategory, onSelectCategory, categories, catego
       )}
 
       {loading ? (
-        <div className="space-y-2 overflow-y-auto pr-1">
+        <div className="space-y-2 overflow-y-auto px-1 pb-1 -mx-1">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-card rounded-lg card-shadow p-4 space-y-3">
               <div className="flex justify-between">
@@ -95,7 +95,7 @@ export function BetList({ selectedCategory, onSelectCategory, categories, catego
           ))}
         </div>
       ) : (
-        <div className="overflow-y-auto pr-1 min-h-0">
+        <div className="overflow-y-auto px-1 pb-1 -mx-1 min-h-0">
           {liveBets.length > 0 && (
             <div className="mb-4">
               <div className="grid gap-2 sm:grid-cols-2">

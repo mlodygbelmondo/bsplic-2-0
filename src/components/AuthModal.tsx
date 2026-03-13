@@ -32,8 +32,12 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
         await signIn(email, password);
         toast.success("Zalogowano pomyślnie!");
       } else {
-        await signUp(email, password, username);
-        toast.success("Konto utworzone! Sprawdź email aby potwierdzić.");
+        const { requiresEmailConfirmation } = await signUp(email, password, username);
+        if (requiresEmailConfirmation) {
+          toast.success("Konto utworzone! Sprawdź email, aby potwierdzić konto.");
+        } else {
+          toast.success("Konto utworzone i zalogowano automatycznie!");
+        }
       }
       onOpenChange(false);
       setEmail("");

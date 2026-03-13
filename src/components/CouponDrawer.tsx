@@ -8,10 +8,23 @@ import { cn } from '@/lib/utils';
 export function CouponDrawer() {
   const { items, removeItem, clearCoupon } = useCoupon();
   const [stake, setStake] = useState('10');
+  const [singleStakes, setSingleStakes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
   const stakePresets = ['10', '20', '50', '100'];
+
+  useEffect(() => {
+    setSingleStakes((previous) => {
+      const next: Record<string, string> = {};
+
+      items.forEach((item) => {
+        next[item.bet.id] = previous[item.bet.id] ?? '10';
+      });
+
+      return next;
+    });
+  }, [items]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -20,10 +33,16 @@ export function CouponDrawer() {
     }
   }, [items.length]);
 
-  const { placing, placeBet, potentialWin, effectiveTotalOdds } = useCouponPlacement(activeTab, stake, () => {
-    setStake('10');
-    handleClose();
-  });
+  const { placing, placeBet, potentialWin, effectiveTotalOdds, totalStake } = useCouponPlacement(
+    activeTab,
+    stake,
+    singleStakes,
+    () => {
+      setStake('10');
+      setSingleStakes({});
+      handleClose();
+    }
+  );
 
   const handleClose = () => {
     setIsClosing(true);
@@ -111,6 +130,25 @@ export function CouponDrawer() {
                     <p className="text-[11px] text-muted-foreground truncate">⚽ {item.bet.title}</p>
                     <p className="font-bold text-[13px] leading-snug mt-0.5">{item.selectedOption}</p>
                     <span className="inline-block mt-1 text-[11px] font-bold text-primary">{item.odds.toFixed(2)}</span>
+                    {activeTab === 'single' && (
+                      <div className="mt-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground">Stawka</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={singleStakes[item.bet.id] ?? ''}
+                          onChange={(event) =>
+                            setSingleStakes((previous) => ({
+                              ...previous,
+                              [item.bet.id]: event.target.value,
+                            }))
+                          }
+                          className="h-8 text-[12px] font-semibold text-center bg-muted border-border"
+                          placeholder="0"
+                        />
+                        <span className="text-[11px] text-muted-foreground">zł</span>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => removeItem(item.bet.id)}
@@ -131,31 +169,37 @@ export function CouponDrawer() {
           <span className="text-[12px] text-muted-foreground">Potencjalna wygrana</span>
           <span className="text-[15px] font-bold text-success">{potentialWin.toFixed(2)} zł</span>
         </div>
-        <div className="text-[11px] text-muted-foreground">Współczynnik {effectiveTotalOdds.toFixed(2)}</div>
-        <Input
-          type="number"
-          value={stake}
-          onChange={(event) => setStake(event.target.value)}
-          min={1}
-          className="text-center font-bold text-[13px] h-9 bg-muted border-border"
-          placeholder="Stawka (zł)"
-        />
-        <div className="grid grid-cols-4 gap-1.5">
-          {stakePresets.map((preset) => (
-            <button
-              key={preset}
-              onClick={() => setStake(preset)}
-              className={cn(
-                'w-full text-[11px] font-semibold px-2 h-8 rounded-md transition-all duration-200',
-                stake === preset
-                  ? 'bg-foreground text-background shadow-sm scale-[1.02]'
-                  : 'bg-card text-foreground hover:bg-muted'
-              )}
-            >
-              {preset} zł
-            </button>
-          ))}
-        </div>
+        {activeTab === 'ako' ? (
+          <>
+            <div className="text-[11px] text-muted-foreground">Współczynnik {effectiveTotalOdds.toFixed(2)}</div>
+            <Input
+              type="number"
+              value={stake}
+              onChange={(event) => setStake(event.target.value)}
+              min={1}
+              className="text-center font-bold text-[13px] h-9 bg-muted border-border"
+              placeholder="Stawka (zł)"
+            />
+            <div className="grid grid-cols-4 gap-1.5">
+              {stakePresets.map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setStake(preset)}
+                  className={cn(
+                    'w-full text-[11px] font-semibold px-2 h-8 rounded-md transition-all duration-200',
+                    stake === preset
+                      ? 'bg-foreground text-background shadow-sm scale-[1.02]'
+                      : 'bg-card text-foreground hover:bg-muted'
+                  )}
+                >
+                  {preset} zł
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-[11px] text-muted-foreground">Łączna stawka: {totalStake.toFixed(2)} zł</div>
+        )}
         <button
           onClick={placeBet}
           disabled={placing || items.length === 0}

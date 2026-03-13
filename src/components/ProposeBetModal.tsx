@@ -8,13 +8,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createBetProposal } from '@/features/home/api/betProposals';
 import { Category } from '@/types/database';
 import { toast } from 'sonner';
-import { Plus, X } from 'lucide-react';
 
 interface ProposeBetModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
 }
+
+const OPTION_COUNT_BY_TYPE: Record<'1x2' | '12' | 'multi', number> = {
+  '12': 2,
+  '1x2': 3,
+  multi: 2,
+};
+
+const OPTION_DEFAULTS: Record<'1x2' | '12' | 'multi', string[]> = {
+  '12': ['1', '2'],
+  '1x2': ['1', 'X', '2'],
+  multi: ['', ''],
+};
 
 export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetModalProps) {
   const { user } = useAuth();
@@ -28,44 +39,28 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (betType === '12') {
-      setOptions([
-        { name: '1', odds: 2 },
-        { name: '2', odds: 2 },
-      ]);
-      return;
-    }
-
-    if (betType === '1x2') {
-      setOptions([
-        { name: '1', odds: 2 },
-        { name: 'X', odds: 3 },
-        { name: '2', odds: 2 },
-      ]);
-      return;
-    }
-
     setOptions((previous) => {
-      if (previous.length >= 2) return previous;
-      return [
-        { name: '', odds: 2 },
-        { name: '', odds: 2 },
-      ];
+      const optionCount = OPTION_COUNT_BY_TYPE[betType];
+      return Array.from({ length: optionCount }, (_, index) => ({
+        name: previous[index]?.name ?? OPTION_DEFAULTS[betType][index] ?? '',
+        odds: previous[index]?.odds ?? (betType === '1x2' && index === 1 ? 3 : 2),
+      }));
     });
   }, [betType]);
-
-  const isLocked = betType === '12' || betType === '1x2';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const preparedOptions = options
-      .filter((option) => option.name.trim())
-      .map((option) => ({
-        name: option.name.trim(),
-        odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
-      }));
+    const preparedOptions = options.map((option) => ({
+      name: option.name.trim(),
+      odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
+    }));
+
+    if (preparedOptions.some((option) => !option.name)) {
+      toast.error('Uzupełnij etykiety wszystkich opcji');
+      return;
+    }
 
     if (preparedOptions.length < 2) {
       toast.error('Dodaj co najmniej 2 opcje');
@@ -146,7 +141,7 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
 
           <div className="space-y-2">
             <Label>
-              Opcje {isLocked && <span className="text-xs text-muted-foreground ml-1">(zablokowane dla tego typu)</span>}
+              Opcje <span className="text-xs text-muted-foreground ml-1">(stała liczba dla typu)</span>
             </Label>
 
             {options.map((option, index) => (
@@ -160,7 +155,6 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
                   }}
                   placeholder={`Opcja ${index + 1}`}
                   className="flex-1"
-                  disabled={isLocked}
                 />
                 <Input
                   type="number"
@@ -175,23 +169,8 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
                   className="w-24"
                   placeholder="Kurs"
                 />
-                {!isLocked && options.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => setOptions(options.filter((_, optionIndex) => optionIndex !== index))}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             ))}
-
-            {!isLocked && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: 2 }])}>
-                <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
-              </Button>
-            )}
           </div>
 
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground font-bold">
