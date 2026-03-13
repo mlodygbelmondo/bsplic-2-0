@@ -80,7 +80,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
 
       {/* Category pills - mobile only (hidden on lg where sidebar shows) */}
       {onSelectCategory && (
-        <div className="lg:hidden flex gap-1.5 mb-3 overflow-x-auto scrollbar-hide pb-1">
+        <div className="lg:hidden flex gap-1.5 mb-3 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3">
           <button
             onClick={() => onSelectCategory(null)}
             className={cn(

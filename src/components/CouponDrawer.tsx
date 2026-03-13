@@ -46,11 +46,12 @@ export function CouponDrawer() {
 
   return (
     <>
-      {/* Mobile FAB */}
-      {items.length > 0 && (
+      {/* Mobile FAB - always visible when items exist */}
+      {items.length > 0 && !open && (
         <button
-          onClick={() => setOpen(!open)}
-          className="lg:hidden fixed bottom-4 right-4 z-50 gradient-primary text-primary-foreground rounded-full h-14 w-14 shadow-xl flex items-center justify-center"
+          onClick={() => setOpen(true)}
+          className="lg:hidden fixed bottom-5 right-5 z-[60] gradient-primary text-primary-foreground rounded-full h-16 w-16 shadow-2xl flex items-center justify-center"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
         >
           <div className="relative">
             <Ticket className="h-6 w-6" />

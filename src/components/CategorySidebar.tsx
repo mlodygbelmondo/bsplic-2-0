@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Category } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface CategorySidebarProps {
   selectedCategory: string | null;
@@ -11,6 +11,7 @@ interface CategorySidebarProps {
 
 export function CategorySidebar({ selectedCategory, onSelectCategory }: CategorySidebarProps) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const fetchCats = async () => {
@@ -25,19 +26,29 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const filtered = categories.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <aside className="w-[250px] hidden lg:block shrink-0 bg-card border-r border-border overflow-y-auto max-h-[calc(100vh-2.75rem)] sticky top-[2.75rem]">
       {/* Search */}
       <div className="p-3 pb-2">
-        <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 text-[13px] text-muted-foreground cursor-pointer hover:border-foreground/30 transition-colors">
+        <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 text-[13px] transition-colors focus-within:border-foreground/30">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span>Zawodnik, drużyna, turniej...</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Zawodnik, drużyna, turniej..."
+            className="bg-transparent outline-none w-full text-[13px] text-foreground placeholder:text-muted-foreground"
+          />
         </div>
       </div>
 
-      {/* Popularne */}
-      <div className="px-3 pb-1">
-        <h3 className="text-[13px] font-bold text-foreground mb-1">Popularne</h3>
+      {/* Kategorie - single flat list, no sections, no arrows */}
+      <div className="px-3 pb-3">
+        <h3 className="text-[13px] font-bold text-foreground mb-1">Kategorie</h3>
         <button
           onClick={() => onSelectCategory(null)}
           className={cn(
@@ -48,9 +59,9 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
           )}
         >
           <span className="text-sm">⭐</span>
-          Najlepsze Ligi Europejskie
+          Wszystkie
         </button>
-        {categories.slice(0, 5).map(cat => (
+        {filtered.map(cat => (
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
@@ -63,27 +74,6 @@ export function CategorySidebar({ selectedCategory, onSelectCategory }: Category
           >
             <span className="text-sm">{cat.emoji}</span>
             {cat.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Sport */}
-      <div className="border-t border-border px-3 pt-2 mt-1">
-        <h3 className="text-[13px] font-bold text-foreground mb-1">Sport</h3>
-        {categories.map(cat => (
-          <button
-            key={`s-${cat.id}`}
-            onClick={() => onSelectCategory(cat.id)}
-            className={cn(
-              'w-full text-left px-2.5 py-2 rounded text-[13px] font-medium hover:bg-muted flex items-center justify-between transition-colors',
-              selectedCategory === cat.id ? 'bg-primary/10 text-primary' : 'text-foreground'
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm">{cat.emoji}</span>
-              {cat.name}
-            </div>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         ))}
       </div>
