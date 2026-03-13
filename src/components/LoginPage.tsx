@@ -276,26 +276,11 @@ export function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={magicLinkLoading || !email}
-                onClick={async () => {
-                  if (!email) {
-                    toast.error("Wpisz adres e-mail");
-                    return;
-                  }
-                  setMagicLinkLoading(true);
-                  try {
-                    await signInWithMagicLink(email);
-                    toast.success("Link do logowania został wysłany na Twój e-mail!");
-                  } catch (err: any) {
-                    toast.error(err.message || "Wystąpił błąd");
-                  } finally {
-                    setMagicLinkLoading(false);
-                  }
-                }}
+                onClick={() => setView("magic")}
                 className="w-full h-11 rounded-xl text-sm font-semibold gap-2"
               >
                 <Mail className="h-4 w-4" />
-                {magicLinkLoading ? "Wysyłanie..." : "Zaloguj przez Magic Link"}
+                Zaloguj przez Magic Link
               </Button>
 
               <button
