@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# BetBuddy Polska 2.0
 
-## Project info
+Epiczna arena zakładów społecznościowych: live kupony, rankingi, propozycje od graczy i panel admina do pełnej kontroli rozgrywki.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Co to jest?
 
-## How can I edit this code?
+BetBuddy Polska to aplikacja webowa, w której:
 
-There are several ways of editing your application.
+- gracze obstawiają aktywne wydarzenia (single / AKO),
+- budują passy i odblokowują badge,
+- zgłaszają własne propozycje zakładów,
+- admin moderuje, publikuje i rozlicza wydarzenia.
 
-**Use Lovable**
+To nie jest zwykły CRUD. To feed zakładów + realtime + ekonomia portfela + gameplay loop.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Najważniejsze funkcje
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Home feed zakładów** z kategoriami i sortowaniem `Popularne` / `Najnowsze`
+- **Coupon Drawer** (desktop + mobile) do budowania kuponu i stawiania zakładów
+- **Propozycje zakładów** od użytkowników (workflow akceptacji/rejekcji)
+- **Panel admina** do tworzenia, rozliczania i moderacji
+- **Rankingi i profil** z passami, bilansem i osiągnięciami
+- **Supabase realtime** dla świeżych danych bez ręcznego odświeżania
 
-**Use your preferred IDE**
+## Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Vite
+- React 18 + TypeScript
+- Tailwind CSS + shadcn/ui
+- Supabase (Auth + DB)
+- Vitest + Testing Library
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Szybki start
 
-Follow these steps:
+### 1) Wymagania
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- Node.js 18+
+- npm
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 2) Instalacja
 
-# Step 3: Install the necessary dependencies.
-npm i
+```bash
+npm install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 3) Konfiguracja `.env`
+
+Utwórz plik `.env` i dodaj:
+
+```bash
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+### 4) Uruchomienie dev
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Domyślnie aplikacja działa na porcie `8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Komendy
 
-**Use GitHub Codespaces**
+```bash
+npm run dev         # lokalny development
+npm run build       # build produkcyjny
+npm run build:dev   # build w trybie development
+npm run preview     # podgląd buildu
+npm run lint        # eslint
+npm run test        # vitest (single run)
+npm run test:watch  # vitest watch
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Przykładowy pojedynczy test:
 
-## What technologies are used for this project?
+```bash
+npm run test -- src/test/example.test.ts
+```
 
-This project is built with:
+## Architektura katalogów
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```text
+src/
+  components/                # komponenty współdzielone
+  components/ui/             # prymitywy shadcn/ui
+  contexts/                  # AuthContext, CouponContext
+  features/
+    home/
+      api/                   # zapytania/mutacje Supabase
+      hooks/                 # logika ekranu home
+      layout/                # kompozycja layoutu home
+  integrations/supabase/     # client + typy wygenerowane
+  pages/                     # routing pages
+  types/                     # typy domenowe
+```
 
-## How can I deploy this project?
+## Reguły projektu (ważne)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- Zachowuj czysty podział: `UI -> hooks -> api`.
+- Nie wrzucaj sekretów do repo.
+- Dla home layout: strona mieści się w `h-screen`, a scroll jest tylko tam, gdzie ma być.
+- Dla typów `12` i `1x2` liczba opcji jest stała (bez dodawania/usuwania opcji).
+- `Popularne` sortuje po `bet_count` malejąco.
 
-## Can I connect a custom domain to my Lovable project?
+Pełne zasady dla agentów i workflow: `AGENTS.md`.
 
-Yes, you can!
+## Jakość i utrzymanie
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Stawiamy na małe, czytelne komponenty.
+- Każdy async flow z loadingiem powinien mieć `try/catch/finally`.
+- Błędy pokazujemy userowi (toast), nie zamiatamy pod dywan.
+- Ograniczamy scope zmian do aktualnego taska.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Roadmap vibe (next-level)
+
+- więcej formatów zakładów,
+- mocniejsze statystyki i analityka gracza,
+- testy E2E kluczowych flow,
+- dalsze wygładzanie UX mobile.
+
+---
+
+Jeśli właśnie odpalasz projekt po raz pierwszy: skonfiguruj `.env`, zrób `npm install`, odpal `npm run dev` i wchodzisz do gry.
