@@ -1,26 +1,26 @@
 # BSPLIC 2.0
 
-Epiczna arena zakładów społecznościowych: live kupony, rankingi, propozycje od graczy i panel admina do pełnej kontroli rozgrywki.
+An epic social betting arena: live coupons, rankings, user-driven bet proposals, and a full admin control panel.
 
-## Co to jest?
+## What Is This?
 
-BSPLIC to aplikacja webowa, w której:
+BSPLIC is a web app where:
 
-- gracze obstawiają aktywne wydarzenia (single / AKO),
-- budują passy i odblokowują badge,
-- zgłaszają własne propozycje zakładów,
-- admin moderuje, publikuje i rozlicza wydarzenia.
+- players place bets on active events (single / AKO),
+- build streaks and unlock badges,
+- submit their own bet proposals,
+- admins moderate, publish, and settle outcomes.
 
-To nie jest zwykły CRUD. To feed zakładów + realtime + ekonomia portfela + gameplay loop.
+This is not plain CRUD. It is a betting feed + realtime updates + wallet economy + gameplay loop.
 
-## Najważniejsze funkcje
+## Core Features
 
-- **Home feed zakładów** z kategoriami i sortowaniem `Popularne` / `Najnowsze`
-- **Coupon Drawer** (desktop + mobile) do budowania kuponu i stawiania zakładów
-- **Propozycje zakładów** od użytkowników (workflow akceptacji/rejekcji)
-- **Panel admina** do tworzenia, rozliczania i moderacji
-- **Rankingi i profil** z passami, bilansem i osiągnięciami
-- **Supabase realtime** dla świeżych danych bez ręcznego odświeżania
+- **Home betting feed** with categories and `Popularne` / `Najnowsze` sorting
+- **Coupon Drawer** (desktop + mobile) for building and placing coupons
+- **Community bet proposals** with accept/reject moderation workflow
+- **Admin panel** for creating, settling, and managing bets
+- **Rankings and profile** with streaks, balance, and achievements
+- **Supabase realtime** for live, no-refresh updates
 
 ## Stack
 
@@ -30,95 +30,95 @@ To nie jest zwykły CRUD. To feed zakładów + realtime + ekonomia portfela + ga
 - Supabase (Auth + DB)
 - Vitest + Testing Library
 
-## Szybki start
+## Quick Start
 
-### 1) Wymagania
+### 1) Requirements
 
 - Node.js 18+
 - npm
 
-### 2) Instalacja
+### 2) Install
 
 ```bash
 npm install
 ```
 
-### 3) Konfiguracja `.env`
+### 3) Configure `.env`
 
-Utwórz plik `.env` i dodaj:
+Create `.env` and add:
 
 ```bash
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
-### 4) Uruchomienie dev
+### 4) Run locally
 
 ```bash
 npm run dev
 ```
 
-Domyślnie aplikacja działa na porcie `8080`.
+Default dev port is `8080`.
 
-## Komendy
+## Commands
 
 ```bash
-npm run dev         # lokalny development
-npm run build       # build produkcyjny
-npm run build:dev   # build w trybie development
-npm run preview     # podgląd buildu
+npm run dev         # local development
+npm run build       # production build
+npm run build:dev   # development-mode build
+npm run preview     # preview production build
 npm run lint        # eslint
 npm run test        # vitest (single run)
-npm run test:watch  # vitest watch
+npm run test:watch  # vitest watch mode
 ```
 
-Przykładowy pojedynczy test:
+Run a single test file:
 
 ```bash
 npm run test -- src/test/example.test.ts
 ```
 
-## Architektura katalogów
+## Project Structure
 
 ```text
 src/
-  components/                # komponenty współdzielone
-  components/ui/             # prymitywy shadcn/ui
+  components/                # shared components
+  components/ui/             # shadcn/ui primitives
   contexts/                  # AuthContext, CouponContext
   features/
     home/
-      api/                   # zapytania/mutacje Supabase
-      hooks/                 # logika ekranu home
-      layout/                # kompozycja layoutu home
-  integrations/supabase/     # client + typy wygenerowane
-  pages/                     # routing pages
-  types/                     # typy domenowe
+      api/                   # Supabase queries/mutations
+      hooks/                 # home view logic
+      layout/                # home screen composition
+  integrations/supabase/     # client + generated types
+  pages/                     # route-level pages
+  types/                     # domain types
 ```
 
-## Reguły projektu (ważne)
+## Project Rules (Important)
 
-- Zachowuj czysty podział: `UI -> hooks -> api`.
-- Nie wrzucaj sekretów do repo.
-- Dla home layout: strona mieści się w `h-screen`, a scroll jest tylko tam, gdzie ma być.
-- Dla typów `12` i `1x2` liczba opcji jest stała (bez dodawania/usuwania opcji).
-- `Popularne` sortuje po `bet_count` malejąco.
+- Keep a clean layering model: `UI -> hooks -> api`.
+- Never commit secrets.
+- Keep the home layout in `h-screen`; only intended sections should scroll.
+- For bet types `12` and `1x2`, option count is fixed (no add/remove).
+- `Popularne` must sort by `bet_count` descending.
 
-Pełne zasady dla agentów i workflow: `AGENTS.md`.
+Full workflow and coding rules: `AGENTS.md`.
 
-## Jakość i utrzymanie
+## Code Quality Principles
 
-- Stawiamy na małe, czytelne komponenty.
-- Każdy async flow z loadingiem powinien mieć `try/catch/finally`.
-- Błędy pokazujemy userowi (toast), nie zamiatamy pod dywan.
-- Ograniczamy scope zmian do aktualnego taska.
+- Prefer small, focused, readable components.
+- Every async flow with loading state should use `try/catch/finally`.
+- Surface failures to users with toasts; do not swallow errors.
+- Keep change scope tight to the current task.
 
-## Roadmap vibe (next-level)
+## Next-Level Roadmap
 
-- więcej formatów zakładów,
-- mocniejsze statystyki i analityka gracza,
-- testy E2E kluczowych flow,
-- dalsze wygładzanie UX mobile.
+- more bet formats,
+- deeper player analytics,
+- stronger E2E coverage for critical flows,
+- extra mobile UX polish.
 
 ---
 
-Jeśli właśnie odpalasz projekt po raz pierwszy: skonfiguruj `.env`, zrób `npm install`, odpal `npm run dev` i wchodzisz do gry.
+First run? Configure `.env`, run `npm install`, then `npm run dev` and you are in.

@@ -58,7 +58,7 @@
 
 ## Behavioral Rules for Assistant Output
 
-- Default language for user communication: **Polish**.
+- Default language for user communication: **English**.
 - Tone: concise, direct, teammate-like.
 - Focus on actionable edits, not long theory.
 - When reporting results, include:
