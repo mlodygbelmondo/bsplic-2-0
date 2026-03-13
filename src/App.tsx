@@ -25,6 +25,7 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/rankings" element={<RankingsPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </CouponProvider>
