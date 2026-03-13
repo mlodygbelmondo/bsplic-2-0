@@ -331,60 +331,407 @@ function ManageBetsTab() {
 }
 
 function ProposalsTab() {
-  const [proposals, setProposals] = useState<any[]>([]);
+  type ProposalType = '1x2' | '12' | 'multi';
+
+  interface ProposalRow {
+    id: string;
+    user_id: string;
+    title: string;
+    category_id: string | null;
+    bet_type: ProposalType;
+    options: BetOption[];
+    username: string;
+  }
+
+  interface ProposalEditor {
+    id: string;
+    title: string;
+    categoryId: string;
+    betType: ProposalType;
+    options: BetOption[];
+    endsAt: string;
+  }
+
+  const [proposals, setProposals] = useState<ProposalRow[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [editing, setEditing] = useState<ProposalEditor | null>(null);
+
+  const toInputDateTime = (date: Date) => {
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return offsetDate.toISOString().slice(0, 16);
+  };
+
+  const normalizeType = (value: string): ProposalType => {
+    if (value === '1x2' || value === 'multi') return value;
+    return '12';
+  };
+
+  const normalizeOptions = (options: any): BetOption[] => {
+    if (!Array.isArray(options)) return [];
+    return options.map((option, index) => ({
+      name: typeof option?.name === 'string' ? option.name : `Opcja ${index + 1}`,
+      odds: Number(option?.odds) > 0 ? Number(option.odds) : 1,
+    }));
+  };
+
+  const lockOptionsByType = (type: ProposalType, current: BetOption[]) => {
+    if (type === '12') {
+      return [
+        { name: '1', odds: current[0]?.odds || 2 },
+        { name: '2', odds: current[1]?.odds || 2 },
+      ];
+    }
+
+    if (type === '1x2') {
+      return [
+        { name: '1', odds: current[0]?.odds || 2 },
+        { name: 'X', odds: current[1]?.odds || 3 },
+        { name: '2', odds: current[2]?.odds || 2 },
+      ];
+    }
+
+    if (current.length >= 2) return current;
+    return [
+      { name: '', odds: 2 },
+      { name: '', odds: 2 },
+    ];
+  };
 
   const fetchProposals = async () => {
-    const { data } = await supabase.from('bet_proposals').select('*, profile:profiles(username)').eq('status', 'pending').order('created_at', { ascending: false });
-    if (data) setProposals(data);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const [{ data: proposalRows, error: proposalError }, { data: categoryRows }] = await Promise.all([
+        supabase.from('bet_proposals').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').order('sort_order'),
+      ]);
+
+      if (proposalError) throw proposalError;
+      setCategories((categoryRows as Category[]) || []);
+
+      const normalized = (proposalRows || []).map((proposal: any) => ({
+        id: proposal.id,
+        user_id: proposal.user_id,
+        title: proposal.title,
+        category_id: proposal.category_id,
+        bet_type: normalizeType(proposal.bet_type),
+        options: normalizeOptions(proposal.options),
+        username: 'Użytkownik',
+      }));
+
+      const uniqueUserIds = [...new Set(normalized.map((proposal) => proposal.user_id))];
+      if (uniqueUserIds.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', uniqueUserIds);
+        const userMap = new Map((profiles || []).map((profile: any) => [profile.id, profile.username]));
+        setProposals(
+          normalized.map((proposal) => ({
+            ...proposal,
+            username: userMap.get(proposal.user_id) || 'Użytkownik',
+          }))
+        );
+      } else {
+        setProposals(normalized);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Nie udało się pobrać propozycji');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchProposals(); }, []);
-
-  const accept = async (p: any) => {
-    await supabase.from('bets').insert([{
-      title: p.title,
-      category_id: p.category_id,
-      bet_type: p.bet_type,
-      options: p.options as any,
-      ends_at: new Date(Date.now() + 86400000).toISOString(),
-    }]);
-    await supabase.from('bet_proposals').update({ status: 'accepted' }).eq('id', p.id);
-    toast.success('Propozycja zaakceptowana');
+  useEffect(() => {
     fetchProposals();
+  }, []);
+
+  const openEditor = (proposal: ProposalRow) => {
+    const lockedOptions = lockOptionsByType(proposal.bet_type, proposal.options);
+    setEditing({
+      id: proposal.id,
+      title: proposal.title,
+      categoryId: proposal.category_id || '',
+      betType: proposal.bet_type,
+      options: lockedOptions,
+      endsAt: toInputDateTime(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+    });
+    setEditorOpen(true);
   };
 
-  const reject = async (p: any) => {
-    await supabase.from('bet_proposals').update({ status: 'rejected' }).eq('id', p.id);
+  const acceptEdited = async () => {
+    if (!editing) return;
+
+    const cleanedOptions = editing.options
+      .filter((option) => option.name.trim())
+      .map((option) => ({
+        name: option.name.trim(),
+        odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
+      }));
+
+    if (cleanedOptions.length < 2) {
+      toast.error('Zakład musi mieć minimum 2 opcje');
+      return;
+    }
+
+    if (!editing.title.trim()) {
+      toast.error('Tytuł jest wymagany');
+      return;
+    }
+
+    const endsAtDate = new Date(editing.endsAt);
+    if (Number.isNaN(endsAtDate.getTime())) {
+      toast.error('Wybierz poprawną datę zakończenia');
+      return;
+    }
+
+    setEditorLoading(true);
+    try {
+      const { error: insertError } = await supabase.from('bets').insert([
+        {
+          title: editing.title.trim(),
+          category_id: editing.categoryId || null,
+          bet_type: editing.betType,
+          options: cleanedOptions as any,
+          ends_at: endsAtDate.toISOString(),
+        },
+      ]);
+
+      if (insertError) throw insertError;
+
+      const { error: proposalUpdateError } = await supabase
+        .from('bet_proposals')
+        .update({
+          status: 'accepted',
+          title: editing.title.trim(),
+          category_id: editing.categoryId || null,
+          bet_type: editing.betType,
+          options: cleanedOptions as any,
+        })
+        .eq('id', editing.id);
+
+      if (proposalUpdateError) throw proposalUpdateError;
+
+      toast.success('Propozycja zaakceptowana i dostosowana');
+      setEditorOpen(false);
+      setEditing(null);
+      fetchProposals();
+    } catch (err: any) {
+      toast.error(err.message || 'Nie udało się zaakceptować propozycji');
+    } finally {
+      setEditorLoading(false);
+    }
+  };
+
+  const reject = async (proposalId: string) => {
+    const { error } = await supabase.from('bet_proposals').update({ status: 'rejected' }).eq('id', proposalId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.info('Propozycja odrzucona');
     fetchProposals();
   };
 
+  const isLocked = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
+
   if (loading) {
     return (
       <div className="space-y-3">
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {proposals.length === 0 && <p className="text-muted-foreground text-center py-8">Brak propozycji</p>}
-      {proposals.map(p => (
-        <div key={p.id} className="bg-card rounded-xl p-4 card-shadow flex items-center justify-between">
-          <div>
-            <p className="font-bold">{p.title}</p>
-            <p className="text-xs text-muted-foreground">Od: {p.profile?.username || 'Użytkownik'} • {p.bet_type}</p>
+    <>
+      <div className="space-y-3">
+        {proposals.length === 0 && <p className="text-muted-foreground text-center py-8">Brak propozycji</p>}
+        {proposals.map((proposal) => (
+          <div key={proposal.id} className="bg-card rounded-xl p-4 card-shadow space-y-2">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold">{proposal.title}</p>
+                <p className="text-xs text-muted-foreground">Od: {proposal.username} • {proposal.bet_type.toUpperCase()}</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {proposal.options.map((option, optionIndex) => (
+                    <span key={`${proposal.id}-${optionIndex}`} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-foreground">
+                      {option.name} ({Number(option.odds).toFixed(2)})
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => openEditor(proposal)} className="gradient-primary text-primary-foreground">
+                  <Check className="h-3 w-3 mr-1" /> Dostosuj i akceptuj
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => reject(proposal.id)}>
+                  <XCircle className="h-3 w-3 mr-1" /> Odrzuć
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => accept(p)} className="bg-success text-success-foreground"><Check className="h-3 w-3 mr-1" /> Akceptuj</Button>
-            <Button size="sm" variant="outline" onClick={() => reject(p)}><XCircle className="h-3 w-3 mr-1" /> Odrzuć</Button>
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dostosuj propozycję przed akceptacją</DialogTitle>
+          </DialogHeader>
+
+          {editing && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tytuł</Label>
+                <Input
+                  value={editing.title}
+                  onChange={(event) => setEditing((prev) => (prev ? { ...prev, title: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Kategoria</Label>
+                  <Select
+                    value={editing.categoryId}
+                    onValueChange={(value) => setEditing((prev) => (prev ? { ...prev, categoryId: value } : prev))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wybierz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.emoji} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Typ</Label>
+                  <Select
+                    value={editing.betType}
+                    onValueChange={(value: '1x2' | '12' | 'multi') =>
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              betType: value,
+                              options: lockOptionsByType(value, prev.options),
+                            }
+                          : prev
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">1/2</SelectItem>
+                      <SelectItem value="1x2">1X2</SelectItem>
+                      <SelectItem value="multi">Multi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Data zakończenia</Label>
+                <Input
+                  type="datetime-local"
+                  value={editing.endsAt}
+                  onChange={(event) => setEditing((prev) => (prev ? { ...prev, endsAt: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Opcje {isLocked && <span className="text-xs text-muted-foreground ml-1">(etykiety zablokowane dla typu)</span>}
+                </Label>
+
+                {editing.options.map((option, index) => (
+                  <div key={`${editing.id}-${index}`} className="flex gap-2 items-center">
+                    <Input
+                      value={option.name}
+                      onChange={(event) =>
+                        setEditing((prev) => {
+                          if (!prev) return prev;
+                          const nextOptions = [...prev.options];
+                          nextOptions[index].name = event.target.value;
+                          return { ...prev, options: nextOptions };
+                        })
+                      }
+                      className="flex-1"
+                      disabled={isLocked}
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      value={option.odds}
+                      onChange={(event) =>
+                        setEditing((prev) => {
+                          if (!prev) return prev;
+                          const nextOptions = [...prev.options];
+                          nextOptions[index].odds = Number(event.target.value);
+                          return { ...prev, options: nextOptions };
+                        })
+                      }
+                      className="w-24"
+                    />
+                    {!isLocked && editing.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditing((prev) => {
+                            if (!prev) return prev;
+                            return {
+                              ...prev,
+                              options: prev.options.filter((_, optionIndex) => optionIndex !== index),
+                            };
+                          })
+                        }
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {!isLocked && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              options: [...prev.options, { name: '', odds: 2 }],
+                            }
+                          : prev
+                      )
+                    }
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
+                  </Button>
+                )}
+              </div>
+
+              <Button onClick={acceptEdited} disabled={editorLoading} className="w-full gradient-primary text-primary-foreground font-bold">
+                {editorLoading ? 'Zapisywanie...' : 'Akceptuj propozycję'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

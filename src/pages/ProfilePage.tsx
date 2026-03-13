@@ -8,7 +8,7 @@ import { Navigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
   const [placedBets, setPlacedBets] = useState<any[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending'>('all');
@@ -16,27 +16,39 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('placed_bets').select('*, bet:bets(*)').eq('user_id', user.id).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setPlacedBets(data); setLoadingBets(false); });
-    supabase.from('badges').select('*').eq('user_id', user.id)
-      .then(({ data }) => { if (data) setBadges(data as Badge[]); });
+
+    supabase
+      .from('placed_bets')
+      .select('*, bet:bets(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPlacedBets(data);
+        setLoadingBets(false);
+      });
+
+    supabase
+      .from('badges')
+      .select('*')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data) setBadges(data as Badge[]);
+      });
   }, [user]);
 
   if (!user || !profile) return <Navigate to="/" />;
 
   const totalBets = placedBets.length;
-  const wins = placedBets.filter(b => b.result === 'won').length;
-  const losses = placedBets.filter(b => b.result === 'lost').length;
+  const wins = placedBets.filter((bet) => bet.result === 'won').length;
+  const losses = placedBets.filter((bet) => bet.result === 'lost').length;
   const winRate = totalBets > 0 ? ((wins / totalBets) * 100).toFixed(1) : '0';
-  const totalProfit = placedBets.reduce((acc, b) => acc + (Number(b.payout) - Number(b.stake)), 0);
-
-  const filtered = placedBets.filter(b => filter === 'all' || b.result === filter);
+  const totalProfit = placedBets.reduce((acc, bet) => acc + (Number(bet.payout) - Number(bet.stake)), 0);
+  const filtered = placedBets.filter((bet) => filter === 'all' || bet.result === filter);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
-        {/* Header */}
         <div className="bg-card rounded-xl p-6 card-shadow">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -50,7 +62,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: 'Zakłady', value: totalBets },
@@ -58,15 +69,14 @@ export default function ProfilePage() {
             { label: 'Przegrane', value: losses },
             { label: 'Win rate', value: `${winRate}%` },
             { label: 'Profit', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)} zł` },
-          ].map(s => (
-            <div key={s.label} className="bg-card rounded-lg p-3 card-shadow text-center">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-lg font-bold">{s.value}</p>
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card rounded-lg p-3 card-shadow text-center">
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-lg font-bold">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        {/* Streak */}
         <div className="bg-card rounded-xl p-4 card-shadow flex items-center gap-3">
           <span className="text-3xl">🔥</span>
           <div>
@@ -75,54 +85,87 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Bet history - ABOVE badges */}
         <div className="bg-card rounded-xl p-4 card-shadow">
           <h2 className="font-bold mb-3">Historia zakładów</h2>
-          <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1">
-            {(['all', 'won', 'lost', 'pending'] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={cn('shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all', filter === f ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-muted')}>
-                {{ all: 'Wszystkie', won: 'Wygrane', lost: 'Przegrane', pending: 'W toku' }[f]}
-              </button>
-            ))}
+          <div className="-mx-1 mb-3 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
+            <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
+              {(['all', 'won', 'lost', 'pending'] as const).map((value) => (
+                <button
+                  key={value}
+                  onClick={() => setFilter(value)}
+                  className={cn(
+                    'shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all',
+                    filter === value ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-muted'
+                  )}
+                >
+                  {{ all: 'Wszystkie', won: 'Wygrane', lost: 'Przegrane', pending: 'W toku' }[value]}
+                </button>
+              ))}
+            </div>
           </div>
+
           {loadingBets ? (
             <div className="space-y-2">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              {[...Array(3)].map((_, index) => (
+                <Skeleton key={index} className="h-14 w-full rounded-lg" />
               ))}
             </div>
           ) : (
             <div className="space-y-2">
               {filtered.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Brak zakładów</p>
-              ) : filtered.map((pb: any) => (
-                <div key={pb.id} className="flex items-center justify-between p-3 bg-muted rounded-lg text-sm card-shadow">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{pb.bet?.title || 'Zakład'}</p>
-                    <p className="text-xs text-muted-foreground">{pb.selected_option} • kurs {Number(pb.odds_at_time).toFixed(2)}</p>
+              ) : (
+                filtered.map((placedBet: any) => (
+                  <div key={placedBet.id} className="flex items-center justify-between p-3 bg-muted rounded-lg text-sm card-shadow">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{placedBet.bet?.title || 'Zakład'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {placedBet.selected_option} • kurs {Number(placedBet.odds_at_time).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-right ml-3">
+                      <p className="font-bold">{Number(placedBet.stake).toFixed(0)} zł</p>
+                      <p
+                        className={cn(
+                          'text-xs font-medium',
+                          placedBet.result === 'won'
+                            ? 'text-success'
+                            : placedBet.result === 'lost'
+                              ? 'text-destructive'
+                              : 'text-muted-foreground'
+                        )}
+                      >
+                        {placedBet.result === 'won'
+                          ? `+${Number(placedBet.payout).toFixed(0)} zł`
+                          : placedBet.result === 'lost'
+                            ? 'Przegrana'
+                            : 'W toku'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right ml-3">
-                    <p className="font-bold">{Number(pb.stake).toFixed(0)} zł</p>
-                    <p className={cn('text-xs font-medium', pb.result === 'won' ? 'text-success' : pb.result === 'lost' ? 'text-destructive' : 'text-muted-foreground')}>
-                      {pb.result === 'won' ? `+${Number(pb.payout).toFixed(0)} zł` : pb.result === 'lost' ? 'Przegrana' : 'W toku'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
 
-        {/* Badges - BELOW bet history */}
         <div className="bg-card rounded-xl p-4 card-shadow">
           <h2 className="font-bold mb-3">Odznaki</h2>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {Object.entries(BADGE_DEFINITIONS).map(([key, def]) => {
-              const unlocked = badges.find(b => b.badge_key === key);
+            {Object.entries(BADGE_DEFINITIONS).map(([key, definition]) => {
+              const unlockedBadge = badges.find((badge) => badge.badge_key === key);
               return (
-                <div key={key} className={cn('text-center p-2 rounded-lg card-shadow transition-all', unlocked ? 'bg-muted' : 'opacity-40')} title={unlocked ? `Odblokowano: ${new Date(unlocked.unlocked_at).toLocaleDateString('pl-PL')}` : def.description}>
-                  <span className="text-2xl">{def.emoji}</span>
-                  <p className="text-xs font-medium mt-1">{def.name}</p>
+                <div
+                  key={key}
+                  className={cn('text-center p-2 rounded-lg card-shadow transition-all', unlockedBadge ? 'bg-muted' : 'opacity-40')}
+                  title={
+                    unlockedBadge
+                      ? `Odblokowano: ${new Date(unlockedBadge.unlocked_at).toLocaleDateString('pl-PL')}`
+                      : definition.description
+                  }
+                >
+                  <span className="text-2xl">{definition.emoji}</span>
+                  <p className="text-xs font-medium mt-1">{definition.name}</p>
                 </div>
               );
             })}
