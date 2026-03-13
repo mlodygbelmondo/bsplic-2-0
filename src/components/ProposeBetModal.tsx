@@ -208,7 +208,6 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
               </Button>
             )}
           </div>
-          </div>
 
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground font-bold">
             {loading ? 'Wysyłanie...' : 'Wyślij propozycję'}
