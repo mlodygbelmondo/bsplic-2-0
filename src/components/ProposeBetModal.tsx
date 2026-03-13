@@ -16,11 +16,12 @@ interface ProposeBetModalProps {
   categories: Category[];
 }
 
-const OPTION_COUNT_BY_TYPE: Record<'1x2' | '12' | 'multi', number> = {
+const FIXED_OPTION_COUNTS: Record<string, number> = {
   '12': 2,
   '1x2': 3,
-  multi: 2,
 };
+
+const hasFixedOptionCount = (type: string) => type in FIXED_OPTION_COUNTS;
 
 const OPTION_DEFAULTS: Record<'1x2' | '12' | 'multi', string[]> = {
   '12': ['1', '2'],
