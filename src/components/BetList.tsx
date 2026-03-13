@@ -31,7 +31,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
     supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
       if (data) {
         const map: Record<string, Category> = {};
-        (data as Category[]).forEach(c => map[c.id] = c);
+        (data as Category[]).forEach((c) => (map[c.id] = c));
         setCategories(map);
         setCatList(data as Category[]);
       }
@@ -45,11 +45,13 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
       .channel('bets-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, () => fetchBets())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedCategory]);
 
-  const liveBets = bets.filter(b => b.is_live);
-  const regularBets = bets.filter(b => !b.is_live);
+  const liveBets = bets.filter((b) => b.is_live);
+  const regularBets = bets.filter((b) => !b.is_live);
 
   const sorted = [...regularBets].sort((a, b) => {
     if (sort === 'popular') return b.bet_count - a.bet_count;
@@ -58,11 +60,11 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
 
   return (
     <div className="flex-1 min-w-0">
-      {/* Tabs */}
       <div className="flex items-center border-b border-border mb-3">
         <button
           onClick={() => setSort('popular')}
-          className={cn('px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
+          className={cn(
+            'px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
             sort === 'popular' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
@@ -70,7 +72,8 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
         </button>
         <button
           onClick={() => setSort('newest')}
-          className={cn('px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
+          className={cn(
+            'px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors',
             sort === 'newest' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
@@ -78,34 +81,40 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
         </button>
       </div>
 
-      {/* Category pills - mobile only (hidden on lg where sidebar shows) */}
       {onSelectCategory && (
-        <div className="lg:hidden flex gap-1.5 mb-3 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3">
-          <button
-            onClick={() => onSelectCategory(null)}
-            className={cn(
-              'shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-              !selectedCategory ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-card text-foreground border border-border hover:border-foreground/30'
-            )}
-          >
-            🌐 Wszystkie
-          </button>
-          {catList.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => onSelectCategory(cat.id)}
-              className={cn(
-                'shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all',
-                selectedCategory === cat.id ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-card text-foreground border border-border hover:border-foreground/30'
-              )}
-            >
-              {cat.emoji} {cat.name}
-            </button>
-          ))}
+        <div className="lg:hidden mb-3 -mx-3 px-3">
+          <div className="overflow-x-auto scrollbar-hide touch-pan-x">
+            <div className="flex min-w-full w-max gap-1.5 pb-1 pr-1">
+              <button
+                onClick={() => onSelectCategory(null)}
+                className={cn(
+                  'shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                  !selectedCategory
+                    ? 'gradient-primary text-primary-foreground shadow-sm'
+                    : 'bg-card text-foreground border border-border hover:border-foreground/30'
+                )}
+              >
+                🌐 Wszystkie
+              </button>
+              {catList.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
+                  className={cn(
+                    'shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all',
+                    selectedCategory === cat.id
+                      ? 'gradient-primary text-primary-foreground shadow-sm'
+                      : 'bg-card text-foreground border border-border hover:border-foreground/30'
+                  )}
+                >
+                  {cat.emoji} {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Loading skeletons */}
       {loading ? (
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => (
@@ -129,18 +138,16 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
         </div>
       ) : (
         <>
-          {/* Live section */}
           {liveBets.length > 0 && (
             <div className="mb-4">
               <div className="grid gap-2 sm:grid-cols-2">
-                {liveBets.map(bet => (
+                {liveBets.map((bet) => (
                   <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Regular bets */}
           <div className="space-y-2">
             {sorted.length === 0 && liveBets.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
@@ -148,7 +155,7 @@ export function BetList({ selectedCategory, onSelectCategory }: BetListProps) {
                 <p className="text-[13px] mt-1">Wróć później lub zmień kategorię</p>
               </div>
             ) : (
-              sorted.map(bet => (
+              sorted.map((bet) => (
                 <BetCard key={bet.id} bet={bet} category={bet.category_id ? categories[bet.category_id] : undefined} />
               ))
             )}
