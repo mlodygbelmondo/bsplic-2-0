@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
-import { Clock, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface BetCardProps {
   bet: Bet;
@@ -42,16 +42,12 @@ export function BetCard({ bet, category }: BetCardProps) {
     }
   };
 
-  // Betclic-style: match card with two teams displayed prominently
-  // For 1x2: Team A vs Team B with time between
-  // Options shown as colored buttons below
-
   return (
     <div className={cn(
-      'bg-card rounded-lg border border-border overflow-hidden',
+      'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
       bet.is_live && 'ring-1 ring-primary/30'
     )}>
-      {/* Top bar: category + live badge */}
+      {/* Top bar */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-muted/50 border-b border-border">
         <div className="flex items-center gap-1.5">
           {category && (
@@ -60,8 +56,8 @@ export function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
           {bet.is_live && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-primary ml-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary pulse-live" />
+            <span className="flex items-center gap-1 text-[10px] font-bold text-primary-foreground ml-1 gradient-primary px-1.5 py-0.5 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground pulse-live" />
               LIVE
             </span>
           )}
@@ -73,21 +69,19 @@ export function BetCard({ bet, category }: BetCardProps) {
 
       {/* Match content */}
       <div className="px-3 py-2.5">
-        {/* Title as match display */}
         <div className="flex items-center justify-center gap-3 mb-3">
           <span className="font-bold text-[13px] text-foreground text-right flex-1">{options[0]?.name || ''}</span>
           <span className="text-[11px] text-muted-foreground font-medium px-1.5">{countdown}</span>
           <span className="font-bold text-[13px] text-foreground text-left flex-1">{options.length >= 2 ? options[options.length - 1]?.name : ''}</span>
         </div>
 
-        {/* If it's not just 2 teams, show the title */}
         {(bet.bet_type === 'multi' || options.length > 3) && (
           <p className="text-[12px] text-muted-foreground text-center mb-2">{bet.title}</p>
         )}
 
-        {/* Odds buttons - Betclic green/yellow style */}
+        {/* Odds buttons */}
         <div className={cn('grid gap-1.5', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
-          {options.map((opt, i) => {
+          {options.map((opt) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
             return (
               <button
@@ -109,7 +103,7 @@ export function BetCard({ bet, category }: BetCardProps) {
           })}
         </div>
 
-        {/* Colored progress bar under odds (Betclic-style) */}
+        {/* Probability bar */}
         <div className="flex mt-2 h-[3px] rounded-full overflow-hidden gap-0.5">
           {options.map((opt, i) => {
             const totalOdds = options.reduce((sum, o) => sum + (1 / o.odds), 0);

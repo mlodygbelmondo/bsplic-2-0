@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96%;
+    --background: 220 14% 96%;
     --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 15%;
 
-    --primary: 0 78% 50%;
+    --primary: 355 100% 44%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -38,28 +38,30 @@
 
     --border: 220 13% 90%;
     --input: 220 13% 90%;
-    --ring: 0 78% 50%;
+    --ring: 355 100% 44%;
     --radius: 0.5rem;
 
-    --navbar: 225 25% 12%;
-    --navbar-foreground: 0 0% 92%;
+    --navbar: 355 100% 44%;
+    --navbar-foreground: 0 0% 100%;
 
-    /* Betclic-style odds button colors */
     --odds-bg: 145 55% 48%;
     --odds-fg: 0 0% 100%;
     --odds-bg-alt: 45 90% 52%;
     --odds-fg-alt: 0 0% 100%;
-    --odds-selected: 0 78% 50%;
+    --odds-selected: 355 100% 44%;
     --odds-selected-fg: 0 0% 100%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 15% 15%;
-    --sidebar-primary: 0 78% 50%;
+    --sidebar-primary: 355 100% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 220 15% 15%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 0 78% 50%;
+    --sidebar-ring: 355 100% 44%;
+
+    --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 12px 32px rgba(0,0,0,0.14);
   }
 }
 
@@ -75,13 +77,16 @@
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(0 78% 55%), hsl(0 78% 45%));
+    background: linear-gradient(135deg, hsl(355 100% 50%), hsl(355 80% 40%));
   }
   .gradient-navbar {
-    background: hsl(225 25% 12%);
+    background: linear-gradient(90deg, hsl(355 100% 44%), hsl(355 90% 38%));
   }
   .gradient-banner {
-    background: linear-gradient(135deg, hsl(0 78% 50%), hsl(340 70% 45%));
+    background: linear-gradient(135deg, hsl(355 100% 50%), hsl(340 70% 45%));
+  }
+  .gradient-cta {
+    background: linear-gradient(135deg, hsl(355 100% 50%), hsl(15 90% 55%));
   }
   .pulse-live {
     animation: pulse-dot 1.5s ease-in-out infinite;
@@ -108,5 +113,14 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+  .card-shadow-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .skeleton-shimmer {
+    @apply animate-pulse rounded-md bg-muted;
   }
 }

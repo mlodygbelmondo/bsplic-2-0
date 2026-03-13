@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function CouponDrawer() {
-  const { items, removeItem, clearCoupon, totalOdds, couponType } = useCoupon();
+  const { items, removeItem, clearCoupon, totalOdds } = useCoupon();
   const { user, profile, refreshProfile } = useAuth();
   const [stake, setStake] = useState('10');
   const [placing, setPlacing] = useState(false);
@@ -61,9 +61,14 @@ export function CouponDrawer() {
         </button>
       )}
 
+      {/* Mobile overlay */}
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setOpen(false)} />
+      )}
+
       {/* Right panel */}
       <aside className={cn(
-        'w-[300px] shrink-0 bg-card border-l border-border',
+        'w-[300px] shrink-0 bg-card border-l border-border card-shadow',
         'fixed lg:sticky right-0 top-[2.75rem] bottom-0 z-40 lg:z-auto transition-transform',
         'lg:translate-x-0 max-h-[calc(100vh-2.75rem)] overflow-hidden',
         items.length === 0 && !open ? 'translate-x-full' : open ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
@@ -85,13 +90,13 @@ export function CouponDrawer() {
             <button
               onClick={() => setActiveTab('single')}
               className={cn('flex-1 py-2 text-[12px] font-semibold text-center border-b-2 -mb-[1px] transition-colors',
-                activeTab === 'single' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground'
+                activeTab === 'single' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
               )}
             >Pojedyncze</button>
             <button
               onClick={() => setActiveTab('ako')}
               className={cn('flex-1 py-2 text-[12px] font-semibold text-center border-b-2 -mb-[1px] transition-colors',
-                activeTab === 'ako' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground'
+                activeTab === 'ako' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
               )}
             >AKO</button>
           </div>
@@ -99,7 +104,7 @@ export function CouponDrawer() {
           {/* Items */}
           {items.length === 0 ? (
             <div className="flex-1 flex items-center justify-center px-4">
-              <p className="text-[12px] text-primary text-center">Twoje zdarzenia są w tej chwili niedostępne. Dodaj nowe zdarzenia do kuponu.</p>
+              <p className="text-[12px] text-muted-foreground text-center">Dodaj zdarzenia do kuponu klikając na kursy.</p>
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
@@ -111,9 +116,8 @@ export function CouponDrawer() {
                         ⚽ {item.bet.title}
                       </p>
                       <p className="font-bold text-[13px]">{item.selectedOption}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.bet.title}</p>
-                      <span className="inline-block mt-1 bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        Zamknięte
+                      <span className="inline-block mt-1 text-primary text-[11px] font-bold">
+                        {item.odds.toFixed(2)}
                       </span>
                     </div>
                     <button onClick={() => removeItem(item.bet.id)} className="absolute top-0 right-0 text-muted-foreground hover:text-destructive">

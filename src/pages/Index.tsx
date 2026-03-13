@@ -16,7 +16,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
+      <div className="min-h-screen gradient-primary flex items-center justify-center">
         <div className="h-10 w-10 border-4 border-primary-foreground border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -32,7 +32,7 @@ const Index = () => {
 
       {/* Promo banner */}
       <div className="max-w-[1600px] mx-auto px-3 pt-3">
-        <div className="gradient-banner rounded-xl p-4 flex items-center justify-between overflow-hidden relative">
+        <div className="gradient-banner rounded-xl p-4 flex items-center justify-between overflow-hidden relative card-shadow">
           <div className="relative z-10">
             <p className="text-primary-foreground/80 text-[11px] font-medium uppercase tracking-wider">Promocja</p>
             <h2 className="text-primary-foreground text-xl font-black">Multiboost 400%</h2>
@@ -49,11 +49,11 @@ const Index = () => {
 
         <main className="flex-1 min-w-0 px-3 py-3">
           <div className="flex items-center justify-end mb-2">
-            <Button onClick={() => setProposeOpen(true)} variant="outline" size="sm" className="text-[11px] font-semibold h-7 border-border">
+            <Button onClick={() => setProposeOpen(true)} size="sm" className="text-[11px] font-bold h-8 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition">
               <Lightbulb className="h-3 w-3 mr-1" /> Zaproponuj zakład
             </Button>
           </div>
-          <BetList selectedCategory={selectedCategory} />
+          <BetList selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
         </main>
 
         <CouponDrawer />

@@ -3,6 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface RankEntry {
   id: string;
@@ -14,16 +15,13 @@ interface RankEntry {
 
 export default function RankingsPage() {
   const [rankings, setRankings] = useState<RankEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
     const fetch = async () => {
-      // Get all profiles
       const { data: profiles } = await supabase.from('profiles').select('id, username');
-      if (!profiles) return;
-
-      // Get placed bets (we can only see our own due to RLS, so rankings may be limited)
-      // For a full ranking, we'd need a server function. For now, show profiles.
+      if (!profiles) { setLoading(false); return; }
       const entries: RankEntry[] = profiles.map((p: any) => ({
         id: p.id,
         username: p.username,
@@ -32,6 +30,7 @@ export default function RankingsPage() {
         total_bets: 0,
       }));
       setRankings(entries);
+      setLoading(false);
     };
     fetch();
   }, []);
@@ -41,7 +40,7 @@ export default function RankingsPage() {
       <Navbar />
       <div className="max-w-3xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-6">🏆 Rankingi</h1>
-        <div className="bg-card rounded-xl border overflow-hidden">
+        <div className="bg-card rounded-xl overflow-hidden card-shadow">
           <div className="grid grid-cols-5 gap-2 p-3 text-xs font-bold text-muted-foreground border-b">
             <span>#</span>
             <span>Gracz</span>
@@ -49,17 +48,33 @@ export default function RankingsPage() {
             <span className="text-right">Win rate</span>
             <span className="text-right">Zakłady</span>
           </div>
-          {rankings.map((r, i) => (
-            <div key={r.id} className={cn('grid grid-cols-5 gap-2 p-3 text-sm items-center', r.id === user?.id && 'bg-primary/10')}>
-              <span className="font-bold">{i + 1}</span>
-              <span className="font-medium truncate">{r.username}</span>
-              <span className="text-right font-bold">{r.total_profit.toFixed(0)} zł</span>
-              <span className="text-right">{r.win_rate.toFixed(1)}%</span>
-              <span className="text-right">{r.total_bets}</span>
+          {loading ? (
+            <div className="space-y-0">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="grid grid-cols-5 gap-2 p-3 items-center">
+                  <Skeleton className="h-4 w-6" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-12 ml-auto" />
+                  <Skeleton className="h-4 w-10 ml-auto" />
+                  <Skeleton className="h-4 w-8 ml-auto" />
+                </div>
+              ))}
             </div>
-          ))}
-          {rankings.length === 0 && (
-            <p className="text-center py-8 text-muted-foreground">Brak danych</p>
+          ) : (
+            <>
+              {rankings.map((r, i) => (
+                <div key={r.id} className={cn('grid grid-cols-5 gap-2 p-3 text-sm items-center border-b border-border last:border-0', r.id === user?.id && 'bg-primary/10')}>
+                  <span className="font-bold">{i + 1}</span>
+                  <span className="font-medium truncate">{r.username}</span>
+                  <span className="text-right font-bold">{r.total_profit.toFixed(0)} zł</span>
+                  <span className="text-right">{r.win_rate.toFixed(1)}%</span>
+                  <span className="text-right">{r.total_bets}</span>
+                </div>
+              ))}
+              {rankings.length === 0 && (
+                <p className="text-center py-8 text-muted-foreground">Brak danych</p>
+              )}
+            </>
           )}
         </div>
       </div>
