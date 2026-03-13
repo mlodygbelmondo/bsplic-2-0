@@ -41,13 +41,24 @@ export function ProposeBetModal({ open, onOpenChange, categories }: ProposeBetMo
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setOptions((previous) => {
-      const optionCount = OPTION_COUNT_BY_TYPE[betType];
-      return Array.from({ length: optionCount }, (_, index) => ({
-        name: previous[index]?.name ?? OPTION_DEFAULTS[betType][index] ?? '',
-        odds: previous[index]?.odds ?? (betType === '1x2' && index === 1 ? 3 : 2),
-      }));
-    });
+    if (hasFixedOptionCount(betType)) {
+      const optionCount = FIXED_OPTION_COUNTS[betType];
+      setOptions((previous) =>
+        Array.from({ length: optionCount }, (_, index) => ({
+          name: previous[index]?.name ?? OPTION_DEFAULTS[betType][index] ?? '',
+          odds: previous[index]?.odds ?? (betType === '1x2' && index === 1 ? 3 : 2),
+        })),
+      );
+    } else {
+      setOptions((previous) =>
+        previous.length >= 2
+          ? previous
+          : [
+              { name: '', odds: 2 },
+              { name: '', odds: 2 },
+            ],
+      );
+    }
   }, [betType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
