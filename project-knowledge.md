@@ -2,7 +2,7 @@
 
 ## App Purpose and Target Users
 
-- **Product:** BetBuddy Polska (internal codename in UI: BSPLIC 2.0)
+- **Product:** BSPLIC 2.0
 - **Domain:** Social sports betting simulation with coupons, rankings, badges, and admin moderation.
 - **Primary users:**
   - **Players** who browse bets, place single/AKO coupons, top up demo balance, and track profile progress.

@@ -1,10 +1,10 @@
-# BetBuddy Polska 2.0
+# BSPLIC 2.0
 
 Epiczna arena zakładów społecznościowych: live kupony, rankingi, propozycje od graczy i panel admina do pełnej kontroli rozgrywki.
 
 ## Co to jest?
 
-BetBuddy Polska to aplikacja webowa, w której:
+BSPLIC to aplikacja webowa, w której:
 
 - gracze obstawiają aktywne wydarzenia (single / AKO),
 - budują passy i odblokowują badge,
