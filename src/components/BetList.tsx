@@ -20,7 +20,7 @@ export function BetList({ selectedCategory }: BetListProps) {
     let query = supabase.from('bets').select('*').eq('is_active', true);
     if (selectedCategory) query = query.eq('category_id', selectedCategory);
     const { data } = await query;
-    if (data) setBets(data as Bet[]);
+    if (data) setBets(data as unknown as Bet[]);
     setLoading(false);
   };
 
