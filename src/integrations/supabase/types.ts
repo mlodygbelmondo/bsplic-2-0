@@ -286,6 +286,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_badge: {
+        Args: { p_badge_key: string; p_user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
