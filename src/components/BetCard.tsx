@@ -33,6 +33,10 @@ export function BetCard({ bet, category }: BetCardProps) {
   const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = (bet.options as unknown as BetOption[]) || [];
+  const showCompactHeaderOptions = bet.bet_type === '12' || bet.bet_type === '1x2';
+  const useTwoColumnMultiLayout = bet.bet_type === 'multi' && (options.length === 4 || options.length === 5);
+  const useThreeColumnMultiLayout = bet.bet_type === 'multi' && options.length >= 6;
+  const shouldCenterLastMultiOption = useTwoColumnMultiLayout && options.length % 2 === 1;
 
   const handleSelect = (option: BetOption) => {
     if (isExpired || !bet.is_active) return;
@@ -70,20 +74,41 @@ export function BetCard({ bet, category }: BetCardProps) {
 
       {/* Match content */}
       <div className="px-3 py-2.5">
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <span className="font-bold text-[13px] text-foreground text-right flex-1">{options[0]?.name || ''}</span>
-          <span className="text-[11px] text-muted-foreground font-medium px-1.5" title={bet.ends_at}>{endsAtLabel}</span>
-          <span className="font-bold text-[13px] text-foreground text-left flex-1">{options.length >= 2 ? options[options.length - 1]?.name : ''}</span>
-        </div>
+        {showCompactHeaderOptions ? (
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="font-bold text-[13px] text-foreground text-right flex-1">{options[0]?.name || ''}</span>
+            <span className="text-[11px] text-muted-foreground font-medium px-1.5" title={bet.ends_at}>{endsAtLabel}</span>
+            <span className="font-bold text-[13px] text-foreground text-left flex-1">{options.length >= 2 ? options[options.length - 1]?.name : ''}</span>
+          </div>
+        ) : (
+          <div className="mb-3 text-center">
+            <p className="font-bold text-base sm:text-lg text-foreground leading-tight">{bet.title}</p>
+            <p className="text-[11px] text-muted-foreground font-medium mt-1" title={bet.ends_at}>{endsAtLabel}</p>
+          </div>
+        )}
 
-        {(bet.bet_type === 'multi' || options.length > 3) && (
+        {(bet.bet_type !== 'multi' && options.length > 3) && (
           <p className="text-[12px] text-muted-foreground text-center mb-2">{bet.title}</p>
         )}
 
         {/* Odds buttons */}
-        <div className={cn('grid gap-1.5', options.length === 3 ? 'grid-cols-3' : options.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+        <div
+          className={cn(
+            'grid gap-1.5',
+            useTwoColumnMultiLayout
+              ? 'grid-cols-2'
+              : useThreeColumnMultiLayout
+                ? 'grid-cols-3'
+                : options.length === 3
+                  ? 'grid-cols-3'
+                  : options.length === 2
+                    ? 'grid-cols-2'
+                    : 'grid-cols-2 sm:grid-cols-3'
+          )}
+        >
           {options.map((opt, index) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
+            const isCenteredLastMultiOption = shouldCenterLastMultiOption && index === options.length - 1;
             return (
               <button
                 key={opt.name}
@@ -91,6 +116,7 @@ export function BetCard({ bet, category }: BetCardProps) {
                 disabled={isExpired || !bet.is_active}
                 className={cn(
                   'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
+                  isCenteredLastMultiOption && 'col-span-2 justify-self-center w-[48%]',
                   isSelected
                     ? 'odds-selected odds-chip-selected shadow-md'
                     : 'odds-yellow hover:brightness-105',

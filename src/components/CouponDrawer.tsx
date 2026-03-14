@@ -26,13 +26,6 @@ export function CouponDrawer() {
     });
   }, [items]);
 
-  useEffect(() => {
-    if (items.length === 0) {
-      setIsClosing(false);
-      setOpen(false);
-    }
-  }, [items.length]);
-
   const { placing, placeBet, potentialWin, effectiveTotalOdds, totalStake } = useCouponPlacement(
     activeTab,
     stake,
@@ -61,6 +54,8 @@ export function CouponDrawer() {
     }
     return 'zdarzeń';
   }, [items.length]);
+
+  const hasItems = items.length > 0;
 
   const drawerContent = (
     <div className="h-full min-h-0 flex flex-col">
@@ -213,18 +208,25 @@ export function CouponDrawer() {
 
   return (
     <>
-      {items.length > 0 && !open && (
+      {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="lg:hidden fixed bottom-4 right-4 z-[80] gradient-primary text-primary-foreground rounded-full h-16 w-16 shadow-2xl flex items-center justify-center"
+          className={cn(
+            'lg:hidden fixed bottom-4 right-4 z-[80] rounded-full h-16 w-16 shadow-2xl flex items-center justify-center transition-colors',
+            hasItems
+              ? 'gradient-primary text-primary-foreground'
+              : 'bg-card text-foreground border border-border'
+          )}
           style={{ WebkitTapHighlightColor: 'transparent' }}
           aria-label="Otwórz kupon"
         >
           <div className="relative">
             <Ticket className="h-6 w-6" />
-            <span className="absolute -top-2 -right-2 bg-card text-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow">
-              {items.length}
-            </span>
+            {hasItems && (
+              <span className="absolute -top-2 -right-2 bg-card text-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow">
+                {items.length}
+              </span>
+            )}
           </div>
         </button>
       )}

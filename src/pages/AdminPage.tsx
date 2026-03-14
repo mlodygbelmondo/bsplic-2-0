@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { Bet, BetOption, Category } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,11 @@ import confetti from 'canvas-confetti';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
+
+interface BetOptionDraft {
+  name: string;
+  odds: string;
+}
 
 export default function AdminPage() {
   const { isAdmin, loading } = useAuth();
@@ -111,7 +117,7 @@ function CreateBetTab() {
   const [betType, setBetType] = useState<'1x2' | '12' | 'multi'>('12');
   const [isLive, setIsLive] = useState(false);
   const [endsAt, setEndsAt] = useState('');
-  const [options, setOptions] = useState<BetOption[]>([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
+  const [options, setOptions] = useState<BetOptionDraft[]>([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -124,11 +130,11 @@ function CreateBetTab() {
   // Lock options based on bet type
   useEffect(() => {
     if (betType === '12') {
-      setOptions([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
+      setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
     } else if (betType === '1x2') {
-      setOptions([{ name: '1', odds: 2 }, { name: 'X', odds: 3 }, { name: '2', odds: 2 }]);
+      setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
     } else if (betType === 'multi' && options.length < 2) {
-      setOptions([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
+      setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
     }
   }, [betType]);
 
@@ -136,22 +142,54 @@ function CreateBetTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanedOptions = options.map((option) => ({
+      name: option.name.trim(),
+      oddsRaw: option.odds.trim(),
+    }));
+
+    if (cleanedOptions.some((option) => !option.name)) {
+      toast.error('Uzupełnij etykiety wszystkich opcji');
+      return;
+    }
+
+    if (cleanedOptions.length < 2) {
+      toast.error('Dodaj co najmniej 2 opcje');
+      return;
+    }
+
+    const invalidOddsIndex = cleanedOptions.findIndex((option) => {
+      if (!option.oddsRaw) return true;
+      const odds = Number(option.oddsRaw);
+      return !Number.isFinite(odds) || odds <= 0;
+    });
+
+    if (invalidOddsIndex !== -1) {
+      toast.error(`Podaj poprawny kurs dla opcji ${invalidOddsIndex + 1}`);
+      return;
+    }
+
+    const normalizedOptions: BetOption[] = cleanedOptions.map((option) => ({
+      name: option.name,
+      odds: Number(option.oddsRaw),
+    }));
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from('bets').insert([{
         title,
         category_id: categoryId || null,
         bet_type: betType,
-        options: options.filter(o => o.name.trim()) as unknown as any,
+        options: normalizedOptions as unknown as any,
         ends_at: new Date(endsAt).toISOString(),
         is_live: isLive,
       }]);
       if (error) throw error;
       toast.success('Zakład utworzony!');
       setTitle('');
-      if (betType === '12') setOptions([{ name: '1', odds: 2 }, { name: '2', odds: 2 }]);
-      else if (betType === '1x2') setOptions([{ name: '1', odds: 2 }, { name: 'X', odds: 3 }, { name: '2', odds: 2 }]);
-      else setOptions([{ name: '', odds: 2 }, { name: '', odds: 2 }]);
+      if (betType === '12') setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
+      else if (betType === '1x2') setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
+      else setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -207,14 +245,14 @@ function CreateBetTab() {
               placeholder={`Opcja ${i+1}`}
               className="flex-1"
             />
-            <Input type="number" step="0.01" min="1" value={opt.odds} onChange={e => { const n = [...options]; n[i].odds = Number(e.target.value); setOptions(n); }} className="w-24" />
+            <Input type="number" step="0.01" min="1" value={opt.odds} onChange={e => { const n = [...options]; n[i].odds = e.target.value; setOptions(n); }} className="w-24" />
             {!hasFixedOptionCount && options.length > 2 && (
               <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))}><X className="h-4 w-4 text-muted-foreground" /></button>
             )}
           </div>
         ))}
         {!hasFixedOptionCount && (
-          <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: 2 }])}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setOptions([...options, { name: '', odds: '2' }])}>
             <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
           </Button>
         )}
@@ -227,39 +265,206 @@ function CreateBetTab() {
 }
 
 function ManageBetsTab() {
+  type EditableBetType = '1x2' | '12' | 'multi';
+
+  interface BetEditor {
+    id: string;
+    title: string;
+    categoryId: string;
+    betType: EditableBetType;
+    options: BetOption[];
+    endsAt: string;
+    isLive: boolean;
+    isActive: boolean;
+  }
+
+  const NO_CATEGORY_VALUE = '__none__';
   const [bets, setBets] = useState<Bet[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [resolveModal, setResolveModal] = useState<Bet | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [editing, setEditing] = useState<BetEditor | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof (error as { message: unknown }).message === 'string'
+    ) {
+      return (error as { message: string }).message;
+    }
+    return fallback;
+  };
+
+  const toInputDateTime = (dateValue: string) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return offsetDate.toISOString().slice(0, 16);
+  };
+
+  const normalizeType = (value: string): EditableBetType => {
+    if (value === '1x2' || value === 'multi') return value;
+    return '12';
+  };
+
+  const normalizeOptions = (options: unknown): BetOption[] => {
+    if (!Array.isArray(options)) return [];
+    return options.map((option, index) => ({
+      name: typeof (option as BetOption)?.name === 'string' ? (option as BetOption).name : `Opcja ${index + 1}`,
+      odds: Number((option as BetOption)?.odds) > 0 ? Number((option as BetOption).odds) : 1,
+    }));
+  };
+
+  const lockOptionsByType = (type: EditableBetType, current: BetOption[]) => {
+    if (type === '12') {
+      return [
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+        { name: current[1]?.name || '2', odds: current[1]?.odds || 2 },
+      ];
+    }
+
+    if (type === '1x2') {
+      return [
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+        { name: current[1]?.name || 'X', odds: current[1]?.odds || 3 },
+        { name: current[2]?.name || '2', odds: current[2]?.odds || 2 },
+      ];
+    }
+
+    if (current.length >= 2) return current;
+    return [
+      { name: '', odds: 2 },
+      { name: '', odds: 2 },
+    ];
+  };
+
   const fetchBets = async () => {
-    const { data } = await supabase.from('bets').select('*').order('created_at', { ascending: false });
-    if (data) setBets(data as unknown as Bet[]);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const [{ data: betRows, error: betError }, { data: categoryRows, error: categoryError }] = await Promise.all([
+        supabase.from('bets').select('*').order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').order('sort_order'),
+      ]);
+
+      if (betError) throw betError;
+      if (categoryError) throw categoryError;
+
+      setBets((betRows as unknown as Bet[]) || []);
+      setCategories((categoryRows as Category[]) || []);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się pobrać zakładów'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchBets(); }, []);
 
+  const openEditor = (bet: Bet) => {
+    const betType = normalizeType(bet.bet_type);
+    const options = lockOptionsByType(betType, normalizeOptions(bet.options));
+    setEditing({
+      id: bet.id,
+      title: bet.title,
+      categoryId: bet.category_id || '',
+      betType,
+      options,
+      endsAt: toInputDateTime(bet.ends_at),
+      isLive: Boolean(bet.is_live),
+      isActive: Boolean(bet.is_active),
+    });
+    setEditorOpen(true);
+  };
+
+  const updateBet = async () => {
+    if (!editing) return;
+
+    if (!editing.title.trim()) {
+      toast.error('Tytuł jest wymagany');
+      return;
+    }
+
+    const cleanedOptions = editing.options.map((option) => ({
+      name: option.name.trim(),
+      odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
+    }));
+
+    if (cleanedOptions.some((option) => !option.name)) {
+      toast.error('Uzupełnij etykiety wszystkich opcji');
+      return;
+    }
+
+    if (cleanedOptions.length < 2) {
+      toast.error('Zakład musi mieć minimum 2 opcje');
+      return;
+    }
+
+    const endsAtDate = new Date(editing.endsAt);
+    if (Number.isNaN(endsAtDate.getTime())) {
+      toast.error('Wybierz poprawną datę zakończenia');
+      return;
+    }
+
+    setEditorLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bets')
+        .update({
+          title: editing.title.trim(),
+          category_id: editing.categoryId || null,
+          bet_type: editing.betType,
+          options: cleanedOptions as Json,
+          ends_at: endsAtDate.toISOString(),
+          is_live: editing.isLive,
+          is_active: editing.isActive,
+        })
+        .eq('id', editing.id);
+
+      if (error) throw error;
+
+      toast.success('Zakład zaktualizowany');
+      setEditorOpen(false);
+      setEditing(null);
+      fetchBets();
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się zaktualizować zakładu'));
+    } finally {
+      setEditorLoading(false);
+    }
+  };
+
   const resolveBet = async (bet: Bet, winningOption: string) => {
-    await supabase.from('bets').update({ winning_option: winningOption, is_active: false }).eq('id', bet.id);
-    const { data: placedBets } = await supabase.from('placed_bets').select('*').eq('bet_id', bet.id);
-    if (placedBets) {
-      for (const pb of placedBets) {
-        const won = pb.selected_option === winningOption;
-        const payout = won ? Number(pb.stake) * Number(pb.odds_at_time) : 0;
-        await supabase.from('placed_bets').update({ result: won ? 'won' : 'lost', payout }).eq('id', pb.id);
-        if (won) {
-          const { data: profile } = await supabase.from('profiles').select('balance').eq('id', pb.user_id).single();
-          if (profile) {
-            await supabase.from('profiles').update({ balance: Number(profile.balance) + payout }).eq('id', pb.user_id);
+    try {
+      await supabase.from('bets').update({ winning_option: winningOption, is_active: false }).eq('id', bet.id);
+      const { data: placedBets } = await supabase.from('placed_bets').select('*').eq('bet_id', bet.id);
+      if (placedBets) {
+        for (const pb of placedBets) {
+          if (pb.result === 'won' || pb.result === 'lost') continue;
+          const won = pb.selected_option === winningOption;
+          const payout = won ? Number(pb.stake) * Number(pb.odds_at_time) : 0;
+          await supabase.from('placed_bets').update({ result: won ? 'won' : 'lost', payout }).eq('id', pb.id);
+          if (won) {
+            const { data: profile } = await supabase.from('profiles').select('balance').eq('id', pb.user_id).single();
+            if (profile) {
+              await supabase.from('profiles').update({ balance: Number(profile.balance) + payout }).eq('id', pb.user_id);
+            }
           }
         }
       }
+      toast.success('Wynik ogłoszony!');
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      setResolveModal(null);
+      fetchBets();
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się ogłosić wyniku'));
     }
-    toast.success('Wynik ogłoszony!');
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    setResolveModal(null);
-    fetchBets();
   };
+
+  const hasFixedOptionCount = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
 
   return (
     <>
@@ -296,11 +501,16 @@ function ManageBetsTab() {
                       )}
                     </td>
                     <td className="p-3">
-                      {!bet.winning_option && (
-                        <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
-                          <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEditor(bet)}>
+                          Edytuj
                         </Button>
-                      )}
+                        {!bet.winning_option && (
+                          <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
+                            <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -309,6 +519,197 @@ function ManageBetsTab() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={editorOpen}
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          if (!open) setEditing(null);
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Edytuj zakład</DialogTitle>
+          </DialogHeader>
+
+          {editing && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tytuł</Label>
+                <Input
+                  value={editing.title}
+                  onChange={(event) => setEditing((prev) => (prev ? { ...prev, title: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Kategoria</Label>
+                  <Select
+                    value={editing.categoryId || NO_CATEGORY_VALUE}
+                    onValueChange={(value) =>
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              categoryId: value === NO_CATEGORY_VALUE ? '' : value,
+                            }
+                          : prev
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wybierz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_CATEGORY_VALUE}>Brak kategorii</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.emoji} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Typ</Label>
+                  <Select
+                    value={editing.betType}
+                    onValueChange={(value: EditableBetType) =>
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              betType: value,
+                              options: lockOptionsByType(value, prev.options),
+                            }
+                          : prev
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">1/2</SelectItem>
+                      <SelectItem value="1x2">1X2</SelectItem>
+                      <SelectItem value="multi">Multi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Data zakończenia</Label>
+                <Input
+                  type="datetime-local"
+                  value={editing.endsAt}
+                  onChange={(event) => setEditing((prev) => (prev ? { ...prev, endsAt: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <Label htmlFor="manage-bet-live">Na żywo</Label>
+                  <Switch
+                    id="manage-bet-live"
+                    checked={editing.isLive}
+                    onCheckedChange={(checked) => setEditing((prev) => (prev ? { ...prev, isLive: checked } : prev))}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <Label htmlFor="manage-bet-active">Aktywny</Label>
+                  <Switch
+                    id="manage-bet-active"
+                    checked={editing.isActive}
+                    onCheckedChange={(checked) => setEditing((prev) => (prev ? { ...prev, isActive: checked } : prev))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Opcje {hasFixedOptionCount && <span className="text-xs text-muted-foreground ml-1">(stała liczba opcji dla typu)</span>}
+                </Label>
+
+                {editing.options.map((option, index) => (
+                  <div key={`${editing.id}-${index}`} className="flex gap-2 items-center">
+                    <Input
+                      value={option.name}
+                      onChange={(event) =>
+                        setEditing((prev) => {
+                          if (!prev) return prev;
+                          const nextOptions = [...prev.options];
+                          nextOptions[index].name = event.target.value;
+                          return { ...prev, options: nextOptions };
+                        })
+                      }
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      value={option.odds}
+                      onChange={(event) =>
+                        setEditing((prev) => {
+                          if (!prev) return prev;
+                          const nextOptions = [...prev.options];
+                          nextOptions[index].odds = Number(event.target.value);
+                          return { ...prev, options: nextOptions };
+                        })
+                      }
+                      className="w-24"
+                    />
+                    {!hasFixedOptionCount && editing.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditing((prev) => {
+                            if (!prev) return prev;
+                            return {
+                              ...prev,
+                              options: prev.options.filter((_, optionIndex) => optionIndex !== index),
+                            };
+                          })
+                        }
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {!hasFixedOptionCount && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setEditing((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              options: [...prev.options, { name: '', odds: 2 }],
+                            }
+                          : prev
+                      )
+                    }
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
+                  </Button>
+                )}
+              </div>
+
+              <Button onClick={updateBet} disabled={editorLoading} className="w-full gradient-primary text-primary-foreground font-bold">
+                {editorLoading ? 'Zapisywanie...' : 'Zapisz zmiany'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {resolveModal && (
         <Dialog open={!!resolveModal} onOpenChange={() => setResolveModal(null)}>
