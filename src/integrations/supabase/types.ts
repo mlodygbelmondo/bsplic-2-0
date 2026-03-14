@@ -291,38 +291,12 @@ export type Database = {
         Returns: undefined
       }
       backfill_streaks_and_badges: { Args: never; Returns: undefined }
-      get_user_rankings: {
-        Args: Record<string, never>
-        Returns: Array<{
-          id: string
-          username: string
-          total_bets: number
-          won_bets: number
-          lost_bets: number
-          win_rate: number
-          total_profit: number
-          balance: number
-        }>
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
-      }
-      place_bet_secure: {
-        Args: {
-          p_user_id: string
-          p_total_odds: number
-          p_stake: number
-          p_items: Json
-        }
-        Returns: string
-      }
-      secure_daily_topup: {
-        Args: { p_user_id: string }
-        Returns: number
       }
     }
     Enums: {
