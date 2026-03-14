@@ -23,7 +23,7 @@ export async function placeCouponSecure({ userId, totalOdds, stake, items }: Pla
     stake: Math.round(item.stake * 100) / 100,
   }));
 
-  const { data, error } = await supabase.rpc('place_bet_secure', {
+  const { data, error } = await supabase.rpc('place_bet_secure' as any, {
     p_user_id: userId,
     p_total_odds: totalOdds,
     p_stake: roundedStake,
@@ -34,5 +34,5 @@ export async function placeCouponSecure({ userId, totalOdds, stake, items }: Pla
     throw new Error(error.message);
   }
 
-  return data as string;
+  return data as unknown as string;
 }
