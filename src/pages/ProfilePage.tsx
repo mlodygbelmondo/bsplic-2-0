@@ -57,7 +57,7 @@ export default function ProfilePage() {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Saldo</p>
-              <p className="text-2xl font-bold text-primary">{Number(profile.balance).toFixed(0)} zł</p>
+              <p className="text-2xl font-bold text-primary">{Number(profile.balance).toFixed(2)} zł</p>
             </div>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default function ProfilePage() {
             { label: 'Wygrane', value: wins },
             { label: 'Przegrane', value: losses },
             { label: 'Win rate', value: `${winRate}%` },
-            { label: 'Profit', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)} zł` },
+            { label: 'Profit', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)} zł` },
           ].map((stat) => (
             <div key={stat.label} className="bg-card rounded-lg p-3 card-shadow text-center">
               <p className="text-xs text-muted-foreground">{stat.label}</p>
@@ -124,7 +124,7 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div className="text-right ml-3">
-                      <p className="font-bold">{Number(placedBet.stake).toFixed(0)} zł</p>
+                      <p className="font-bold">{Number(placedBet.stake).toFixed(2)} zł</p>
                       <p
                         className={cn(
                           'text-xs font-medium',
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                         )}
                       >
                         {placedBet.result === 'won'
-                          ? `+${Number(placedBet.payout).toFixed(0)} zł`
+                          ? `+${Number(placedBet.payout).toFixed(2)} zł`
                           : placedBet.result === 'lost'
                             ? 'Przegrana'
                             : 'W toku'}

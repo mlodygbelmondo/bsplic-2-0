@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 interface PlaceCouponParams {
   userId: string;
@@ -12,37 +13,26 @@ interface PlaceCouponParams {
   }>;
 }
 
-export async function placeCoupon({ userId, totalOdds, stake, items }: PlaceCouponParams) {
-  const { data: coupon, error: couponError } = await supabase
-    .from('coupons')
-    .insert({ user_id: userId, total_odds: totalOdds, stake, status: 'pending' })
-    .select()
-    .single();
+export async function placeCouponSecure({ userId, totalOdds, stake, items }: PlaceCouponParams): Promise<string> {
+  const roundedStake = Math.round(stake * 100) / 100;
 
-  if (couponError) {
-    throw new Error(couponError.message);
-  }
-
-  const placedBets = items.map((item) => ({
-    user_id: userId,
-    bet_id: item.betId,
-    selected_option: item.selectedOption,
-    stake: item.stake,
-    odds_at_time: item.odds,
-    coupon_id: coupon.id,
+  const p_items = items.map((item) => ({
+    betId: item.betId,
+    selectedOption: item.selectedOption,
+    odds: item.odds,
+    stake: Math.round(item.stake * 100) / 100,
   }));
 
-  const { error: betsError } = await supabase.from('placed_bets').insert(placedBets);
-
-  if (betsError) {
-    throw new Error(betsError.message);
-  }
-}
-
-export async function updateUserBalance(userId: string, newBalance: number) {
-  const { error } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', userId);
+  const { data, error } = await supabase.rpc('place_bet_secure', {
+    p_user_id: userId,
+    p_total_odds: totalOdds,
+    p_stake: roundedStake,
+    p_items: p_items as unknown as Json,
+  });
 
   if (error) {
     throw new Error(error.message);
   }
+
+  return data as string;
 }

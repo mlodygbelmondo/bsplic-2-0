@@ -234,9 +234,7 @@ function CreateBetTab() {
         <Label>Na żywo 🔴</Label>
       </div>
       <div className="space-y-2">
-        <Label>
-          Opcje {hasFixedOptionCount && <span className="text-muted-foreground text-xs ml-1">(stała liczba opcji dla {betType})</span>}
-        </Label>
+        <Label>Opcje</Label>
         {options.map((opt, i) => (
           <div key={i} className="flex gap-2 items-center">
             <Input
@@ -286,6 +284,7 @@ function ManageBetsTab() {
   const [editorLoading, setEditorLoading] = useState(false);
   const [editing, setEditing] = useState<BetEditor | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (
@@ -464,6 +463,33 @@ function ManageBetsTab() {
     }
   };
 
+  const deleteBet = async (bet: Bet) => {
+    const shouldDelete = window.confirm(`Czy na pewno chcesz usunąć zakład "${bet.title}"?`);
+    if (!shouldDelete) return;
+
+    setDeletingBetId(bet.id);
+    try {
+      const { error } = await supabase.from('bets').delete().eq('id', bet.id);
+      if (error) throw error;
+
+      if (editing?.id === bet.id) {
+        setEditorOpen(false);
+        setEditing(null);
+      }
+
+      if (resolveModal?.id === bet.id) {
+        setResolveModal(null);
+      }
+
+      toast.success('Zakład usunięty');
+      fetchBets();
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się usunąć zakładu'));
+    } finally {
+      setDeletingBetId(null);
+    }
+  };
+
   const hasFixedOptionCount = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
 
   return (
@@ -510,6 +536,14 @@ function ManageBetsTab() {
                             <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteBet(bet)}
+                          disabled={deletingBetId === bet.id}
+                        >
+                          {deletingBetId === bet.id ? 'Usuwanie...' : 'Usuń'}
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -629,9 +663,7 @@ function ManageBetsTab() {
               </div>
 
               <div className="space-y-2">
-                <Label>
-                  Opcje {hasFixedOptionCount && <span className="text-xs text-muted-foreground ml-1">(stała liczba opcji dla typu)</span>}
-                </Label>
+                <Label>Opcje</Label>
 
                 {editing.options.map((option, index) => (
                   <div key={`${editing.id}-${index}`} className="flex gap-2 items-center">
@@ -1051,9 +1083,7 @@ function ProposalsTab() {
               </div>
 
               <div className="space-y-2">
-                <Label>
-                  Opcje {hasFixedOptionCount && <span className="text-xs text-muted-foreground ml-1">(stała liczba opcji dla typu)</span>}
-                </Label>
+                <Label>Opcje</Label>
 
                 {editing.options.map((option, index) => (
                   <div key={`${editing.id}-${index}`} className="flex gap-2 items-center">

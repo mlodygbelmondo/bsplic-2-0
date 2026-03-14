@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
-import { placeCoupon, updateUserBalance } from '@/features/home/api/coupons';
+import { placeCouponSecure } from '@/features/home/api/coupons';
 import { toast } from 'sonner';
 
 interface UseCouponPlacementResult {
@@ -12,9 +12,14 @@ interface UseCouponPlacementResult {
   totalStake: number;
 }
 
-function parseStake(value: string) {
+function parseStake(value: string): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.round(parsed * 100) / 100;
+}
+
+function validateStakePrecision(value: number): boolean {
+  return value === Math.round(value * 100) / 100;
 }
 
 export function useCouponPlacement(
@@ -32,7 +37,10 @@ export function useCouponPlacement(
       return parseStake(stake);
     }
 
-    return items.reduce((sum, item) => sum + parseStake(singleStakes[item.bet.id] || ''), 0);
+    return items.reduce((sum, item) => {
+      const itemStake = parseStake(singleStakes[item.bet.id] || '');
+      return Math.round((sum + itemStake) * 100) / 100;
+    }, 0);
   }, [activeTab, items, singleStakes, stake]);
 
   const effectiveTotalOdds = useMemo(() => {
@@ -44,11 +52,14 @@ export function useCouponPlacement(
 
   const potentialWin = useMemo(() => {
     if (activeTab === 'ako') {
-      return parseStake(stake) * effectiveTotalOdds;
+      return Math.round(parseStake(stake) * effectiveTotalOdds * 100) / 100;
     }
 
     return items.reduce(
-      (sum, item) => sum + parseStake(singleStakes[item.bet.id] || '') * item.odds,
+      (sum, item) => {
+        const win = parseStake(singleStakes[item.bet.id] || '') * item.odds;
+        return Math.round((sum + win) * 100) / 100;
+      },
       0
     );
   }, [activeTab, effectiveTotalOdds, items, singleStakes, stake]);
@@ -59,23 +70,51 @@ export function useCouponPlacement(
       return;
     }
 
+    if (items.length === 0) {
+      toast.error('Dodaj co najmniej jedno zdarzenie do kuponu');
+      return;
+    }
+
     if (activeTab === 'single') {
-      const missingStake = items.some((item) => parseStake(singleStakes[item.bet.id] || '') <= 0);
-      if (missingStake) {
-        toast.error('Uzupełnij stawkę dla każdego zakładu');
+      for (const item of items) {
+        const itemStake = parseStake(singleStakes[item.bet.id] || '');
+        if (itemStake <= 0) {
+          toast.error('Uzupełnij stawkę dla każdego zakładu');
+          return;
+        }
+        if (!validateStakePrecision(itemStake)) {
+          toast.error('Stawka może mieć maksymalnie 2 miejsca po przecinku');
+          return;
+        }
+      }
+    } else {
+      const akoStake = parseStake(stake);
+      if (akoStake <= 0) {
+        toast.error('Stawka musi być większa od 0');
+        return;
+      }
+      if (!validateStakePrecision(akoStake)) {
+        toast.error('Stawka może mieć maksymalnie 2 miejsca po przecinku');
         return;
       }
     }
 
-    if (totalStake <= 0 || totalStake > Number(profile.balance)) {
-      toast.error('Niewystarczające środki');
+    if (totalStake <= 0) {
+      toast.error('Stawka musi być większa od 0');
+      return;
+    }
+
+    const balance = Number(profile.balance);
+
+    if (totalStake > balance) {
+      toast.error(`Niewystarczające środki (saldo: ${balance.toFixed(2)} zł)`);
       return;
     }
 
     setPlacing(true);
 
     try {
-      await placeCoupon({
+      await placeCouponSecure({
         userId: user.id,
         totalOdds: activeTab === 'ako' ? effectiveTotalOdds : 1,
         stake: totalStake,
@@ -83,15 +122,14 @@ export function useCouponPlacement(
           betId: item.bet.id,
           selectedOption: item.selectedOption,
           odds: item.odds,
-          stake: activeTab === 'single' ? parseStake(singleStakes[item.bet.id] || '') : totalStake / items.length,
+          stake: activeTab === 'single' ? parseStake(singleStakes[item.bet.id] || '') : Math.round((totalStake / items.length) * 100) / 100,
         })),
       });
 
-      await updateUserBalance(user.id, Number(profile.balance) - totalStake);
       await refreshProfile();
       clearCoupon();
       onSuccess();
-      toast.success('🎰 Kupon postawiony pomyślnie!');
+      toast.success('Kupon postawiony pomyślnie!');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Nie udało się postawić kuponu';
       toast.error(message);

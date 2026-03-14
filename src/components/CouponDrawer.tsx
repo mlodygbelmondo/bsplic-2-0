@@ -12,7 +12,7 @@ export function CouponDrawer() {
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
-  const stakePresets = ['10', '20', '50', '100'];
+  const stakePresets = ['5', '10', '25', '50'];
 
   useEffect(() => {
     setSingleStakes((previous) => {
@@ -130,7 +130,8 @@ export function CouponDrawer() {
                         <span className="text-[11px] text-muted-foreground">Stawka</span>
                         <Input
                           type="number"
-                          min={1}
+                          min={0.01}
+                          step={0.01}
                           value={singleStakes[item.bet.id] ?? ''}
                           onChange={(event) =>
                             setSingleStakes((previous) => ({
@@ -138,8 +139,8 @@ export function CouponDrawer() {
                               [item.bet.id]: event.target.value,
                             }))
                           }
-                          className="h-8 text-[12px] font-semibold text-center bg-muted border-border"
-                          placeholder="0"
+                          className="h-8 text-base md:text-[12px] font-semibold text-center bg-muted border-border"
+                          placeholder="0.00"
                         />
                         <span className="text-[11px] text-muted-foreground">zł</span>
                       </div>
@@ -171,8 +172,9 @@ export function CouponDrawer() {
               type="number"
               value={stake}
               onChange={(event) => setStake(event.target.value)}
-              min={1}
-              className="text-center font-bold text-[13px] h-9 bg-muted border-border"
+              min={0.01}
+              step={0.01}
+              className="text-center font-bold text-base md:text-[13px] h-9 bg-muted border-border"
               placeholder="Stawka (zł)"
             />
             <div className="grid grid-cols-4 gap-1.5">

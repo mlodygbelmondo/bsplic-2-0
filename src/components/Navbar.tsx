@@ -36,24 +36,18 @@ export function Navbar() {
 
   const handleTopup = async () => {
     if (!user || !profile) return;
-    if (!canTopup()) {
-      toast.error("Już doładowano dzisiaj. Wróć jutro!");
-      return;
-    }
     setTopupLoading(true);
     try {
-      await supabase
-        .from("profiles")
-        .update({
-          balance: Number(profile.balance) + 100,
-          last_topup_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+      const { data, error } = await supabase.rpc('secure_daily_topup');
+      if (error) {
+        toast.error(error.message || 'Błąd doładowania');
+        return;
+      }
       await refreshProfile();
-      toast.success("💰 Doładowano 100 zł. Wróć jutro po więcej!");
+      toast.success('💰 Doładowano 100 zł. Wróć jutro po więcej!');
       setTopupOpen(false);
     } catch {
-      toast.error("Błąd doładowania");
+      toast.error('Błąd doładowania');
     } finally {
       setTopupLoading(false);
     }
@@ -127,7 +121,7 @@ export function Navbar() {
                 }
               >
                 <Wallet className="h-3 w-3" />
-                {Number(profile.balance).toFixed(0)} zł
+                {Number(profile.balance).toFixed(2)} zł
               </button>
             )}
             {profile && (
