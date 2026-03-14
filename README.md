@@ -12,7 +12,7 @@ BSPLIC is a web app where:
 - admins moderate, publish, and settle outcomes.
 
 This is not plain CRUD. It is a betting feed + realtime updates + wallet economy + gameplay loop.
-
+ 
 ## Core Features
 
 - **Home betting feed** with categories and `Popularne` / `Najnowsze` sorting
