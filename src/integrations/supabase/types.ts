@@ -291,6 +291,18 @@ export type Database = {
         Returns: undefined
       }
       backfill_streaks_and_badges: { Args: never; Returns: undefined }
+      get_public_profile: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_social_coupon_feed: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_user_coupon_history: {
+        Args: { p_user_id: string; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       get_user_rankings: {
         Args: Record<PropertyKey, never>
         Returns: {

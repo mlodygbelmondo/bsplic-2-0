@@ -43,8 +43,8 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       setEmail("");
       setPassword("");
       setUsername("");
-    } catch (err: any) {
-      toast.error(err.message || "Wystąpił błąd");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
     } finally {
       setLoading(false);
     }

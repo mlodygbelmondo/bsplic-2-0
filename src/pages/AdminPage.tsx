@@ -19,6 +19,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message;
+  }
+  return fallback;
+};
+
 interface BetOptionDraft {
   name: string;
   odds: string;
@@ -180,7 +192,7 @@ function CreateBetTab() {
         title,
         category_id: categoryId || null,
         bet_type: betType,
-        options: normalizedOptions as unknown as any,
+        options: normalizedOptions as unknown as Json,
         ends_at: new Date(endsAt).toISOString(),
         is_live: isLive,
       }]);
@@ -190,8 +202,8 @@ function CreateBetTab() {
       if (betType === '12') setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
       else if (betType === '1x2') setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
       else setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się utworzyć zakładu'));
     } finally {
       setSubmitting(false);
     }
@@ -215,7 +227,7 @@ function CreateBetTab() {
         </div>
         <div className="space-y-2">
           <Label>Typ</Label>
-          <Select value={betType} onValueChange={(v: any) => setBetType(v)}>
+          <Select value={betType} onValueChange={(v: string) => setBetType(v as '1x2' | '12' | 'multi')}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="12">1/2</SelectItem>
@@ -285,18 +297,6 @@ function ManageBetsTab() {
   const [editing, setEditing] = useState<BetEditor | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
-
-  const getErrorMessage = (error: unknown, fallback: string) => {
-    if (
-      typeof error === 'object' &&
-      error !== null &&
-      'message' in error &&
-      typeof (error as { message: unknown }).message === 'string'
-    ) {
-      return (error as { message: string }).message;
-    }
-    return fallback;
-  };
 
   const toInputDateTime = (dateValue: string) => {
     const date = new Date(dateValue);
@@ -803,7 +803,7 @@ function ProposalsTab() {
     return '12';
   };
 
-  const normalizeOptions = (options: any): BetOption[] => {
+  const normalizeOptions = (options: unknown): BetOption[] => {
     if (!Array.isArray(options)) return [];
     return options.map((option, index) => ({
       name: typeof option?.name === 'string' ? option.name : `Opcja ${index + 1}`,
@@ -845,7 +845,7 @@ function ProposalsTab() {
       if (proposalError) throw proposalError;
       setCategories((categoryRows as Category[]) || []);
 
-      const normalized = (proposalRows || []).map((proposal: any) => ({
+      const normalized = (proposalRows || []).map((proposal) => ({
         id: proposal.id,
         user_id: proposal.user_id,
         title: proposal.title,
@@ -858,7 +858,7 @@ function ProposalsTab() {
       const uniqueUserIds = [...new Set(normalized.map((proposal) => proposal.user_id))];
       if (uniqueUserIds.length > 0) {
         const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', uniqueUserIds);
-        const userMap = new Map((profiles || []).map((profile: any) => [profile.id, profile.username]));
+        const userMap = new Map((profiles || []).map((profile) => [profile.id, profile.username]));
         setProposals(
           normalized.map((proposal) => ({
             ...proposal,
@@ -868,8 +868,8 @@ function ProposalsTab() {
       } else {
         setProposals(normalized);
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Nie udało się pobrać propozycji');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się pobrać propozycji'));
     } finally {
       setLoading(false);
     }
@@ -925,7 +925,7 @@ function ProposalsTab() {
           title: editing.title.trim(),
           category_id: editing.categoryId || null,
           bet_type: editing.betType,
-          options: cleanedOptions as any,
+          options: cleanedOptions as Json,
           ends_at: endsAtDate.toISOString(),
         },
       ]);
@@ -939,7 +939,7 @@ function ProposalsTab() {
           title: editing.title.trim(),
           category_id: editing.categoryId || null,
           bet_type: editing.betType,
-          options: cleanedOptions as any,
+          options: cleanedOptions as Json,
         })
         .eq('id', editing.id);
 
@@ -949,8 +949,8 @@ function ProposalsTab() {
       setEditorOpen(false);
       setEditing(null);
       fetchProposals();
-    } catch (err: any) {
-      toast.error(err.message || 'Nie udało się zaakceptować propozycji');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'Nie udało się zaakceptować propozycji'));
     } finally {
       setEditorLoading(false);
     }

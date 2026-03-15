@@ -30,8 +30,8 @@ export function LoginPage() {
           toast.success("Konto utworzone i zalogowano automatycznie!");
         }
       }
-    } catch (err: any) {
-      toast.error(err.message || "Wystąpił błąd");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
     } finally {
       setLoading(false);
     }
@@ -47,8 +47,8 @@ export function LoginPage() {
     try {
       await resetPassword(email);
       toast.success("Link do resetowania hasła został wysłany na Twój e-mail!");
-    } catch (err: any) {
-      toast.error(err.message || "Wystąpił błąd");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
     } finally {
       setLoading(false);
     }

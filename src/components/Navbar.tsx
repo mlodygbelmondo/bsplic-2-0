@@ -64,6 +64,7 @@ export function Navbar() {
 
   const navLinks = [
     { to: "/", label: "Zakłady sportowe" },
+    { to: "/social", label: "Social" },
     { to: "/rankings", label: "Rankingi" },
   ];
 
@@ -94,6 +95,17 @@ export function Navbar() {
                 )}
               >
                 Zakłady sportowe
+              </Link>
+              <Link
+                to="/social"
+                className={cn(
+                  "text-[13px] font-semibold hover:text-primary-foreground transition-colors",
+                  isActivePath("/social")
+                    ? "text-primary-foreground"
+                    : "text-primary-foreground/70",
+                )}
+              >
+                Social
               </Link>
               <Link
                 to="/rankings"

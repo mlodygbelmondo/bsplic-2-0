@@ -87,6 +87,44 @@ export interface CouponItem {
   odds: number;
 }
 
+export interface CouponLeg {
+  id: string;
+  selected_option: string;
+  odds_at_time: number;
+  leg_stake?: number;
+  leg_payout?: number;
+  result: 'pending' | 'won' | 'lost';
+  bet_title: string | null;
+}
+
+export interface CouponHistoryEntry {
+  id: string;
+  total_odds: number;
+  stake: number;
+  payout: number;
+  status: 'pending' | 'won' | 'lost';
+  created_at: string;
+  legs: CouponLeg[] | null;
+}
+
+export interface SocialCouponEntry extends CouponHistoryEntry {
+  user_id: string;
+  username: string;
+}
+
+export interface PublicProfile {
+  id: string;
+  username: string;
+  current_streak: number;
+  longest_streak: number;
+  created_at: string;
+  total_bets: number;
+  won_bets: number;
+  lost_bets: number;
+  win_rate: number;
+  total_profit: number;
+}
+
 export const BADGE_DEFINITIONS: Record<string, { emoji: string; name: string; description: string }> = {
   debiutant: { emoji: '🎰', name: 'Debiutant', description: 'Pierwszy postawiony zakład' },
   trafiony: { emoji: '🎯', name: 'Trafiony zakład', description: 'Pierwszy wygrany zakład' },
