@@ -50,4 +50,35 @@ describe('BetCard', () => {
 
     expect(screen.getByText('Legia vs Lech')).toBeInTheDocument();
   });
+
+  it('shows in-progress badge and keeps options disabled when event already started', () => {
+    const bet = createBet({
+      ends_at: new Date(Date.now() - 60_000).toISOString(),
+      winning_option: null,
+    });
+
+    render(
+      <CouponProvider>
+        <BetCard bet={bet} />
+      </CouponProvider>,
+    );
+
+    expect(screen.getByText('W trakcie')).toBeInTheDocument();
+    expect(screen.getAllByRole('button').every((button) => button.hasAttribute('disabled'))).toBe(true);
+  });
+
+  it('hides in-progress badge for resolved events', () => {
+    const bet = createBet({
+      ends_at: new Date(Date.now() - 60_000).toISOString(),
+      winning_option: 'Legia',
+    });
+
+    render(
+      <CouponProvider>
+        <BetCard bet={bet} />
+      </CouponProvider>,
+    );
+
+    expect(screen.queryByText('W trakcie')).not.toBeInTheDocument();
+  });
 });
