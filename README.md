@@ -4,7 +4,7 @@ An epic social betting arena: live coupons, rankings, user-driven bet proposals,
 
 ## What Is This?
 
-BSPLIC is a web app where:
+BSPLIC is a web app where you can:
 
 - players place bets on active events (single / AKO),
 - build streaks and unlock badges,
