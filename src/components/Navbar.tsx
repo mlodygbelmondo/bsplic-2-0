@@ -38,9 +38,7 @@ export function Navbar() {
     if (!user || !profile) return;
     setTopupLoading(true);
     try {
-      const { data, error } = await supabase.rpc('secure_daily_topup' as any, {
-        p_user_id: user.id,
-      });
+      const { error } = await supabase.rpc('secure_daily_topup' as any);
       if (error) {
         toast.error(error.message || 'Błąd doładowania');
         return;
