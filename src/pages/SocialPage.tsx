@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { getDisplayedCouponOdds } from '@/features/coupons/display';
 
 export default function SocialPage() {
   const [coupons, setCoupons] = useState<SocialCouponEntry[]>([]);
@@ -66,6 +67,10 @@ export default function SocialPage() {
             {coupons.map((coupon) => {
               const ako = isAko(coupon);
               const expanded = expandedCoupons.has(coupon.id);
+              const displayedOdds = getDisplayedCouponOdds({
+                totalOdds: Number(coupon.total_odds),
+                legs: (coupon.legs ?? []).map((leg) => ({ oddsAtTime: Number(leg.odds_at_time) })),
+              });
 
               return (
                 <div key={coupon.id} className="bg-card rounded-xl card-shadow overflow-hidden">
@@ -100,7 +105,7 @@ export default function SocialPage() {
                             AKO {coupon.legs!.length}
                           </span>
                           <span className="font-medium text-xs text-muted-foreground">
-                            kurs {Number(coupon.total_odds).toFixed(2)}
+                            kurs {displayedOdds.toFixed(2)}
                           </span>
                           {expanded
                             ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
@@ -110,7 +115,7 @@ export default function SocialPage() {
                         <>
                           <p className="font-medium truncate">{coupon.legs?.[0]?.bet_title || 'Zakład'}</p>
                           <p className="text-xs text-muted-foreground">
-                            {coupon.legs?.[0]?.selected_option} • kurs {Number(coupon.total_odds).toFixed(2)}
+                            {coupon.legs?.[0]?.selected_option} • kurs {displayedOdds.toFixed(2)}
                           </p>
                         </>
                       )}

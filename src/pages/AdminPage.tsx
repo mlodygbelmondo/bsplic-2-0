@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { Plus, X, Check, XCircle, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Skeleton } from '@/components/ui/skeleton';
+import { calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
 
 type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
 
@@ -29,6 +30,11 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     return (error as { message: string }).message;
   }
   return fallback;
+};
+
+const normalizeCouponStatus = (value: string | null | undefined): CouponSettlementSnapshot['status'] => {
+  if (value === 'won' || value === 'lost') return value;
+  return 'pending';
 };
 
 interface BetOptionDraft {
@@ -443,13 +449,66 @@ function ManageBetsTab() {
       if (placedBets) {
         for (const pb of placedBets) {
           if (pb.result === 'won' || pb.result === 'lost') continue;
-          const won = pb.selected_option === winningOption;
-          const payout = won ? Number(pb.stake) * Number(pb.odds_at_time) : 0;
-          await supabase.from('placed_bets').update({ result: won ? 'won' : 'lost', payout }).eq('id', pb.id);
-          if (won) {
+
+          let couponBefore: CouponSettlementSnapshot | null = null;
+          if (pb.coupon_id) {
+            const { data: coupon } = await supabase
+              .from('coupons')
+              .select('stake, total_odds, status, payout')
+              .eq('id', pb.coupon_id)
+              .single();
+
+            if (coupon) {
+              couponBefore = {
+                stake: Number(coupon.stake),
+                totalOdds: Number(coupon.total_odds),
+                status: normalizeCouponStatus(coupon.status),
+                payout: Number(coupon.payout ?? 0),
+              };
+            }
+          }
+
+          const legOutcome = calculateLegOutcome({
+            selectedOption: pb.selected_option,
+            winningOption,
+            stake: Number(pb.stake),
+            oddsAtTime: Number(pb.odds_at_time),
+          });
+
+          await supabase
+            .from('placed_bets')
+            .update({ result: legOutcome.result, payout: legOutcome.payout })
+            .eq('id', pb.id);
+
+          let couponAfter: CouponSettlementSnapshot | null = null;
+          if (pb.coupon_id) {
+            const { data: coupon } = await supabase
+              .from('coupons')
+              .select('stake, total_odds, status, payout')
+              .eq('id', pb.coupon_id)
+              .single();
+
+            if (coupon) {
+              couponAfter = {
+                stake: Number(coupon.stake),
+                totalOdds: Number(coupon.total_odds),
+                status: normalizeCouponStatus(coupon.status),
+                payout: Number(coupon.payout ?? 0),
+              };
+            }
+          }
+
+          const creditAmount = calculateCreditAmount({
+            legWon: legOutcome.won,
+            legPayout: legOutcome.payout,
+            couponBefore,
+            couponAfter,
+          });
+
+          if (creditAmount > 0) {
             const { data: profile } = await supabase.from('profiles').select('balance').eq('id', pb.user_id).single();
             if (profile) {
-              await supabase.from('profiles').update({ balance: Number(profile.balance) + payout }).eq('id', pb.user_id);
+              await supabase.from('profiles').update({ balance: Number(profile.balance) + creditAmount }).eq('id', pb.user_id);
             }
           }
         }
