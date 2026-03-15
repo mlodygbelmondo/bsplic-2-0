@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Link } from 'react-router-dom';
 
 interface RankEntry {
   id: string;
@@ -144,10 +145,10 @@ export default function RankingsPage() {
                     <span className="font-bold">
                       {medal ?? rank}
                     </span>
-                    <span className="font-medium truncate">
+                    <Link to={`/profile/${r.id}`} className="font-medium truncate hover:text-primary transition-colors">
                       {r.username}
                       {r.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(ty)</span>}
-                    </span>
+                    </Link>
                     <span
                       className={cn(
                         'text-right font-bold',
