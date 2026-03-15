@@ -7,10 +7,27 @@ import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface ProfilePlacedBet {
+  id: string;
+  selected_option: string;
+  odds_at_time: number;
+  stake: number;
+  payout: number;
+  result: 'pending' | 'won' | 'lost';
+  bet?: { title: string } | null;
+}
+
 export default function ProfilePage() {
   const { user, profile } = useAuth();
-  const [placedBets, setPlacedBets] = useState<any[]>([]);
+  const [placedBets, setPlacedBets] = useState<ProfilePlacedBet[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [rankingStats, setRankingStats] = useState<{
+    totalBets: number;
+    wins: number;
+    losses: number;
+    winRate: number;
+    totalProfit: number;
+  } | null>(null);
   const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending'>('all');
   const [loadingBets, setLoadingBets] = useState(true);
 
@@ -23,7 +40,7 @@ export default function ProfilePage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        if (data) setPlacedBets(data);
+        if (data) setPlacedBets(data as unknown as ProfilePlacedBet[]);
         setLoadingBets(false);
       });
 
@@ -34,15 +51,44 @@ export default function ProfilePage() {
       .then(({ data }) => {
         if (data) setBadges(data as Badge[]);
       });
+
+    supabase
+      .rpc('get_user_rankings')
+      .then(({ data }) => {
+        if (!data) return;
+
+        const userRanking = (data as Array<{
+          id: string;
+          total_bets: number;
+          won_bets: number;
+          lost_bets: number;
+          win_rate: number;
+          total_profit: number;
+        }>).find((entry) => entry.id === user.id);
+
+        if (!userRanking) return;
+
+        setRankingStats({
+          totalBets: Number(userRanking.total_bets),
+          wins: Number(userRanking.won_bets),
+          losses: Number(userRanking.lost_bets),
+          winRate: Number(userRanking.win_rate),
+          totalProfit: Number(userRanking.total_profit),
+        });
+      });
   }, [user]);
 
   if (!user || !profile) return <Navigate to="/" />;
 
-  const totalBets = placedBets.length;
-  const wins = placedBets.filter((bet) => bet.result === 'won').length;
-  const losses = placedBets.filter((bet) => bet.result === 'lost').length;
-  const winRate = totalBets > 0 ? ((wins / totalBets) * 100).toFixed(1) : '0';
-  const totalProfit = placedBets.reduce((acc, bet) => acc + (Number(bet.payout) - Number(bet.stake)), 0);
+  const totalBets = rankingStats?.totalBets ?? placedBets.length;
+  const wins = rankingStats?.wins ?? placedBets.filter((bet) => bet.result === 'won').length;
+  const losses = rankingStats?.losses ?? placedBets.filter((bet) => bet.result === 'lost').length;
+  const winRate = rankingStats
+    ? rankingStats.winRate.toFixed(1)
+    : totalBets > 0
+      ? ((wins / totalBets) * 100).toFixed(1)
+      : '0';
+  const totalProfit = rankingStats?.totalProfit ?? placedBets.reduce((acc, bet) => acc + (Number(bet.payout) - Number(bet.stake)), 0);
   const filtered = placedBets.filter((bet) => filter === 'all' || bet.result === filter);
 
   return (
@@ -115,7 +161,7 @@ export default function ProfilePage() {
               {filtered.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Brak zakładów</p>
               ) : (
-                filtered.map((placedBet: any) => (
+                filtered.map((placedBet) => (
                   <div key={placedBet.id} className="flex items-center justify-between p-3 bg-muted rounded-lg text-sm card-shadow">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{placedBet.bet?.title || 'Zakład'}</p>

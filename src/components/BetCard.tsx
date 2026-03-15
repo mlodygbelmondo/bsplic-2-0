@@ -31,6 +31,7 @@ export function BetCard({ bet, category }: BetCardProps) {
   const selectedInCoupon = items.find(i => i.bet.id === bet.id);
   const endTimestamp = useMemo(() => new Date(bet.ends_at).getTime(), [bet.ends_at]);
   const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+  const isInProgress = isExpired && bet.winning_option === null;
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = (bet.options as unknown as BetOption[]) || [];
   const useTwoColumnMultiLayout = bet.bet_type === 'multi' && (options.length === 4 || options.length === 5);
@@ -75,6 +76,12 @@ export function BetCard({ bet, category }: BetCardProps) {
       <div className="px-3 py-2.5">
         <div className="mb-3 text-center">
           <p className="font-bold text-base sm:text-lg text-foreground leading-tight">{bet.title}</p>
+          {isInProgress && (
+            <div className="mt-1 flex items-center justify-center gap-1 text-red-500 text-sm font-medium">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              W trakcie
+            </div>
+          )}
           <p className="text-[11px] text-muted-foreground font-medium mt-1" title={bet.ends_at}>{endsAtLabel}</p>
         </div>
 

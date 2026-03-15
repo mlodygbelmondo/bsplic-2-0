@@ -27,7 +27,7 @@ export default function RankingsPage() {
   useEffect(() => {
     const fetchRankings = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_rankings' as any);
+      const { data, error } = await supabase.rpc('get_user_rankings');
 
       if (error) {
         console.error('Rankings fetch error:', error);
@@ -53,7 +53,7 @@ export default function RankingsPage() {
     };
 
     fetchRankings();
-  }, []);
+  }, [user?.id]);
 
   const sorted = useMemo(() => {
     return [...rankings].sort((a, b) => b[sortBy] - a[sortBy]);

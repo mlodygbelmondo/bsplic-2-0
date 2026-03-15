@@ -72,6 +72,12 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #root {
+    min-height: 100dvh;
   }
 }
 
@@ -81,6 +87,15 @@
   }
   .gradient-navbar {
     background: linear-gradient(90deg, hsl(355 100% 44%), hsl(355 90% 38%));
+  }
+  .safe-sticky-top {
+    top: env(safe-area-inset-top);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .gradient-banner {
     background: linear-gradient(135deg, hsl(355 100% 50%), hsl(340 70% 45%));
