@@ -25,7 +25,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-safe-screen bg-background overflow-hidden flex flex-col">
+    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
 
       <HomeShell

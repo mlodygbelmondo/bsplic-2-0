@@ -102,6 +102,10 @@
     min-height: 100vh;
     min-height: 100svh;
   }
+  .h-safe-screen {
+    height: 100vh;
+    height: 100dvh;
+  }
   .safe-pad-y {
     padding-top: calc(1rem + var(--safe-area-top));
     padding-bottom: calc(1rem + var(--safe-area-bottom));
