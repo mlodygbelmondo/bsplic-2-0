@@ -60,7 +60,7 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { to: "/", label: "Zakłady sportowe" },
+    { to: "/", label: "Zakłady" },
     { to: "/social", label: "Social" },
     { to: "/rankings", label: "Rankingi" },
   ];
@@ -71,7 +71,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="gradient-navbar safe-sticky-top sticky top-0 z-50 shadow-md">
+      <nav className="gradient-navbar safe-area-top fixed inset-x-0 top-0 z-50 shadow-md">
         <div className="flex items-center justify-between px-4 h-11 max-w-[1600px] mx-auto">
           {/* Left */}
           <div className="flex items-center gap-5">
@@ -91,7 +91,7 @@ export function Navbar() {
                     : "text-primary-foreground/70",
                 )}
               >
-                Zakłady sportowe
+                Zakłady
               </Link>
               <Link
                 to="/social"
@@ -274,6 +274,8 @@ export function Navbar() {
           </div>
         </div>
       </nav>
+
+      <div className="h-11 safe-area-top" aria-hidden="true" />
 
       {/* Topup confirmation modal */}
       <Dialog open={topupOpen} onOpenChange={setTopupOpen}>

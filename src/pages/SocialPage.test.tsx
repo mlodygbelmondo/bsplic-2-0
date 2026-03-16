@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -125,6 +125,18 @@ function renderSocialPage() {
   );
 }
 
+function makePostPage(size: number, start = 0): SocialFeedItem[] {
+  return Array.from({ length: size }, (_, index) => {
+    const n = start + index;
+    return makePostFeedItem({
+      id: `post-${n}`,
+      username: `Poster ${n}`,
+      content: `Post treść ${n}`,
+      created_at: `2030-01-01T11:${String(n % 60).padStart(2, '0')}:00.000Z`,
+    });
+  });
+}
+
 // ── Tests ────────────────────────────────────────────────────
 
 describe('SocialPage', () => {
@@ -191,6 +203,58 @@ describe('SocialPage', () => {
     expect(screen.getByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
   });
 
+  it('filters feed to show only coupons', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
+      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Kuponiarz')).toBeInTheDocument();
+    expect(screen.getByText('Treść posta')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kupony' }));
+
+    expect(screen.getByText('Kuponiarz')).toBeInTheDocument();
+    expect(screen.queryByText('Treść posta')).not.toBeInTheDocument();
+  });
+
+  it('filters feed to show only posts', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
+      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Kuponiarz')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Posty' }));
+
+    expect(screen.getByText('Treść posta')).toBeInTheDocument();
+    expect(screen.queryByText('Kuponiarz')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /skopiuj kupon/i })).not.toBeInTheDocument();
+  });
+
+  it('returns to mixed feed when selecting all filter', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
+      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Kuponiarz')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Posty' }));
+    expect(screen.queryByText('Kuponiarz')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wszystko' }));
+    expect(screen.getByText('Kuponiarz')).toBeInTheDocument();
+    expect(screen.getByText('Treść posta')).toBeInTheDocument();
+  });
+
   it('shows initial comment count from feed before loading thread comments', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makePostFeedItem({
@@ -203,6 +267,73 @@ describe('SocialPage', () => {
 
     expect(await screen.findByText('3 komentarze')).toBeInTheDocument();
     expect(fetchCommentsMock).not.toHaveBeenCalled();
+  });
+
+  it('loads more feed items when sentinel enters viewport', async () => {
+    const firstPage = makePostPage(50, 0);
+    const secondPage = makePostPage(1, 50);
+    fetchSocialFeedMock
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce(secondPage);
+
+    let observerCallback: IntersectionObserverCallback | null = null;
+    let observerOptions: IntersectionObserverInit | undefined;
+    const observeMock = vi.fn();
+    const disconnectMock = vi.fn();
+
+    class MockIntersectionObserver {
+      constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        observerCallback = cb;
+        observerOptions = options;
+      }
+
+      observe = observeMock;
+
+      disconnect = disconnectMock;
+
+      unobserve = vi.fn();
+
+      takeRecords = vi.fn(() => []);
+
+      root = null;
+
+      rootMargin = '';
+
+      thresholds = [];
+    }
+
+    const originalIntersectionObserver = globalThis.IntersectionObserver;
+    Object.defineProperty(globalThis, 'IntersectionObserver', {
+      configurable: true,
+      writable: true,
+      value: MockIntersectionObserver,
+    });
+
+    try {
+      renderSocialPage();
+
+      expect(await screen.findByText('Post treść 0')).toBeInTheDocument();
+      expect(fetchSocialFeedMock).toHaveBeenNthCalledWith(1, 50, 0, 'user-1');
+      expect(observerOptions?.rootMargin).toBe('1200px 0px');
+
+      await act(async () => {
+        observerCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      });
+
+      await waitFor(() => {
+        expect(fetchSocialFeedMock).toHaveBeenNthCalledWith(2, 50, 50, 'user-1');
+      });
+
+      expect(await screen.findByText('Post treść 50')).toBeInTheDocument();
+      expect(observeMock).toHaveBeenCalled();
+      expect(disconnectMock).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(globalThis, 'IntersectionObserver', {
+        configurable: true,
+        writable: true,
+        value: originalIntersectionObserver,
+      });
+    }
   });
 
   // ── PostComposer ─────────────────────────────────────────
@@ -342,6 +473,34 @@ describe('SocialPage', () => {
 
     // ReactionBar should show the count
     expect(await screen.findByText('3')).toBeInTheDocument();
+  });
+
+  it('toggles post reaction without reloading whole feed', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-reaction',
+        reactions: { like: 3 },
+        my_reaction: 'like',
+      }),
+    ]);
+    toggleReactionMock.mockResolvedValue(null);
+
+    renderSocialPage();
+
+    const reactionButton = await screen.findByLabelText('👍 3');
+    fireEvent.click(reactionButton);
+
+    await waitFor(() => {
+      expect(toggleReactionMock).toHaveBeenCalledWith({
+        userId: 'user-1',
+        emoji: 'like',
+        postId: 'post-reaction',
+        couponId: undefined,
+      });
+    });
+
+    expect(fetchSocialFeedMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByLabelText('👍 2')).toBeInTheDocument();
   });
 
   // ── AKO coupon toggle ────────────────────────────────────

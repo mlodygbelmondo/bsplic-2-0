@@ -115,7 +115,7 @@ export interface SocialCouponEntry extends CouponHistoryEntry {
 
 // --- Social types ---
 
-export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry';
+export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry' | 'fire';
 
 export type FeedItemType = 'post' | 'coupon';
 

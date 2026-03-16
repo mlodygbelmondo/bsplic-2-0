@@ -9,8 +9,8 @@ import {
 } from './reactions';
 
 describe('REACTION_EMOJIS', () => {
-  it('has 6 emoji types', () => {
-    expect(Object.keys(REACTION_EMOJIS)).toHaveLength(6);
+  it('has 7 emoji types', () => {
+    expect(Object.keys(REACTION_EMOJIS)).toHaveLength(7);
   });
 
   it('REACTION_TYPES matches REACTION_EMOJIS keys', () => {
@@ -40,11 +40,11 @@ describe('totalReactions', () => {
     expect(totalReactions({ wow: 1 })).toBe(1);
   });
 
-  it('handles all six types', () => {
+  it('handles all seven types', () => {
     const counts: ReactionCounts = {
-      like: 1, heart: 2, laugh: 3, wow: 4, sad: 5, angry: 6,
+      like: 1, heart: 2, laugh: 3, wow: 4, sad: 5, angry: 6, fire: 7,
     };
-    expect(totalReactions(counts)).toBe(21);
+    expect(totalReactions(counts)).toBe(28);
   });
 });
 
@@ -80,13 +80,14 @@ describe('sortedReactions', () => {
   });
 
   it('includes correct emoji strings', () => {
-    const counts: ReactionCounts = { wow: 1, sad: 1, angry: 1 };
+    const counts: ReactionCounts = { wow: 1, sad: 1, angry: 1, fire: 1 };
     const result = sortedReactions(counts);
 
     const emojis = result.map(r => r.emoji);
     expect(emojis).toContain('😮');
     expect(emojis).toContain('😢');
     expect(emojis).toContain('😡');
+    expect(emojis).toContain('🔥');
   });
 });
 
@@ -98,6 +99,7 @@ describe('getReactionEmoji', () => {
     expect(getReactionEmoji('wow')).toBe('😮');
     expect(getReactionEmoji('sad')).toBe('😢');
     expect(getReactionEmoji('angry')).toBe('😡');
+    expect(getReactionEmoji('fire')).toBe('🔥');
   });
 
   it('returns the input string for unknown types', () => {
