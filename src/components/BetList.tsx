@@ -18,12 +18,23 @@ export function BetList({
   categories,
   categoryMap,
 }: BetListProps) {
-  const [sort, setSort] = useState<SortMode>("popular");
+  const [sort, setSort] = useState<SortMode>("newest");
   const { loading, liveBets, sortedBets } = useBets(selectedCategory, sort);
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
       <div className="flex items-center border-b border-border mb-3 shrink-0">
+        <button
+          onClick={() => setSort("newest")}
+          className={cn(
+            "px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors",
+            sort === "newest"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Najnowsze
+        </button>
         <button
           onClick={() => setSort("popular")}
           className={cn(
@@ -36,15 +47,15 @@ export function BetList({
           Popularne
         </button>
         <button
-          onClick={() => setSort("newest")}
+          onClick={() => setSort("ending_soon")}
           className={cn(
             "px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors",
-            sort === "newest"
+            sort === "ending_soon"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
-          Najnowsze
+          Kończące się
         </button>
       </div>
 

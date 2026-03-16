@@ -1,18 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCoupon } from '@/contexts/CouponContext';
 import { useCouponPlacement } from '@/features/home/hooks/useCouponPlacement';
+import { getCouponCategoryEmoji } from '@/features/coupons/categoryEmoji';
 import { Input } from '@/components/ui/input';
 import { X, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Category } from '@/types/database';
 
-export function CouponDrawer() {
-  const { items, removeItem, clearCoupon } = useCoupon();
+interface CouponDrawerProps {
+  categoryMap: Record<string, Category>;
+}
+
+export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
+  const { items, removeItem, clearCoupon, preferredCouponType, setPreferredCouponType } = useCoupon();
   const [stake, setStake] = useState('10');
   const [singleStakes, setSingleStakes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
   const stakePresets = ['5', '10', '25', '50'];
+
+  useEffect(() => {
+    if (!preferredCouponType) {
+      return;
+    }
+
+    setActiveTab(preferredCouponType);
+    setPreferredCouponType(null);
+  }, [preferredCouponType, setPreferredCouponType]);
 
   useEffect(() => {
     setSingleStakes((previous) => {
@@ -122,7 +137,9 @@ export function CouponDrawer() {
               <article key={item.bet.id} className="rounded-xl border border-border bg-background/60 p-2.5">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-muted-foreground truncate">⚽ {item.bet.title}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {getCouponCategoryEmoji(item.bet.category_id, categoryMap)} {item.bet.title}
+                    </p>
                     <p className="font-bold text-[13px] leading-snug mt-0.5">{item.selectedOption}</p>
                     <span className="inline-block mt-1 text-[11px] font-bold text-primary">{item.odds.toFixed(2)}</span>
                     {activeTab === 'single' && (

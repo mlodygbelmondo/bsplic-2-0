@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bet } from '@/types/database';
 import { fetchActiveBets, subscribeToBetsChanges } from '@/features/home/api/bets';
+import { SortMode, sortBetsByMode } from '@/features/home/hooks/sortBets';
 
-export type SortMode = 'popular' | 'newest';
+export type { SortMode } from '@/features/home/hooks/sortBets';
 
 export function useBets(selectedCategory: string | null, sort: SortMode) {
   const [bets, setBets] = useState<Bet[]>([]);
@@ -39,15 +40,7 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
 
   const sortByMode = useCallback(
     (a: Bet, b: Bet) => {
-      if (sort === 'popular') {
-        const popularityDiff = Number(b.bet_count) - Number(a.bet_count);
-        if (popularityDiff !== 0) {
-          return popularityDiff;
-        }
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return sortBetsByMode(sort, a, b);
     },
     [sort]
   );

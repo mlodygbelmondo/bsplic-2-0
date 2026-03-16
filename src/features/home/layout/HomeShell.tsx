@@ -45,7 +45,7 @@ export function HomeShell({
             />
           </main>
 
-          <CouponDrawer />
+          <CouponDrawer categoryMap={categoryMap} />
         </div>
       </div>
     </div>
