@@ -17,6 +17,20 @@ export async function fetchActiveBets(selectedCategory: string | null) {
   return (data ?? []) as unknown as Bet[];
 }
 
+export async function fetchBetsByIds(ids: string[]) {
+  if (ids.length === 0) {
+    return [] as Bet[];
+  }
+
+  const { data, error } = await supabase.from('bets').select('*').in('id', ids);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as unknown as Bet[];
+}
+
 export function subscribeToBetsChanges(onChange: () => void) {
   const channel = supabase
     .channel('bets-realtime')

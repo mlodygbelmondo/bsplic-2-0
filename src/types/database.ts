@@ -89,6 +89,7 @@ export interface CouponItem {
 
 export interface CouponLeg {
   id: string;
+  bet_id?: string | null;
   selected_option: string;
   odds_at_time: number;
   leg_stake?: number;
