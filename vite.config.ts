@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => ({
         id: "/",
         name: "BSPLIC 2.0",
         short_name: "BSPLIC",
-        description: "Zakłady sportowe",
+        description: "Luźne betowanko",
         start_url: "/",
         scope: "/",
         display: "standalone",

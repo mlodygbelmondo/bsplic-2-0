@@ -13,10 +13,11 @@ describe('ReactionBar', () => {
   it('renders reaction picker when no reactions exist', () => {
     render(<ReactionBar {...defaultProps} />);
 
-    // Should show 6 emoji picker buttons
+    // Should show 7 emoji picker buttons
     expect(screen.getByRole('group', { name: 'Reakcje' })).toBeInTheDocument();
     expect(screen.getByLabelText('👍')).toBeInTheDocument();
     expect(screen.getByLabelText('❤️')).toBeInTheDocument();
+    expect(screen.getByLabelText('🔥')).toBeInTheDocument();
   });
 
   it('renders existing reactions with counts', () => {
@@ -88,20 +89,21 @@ describe('ReactionBar', () => {
     });
   });
 
-  it('hides picker when all 6 types have counts', () => {
+  it('hides picker when all 7 types have counts', () => {
     render(
       <ReactionBar
         {...defaultProps}
-        reactions={{ like: 1, heart: 2, laugh: 3, wow: 4, sad: 5, angry: 6 }}
+        reactions={{ like: 1, heart: 2, laugh: 3, wow: 4, sad: 5, angry: 6, fire: 7 }}
       />
     );
 
-    // All 6 buttons should be count buttons, no picker buttons
+    // All 7 buttons should be count buttons, no picker buttons
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(6);
+    expect(buttons).toHaveLength(7);
     // Each should have a count label
     expect(screen.getByLabelText('👍 1')).toBeInTheDocument();
     expect(screen.getByLabelText('😡 6')).toBeInTheDocument();
+    expect(screen.getByLabelText('🔥 7')).toBeInTheDocument();
   });
 
   it('shows missing types in picker for partial reactions', () => {
@@ -112,12 +114,13 @@ describe('ReactionBar', () => {
       />
     );
 
-    // like is shown as count button, other 5 as picker buttons
+    // like is shown as count button, other 6 as picker buttons
     expect(screen.getByLabelText('👍 5')).toBeInTheDocument();
     expect(screen.getByLabelText('❤️')).toBeInTheDocument();
     expect(screen.getByLabelText('😂')).toBeInTheDocument();
     expect(screen.getByLabelText('😮')).toBeInTheDocument();
     expect(screen.getByLabelText('😢')).toBeInTheDocument();
     expect(screen.getByLabelText('😡')).toBeInTheDocument();
+    expect(screen.getByLabelText('🔥')).toBeInTheDocument();
   });
 });

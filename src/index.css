@@ -62,6 +62,9 @@
 
     --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10);
     --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 12px 32px rgba(0,0,0,0.14);
+
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -72,8 +75,6 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   #root {
@@ -89,13 +90,21 @@
     background: linear-gradient(90deg, hsl(355 100% 44%), hsl(355 90% 38%));
   }
   .safe-sticky-top {
-    top: env(safe-area-inset-top);
+    top: 0;
   }
   .safe-area-top {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-area-top);
   }
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--safe-area-bottom);
+  }
+  .min-safe-screen {
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+  .safe-pad-y {
+    padding-top: calc(1rem + var(--safe-area-top));
+    padding-bottom: calc(1rem + var(--safe-area-bottom));
   }
   .gradient-banner {
     background: linear-gradient(135deg, hsl(355 100% 50%), hsl(340 70% 45%));

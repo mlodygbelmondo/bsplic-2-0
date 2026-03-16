@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types/database';
 import { cn } from '@/lib/utils';
@@ -24,28 +24,139 @@ import {
 import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 import type { FlatComment } from '@/features/social/thread';
 
+const SOCIAL_FEED_PAGE_SIZE = 50;
+const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
+const EMPTY_COMMENTS: SocialComment[] = [];
+
+function updateReactionCounts(
+  reactions: Partial<Record<ReactionEmoji, number>> | null,
+  previousReaction: ReactionEmoji | null,
+  nextReaction: ReactionEmoji | null,
+): Partial<Record<ReactionEmoji, number>> | null {
+  const counts: Partial<Record<ReactionEmoji, number>> = { ...(reactions ?? {}) };
+
+  if (previousReaction) {
+    counts[previousReaction] = Math.max((counts[previousReaction] ?? 0) - 1, 0);
+  }
+
+  if (nextReaction) {
+    counts[nextReaction] = (counts[nextReaction] ?? 0) + 1;
+  }
+
+  const normalized = (Object.entries(counts) as Array<[ReactionEmoji, number]>)
+    .filter(([, value]) => value > 0)
+    .reduce<Partial<Record<ReactionEmoji, number>>>((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
+function formatEventsCount(count: number) {
+  if (count === 1) return `${count} zdarzenie`;
+  const lastTwoDigits = count % 100;
+  if (lastTwoDigits >= 12 && lastTwoDigits <= 14) return `${count} zdarzeń`;
+  const lastDigit = count % 10;
+  if (lastDigit >= 2 && lastDigit <= 4) return `${count} zdarzenia`;
+  return `${count} zdarzeń`;
+}
+
+function formatTimeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'przed chwilą';
+  if (minutes < 60) return `${minutes} min temu`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} godz. temu`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} dn. temu`;
+  return new Date(dateStr).toLocaleDateString('pl-PL');
+}
+
 export default function SocialPage() {
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
+  const [feedFilter, setFeedFilter] = useState<'all' | 'coupon' | 'post'>('all');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
   const [copyingCoupons, setCopyingCoupons] = useState<Set<string>>(new Set());
   const [commentsMap, setCommentsMap] = useState<Record<string, SocialComment[]>>({});
+  const [commentsLoadedMap, setCommentsLoadedMap] = useState<Record<string, boolean>>({});
+  const [commentsLoadingMap, setCommentsLoadingMap] = useState<Record<string, boolean>>({});
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const filteredFeedItems = useMemo(() => {
+    if (feedFilter === 'all') return feedItems;
+    return feedItems.filter((item) => item.item_type === feedFilter);
+  }, [feedItems, feedFilter]);
+
   const loadFeed = useCallback(async () => {
+    setLoading(true);
+    setOffset(0);
+    setHasMore(true);
     try {
-      const data = await fetchSocialFeed(50, 0, user?.id);
+      const data = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, 0, user?.id);
       setFeedItems(data);
+      setHasMore(data.length === SOCIAL_FEED_PAGE_SIZE);
+      setOffset(data.length);
+      setCommentsMap({});
+      setCommentsLoadedMap({});
+      setCommentsLoadingMap({});
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
 
+  const loadMoreFeed = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const data = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, offset, user?.id);
+      setFeedItems((prev) => [...prev, ...data]);
+      setOffset((prev) => prev + data.length);
+      setHasMore(data.length === SOCIAL_FEED_PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loading, loadingMore, offset, user?.id]);
+
   useEffect(() => {
     void loadFeed();
   }, [loadFeed]);
+
+  useEffect(() => {
+    if (loading || !hasMore || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const sentinel = document.getElementById('social-feed-sentinel');
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const isVisible = entries.some((entry) => entry.isIntersecting);
+        if (isVisible) {
+          void loadMoreFeed();
+        }
+      },
+      {
+        root: null,
+        rootMargin: SOCIAL_FEED_PREFETCH_ROOT_MARGIN,
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loading, loadMoreFeed, filteredFeedItems.length]);
 
   // ── Coupon helpers ─────────────────────────────────────────
 
@@ -60,15 +171,6 @@ export default function SocialPage() {
 
   const isAko = (item: SocialFeedItem) =>
     item.item_type === 'coupon' && item.legs !== null && item.legs.length > 1;
-
-  const formatEventsCount = (count: number) => {
-    if (count === 1) return `${count} zdarzenie`;
-    const lastTwoDigits = count % 100;
-    if (lastTwoDigits >= 12 && lastTwoDigits <= 14) return `${count} zdarzeń`;
-    const lastDigit = count % 10;
-    if (lastDigit >= 2 && lastDigit <= 4) return `${count} zdarzenia`;
-    return `${count} zdarzeń`;
-  };
 
   const setCouponCopying = (couponId: string, isCopying: boolean) => {
     setCopyingCoupons((prev) => {
@@ -139,10 +241,27 @@ export default function SocialPage() {
 
   const loadComments = useCallback(
     async (itemId: string, itemType: 'post' | 'coupon') => {
-      const target =
-        itemType === 'post' ? { postId: itemId } : { couponId: itemId };
-      const data = await fetchComments(target, user?.id);
-      setCommentsMap((prev) => ({ ...prev, [itemId]: data }));
+      setCommentsLoadingMap((prev) => ({ ...prev, [itemId]: true }));
+      try {
+        const target =
+          itemType === 'post' ? { postId: itemId } : { couponId: itemId };
+        const data = await fetchComments(target, user?.id);
+        setCommentsMap((prev) => ({ ...prev, [itemId]: data }));
+        setCommentsLoadedMap((prev) => ({ ...prev, [itemId]: true }));
+
+        setFeedItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  comment_count: data.length,
+                }
+              : item,
+          ),
+        );
+      } finally {
+        setCommentsLoadingMap((prev) => ({ ...prev, [itemId]: false }));
+      }
     },
     [user?.id],
   );
@@ -162,6 +281,18 @@ export default function SocialPage() {
         couponId: itemType === 'coupon' ? itemId : undefined,
         parentId,
       });
+
+      setFeedItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                comment_count: (item.comment_count ?? 0) + 1,
+              }
+            : item,
+        ),
+      );
+
       await loadComments(itemId, itemType);
     },
     [user, loadComments],
@@ -176,15 +307,25 @@ export default function SocialPage() {
       emoji: ReactionType,
     ) => {
       if (!user) return;
-      await toggleReaction({
+      const nextReaction = await toggleReaction({
         userId: user.id,
         emoji: emoji as ReactionEmoji,
         postId: itemType === 'post' ? itemId : undefined,
         couponId: itemType === 'coupon' ? itemId : undefined,
       });
-      await loadFeed();
+
+      setFeedItems((prev) =>
+        prev.map((item) => {
+          if (item.id !== itemId || item.item_type !== itemType) return item;
+          return {
+            ...item,
+            reactions: updateReactionCounts(item.reactions, item.my_reaction, nextReaction as ReactionEmoji | null),
+            my_reaction: nextReaction as ReactionEmoji | null,
+          };
+        }),
+      );
     },
-    [user, loadFeed],
+    [user],
   );
 
   const handleToggleCommentReaction = useCallback(
@@ -192,32 +333,37 @@ export default function SocialPage() {
       commentId: string,
       emoji: ReactionType,
       itemId: string,
-      itemType: 'post' | 'coupon',
+      _itemType: 'post' | 'coupon',
     ) => {
       if (!user) return;
-      await toggleReaction({
+      const nextReaction = await toggleReaction({
         userId: user.id,
         emoji: emoji as ReactionEmoji,
         commentId,
       });
-      await loadComments(itemId, itemType);
+
+      setCommentsMap((prev) => {
+        const current = prev[itemId] ?? [];
+        return {
+          ...prev,
+          [itemId]: current.map((comment) =>
+            comment.id === commentId
+              ? {
+                  ...comment,
+                  reactions: updateReactionCounts(
+                    comment.reactions,
+                    comment.my_reaction,
+                    nextReaction as ReactionEmoji | null,
+                  ),
+                  my_reaction: nextReaction as ReactionEmoji | null,
+                }
+              : comment,
+          ),
+        };
+      });
     },
-    [user, loadComments],
+    [user],
   );
-
-  // ── Time formatting ────────────────────────────────────────
-
-  const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'przed chwilą';
-    if (minutes < 60) return `${minutes} min temu`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} godz. temu`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days} dn. temu`;
-    return new Date(dateStr).toLocaleDateString('pl-PL');
-  };
 
   // ── Render ─────────────────────────────────────────────────
 
@@ -226,6 +372,45 @@ export default function SocialPage() {
       <Navbar />
       <div className="max-w-3xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Social</h1>
+
+        <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+              feedFilter === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            )}
+            onClick={() => setFeedFilter('all')}
+          >
+            Wszystko
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+              feedFilter === 'coupon'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            )}
+            onClick={() => setFeedFilter('coupon')}
+          >
+            Kupony
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+              feedFilter === 'post'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            )}
+            onClick={() => setFeedFilter('post')}
+          >
+            Posty
+          </button>
+        </div>
 
         {/* Post composer for logged-in users */}
         {user && (
@@ -240,40 +425,53 @@ export default function SocialPage() {
               <Skeleton key={i} className="h-20 w-full rounded-xl" />
             ))}
           </div>
-        ) : feedItems.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg font-medium">Brak aktywności</p>
-            <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
-          </div>
         ) : (
           <div className="space-y-3">
-            {feedItems.map((item) => (
-              <FeedCard
-                key={`${item.item_type}-${item.id}`}
-                item={item}
-                expandedCoupons={expandedCoupons}
-                copyingCoupons={copyingCoupons}
-                commentsMap={commentsMap}
-                isLoggedIn={!!user}
-                onToggleCoupon={toggleCoupon}
-                onCopyCoupon={handleCopyCoupon}
-                onToggleReaction={(emoji) =>
-                  handleToggleReaction(item.id, item.item_type, emoji)
-                }
-                onLoadComments={() =>
-                  loadComments(item.id, item.item_type)
-                }
-                onAddComment={(content, parentId) =>
-                  handleAddComment(item.id, item.item_type, content, parentId)
-                }
-                onToggleCommentReaction={(commentId, emoji) =>
-                  handleToggleCommentReaction(commentId, emoji, item.id, item.item_type)
-                }
-                isAko={isAko(item)}
-                formatTimeAgo={formatTimeAgo}
-                formatEventsCount={formatEventsCount}
-              />
-            ))}
+            {filteredFeedItems.length === 0 && !hasMore ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-lg font-medium">Brak aktywności</p>
+                <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
+              </div>
+            ) : (
+              filteredFeedItems.map((item) => (
+                <FeedCard
+                  key={`${item.item_type}-${item.id}`}
+                  item={item}
+                  expandedCoupons={expandedCoupons}
+                  copyingCoupons={copyingCoupons}
+                  comments={commentsMap[item.id] ?? EMPTY_COMMENTS}
+                  commentsLoaded={!!commentsLoadedMap[item.id]}
+                  commentsLoading={!!commentsLoadingMap[item.id]}
+                  isLoggedIn={!!user}
+                  onToggleCoupon={toggleCoupon}
+                  onCopyCoupon={handleCopyCoupon}
+                  onToggleReaction={handleToggleReaction}
+                  onFirstExpandComments={loadComments}
+                  onAddComment={handleAddComment}
+                  onToggleCommentReaction={handleToggleCommentReaction}
+                  isAko={isAko(item)}
+                  formatTimeAgo={formatTimeAgo}
+                  formatEventsCount={formatEventsCount}
+                />
+              ))
+            )}
+
+            {filteredFeedItems.length === 0 && hasMore && (
+              <div className="text-center py-6 text-xs text-muted-foreground">
+                Szukamy kolejnych wpisów...
+              </div>
+            )}
+
+            {hasMore && (
+              <div id="social-feed-sentinel" className="h-1" aria-hidden="true" />
+            )}
+
+            {loadingMore && (
+              <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Ładowanie kolejnych wpisów...
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -287,29 +485,43 @@ interface FeedCardProps {
   item: SocialFeedItem;
   expandedCoupons: Set<string>;
   copyingCoupons: Set<string>;
-  commentsMap: Record<string, SocialComment[]>;
+  comments: SocialComment[];
+  commentsLoaded: boolean;
+  commentsLoading: boolean;
   isLoggedIn: boolean;
   onToggleCoupon: (id: string) => void;
   onCopyCoupon: (item: SocialFeedItem) => void;
-  onToggleReaction: (emoji: ReactionType) => void;
-  onLoadComments: () => void;
-  onAddComment: (content: string, parentId?: string) => Promise<void>;
-  onToggleCommentReaction: (commentId: string, emoji: ReactionType) => void;
+  onToggleReaction: (itemId: string, itemType: 'post' | 'coupon', emoji: ReactionType) => void | Promise<void>;
+  onFirstExpandComments: (itemId: string, itemType: 'post' | 'coupon') => void | Promise<void>;
+  onAddComment: (
+    itemId: string,
+    itemType: 'post' | 'coupon',
+    content: string,
+    parentId?: string,
+  ) => Promise<void>;
+  onToggleCommentReaction: (
+    commentId: string,
+    emoji: ReactionType,
+    itemId: string,
+    itemType: 'post' | 'coupon',
+  ) => void | Promise<void>;
   isAko: boolean;
   formatTimeAgo: (dateStr: string) => string;
   formatEventsCount: (count: number) => string;
 }
 
-function FeedCard({
+const FeedCard = memo(function FeedCard({
   item,
   expandedCoupons,
   copyingCoupons,
-  commentsMap,
+  comments,
+  commentsLoaded,
+  commentsLoading,
   isLoggedIn,
   onToggleCoupon,
   onCopyCoupon,
   onToggleReaction,
-  onLoadComments,
+  onFirstExpandComments,
   onAddComment,
   onToggleCommentReaction,
   isAko: ako,
@@ -318,15 +530,6 @@ function FeedCard({
 }: FeedCardProps) {
   const expanded = expandedCoupons.has(item.id);
   const isCopying = copyingCoupons.has(item.id);
-  const comments = commentsMap[item.id] ?? [];
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
-
-  const handleCommentsToggle = () => {
-    if (!commentsLoaded) {
-      onLoadComments();
-      setCommentsLoaded(true);
-    }
-  };
 
   const commentsAsFlatComments: FlatComment[] = comments.map((c) => ({
     id: c.id,
@@ -397,23 +600,29 @@ function FeedCard({
         <ReactionBar
           reactions={item.reactions as ReactionCounts | null}
           myReaction={item.my_reaction as ReactionType | null}
-          onToggle={onToggleReaction}
+          onToggle={(emoji) => {
+            void onToggleReaction(item.id, item.item_type, emoji);
+          }}
           disabled={!isLoggedIn}
         />
-        <div onClick={handleCommentsToggle}>
-          <CommentThread
-            comments={commentsAsFlatComments}
-            initialCount={item.comment_count ?? 0}
-            commentsLoaded={commentsLoaded}
-            onAddComment={onAddComment}
-            onToggleReaction={onToggleCommentReaction}
-            disabled={!isLoggedIn}
-          />
-        </div>
+        <CommentThread
+          comments={commentsAsFlatComments}
+          initialCount={item.comment_count ?? 0}
+          commentsLoaded={commentsLoaded}
+          onFirstExpand={() => {
+            if (commentsLoaded || commentsLoading) return;
+            void onFirstExpandComments(item.id, item.item_type);
+          }}
+          onAddComment={(content, parentId) => onAddComment(item.id, item.item_type, content, parentId)}
+          onToggleReaction={(commentId, emoji) => {
+            void onToggleCommentReaction(commentId, emoji, item.id, item.item_type);
+          }}
+          disabled={!isLoggedIn}
+        />
       </div>
     </div>
   );
-}
+});
 
 // ── Coupon content ──────────────────────────────────────────
 

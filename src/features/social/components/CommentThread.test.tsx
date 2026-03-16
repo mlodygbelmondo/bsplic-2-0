@@ -38,6 +38,28 @@ describe('CommentThread', () => {
     expect(screen.getByText(/2 komentarze/)).toBeInTheDocument();
   });
 
+  it('keeps initial count label while comments are loading', () => {
+    const onFirstExpand = vi.fn();
+
+    render(
+      <CommentThread
+        {...defaultProps}
+        comments={[]}
+        initialCount={3}
+        commentsLoaded={false}
+        onFirstExpand={onFirstExpand}
+      />
+    );
+
+    expect(screen.getByText('3 komentarze')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/Pokaż komentarze/));
+
+    expect(onFirstExpand).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('3 komentarze')).toBeInTheDocument();
+    expect(screen.queryByText('Skomentuj')).not.toBeInTheDocument();
+  });
+
   it('expands comments on toggle click', () => {
     const comments = [makeComment({ id: 'c1', content: 'Widoczny komentarz' })];
 

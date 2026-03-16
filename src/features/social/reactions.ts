@@ -9,11 +9,12 @@ export const REACTION_EMOJIS = {
   wow:   '😮',
   sad:   '😢',
   angry: '😡',
+  fire:  '🔥',
 } as const;
 
 export type ReactionType = keyof typeof REACTION_EMOJIS;
 
-export const REACTION_TYPES: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad', 'angry'];
+export const REACTION_TYPES: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad', 'angry', 'fire'];
 
 export type ReactionCounts = Partial<Record<ReactionType, number>>;
 

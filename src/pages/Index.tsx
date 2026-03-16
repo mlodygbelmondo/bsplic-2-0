@@ -14,7 +14,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen gradient-primary flex items-center justify-center">
+      <div className="min-safe-screen gradient-primary flex items-center justify-center">
         <div className="h-10 w-10 border-4 border-primary-foreground border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -25,7 +25,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen bg-background overflow-hidden flex flex-col">
+    <div className="min-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
 
       <HomeShell

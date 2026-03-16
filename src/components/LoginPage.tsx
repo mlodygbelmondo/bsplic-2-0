@@ -76,7 +76,7 @@ export function LoginPage() {
 
   if (view === "forgot") {
     return (
-      <div className="min-h-screen gradient-primary relative overflow-hidden flex flex-col items-center justify-center px-4">
+      <div className="min-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4">
         {backgroundDecoration}
         <div className="relative z-10 mb-8">
           <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
@@ -105,7 +105,7 @@ export function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent text-foreground text-sm font-medium outline-none"
+                  className="w-full bg-transparent text-foreground text-base font-medium outline-none"
                   placeholder="twoj@email.pl"
                   required
                 />
@@ -128,7 +128,7 @@ export function LoginPage() {
   const isLogin = view === "login";
 
   return (
-    <div className="min-h-screen gradient-primary relative overflow-hidden flex flex-col items-center justify-center px-4">
+    <div className="min-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4">
       {backgroundDecoration}
 
       <div className="relative z-10 mb-8">
@@ -149,7 +149,7 @@ export function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-transparent text-foreground text-sm font-medium outline-none"
+                  className="w-full bg-transparent text-foreground text-base font-medium outline-none"
                   placeholder="Twój nick"
                   required
                 />
@@ -162,7 +162,7 @@ export function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-transparent text-foreground text-sm font-medium outline-none"
+                className="w-full bg-transparent text-foreground text-base font-medium outline-none"
                 placeholder="twoj@email.pl"
                 required
               />
@@ -175,7 +175,7 @@ export function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-foreground text-sm font-medium outline-none"
+                  className="w-full bg-transparent text-foreground text-base font-medium outline-none"
                   placeholder="••••••••"
                   required
                   minLength={6}

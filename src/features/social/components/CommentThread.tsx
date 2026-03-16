@@ -10,6 +10,7 @@ interface CommentThreadProps {
   comments: FlatComment[];
   initialCount?: number;
   commentsLoaded?: boolean;
+  onFirstExpand?: () => void;
   onAddComment: (content: string, parentId?: string) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
   disabled?: boolean;
@@ -20,6 +21,7 @@ export function CommentThread({
   comments,
   initialCount = 0,
   commentsLoaded = true,
+  onFirstExpand,
   onAddComment,
   onToggleReaction,
   disabled,
@@ -38,8 +40,14 @@ export function CommentThread({
         type="button"
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         onClick={() => {
+          const willExpand = collapsed;
           setCollapsed(!collapsed);
-          if (collapsed) setShowInput(true);
+          if (willExpand) {
+            setShowInput(true);
+            if (!commentsLoaded) {
+              onFirstExpand?.();
+            }
+          }
         }}
         aria-label={collapsed ? `Pokaż komentarze (${totalCount})` : 'Ukryj komentarze'}
       >
