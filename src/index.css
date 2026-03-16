@@ -98,6 +98,9 @@
   .safe-area-bottom {
     padding-bottom: var(--safe-area-bottom);
   }
+  .navbar-offset {
+    height: calc(2.75rem + var(--safe-area-top));
+  }
   .min-safe-screen {
     min-height: 100vh;
     min-height: 100svh;

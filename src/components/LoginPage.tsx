@@ -76,7 +76,7 @@ export function LoginPage() {
 
   if (view === "forgot") {
     return (
-      <div className="min-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4">
+      <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
         {backgroundDecoration}
         <div className="relative z-10 mb-8">
           <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
@@ -128,7 +128,7 @@ export function LoginPage() {
   const isLogin = view === "login";
 
   return (
-    <div className="min-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4">
+    <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
       {backgroundDecoration}
 
       <div className="relative z-10 mb-8">

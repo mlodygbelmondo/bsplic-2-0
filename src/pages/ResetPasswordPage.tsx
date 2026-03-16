@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
 
   if (!isRecovery) {
     return (
-      <div className="min-safe-screen safe-pad-y gradient-primary flex items-start sm:items-center justify-center px-4">
+      <div className="h-safe-screen safe-pad-y gradient-primary flex items-start md:items-center justify-center px-4 overflow-y-auto">
         <div className="bg-card rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-sm text-center">
           <h2 className="text-xl font-bold text-card-foreground mb-3">Nieprawidłowy link</h2>
           <p className="text-sm text-muted-foreground mb-5">
@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start sm:justify-center px-4">
+    <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
       <div className="relative z-10 mb-8">
         <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
       </div>
