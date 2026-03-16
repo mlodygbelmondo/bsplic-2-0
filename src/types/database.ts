@@ -113,6 +113,40 @@ export interface SocialCouponEntry extends CouponHistoryEntry {
   username: string;
 }
 
+// --- Social types ---
+
+export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry';
+
+export type FeedItemType = 'post' | 'coupon';
+
+export interface SocialFeedItem {
+  id: string;
+  item_type: FeedItemType;
+  user_id: string;
+  username: string;
+  content: string | null;
+  total_odds: number | null;
+  stake: number | null;
+  payout: number | null;
+  status: string | null;
+  legs: CouponLeg[] | null;
+  created_at: string;
+  reactions: Partial<Record<ReactionEmoji, number>> | null;
+  comment_count: number;
+  my_reaction: ReactionEmoji | null;
+}
+
+export interface SocialComment {
+  id: string;
+  user_id: string;
+  username: string;
+  content: string;
+  parent_id: string | null;
+  created_at: string;
+  reactions: Partial<Record<ReactionEmoji, number>> | null;
+  my_reaction: ReactionEmoji | null;
+}
+
 export interface PublicProfile {
   id: string;
   username: string;
