@@ -368,10 +368,11 @@ export default function SocialPage() {
   // ── Render ─────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
-      <div className="max-w-3xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Social</h1>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-4">Social</h1>
 
         <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1">
           <button
@@ -412,68 +413,69 @@ export default function SocialPage() {
           </button>
         </div>
 
-        {/* Post composer for logged-in users */}
-        {user && (
-          <div className="mb-4">
-            <PostComposer onSubmit={handleCreatePost} />
-          </div>
-        )}
+          {/* Post composer for logged-in users */}
+          {user && (
+            <div className="mb-4">
+              <PostComposer onSubmit={handleCreatePost} />
+            </div>
+          )}
 
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredFeedItems.length === 0 && !hasMore ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg font-medium">Brak aktywności</p>
-                <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
-              </div>
-            ) : (
-              filteredFeedItems.map((item) => (
-                <FeedCard
-                  key={`${item.item_type}-${item.id}`}
-                  item={item}
-                  expandedCoupons={expandedCoupons}
-                  copyingCoupons={copyingCoupons}
-                  comments={commentsMap[item.id] ?? EMPTY_COMMENTS}
-                  commentsLoaded={!!commentsLoadedMap[item.id]}
-                  commentsLoading={!!commentsLoadingMap[item.id]}
-                  isLoggedIn={!!user}
-                  onToggleCoupon={toggleCoupon}
-                  onCopyCoupon={handleCopyCoupon}
-                  onToggleReaction={handleToggleReaction}
-                  onFirstExpandComments={loadComments}
-                  onAddComment={handleAddComment}
-                  onToggleCommentReaction={handleToggleCommentReaction}
-                  isAko={isAko(item)}
-                  formatTimeAgo={formatTimeAgo}
-                  formatEventsCount={formatEventsCount}
-                />
-              ))
-            )}
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredFeedItems.length === 0 && !hasMore ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-lg font-medium">Brak aktywności</p>
+                  <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
+                </div>
+              ) : (
+                filteredFeedItems.map((item) => (
+                  <FeedCard
+                    key={`${item.item_type}-${item.id}`}
+                    item={item}
+                    expandedCoupons={expandedCoupons}
+                    copyingCoupons={copyingCoupons}
+                    comments={commentsMap[item.id] ?? EMPTY_COMMENTS}
+                    commentsLoaded={!!commentsLoadedMap[item.id]}
+                    commentsLoading={!!commentsLoadingMap[item.id]}
+                    isLoggedIn={!!user}
+                    onToggleCoupon={toggleCoupon}
+                    onCopyCoupon={handleCopyCoupon}
+                    onToggleReaction={handleToggleReaction}
+                    onFirstExpandComments={loadComments}
+                    onAddComment={handleAddComment}
+                    onToggleCommentReaction={handleToggleCommentReaction}
+                    isAko={isAko(item)}
+                    formatTimeAgo={formatTimeAgo}
+                    formatEventsCount={formatEventsCount}
+                  />
+                ))
+              )}
 
-            {filteredFeedItems.length === 0 && hasMore && (
-              <div className="text-center py-6 text-xs text-muted-foreground">
-                Szukamy kolejnych wpisów...
-              </div>
-            )}
+              {filteredFeedItems.length === 0 && hasMore && (
+                <div className="text-center py-6 text-xs text-muted-foreground">
+                  Szukamy kolejnych wpisów...
+                </div>
+              )}
 
-            {hasMore && (
-              <div id="social-feed-sentinel" className="h-1" aria-hidden="true" />
-            )}
+              {hasMore && (
+                <div id="social-feed-sentinel" className="h-1" aria-hidden="true" />
+              )}
 
-            {loadingMore && (
-              <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Ładowanie kolejnych wpisów...
-              </div>
-            )}
-          </div>
-        )}
+              {loadingMore && (
+                <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Ładowanie kolejnych wpisów...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
