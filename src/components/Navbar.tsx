@@ -275,7 +275,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      <div className="h-11 safe-area-top" aria-hidden="true" />
+      <div className="navbar-offset" aria-hidden="true" />
 
       {/* Topup confirmation modal */}
       <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
