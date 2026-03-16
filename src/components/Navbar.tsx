@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { LogOut, ShieldCheck, Plus, Wallet, Menu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { canClaimTopup } from "@/features/social/polishDay";
 import {
   Dialog,
   DialogContent,
@@ -35,11 +36,7 @@ export function Navbar() {
     );
   };
 
-  const canTopup = () => {
-    if (!profile?.last_topup_at) return true;
-    const last = new Date(profile.last_topup_at).getTime();
-    return Date.now() - last >= 24 * 60 * 60 * 1000;
-  };
+  const canTopup = () => canClaimTopup(profile?.last_topup_at);
 
   const handleTopup = async () => {
     if (!user || !profile) return;

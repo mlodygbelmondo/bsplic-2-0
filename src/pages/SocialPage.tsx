@@ -1,26 +1,53 @@
-import { useEffect, useState } from "react";
-import { Navbar } from "@/components/Navbar";
-import { supabase } from "@/integrations/supabase/client";
-import { SocialCouponEntry } from "@/types/database";
-import { cn } from "@/lib/utils";
-import { Link, useNavigate } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronUp, Copy, Loader2 } from "lucide-react";
-import { getDisplayedCouponOdds } from "@/features/coupons/display";
-import { useCoupon } from "@/contexts/CouponContext";
-import { buildCouponItemsFromSocial } from "@/features/social/copyCoupon";
-import { fetchBetsByIds } from "@/features/home/api/bets";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from 'react';
+import { Navbar } from '@/components/Navbar';
+import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types/database';
+import { cn } from '@/lib/utils';
+import { Link, useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
+import { getDisplayedCouponOdds } from '@/features/coupons/display';
+import { useCoupon } from '@/contexts/CouponContext';
+import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
+import { fetchBetsByIds } from '@/features/home/api/bets';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { PostComposer } from '@/features/social/components/PostComposer';
+import { ReactionBar } from '@/features/social/components/ReactionBar';
+import { CommentThread } from '@/features/social/components/CommentThread';
+import {
+  fetchSocialFeed,
+  createPost,
+  fetchComments,
+  addComment,
+  toggleReaction,
+} from '@/features/social/api/social';
+import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
+import type { FlatComment } from '@/features/social/thread';
 
 export default function SocialPage() {
-  const [coupons, setCoupons] = useState<SocialCouponEntry[]>([]);
+  const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
   const [copyingCoupons, setCopyingCoupons] = useState<Set<string>>(new Set());
+  const [commentsMap, setCommentsMap] = useState<Record<string, SocialComment[]>>({});
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const loadFeed = useCallback(async () => {
+    try {
+      const data = await fetchSocialFeed(50, 0, user?.id);
+      setFeedItems(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadFeed();
+  }, [loadFeed]);
+
+  // ── Coupon helpers ─────────────────────────────────────────
 
   const toggleCoupon = (couponId: string) => {
     setExpandedCoupons((prev) => {
@@ -31,16 +58,8 @@ export default function SocialPage() {
     });
   };
 
-  useEffect(() => {
-    supabase
-      .rpc("get_social_coupon_feed", { p_limit: 50, p_offset: 0 })
-      .then(({ data }) => {
-        if (data) setCoupons(data as unknown as SocialCouponEntry[]);
-        setLoading(false);
-      });
-  }, []);
-
-  const isAko = (c: SocialCouponEntry) => c.legs !== null && c.legs.length > 1;
+  const isAko = (item: SocialFeedItem) =>
+    item.item_type === 'coupon' && item.legs !== null && item.legs.length > 1;
 
   const formatEventsCount = (count: number) => {
     if (count === 1) return `${count} zdarzenie`;
@@ -52,19 +71,16 @@ export default function SocialPage() {
   };
 
   const setCouponCopying = (couponId: string, isCopying: boolean) => {
-    setCopyingCoupons((previous) => {
-      const next = new Set(previous);
-      if (isCopying) {
-        next.add(couponId);
-      } else {
-        next.delete(couponId);
-      }
+    setCopyingCoupons((prev) => {
+      const next = new Set(prev);
+      if (isCopying) next.add(couponId);
+      else next.delete(couponId);
       return next;
     });
   };
 
-  const handleCopyCoupon = async (coupon: SocialCouponEntry) => {
-    const legs = coupon.legs ?? [];
+  const handleCopyCoupon = async (item: SocialFeedItem) => {
+    const legs = item.legs ?? [];
     const betIds = Array.from(
       new Set(
         legs
@@ -74,28 +90,23 @@ export default function SocialPage() {
     );
 
     if (betIds.length === 0) {
-      toast.error("Ten kupon nie zawiera zdarzeń możliwych do skopiowania");
+      toast.error('Ten kupon nie zawiera zdarzeń możliwych do skopiowania');
       return;
     }
 
-    setCouponCopying(coupon.id, true);
+    setCouponCopying(item.id, true);
 
     try {
       const bets = await fetchBetsByIds(betIds);
-      const { items, skippedCount } = buildCouponItemsFromSocial({
-        legs,
-        bets,
-      });
+      const { items, skippedCount } = buildCouponItemsFromSocial({ legs, bets });
 
       if (items.length === 0) {
-        toast.error(
-          "Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone",
-        );
+        toast.error('Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone');
         return;
       }
 
       addItems(items);
-      setPreferredCouponType(items.length > 1 ? "ako" : "single");
+      setPreferredCouponType(items.length > 1 ? 'ako' : 'single');
 
       if (skippedCount > 0) {
         toast.success(
@@ -105,29 +116,110 @@ export default function SocialPage() {
         toast.success(`Skopiowano kupon: ${formatEventsCount(items.length)}`);
       }
 
-      navigate("/");
+      navigate('/');
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Nie udało się skopiować kuponu";
+        error instanceof Error ? error.message : 'Nie udało się skopiować kuponu';
       toast.error(message);
     } finally {
-      setCouponCopying(coupon.id, false);
+      setCouponCopying(item.id, false);
     }
   };
+
+  // ── Post creation ──────────────────────────────────────────
+
+  const handleCreatePost = async (content: string) => {
+    if (!user) return;
+    await createPost(user.id, content);
+    await loadFeed();
+    toast.success('Post opublikowany');
+  };
+
+  // ── Comments ───────────────────────────────────────────────
+
+  const loadComments = useCallback(
+    async (itemId: string, itemType: 'post' | 'coupon') => {
+      const target =
+        itemType === 'post' ? { postId: itemId } : { couponId: itemId };
+      const data = await fetchComments(target, user?.id);
+      setCommentsMap((prev) => ({ ...prev, [itemId]: data }));
+    },
+    [user?.id],
+  );
+
+  const handleAddComment = useCallback(
+    async (
+      itemId: string,
+      itemType: 'post' | 'coupon',
+      content: string,
+      parentId?: string,
+    ) => {
+      if (!user) return;
+      await addComment({
+        userId: user.id,
+        content,
+        postId: itemType === 'post' ? itemId : undefined,
+        couponId: itemType === 'coupon' ? itemId : undefined,
+        parentId,
+      });
+      await loadComments(itemId, itemType);
+    },
+    [user, loadComments],
+  );
+
+  // ── Reactions ──────────────────────────────────────────────
+
+  const handleToggleReaction = useCallback(
+    async (
+      itemId: string,
+      itemType: 'post' | 'coupon',
+      emoji: ReactionType,
+    ) => {
+      if (!user) return;
+      await toggleReaction({
+        userId: user.id,
+        emoji: emoji as ReactionEmoji,
+        postId: itemType === 'post' ? itemId : undefined,
+        couponId: itemType === 'coupon' ? itemId : undefined,
+      });
+      await loadFeed();
+    },
+    [user, loadFeed],
+  );
+
+  const handleToggleCommentReaction = useCallback(
+    async (
+      commentId: string,
+      emoji: ReactionType,
+      itemId: string,
+      itemType: 'post' | 'coupon',
+    ) => {
+      if (!user) return;
+      await toggleReaction({
+        userId: user.id,
+        emoji: emoji as ReactionEmoji,
+        commentId,
+      });
+      await loadComments(itemId, itemType);
+    },
+    [user, loadComments],
+  );
+
+  // ── Time formatting ────────────────────────────────────────
 
   const formatTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "przed chwilą";
+    if (minutes < 1) return 'przed chwilą';
     if (minutes < 60) return `${minutes} min temu`;
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours} godz. temu`;
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days} dn. temu`;
-    return new Date(dateStr).toLocaleDateString("pl-PL");
+    return new Date(dateStr).toLocaleDateString('pl-PL');
   };
+
+  // ── Render ─────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,168 +227,295 @@ export default function SocialPage() {
       <div className="max-w-3xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Social</h1>
 
+        {/* Post composer for logged-in users */}
+        {user && (
+          <div className="mb-4">
+            <PostComposer onSubmit={handleCreatePost} />
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
               <Skeleton key={i} className="h-20 w-full rounded-xl" />
             ))}
           </div>
-        ) : coupons.length === 0 ? (
+        ) : feedItems.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg font-medium">Brak kuponów</p>
-            <p className="text-sm mt-1">Nikt jeszcze nie postawił zakładu.</p>
+            <p className="text-lg font-medium">Brak aktywności</p>
+            <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {coupons.map((coupon) => {
-              const ako = isAko(coupon);
-              const expanded = expandedCoupons.has(coupon.id);
-              const isCopying = copyingCoupons.has(coupon.id);
-              const displayedOdds = getDisplayedCouponOdds({
-                totalOdds: Number(coupon.total_odds),
-                legs: (coupon.legs ?? []).map((leg) => ({
-                  oddsAtTime: Number(leg.odds_at_time),
-                })),
-              });
-
-              return (
-                <div
-                  key={coupon.id}
-                  className="bg-card rounded-xl card-shadow overflow-hidden"
-                >
-                  {/* User header */}
-                  <div className="flex items-center justify-between px-4 pt-3 pb-1">
-                    <Link
-                      to={`/profile/${coupon.user_id}`}
-                      className="flex items-center gap-2 group"
-                    >
-                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary group-hover:bg-primary/20 transition-colors">
-                        {coupon.username.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-semibold group-hover:text-primary transition-colors">
-                        {coupon.username}
-                      </span>
-                    </Link>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground">
-                        {formatTimeAgo(coupon.created_at)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => void handleCopyCoupon(coupon)}
-                        disabled={isCopying}
-                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                        aria-label="Skopiuj kupon"
-                      >
-                        {isCopying ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                        Skopiuj kupon
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Coupon content */}
-                  <button
-                    type="button"
-                    className="flex items-center justify-between px-4 py-2 w-full text-sm text-left"
-                    onClick={() => ako && toggleCoupon(coupon.id)}
-                  >
-                    <div className="min-w-0 flex-1">
-                      {ako ? (
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
-                            AKO {coupon.legs!.length}
-                          </span>
-                          <span className="font-medium text-xs text-muted-foreground">
-                            kurs {displayedOdds.toFixed(2)}
-                          </span>
-                          {expanded ? (
-                            <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <p className="font-medium truncate">
-                            {coupon.legs?.[0]?.bet_title || "Zakład"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {coupon.legs?.[0]?.selected_option} • kurs{" "}
-                            {displayedOdds.toFixed(2)}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                    <div className="text-right ml-3 shrink-0">
-                      <p className="font-bold">
-                        {Number(coupon.stake).toFixed(2)} zł
-                      </p>
-                      <p
-                        className={cn(
-                          "text-xs font-medium",
-                          coupon.status === "won"
-                            ? "text-success"
-                            : coupon.status === "lost"
-                              ? "text-destructive"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {coupon.status === "won"
-                          ? `+${Number(coupon.payout).toFixed(2)} zł`
-                          : coupon.status === "lost"
-                            ? "Przegrana"
-                            : "W toku"}
-                      </p>
-                    </div>
-                  </button>
-
-                  {/* AKO legs */}
-                  {ako && expanded && (
-                    <div className="border-t border-border px-4 pb-3 pt-2 space-y-1.5">
-                      {coupon.legs!.map((leg) => (
-                        <div
-                          key={leg.id}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">
-                              {leg.bet_title || "Zakład"}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {leg.selected_option} • kurs{" "}
-                              {Number(leg.odds_at_time).toFixed(2)}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              "ml-2 shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded",
-                              leg.result === "won"
-                                ? "bg-success/10 text-success"
-                                : leg.result === "lost"
-                                  ? "bg-destructive/10 text-destructive"
-                                  : "bg-muted-foreground/10 text-muted-foreground",
-                            )}
-                          >
-                            {leg.result === "won"
-                              ? "Wygrana"
-                              : leg.result === "lost"
-                                ? "Przegrana"
-                                : "W toku"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {feedItems.map((item) => (
+              <FeedCard
+                key={`${item.item_type}-${item.id}`}
+                item={item}
+                expandedCoupons={expandedCoupons}
+                copyingCoupons={copyingCoupons}
+                commentsMap={commentsMap}
+                isLoggedIn={!!user}
+                onToggleCoupon={toggleCoupon}
+                onCopyCoupon={handleCopyCoupon}
+                onToggleReaction={(emoji) =>
+                  handleToggleReaction(item.id, item.item_type, emoji)
+                }
+                onLoadComments={() =>
+                  loadComments(item.id, item.item_type)
+                }
+                onAddComment={(content, parentId) =>
+                  handleAddComment(item.id, item.item_type, content, parentId)
+                }
+                onToggleCommentReaction={(commentId, emoji) =>
+                  handleToggleCommentReaction(commentId, emoji, item.id, item.item_type)
+                }
+                isAko={isAko(item)}
+                formatTimeAgo={formatTimeAgo}
+                formatEventsCount={formatEventsCount}
+              />
+            ))}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// ── Feed card ─────────────────────────────────────────────────
+
+interface FeedCardProps {
+  item: SocialFeedItem;
+  expandedCoupons: Set<string>;
+  copyingCoupons: Set<string>;
+  commentsMap: Record<string, SocialComment[]>;
+  isLoggedIn: boolean;
+  onToggleCoupon: (id: string) => void;
+  onCopyCoupon: (item: SocialFeedItem) => void;
+  onToggleReaction: (emoji: ReactionType) => void;
+  onLoadComments: () => void;
+  onAddComment: (content: string, parentId?: string) => Promise<void>;
+  onToggleCommentReaction: (commentId: string, emoji: ReactionType) => void;
+  isAko: boolean;
+  formatTimeAgo: (dateStr: string) => string;
+  formatEventsCount: (count: number) => string;
+}
+
+function FeedCard({
+  item,
+  expandedCoupons,
+  copyingCoupons,
+  commentsMap,
+  isLoggedIn,
+  onToggleCoupon,
+  onCopyCoupon,
+  onToggleReaction,
+  onLoadComments,
+  onAddComment,
+  onToggleCommentReaction,
+  isAko: ako,
+  formatTimeAgo,
+  formatEventsCount,
+}: FeedCardProps) {
+  const expanded = expandedCoupons.has(item.id);
+  const isCopying = copyingCoupons.has(item.id);
+  const comments = commentsMap[item.id] ?? [];
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
+
+  const handleCommentsToggle = () => {
+    if (!commentsLoaded) {
+      onLoadComments();
+      setCommentsLoaded(true);
+    }
+  };
+
+  const commentsAsFlatComments: FlatComment[] = comments.map((c) => ({
+    id: c.id,
+    user_id: c.user_id,
+    username: c.username,
+    content: c.content,
+    parent_id: c.parent_id,
+    created_at: c.created_at,
+    reactions: c.reactions as Record<string, number> | null,
+    my_reaction: c.my_reaction,
+  }));
+
+  return (
+    <div className="bg-card rounded-xl card-shadow overflow-hidden">
+      {/* User header */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <Link
+          to={`/profile/${item.user_id}`}
+          className="flex items-center gap-2 group"
+        >
+          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary group-hover:bg-primary/20 transition-colors">
+            {item.username.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-sm font-semibold group-hover:text-primary transition-colors">
+            {item.username}
+          </span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">
+            {formatTimeAgo(item.created_at)}
+          </span>
+          {item.item_type === 'coupon' && (
+            <button
+              type="button"
+              onClick={() => void onCopyCoupon(item)}
+              disabled={isCopying}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              aria-label="Skopiuj kupon"
+            >
+              {isCopying ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              Skopiuj kupon
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      {item.item_type === 'post' ? (
+        <div className="px-4 py-2">
+          <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+        </div>
+      ) : (
+        <CouponContent
+          item={item}
+          ako={ako}
+          expanded={expanded}
+          onToggle={() => onToggleCoupon(item.id)}
+          formatEventsCount={formatEventsCount}
+        />
+      )}
+
+      {/* Reactions + Comments */}
+      <div className="px-4 pb-3 space-y-2">
+        <ReactionBar
+          reactions={item.reactions as ReactionCounts | null}
+          myReaction={item.my_reaction as ReactionType | null}
+          onToggle={onToggleReaction}
+          disabled={!isLoggedIn}
+        />
+        <div onClick={handleCommentsToggle}>
+          <CommentThread
+            comments={commentsAsFlatComments}
+            onAddComment={onAddComment}
+            onToggleReaction={onToggleCommentReaction}
+            disabled={!isLoggedIn}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Coupon content ──────────────────────────────────────────
+
+interface CouponContentProps {
+  item: SocialFeedItem;
+  ako: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  formatEventsCount: (count: number) => string;
+}
+
+function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
+  const displayedOdds = getDisplayedCouponOdds({
+    totalOdds: Number(item.total_odds),
+    legs: (item.legs ?? []).map((leg) => ({
+      oddsAtTime: Number(leg.odds_at_time),
+    })),
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        className="flex items-center justify-between px-4 py-2 w-full text-sm text-left"
+        onClick={() => ako && onToggle()}
+      >
+        <div className="min-w-0 flex-1">
+          {ako ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
+                AKO {item.legs!.length}
+              </span>
+              <span className="font-medium text-xs text-muted-foreground">
+                kurs {displayedOdds.toFixed(2)}
+              </span>
+              {expanded ? (
+                <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </div>
+          ) : (
+            <>
+              <p className="font-medium truncate">
+                {item.legs?.[0]?.bet_title || 'Zakład'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {item.legs?.[0]?.selected_option} • kurs {displayedOdds.toFixed(2)}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="text-right ml-3 shrink-0">
+          <p className="font-bold">{Number(item.stake).toFixed(2)} zł</p>
+          <p
+            className={cn(
+              'text-xs font-medium',
+              item.status === 'won'
+                ? 'text-success'
+                : item.status === 'lost'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground',
+            )}
+          >
+            {item.status === 'won'
+              ? `+${Number(item.payout).toFixed(2)} zł`
+              : item.status === 'lost'
+                ? 'Przegrana'
+                : 'W toku'}
+          </p>
+        </div>
+      </button>
+
+      {/* AKO legs */}
+      {ako && expanded && (
+        <div className="border-t border-border px-4 pb-3 pt-2 space-y-1.5">
+          {item.legs!.map((leg) => (
+            <div key={leg.id} className="flex items-center justify-between text-xs">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{leg.bet_title || 'Zakład'}</p>
+                <p className="text-muted-foreground">
+                  {leg.selected_option} • kurs {Number(leg.odds_at_time).toFixed(2)}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  'ml-2 shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded',
+                  leg.result === 'won'
+                    ? 'bg-success/10 text-success'
+                    : leg.result === 'lost'
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-muted-foreground/10 text-muted-foreground',
+                )}
+              >
+                {leg.result === 'won'
+                  ? 'Wygrana'
+                  : leg.result === 'lost'
+                    ? 'Przegrana'
+                    : 'W toku'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
