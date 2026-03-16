@@ -403,6 +403,8 @@ function FeedCard({
         <div onClick={handleCommentsToggle}>
           <CommentThread
             comments={commentsAsFlatComments}
+            initialCount={item.comment_count ?? 0}
+            commentsLoaded={commentsLoaded}
             onAddComment={onAddComment}
             onToggleReaction={onToggleCommentReaction}
             disabled={!isLoggedIn}
