@@ -8,6 +8,8 @@ import type { ReactionType, ReactionCounts } from '../reactions';
 
 interface CommentThreadProps {
   comments: FlatComment[];
+  initialCount?: number;
+  commentsLoaded?: boolean;
   onAddComment: (content: string, parentId?: string) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
   disabled?: boolean;
@@ -16,6 +18,8 @@ interface CommentThreadProps {
 
 export function CommentThread({
   comments,
+  initialCount = 0,
+  commentsLoaded = true,
   onAddComment,
   onToggleReaction,
   disabled,
@@ -25,7 +29,7 @@ export function CommentThread({
   const [collapsed, setCollapsed] = useState(true);
   const [showInput, setShowInput] = useState(false);
 
-  const totalCount = comments.length;
+  const totalCount = commentsLoaded ? comments.length : Math.max(comments.length, initialCount);
 
   return (
     <div className="space-y-2">

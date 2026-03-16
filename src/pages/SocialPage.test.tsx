@@ -191,6 +191,20 @@ describe('SocialPage', () => {
     expect(screen.getByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
   });
 
+  it('shows initial comment count from feed before loading thread comments', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-with-comments',
+        comment_count: 3,
+      }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('3 komentarze')).toBeInTheDocument();
+    expect(fetchCommentsMock).not.toHaveBeenCalled();
+  });
+
   // ── PostComposer ─────────────────────────────────────────
 
   it('renders PostComposer for logged-in user', async () => {
