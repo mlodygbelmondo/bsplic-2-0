@@ -156,7 +156,9 @@ function CommentNodeView({
   currentUserId,
 }: CommentNodeViewProps) {
   const [replying, setReplying] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const canReply = depth < maxDepth;
+  const hasAvatar = Boolean(node.avatar_url) && !avatarFailed;
 
   const handleReply = async (content: string, imageBlob?: Blob) => {
     await onAddComment(content, node.id, imageBlob);
@@ -166,8 +168,20 @@ function CommentNodeView({
   return (
     <div className={cn('space-y-1', depth > 0 && 'ml-4 border-l border-border pl-3')}>
       <div className="flex items-start gap-2">
-        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
-          {node.username.charAt(0).toUpperCase()}
+        <div className="h-6 w-6 shrink-0 mt-0.5 rounded-full bg-primary/10 overflow-hidden">
+          {hasAvatar ? (
+            <img
+              src={node.avatar_url ?? undefined}
+              alt={`Avatar ${node.username}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onError={() => setAvatarFailed(true)}
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-[10px] font-bold text-primary">
+              {node.username.charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">

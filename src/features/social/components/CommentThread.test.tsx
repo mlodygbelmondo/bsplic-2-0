@@ -112,6 +112,22 @@ describe('CommentThread', () => {
     expect(screen.getByText('Odpowiedź')).toBeInTheDocument();
   });
 
+  it('renders comment avatar image when avatar_url exists', () => {
+    const comments = [
+      makeComment({
+        id: 'c1',
+        username: 'adam',
+        avatar_url: 'https://cdn.example/comment-avatar.jpg',
+      }),
+    ];
+
+    render(<CommentThread {...defaultProps} comments={comments} />);
+    fireEvent.click(screen.getByLabelText(/Pokaż komentarze/));
+
+    const avatar = screen.getByAltText('Avatar adam');
+    expect(avatar).toHaveAttribute('src', 'https://cdn.example/comment-avatar.jpg');
+  });
+
   it('allows adding a root-level comment', async () => {
     const onAddComment = vi.fn().mockResolvedValue(undefined);
     render(<CommentThread {...defaultProps} onAddComment={onAddComment} />);

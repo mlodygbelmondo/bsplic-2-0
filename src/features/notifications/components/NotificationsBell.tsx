@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { UserNotification } from '@/types/database';
@@ -10,6 +10,7 @@ import {
   markNotificationRead,
 } from '@/features/notifications/api/notifications';
 import { formatNotificationTime, formatNotificationTypeLabel, getNotificationLink } from '@/features/notifications/format';
+import { getNotificationsSoundMuted, playNotificationSound, setNotificationsSoundMuted } from '@/features/notifications/sound';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface NotificationsBellProps {
@@ -22,6 +23,7 @@ export function NotificationsBell({ userId, className }: NotificationsBellProps)
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(getNotificationsSoundMuted());
   const navigate = useNavigate();
 
   const hasUnread = unreadCount > 0;
@@ -66,7 +68,10 @@ export function NotificationsBell({ userId, className }: NotificationsBellProps)
           table: 'user_notifications',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT' && !soundMuted) {
+            void playNotificationSound();
+          }
           void loadCount();
           if (open) {
             void loadNotifications();
@@ -98,7 +103,7 @@ export function NotificationsBell({ userId, className }: NotificationsBellProps)
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [open, userId]);
+  }, [open, soundMuted, userId]);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -162,6 +167,12 @@ export function NotificationsBell({ userId, className }: NotificationsBellProps)
     }
   };
 
+  const handleToggleSound = () => {
+    const nextMuted = !soundMuted;
+    setSoundMuted(nextMuted);
+    setNotificationsSoundMuted(nextMuted);
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -185,14 +196,25 @@ export function NotificationsBell({ userId, className }: NotificationsBellProps)
       <PopoverContent align="end" className="w-[340px] p-0">
         <div className="border-b border-border px-3 py-2 flex items-center justify-between">
           <p className="text-sm font-semibold">Powiadomienia</p>
-          <button
-            type="button"
-            className="text-xs text-primary disabled:text-muted-foreground"
-            disabled={!hasUnread}
-            onClick={() => void handleMarkAllRead()}
-          >
-            Oznacz wszystkie
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToggleSound}
+              aria-label={soundMuted ? 'Włącz dźwięk powiadomień' : 'Wycisz dźwięk powiadomień'}
+              className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+              title={soundMuted ? 'Dźwięk wyłączony' : 'Dźwięk włączony'}
+            >
+              {soundMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              className="text-xs text-primary disabled:text-muted-foreground"
+              disabled={!hasUnread}
+              onClick={() => void handleMarkAllRead()}
+            >
+              Oznacz wszystkie
+            </button>
+          </div>
         </div>
 
         {loading ? (
