@@ -12,6 +12,7 @@ export interface FlatComment {
   created_at: string;
   reactions: Record<string, number> | null;
   my_reaction: string | null;
+  image_path?: string | null;
 }
 
 export interface CommentNode extends FlatComment {

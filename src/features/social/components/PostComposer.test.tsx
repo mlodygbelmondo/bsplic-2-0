@@ -1,8 +1,29 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { PostComposer } from './PostComposer';
 
+const searchMentionUsersMock = vi.fn();
+const compressImageFileMock = vi.fn();
+
+vi.mock('@/features/social/api/mentions', () => ({
+  searchMentionUsers: (...args: unknown[]) => searchMentionUsersMock(...args),
+}));
+
+vi.mock('@/features/social/images', () => ({
+  compressImageFile: (...args: unknown[]) => compressImageFileMock(...args),
+}));
+
 describe('PostComposer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchMentionUsersMock.mockResolvedValue([]);
+    compressImageFileMock.mockResolvedValue({
+      blob: new Blob(['img'], { type: 'image/jpeg' }),
+      width: 800,
+      height: 600,
+    });
+  });
+
   it('renders textarea and submit button', () => {
     render(<PostComposer onSubmit={vi.fn()} />);
 
@@ -108,4 +129,28 @@ describe('PostComposer', () => {
     fireEvent.click(screen.getByLabelText('Opublikuj post'));
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it('shows mention suggestions and inserts selected mention', async () => {
+    searchMentionUsersMock.mockResolvedValue([
+      { id: 'user-2', username: 'tester' },
+      { id: 'user-3', username: 'testowy' },
+    ]);
+
+    render(<PostComposer onSubmit={vi.fn()} currentUserId="user-1" />);
+
+    const textarea = screen.getByLabelText('Treść posta');
+    fireEvent.change(textarea, {
+      target: { value: 'Hej @te' },
+    });
+
+    await waitFor(() => {
+      expect(searchMentionUsersMock).toHaveBeenCalledWith('te', 'user-1');
+    });
+
+    const suggestion = await screen.findByRole('button', { name: '@tester' });
+    fireEvent.click(suggestion);
+
+    expect(textarea).toHaveValue('Hej @tester ');
+  });
+
 });

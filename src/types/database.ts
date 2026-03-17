@@ -119,6 +119,8 @@ export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry'
 
 export type FeedItemType = 'post' | 'coupon';
 
+export type NotificationType = 'mention_post' | 'mention_comment' | 'coupon_won';
+
 export interface SocialFeedItem {
   id: string;
   item_type: FeedItemType;
@@ -145,6 +147,21 @@ export interface SocialComment {
   created_at: string;
   reactions: Partial<Record<ReactionEmoji, number>> | null;
   my_reaction: ReactionEmoji | null;
+}
+
+export interface UserNotification {
+  id: string;
+  user_id: string;
+  actor_user_id: string | null;
+  actor_username: string | null;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link_path: string | null;
+  metadata: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
 }
 
 export interface PublicProfile {

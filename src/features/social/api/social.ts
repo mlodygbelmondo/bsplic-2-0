@@ -22,6 +22,21 @@ export async function fetchSocialFeed(
   return (data ?? []) as unknown as SocialFeedItem[];
 }
 
+export async function fetchSocialFeedItem(
+  itemType: 'post' | 'coupon',
+  itemId: string,
+  userId?: string,
+): Promise<SocialFeedItem | null> {
+  const { data, error } = await rpc('get_social_feed_item', {
+    p_item_type: itemType,
+    p_item_id: itemId,
+    p_user_id: userId ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+  return (data ?? null) as unknown as SocialFeedItem | null;
+}
+
 // ── Posts ──────────────────────────────────────────────────────
 
 export async function createPost(userId: string, content: string): Promise<string> {

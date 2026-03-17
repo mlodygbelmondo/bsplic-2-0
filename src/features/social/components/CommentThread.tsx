@@ -1,20 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildCommentTree, type FlatComment, type CommentNode } from '../thread';
 import { ReactionBar } from './ReactionBar';
 import type { ReactionType, ReactionCounts } from '../reactions';
+import { MentionSuggestions } from '@/features/social/components/MentionSuggestions';
+import { useMentionAutocomplete } from '@/features/social/hooks/useMentionAutocomplete';
+import { applyMention } from '@/features/social/mentions';
+import { compressImageFile } from '@/features/social/images';
+import { SocialImagePreview } from '@/features/social/components/SocialImagePreview';
+import { toast } from 'sonner';
+import { SocialContentBlock } from '@/features/social/components/SocialContentBlock';
+
+interface AttachedImage {
+  blob: Blob;
+  previewUrl: string;
+  sizeKb: number;
+}
+
+function getPastedImageFile(event: React.ClipboardEvent<HTMLInputElement>): File | null {
+  const directFile = event.clipboardData.files?.[0];
+  if (directFile && directFile.type.startsWith('image/')) {
+    return directFile;
+  }
+
+  const item = Array.from(event.clipboardData.items ?? []).find((entry) =>
+    entry.type.startsWith('image/'),
+  );
+
+  return item?.getAsFile() ?? null;
+}
 
 interface CommentThreadProps {
   comments: FlatComment[];
   initialCount?: number;
   commentsLoaded?: boolean;
   onFirstExpand?: () => void;
-  onAddComment: (content: string, parentId?: string) => Promise<void>;
+  onAddComment: (content: string, parentId?: string, imageBlob?: Blob) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
   disabled?: boolean;
   maxDepth?: number;
+  currentUserId?: string;
 }
 
 export function CommentThread({
@@ -26,6 +53,7 @@ export function CommentThread({
   onToggleReaction,
   disabled,
   maxDepth = 3,
+  currentUserId,
 }: CommentThreadProps) {
   const tree = buildCommentTree(comments);
   const [collapsed, setCollapsed] = useState(true);
@@ -64,25 +92,27 @@ export function CommentThread({
         <div className="space-y-2 pl-1">
           {/* Comment list */}
           {tree.map((node) => (
-            <CommentNodeView
-              key={node.id}
-              node={node}
-              depth={0}
-              maxDepth={maxDepth}
-              onAddComment={onAddComment}
-              onToggleReaction={onToggleReaction}
-              disabled={disabled}
-            />
-          ))}
+              <CommentNodeView
+                key={node.id}
+                node={node}
+                depth={0}
+                maxDepth={maxDepth}
+                onAddComment={onAddComment}
+                onToggleReaction={onToggleReaction}
+                disabled={disabled}
+                currentUserId={currentUserId}
+              />
+            ))}
 
           {/* Root-level comment input */}
           {showInput && (
-            <CommentInput
-              onSubmit={(content) => onAddComment(content)}
-              disabled={disabled}
-              placeholder="Napisz komentarz..."
-            />
-          )}
+              <CommentInput
+                onSubmit={(content, imageBlob) => onAddComment(content, undefined, imageBlob)}
+                disabled={disabled}
+                placeholder="Napisz komentarz..."
+                currentUserId={currentUserId}
+              />
+            )}
 
           {!showInput && (
             <button
@@ -105,9 +135,10 @@ interface CommentNodeViewProps {
   node: CommentNode;
   depth: number;
   maxDepth: number;
-  onAddComment: (content: string, parentId?: string) => Promise<void>;
+  onAddComment: (content: string, parentId?: string, imageBlob?: Blob) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
   disabled?: boolean;
+  currentUserId?: string;
 }
 
 function CommentNodeView({
@@ -117,12 +148,13 @@ function CommentNodeView({
   onAddComment,
   onToggleReaction,
   disabled,
+  currentUserId,
 }: CommentNodeViewProps) {
   const [replying, setReplying] = useState(false);
   const canReply = depth < maxDepth;
 
-  const handleReply = async (content: string) => {
-    await onAddComment(content, node.id);
+  const handleReply = async (content: string, imageBlob?: Blob) => {
+    await onAddComment(content, node.id, imageBlob);
     setReplying(false);
   };
 
@@ -139,7 +171,12 @@ function CommentNodeView({
               {formatTimeAgo(node.created_at)}
             </span>
           </div>
-          <p className="text-sm mt-0.5">{node.content}</p>
+          <div className="mt-0.5">
+            <SocialContentBlock
+              content={node.image_path ? `${node.content}\n[[img:${node.image_path}]]` : node.content}
+              imageAlt="Zdjęcie w komentarzu"
+            />
+          </div>
 
           <div className="flex items-center gap-3 mt-1">
             <ReactionBar
@@ -167,6 +204,7 @@ function CommentNodeView({
                 disabled={disabled}
                 placeholder={`Odpowiedz @${node.username}...`}
                 onCancel={() => setReplying(false)}
+                currentUserId={currentUserId}
               />
             </div>
           )}
@@ -183,6 +221,7 @@ function CommentNodeView({
           onAddComment={onAddComment}
           onToggleReaction={onToggleReaction}
           disabled={disabled}
+          currentUserId={currentUserId}
         />
       ))}
     </div>
@@ -192,67 +231,165 @@ function CommentNodeView({
 // ── Comment input ────────────────────────────────────────────
 
 interface CommentInputProps {
-  onSubmit: (content: string) => Promise<void>;
+  onSubmit: (content: string, imageBlob?: Blob) => Promise<void>;
   disabled?: boolean;
   placeholder?: string;
   onCancel?: () => void;
+  currentUserId?: string;
 }
 
-function CommentInput({ onSubmit, disabled, placeholder, onCancel }: CommentInputProps) {
+function CommentInput({ onSubmit, disabled, placeholder, onCancel, currentUserId }: CommentInputProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [caretPosition, setCaretPosition] = useState(0);
+  const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const { activeMention, suggestions, loading } = useMentionAutocomplete({
+    value: content,
+    caretPosition,
+    currentUserId,
+  });
 
   const trimmed = content.trim();
 
+  useEffect(() => {
+    return () => {
+      if (attachedImage) {
+        URL.revokeObjectURL(attachedImage.previewUrl);
+      }
+    };
+  }, [attachedImage]);
+
   const handleSubmit = async () => {
-    if (!trimmed || submitting) return;
+    if ((!trimmed && !attachedImage) || submitting) return;
     setSubmitting(true);
     try {
-      await onSubmit(trimmed);
+      if (attachedImage) {
+        await onSubmit(trimmed, attachedImage.blob);
+      } else {
+        await onSubmit(trimmed);
+      }
       setContent('');
+      if (attachedImage) {
+        URL.revokeObjectURL(attachedImage.previewUrl);
+      }
+      setAttachedImage(null);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handlePaste = async (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const file = getPastedImageFile(event);
+    if (!file) return;
+
+    event.preventDefault();
+
+    if (attachedImage) {
+      toast.error('Możesz dodać maksymalnie jedno zdjęcie do komentarza');
+      return;
+    }
+
+    try {
+      const compressed = await compressImageFile(file);
+      const previewUrl = URL.createObjectURL(compressed.blob);
+      setAttachedImage({
+        blob: compressed.blob,
+        previewUrl,
+        sizeKb: Math.round(compressed.blob.size / 1024),
+      });
+      toast.success('Zdjęcie zostało dodane i skompresowane');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nie udało się dodać zdjęcia';
+      toast.error(message);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (!attachedImage) return;
+    URL.revokeObjectURL(attachedImage.previewUrl);
+    setAttachedImage(null);
+  };
+
+  const handleMentionSelect = (username: string) => {
+    if (!activeMention) return;
+    const next = applyMention(content, activeMention, username);
+    setContent(next.value);
+    setCaretPosition(next.caret);
+
+    window.requestAnimationFrame(() => {
+      if (!inputRef.current) return;
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(next.caret, next.caret);
+    });
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="text"
-        className="flex-1 bg-transparent border border-border rounded-lg px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        placeholder={placeholder ?? 'Napisz komentarz...'}
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            void handleSubmit();
-          }
-        }}
-        disabled={submitting || disabled}
-        maxLength={500}
-        aria-label={placeholder ?? 'Napisz komentarz...'}
-      />
-      <Button
-        size="icon"
-        variant="ghost"
-        className="h-7 w-7 shrink-0"
-        onClick={handleSubmit}
-        disabled={!trimmed || submitting || disabled}
-        aria-label="Wyślij komentarz"
-      >
-        <Send className="h-3.5 w-3.5" />
-      </Button>
-      {onCancel && (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          className="flex-1 bg-transparent border border-border rounded-lg px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder={placeholder ?? 'Napisz komentarz...'}
+          value={content}
+          onChange={(e) => {
+            setContent(e.target.value);
+            setCaretPosition(e.target.selectionStart ?? e.target.value.length);
+          }}
+          onPaste={(e) => {
+            void handlePaste(e);
+          }}
+          onSelect={(e) => {
+            const target = e.target as HTMLInputElement;
+            setCaretPosition(target.selectionStart ?? target.value.length);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              void handleSubmit();
+            }
+          }}
+          disabled={submitting || disabled}
+          maxLength={500}
+          aria-label={placeholder ?? 'Napisz komentarz...'}
+        />
         <Button
           size="icon"
           variant="ghost"
           className="h-7 w-7 shrink-0"
-          onClick={onCancel}
-          aria-label="Anuluj odpowiedź"
+          onClick={handleSubmit}
+          disabled={(!trimmed && !attachedImage) || submitting || disabled}
+          aria-label="Wyślij komentarz"
         >
-          <span className="text-xs">✕</span>
+          <Send className="h-3.5 w-3.5" />
         </Button>
+        {onCancel && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0"
+            onClick={onCancel}
+            aria-label="Anuluj odpowiedź"
+          >
+            <span className="text-xs">✕</span>
+          </Button>
+        )}
+      </div>
+      {attachedImage && (
+        <SocialImagePreview
+          imageUrl={attachedImage.previewUrl}
+          imageKb={attachedImage.sizeKb}
+          onRemove={handleRemoveImage}
+        />
+      )}
+      {activeMention && (
+        <MentionSuggestions
+          loading={loading}
+          users={suggestions}
+          onSelect={handleMentionSelect}
+        />
       )}
     </div>
   );

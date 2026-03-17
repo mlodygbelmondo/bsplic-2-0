@@ -8,6 +8,7 @@ import type { SocialFeedItem } from '@/types/database';
 // ── Mocks ────────────────────────────────────────────────────
 
 const fetchSocialFeedMock = vi.fn<() => Promise<SocialFeedItem[]>>();
+const fetchSocialFeedItemMock = vi.fn<() => Promise<SocialFeedItem | null>>();
 const createPostMock = vi.fn<() => Promise<string>>();
 const fetchCommentsMock = vi.fn();
 const addCommentMock = vi.fn();
@@ -34,6 +35,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 vi.mock('@/features/social/api/social', () => ({
   fetchSocialFeed: (...args: unknown[]) => fetchSocialFeedMock(...(args as [])),
+  fetchSocialFeedItem: (...args: unknown[]) => fetchSocialFeedItemMock(...(args as [])),
   createPost: (...args: unknown[]) => createPostMock(...(args as [])),
   fetchComments: (...args: unknown[]) => fetchCommentsMock(...args),
   addComment: (...args: unknown[]) => addCommentMock(...args),
@@ -125,6 +127,14 @@ function renderSocialPage() {
   );
 }
 
+function renderSocialPageWithRoute(route: string) {
+  return render(
+    <MemoryRouter initialEntries={[route]}>
+      <SocialPage />
+    </MemoryRouter>,
+  );
+}
+
 function makePostPage(size: number, start = 0): SocialFeedItem[] {
   return Array.from({ length: size }, (_, index) => {
     const n = start + index;
@@ -143,6 +153,7 @@ describe('SocialPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
+    fetchSocialFeedItemMock.mockResolvedValue(null);
     fetchCommentsMock.mockResolvedValue([]);
     createPostMock.mockResolvedValue('new-post-id');
     addCommentMock.mockResolvedValue('new-comment-id');
@@ -201,6 +212,22 @@ describe('SocialPage', () => {
     expect(await screen.findByText('Typster')).toBeInTheDocument();
     expect(screen.getByText('Poster')).toBeInTheDocument();
     expect(screen.getByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+  });
+
+  it('loads target feed item from notification link params when item is not in current page', async () => {
+    fetchSocialFeedMock.mockResolvedValueOnce([]);
+    fetchSocialFeedItemMock.mockResolvedValueOnce(
+      makePostFeedItem({
+        id: 'post-notif',
+        content: 'Wpis z powiadomienia',
+        username: 'Pingowany',
+      }),
+    );
+
+    renderSocialPageWithRoute('/social?itemType=post&itemId=post-notif');
+
+    expect(await screen.findByText('Wpis z powiadomienia')).toBeInTheDocument();
+    expect(fetchSocialFeedItemMock).toHaveBeenCalledWith('post', 'post-notif', 'user-1');
   });
 
   it('filters feed to show only coupons', async () => {

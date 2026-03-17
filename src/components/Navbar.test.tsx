@@ -43,6 +43,14 @@ vi.mock("@/features/social/polishDay", () => ({
   canClaimTopup: vi.fn(),
 }));
 
+const notificationsBellMock = vi.fn(({ userId }: { userId?: string }) => (
+  <div data-testid="notifications-bell">notifications-{userId ?? 'none'}</div>
+));
+
+vi.mock("@/features/notifications/components/NotificationsBell", () => ({
+  NotificationsBell: (props: { userId?: string; className?: string }) => notificationsBellMock(props),
+}));
+
 // Import the mocked function so we can control its return value per test
 import { canClaimTopup } from "@/features/social/polishDay";
 const canClaimTopupMock = vi.mocked(canClaimTopup);
@@ -73,6 +81,7 @@ describe("Navbar", () => {
     canClaimTopupMock.mockReturnValue(true);
     rpcMock.mockResolvedValue({ error: null });
     refreshProfileMock.mockResolvedValue(undefined);
+    notificationsBellMock.mockClear();
   });
 
   // ── Basic rendering ──────────────────────────────────────
@@ -101,6 +110,14 @@ describe("Navbar", () => {
   it("displays user balance in the wallet button", () => {
     renderNavbar();
     expect(screen.getByText("500.00 zł")).toBeInTheDocument();
+  });
+
+  it("renders notifications bell and passes current user id", () => {
+    renderNavbar();
+    expect(screen.getAllByTestId("notifications-bell").length).toBeGreaterThan(0);
+    expect(notificationsBellMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-1" }),
+    );
   });
 
   // ── Topup — canClaimTopup is true ─────────────────────

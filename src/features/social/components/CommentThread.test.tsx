@@ -1,7 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { CommentThread } from './CommentThread';
 import type { FlatComment } from '../thread';
+
+const searchMentionUsersMock = vi.fn();
+const compressImageFileMock = vi.fn();
+
+vi.mock('@/features/social/api/mentions', () => ({
+  searchMentionUsers: (...args: unknown[]) => searchMentionUsersMock(...args),
+}));
+
+vi.mock('@/features/social/images', () => ({
+  compressImageFile: (...args: unknown[]) => compressImageFileMock(...args),
+  getSocialImageUrl: (path: string) => `https://example.com/${path}`,
+}));
 
 function makeComment(overrides: Partial<FlatComment> & { id: string }): FlatComment {
   return {
@@ -21,7 +33,18 @@ describe('CommentThread', () => {
     comments: [] as FlatComment[],
     onAddComment: vi.fn().mockResolvedValue(undefined),
     onToggleReaction: vi.fn(),
+    currentUserId: 'user-1',
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchMentionUsersMock.mockResolvedValue([]);
+    compressImageFileMock.mockResolvedValue({
+      blob: new Blob(['img'], { type: 'image/jpeg' }),
+      width: 800,
+      height: 600,
+    });
+  });
 
   it('renders comment toggle button', () => {
     render(<CommentThread {...defaultProps} />);
@@ -99,7 +122,7 @@ describe('CommentThread', () => {
     fireEvent.click(screen.getByLabelText('Wyślij komentarz'));
 
     await waitFor(() => {
-      expect(onAddComment).toHaveBeenCalledWith('Nowy komentarz');
+      expect(onAddComment).toHaveBeenCalledWith('Nowy komentarz', undefined, undefined);
     });
   });
 
@@ -113,7 +136,7 @@ describe('CommentThread', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     await waitFor(() => {
-      expect(onAddComment).toHaveBeenCalledWith('Enter test');
+      expect(onAddComment).toHaveBeenCalledWith('Enter test', undefined, undefined);
     });
   });
 
@@ -147,7 +170,7 @@ describe('CommentThread', () => {
     fireEvent.click(enabledSend!);
 
     await waitFor(() => {
-      expect(onAddComment).toHaveBeenCalledWith('Moja odpowiedź', 'c1');
+      expect(onAddComment).toHaveBeenCalledWith('Moja odpowiedź', 'c1', undefined);
     });
   });
 
@@ -202,4 +225,31 @@ describe('CommentThread', () => {
 
     expect(onToggleReaction).toHaveBeenCalledWith('c1', 'like');
   });
+
+  it('shows mention suggestions in comment input and inserts selected mention', async () => {
+    const onAddComment = vi.fn().mockResolvedValue(undefined);
+    searchMentionUsersMock.mockResolvedValue([{ id: 'user-2', username: 'adam' }]);
+
+    render(
+      <CommentThread
+        {...defaultProps}
+        onAddComment={onAddComment}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Skomentuj'));
+
+    const input = screen.getByLabelText('Napisz komentarz...');
+    fireEvent.change(input, { target: { value: 'Hej @ad' } });
+
+    await waitFor(() => {
+      expect(searchMentionUsersMock).toHaveBeenCalledWith('ad', 'user-1');
+    });
+
+    const suggestion = await screen.findByRole('button', { name: '@adam' });
+    fireEvent.click(suggestion);
+
+    expect(input).toHaveValue('Hej @adam ');
+  });
+
 });
