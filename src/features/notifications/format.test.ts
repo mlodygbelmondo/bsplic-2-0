@@ -22,6 +22,7 @@ describe('notifications format helpers', () => {
     expect(formatNotificationTypeLabel('mention_post')).toBe('Wzmianka w poście');
     expect(formatNotificationTypeLabel('mention_comment')).toBe('Wzmianka w komentarzu');
     expect(formatNotificationTypeLabel('coupon_won')).toBe('Wygrany kupon');
+    expect(formatNotificationTypeLabel('comment_post')).toBe('Komentarz do posta');
   });
 
   it('returns social fallback link when link_path is missing', () => {

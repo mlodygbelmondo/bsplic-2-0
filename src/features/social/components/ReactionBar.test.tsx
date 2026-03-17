@@ -3,11 +3,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { ReactionBar } from './ReactionBar';
 import type { ReactionCounts, ReactionType } from '../reactions';
 
+const onOpenReactorsMock = vi.fn();
+
 describe('ReactionBar', () => {
   const defaultProps = {
     reactions: null as ReactionCounts | null,
     myReaction: null as ReactionType | null,
     onToggle: vi.fn(),
+    onOpenReactors: onOpenReactorsMock,
   };
 
   it('renders reaction picker when no reactions exist', () => {
@@ -59,6 +62,18 @@ describe('ReactionBar', () => {
     expect(onToggle).toHaveBeenCalledWith('like');
   });
 
+  it('shows "Wyświetl reakcje" and opens reactors on click', () => {
+    render(
+      <ReactionBar
+        {...defaultProps}
+        reactions={{ like: 3 }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wyświetl reakcje' }));
+    expect(onOpenReactorsMock).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onToggle when a picker emoji is clicked', () => {
     const onToggle = vi.fn();
     render(
@@ -99,7 +114,8 @@ describe('ReactionBar', () => {
 
     // All 7 buttons should be count buttons, no picker buttons
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(7);
+    expect(buttons).toHaveLength(8);
+    expect(screen.getByRole('button', { name: 'Wyświetl reakcje' })).toBeInTheDocument();
     // Each should have a count label
     expect(screen.getByLabelText('👍 1')).toBeInTheDocument();
     expect(screen.getByLabelText('😡 6')).toBeInTheDocument();

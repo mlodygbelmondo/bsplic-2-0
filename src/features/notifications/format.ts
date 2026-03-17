@@ -8,6 +8,8 @@ export function formatNotificationTypeLabel(type: NotificationType): string {
       return 'Wzmianka w komentarzu';
     case 'coupon_won':
       return 'Wygrany kupon';
+    case 'comment_post':
+      return 'Komentarz do posta';
     default:
       return 'Powiadomienie';
   }

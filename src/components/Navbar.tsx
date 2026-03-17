@@ -20,6 +20,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { NotificationsBell } from "@/features/notifications/components/NotificationsBell";
 
@@ -157,9 +158,12 @@ export function Navbar() {
                 to="/profile"
                 className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition"
               >
-                <div className="h-6 w-6 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px] font-bold text-primary-foreground">
-                  {profile.username.charAt(0).toUpperCase()}
-                </div>
+                <Avatar className="h-6 w-6 bg-primary-foreground/20">
+                  <AvatarImage src={profile.avatar_url ?? undefined} alt={`Avatar ${profile.username}`} />
+                  <AvatarFallback className="bg-primary-foreground/20 text-[10px] font-bold text-primary-foreground">
+                    {profile.username.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="hidden sm:inline">{profile.username}</span>
               </Link>
             )}
@@ -245,9 +249,12 @@ export function Navbar() {
                             to="/profile"
                             className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-background transition-colors"
                           >
-                            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary">
-                              {profile.username.charAt(0).toUpperCase()}
-                            </div>
+                            <Avatar className="h-7 w-7 bg-primary/10">
+                              <AvatarImage src={profile.avatar_url ?? undefined} alt={`Avatar ${profile.username}`} />
+                              <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                                {profile.username.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <span className="text-sm font-medium text-foreground">
                               {profile.username}
                             </span>

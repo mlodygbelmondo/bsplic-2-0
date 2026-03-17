@@ -4,6 +4,7 @@ import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
 import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { useCoupon } from '@/contexts/CouponContext';
@@ -17,6 +18,7 @@ import { CommentThread } from '@/features/social/components/CommentThread';
 import { buildSocialContent, parseSocialContent } from '@/features/social/content';
 import { uploadSocialImage } from '@/features/social/images';
 import { SocialContentBlock } from '@/features/social/components/SocialContentBlock';
+import { ReactorsDialog } from '@/features/social/components/ReactorsDialog';
 import {
   fetchSocialFeed,
   fetchSocialFeedItem,
@@ -31,6 +33,7 @@ import type { FlatComment } from '@/features/social/thread';
 const SOCIAL_FEED_PAGE_SIZE = 50;
 const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
 const EMPTY_COMMENTS: SocialComment[] = [];
+const REACTION_TYPES: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad', 'angry', 'fire'];
 
 function updateReactionCounts(
   reactions: Partial<Record<ReactionEmoji, number>> | null,
@@ -95,6 +98,13 @@ export default function SocialPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(null);
+  const [reactorsOpen, setReactorsOpen] = useState(false);
+  const [reactorsEmoji, setReactorsEmoji] = useState<ReactionType | null>(null);
+  const [reactorsTarget, setReactorsTarget] = useState<{
+    postId?: string;
+    couponId?: string;
+    commentId?: string;
+  } | null>(null);
 
   const targetItemTypeParam = searchParams.get('itemType');
   const targetItemIdParam = searchParams.get('itemId');
@@ -442,6 +452,29 @@ export default function SocialPage() {
     [user],
   );
 
+  const handleOpenItemReactors = useCallback((item: SocialFeedItem) => {
+    const firstReactionType = REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
+
+    setReactorsTarget(
+      item.item_type === 'post'
+        ? { postId: item.id }
+        : { couponId: item.id },
+    );
+    setReactorsEmoji(firstReactionType);
+    setReactorsOpen(true);
+  }, []);
+
+  const handleOpenCommentReactors = useCallback((commentId: string) => {
+    const comment = Object.values(commentsMap)
+      .flat()
+      .find((entry) => entry.id === commentId);
+    const firstReactionType = REACTION_TYPES.find((type) => ((comment?.reactions as ReactionCounts | null)?.[type] ?? 0) > 0) ?? null;
+
+    setReactorsTarget({ commentId });
+    setReactorsEmoji(firstReactionType);
+    setReactorsOpen(true);
+  }, [commentsMap]);
+
   // ── Render ─────────────────────────────────────────────────
 
   return (
@@ -532,6 +565,8 @@ export default function SocialPage() {
                     formatEventsCount={formatEventsCount}
                     currentUserId={user?.id}
                     highlighted={highlightedItemKey === `${item.item_type}-${item.id}`}
+                    onOpenItemReactors={handleOpenItemReactors}
+                    onOpenCommentReactors={handleOpenCommentReactors}
                   />
                 ))
               )}
@@ -556,6 +591,12 @@ export default function SocialPage() {
           )}
         </div>
       </div>
+      <ReactorsDialog
+        open={reactorsOpen}
+        onOpenChange={setReactorsOpen}
+        target={reactorsTarget}
+        initialEmoji={reactorsEmoji}
+      />
     </div>
   );
 }
@@ -592,6 +633,8 @@ interface FeedCardProps {
   formatEventsCount: (count: number) => string;
   currentUserId?: string;
   highlighted?: boolean;
+  onOpenItemReactors: (item: SocialFeedItem) => void;
+  onOpenCommentReactors: (commentId: string) => void;
 }
 
 const FeedCard = memo(function FeedCard({
@@ -613,6 +656,8 @@ const FeedCard = memo(function FeedCard({
   formatEventsCount,
   currentUserId,
   highlighted = false,
+  onOpenItemReactors,
+  onOpenCommentReactors,
 }: FeedCardProps) {
   const expanded = expandedCoupons.has(item.id);
   const isCopying = copyingCoupons.has(item.id);
@@ -651,9 +696,12 @@ const FeedCard = memo(function FeedCard({
           to={`/profile/${item.user_id}`}
           className="flex items-center gap-2 group"
         >
-          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary group-hover:bg-primary/20 transition-colors">
-            {item.username.charAt(0).toUpperCase()}
-          </div>
+          <Avatar className="h-7 w-7 bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <AvatarImage src={item.avatar_url ?? undefined} alt={`Avatar ${item.username}`} />
+            <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+              {item.username.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <span className="text-sm font-semibold group-hover:text-primary transition-colors">
             {item.username}
           </span>
@@ -704,6 +752,7 @@ const FeedCard = memo(function FeedCard({
           onToggle={(emoji) => {
             void onToggleReaction(item.id, item.item_type, emoji);
           }}
+          onOpenReactors={() => onOpenItemReactors(item)}
           disabled={!isLoggedIn}
         />
         <CommentThread
@@ -718,6 +767,7 @@ const FeedCard = memo(function FeedCard({
           onToggleReaction={(commentId, emoji) => {
             void onToggleCommentReaction(commentId, emoji, item.id, item.item_type);
           }}
+          onOpenCommentReactors={onOpenCommentReactors}
           disabled={!isLoggedIn}
           currentUserId={currentUserId}
         />
