@@ -12,6 +12,7 @@ interface CreateBetProposalParams {
   categoryId: string | null;
   betType: '1x2' | '12' | 'multi';
   options: ProposalOption[];
+  endsAt: string;
 }
 
 export async function createBetProposal({
@@ -20,6 +21,7 @@ export async function createBetProposal({
   categoryId,
   betType,
   options,
+  endsAt,
 }: CreateBetProposalParams) {
   const { error } = await supabase.from('bet_proposals').insert({
     user_id: userId,
@@ -27,6 +29,7 @@ export async function createBetProposal({
     category_id: categoryId,
     bet_type: betType,
     options: options as unknown as Json,
+    ends_at: new Date(endsAt).toISOString(),
   });
 
   if (error) {

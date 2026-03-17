@@ -45,6 +45,18 @@ const OPTION_DEFAULTS: Record<"1x2" | "12" | "multi", string[]> = {
   multi: ["", ""],
 };
 
+const toInputDateTime = (value: Date) => {
+  const offsetDate = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
+};
+
+const getTomorrowAt2359 = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(23, 59, 0, 0);
+  return date;
+};
+
 export function ProposeBetModal({
   open,
   onOpenChange,
@@ -54,6 +66,7 @@ export function ProposeBetModal({
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [betType, setBetType] = useState<"1x2" | "12" | "multi">("12");
+  const [endsAt, setEndsAt] = useState(() => toInputDateTime(getTomorrowAt2359()));
   const [options, setOptions] = useState<OptionDraft[]>([
     { name: "1", odds: "2" },
     { name: "2", odds: "2" },
@@ -126,6 +139,7 @@ export function ProposeBetModal({
         categoryId: categoryId || null,
         betType,
         options: normalizedOptions,
+        endsAt,
       });
 
       toast.success("📋 Zakład zaproponowany — czeka na akceptację admina");
@@ -133,6 +147,7 @@ export function ProposeBetModal({
       setTitle("");
       setCategoryId("");
       setBetType("12");
+      setEndsAt(toInputDateTime(getTomorrowAt2359()));
       setOptions([
         { name: "1", odds: "2" },
         { name: "2", odds: "2" },
@@ -200,6 +215,16 @@ export function ProposeBetModal({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data zakończenia</Label>
+            <Input
+              type="datetime-local"
+              value={endsAt}
+              onChange={(event) => setEndsAt(event.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
