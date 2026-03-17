@@ -21,6 +21,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { NotificationsBell } from "@/features/notifications/components/NotificationsBell";
 
 export function Navbar() {
   const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
@@ -132,6 +133,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2">
+            <NotificationsBell userId={user?.id} />
             {profile && (
               <button
                 onClick={() =>
@@ -170,7 +172,8 @@ export function Navbar() {
             </button>
           </div>
 
-          <div className="lg:hidden">
+          <div className="lg:hidden flex items-center gap-1">
+            <NotificationsBell userId={user?.id} />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
 import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
@@ -14,8 +14,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PostComposer } from '@/features/social/components/PostComposer';
 import { ReactionBar } from '@/features/social/components/ReactionBar';
 import { CommentThread } from '@/features/social/components/CommentThread';
+import { buildSocialContent, parseSocialContent } from '@/features/social/content';
+import { uploadSocialImage } from '@/features/social/images';
+import { SocialContentBlock } from '@/features/social/components/SocialContentBlock';
 import {
   fetchSocialFeed,
+  fetchSocialFeedItem,
   createPost,
   fetchComments,
   addComment,
@@ -88,7 +92,17 @@ export default function SocialPage() {
   const [commentsLoadingMap, setCommentsLoadingMap] = useState<Record<string, boolean>>({});
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(null);
+
+  const targetItemTypeParam = searchParams.get('itemType');
+  const targetItemIdParam = searchParams.get('itemId');
+  const targetItemType =
+    targetItemTypeParam === 'post' || targetItemTypeParam === 'coupon'
+      ? targetItemTypeParam
+      : null;
+  const targetItemId = targetItemIdParam && targetItemIdParam.length > 0 ? targetItemIdParam : null;
 
   const filteredFeedItems = useMemo(() => {
     if (feedFilter === 'all') return feedItems;
@@ -129,6 +143,56 @@ export default function SocialPage() {
   useEffect(() => {
     void loadFeed();
   }, [loadFeed]);
+
+  useEffect(() => {
+    if (!targetItemType || !targetItemId) return;
+
+    let cancelled = false;
+
+    const ensureTargetItemVisible = async () => {
+      setFeedFilter('all');
+
+      try {
+        const item = await fetchSocialFeedItem(targetItemType, targetItemId, user?.id);
+        if (!item || cancelled) return;
+
+        setFeedItems((prev) => {
+          const exists = prev.some(
+            (feedItem) => feedItem.id === item.id && feedItem.item_type === item.item_type,
+          );
+          if (exists) return prev;
+          return [item, ...prev];
+        });
+
+        setHighlightedItemKey(`${item.item_type}-${item.id}`);
+      } catch {
+        // no-op, social feed still works without deep-link preload
+      }
+    };
+
+    void ensureTargetItemVisible();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [targetItemId, targetItemType, user?.id]);
+
+  useEffect(() => {
+    if (!highlightedItemKey) return;
+
+    const element = document.getElementById(`social-item-${highlightedItemKey}`);
+    if (!element) return;
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const timeout = window.setTimeout(() => {
+      setHighlightedItemKey((current) => (current === highlightedItemKey ? null : current));
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [highlightedItemKey, filteredFeedItems.length]);
 
   useEffect(() => {
     if (loading || !hasMore || typeof IntersectionObserver === 'undefined') {
@@ -230,9 +294,15 @@ export default function SocialPage() {
 
   // ── Post creation ──────────────────────────────────────────
 
-  const handleCreatePost = async (content: string) => {
+  const handleCreatePost = async (content: string, imageBlob?: Blob) => {
     if (!user) return;
-    await createPost(user.id, content);
+    let imagePath: string | undefined;
+    if (imageBlob) {
+      imagePath = await uploadSocialImage(user.id, imageBlob);
+    }
+
+    const payload = buildSocialContent(content, imagePath);
+    await createPost(user.id, payload);
     await loadFeed();
     toast.success('Post opublikowany');
   };
@@ -272,11 +342,18 @@ export default function SocialPage() {
       itemType: 'post' | 'coupon',
       content: string,
       parentId?: string,
+      imageBlob?: Blob,
     ) => {
       if (!user) return;
+      let imagePath: string | undefined;
+      if (imageBlob) {
+        imagePath = await uploadSocialImage(user.id, imageBlob);
+      }
+
+      const payload = buildSocialContent(content, imagePath);
       await addComment({
         userId: user.id,
-        content,
+        content: payload,
         postId: itemType === 'post' ? itemId : undefined,
         couponId: itemType === 'coupon' ? itemId : undefined,
         parentId,
@@ -416,7 +493,7 @@ export default function SocialPage() {
           {/* Post composer for logged-in users */}
           {user && (
             <div className="mb-4">
-              <PostComposer onSubmit={handleCreatePost} />
+              <PostComposer onSubmit={handleCreatePost} currentUserId={user.id} />
             </div>
           )}
 
@@ -453,6 +530,8 @@ export default function SocialPage() {
                     isAko={isAko(item)}
                     formatTimeAgo={formatTimeAgo}
                     formatEventsCount={formatEventsCount}
+                    currentUserId={user?.id}
+                    highlighted={highlightedItemKey === `${item.item_type}-${item.id}`}
                   />
                 ))
               )}
@@ -500,6 +579,7 @@ interface FeedCardProps {
     itemType: 'post' | 'coupon',
     content: string,
     parentId?: string,
+    imageBlob?: Blob,
   ) => Promise<void>;
   onToggleCommentReaction: (
     commentId: string,
@@ -510,6 +590,8 @@ interface FeedCardProps {
   isAko: boolean;
   formatTimeAgo: (dateStr: string) => string;
   formatEventsCount: (count: number) => string;
+  currentUserId?: string;
+  highlighted?: boolean;
 }
 
 const FeedCard = memo(function FeedCard({
@@ -529,6 +611,8 @@ const FeedCard = memo(function FeedCard({
   isAko: ako,
   formatTimeAgo,
   formatEventsCount,
+  currentUserId,
+  highlighted = false,
 }: FeedCardProps) {
   const expanded = expandedCoupons.has(item.id);
   const isCopying = copyingCoupons.has(item.id);
@@ -544,8 +628,23 @@ const FeedCard = memo(function FeedCard({
     my_reaction: c.my_reaction,
   }));
 
+  const parsedComments = commentsAsFlatComments.map((comment) => {
+    const parsed = parseSocialContent(comment.content);
+    return {
+      ...comment,
+      content: parsed.text,
+      image_path: parsed.imagePath,
+    };
+  });
+
   return (
-    <div className="bg-card rounded-xl card-shadow overflow-hidden">
+    <div
+      id={`social-item-${item.item_type}-${item.id}`}
+      className={cn(
+        'bg-card rounded-xl card-shadow overflow-hidden transition-shadow',
+        highlighted && 'ring-2 ring-primary/50 shadow-lg',
+      )}
+    >
       {/* User header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <Link
@@ -585,7 +684,7 @@ const FeedCard = memo(function FeedCard({
       {/* Content */}
       {item.item_type === 'post' ? (
         <div className="px-4 py-2">
-          <p className="text-sm whitespace-pre-wrap">{item.content}</p>
+          <SocialContentBlock content={item.content} imageAlt="Zdjęcie w poście" />
         </div>
       ) : (
         <CouponContent
@@ -608,18 +707,19 @@ const FeedCard = memo(function FeedCard({
           disabled={!isLoggedIn}
         />
         <CommentThread
-          comments={commentsAsFlatComments}
+          comments={parsedComments}
           initialCount={item.comment_count ?? 0}
           commentsLoaded={commentsLoaded}
           onFirstExpand={() => {
             if (commentsLoaded || commentsLoading) return;
             void onFirstExpandComments(item.id, item.item_type);
           }}
-          onAddComment={(content, parentId) => onAddComment(item.id, item.item_type, content, parentId)}
+          onAddComment={(content, parentId, imageBlob) => onAddComment(item.id, item.item_type, content, parentId, imageBlob)}
           onToggleReaction={(commentId, emoji) => {
             void onToggleCommentReaction(commentId, emoji, item.id, item.item_type);
           }}
           disabled={!isLoggedIn}
+          currentUserId={currentUserId}
         />
       </div>
     </div>
