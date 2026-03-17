@@ -310,6 +310,21 @@ describe('SocialPage', () => {
     });
   });
 
+  it('renders avatar image in feed card when avatar_url exists', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-avatar',
+        username: 'AvatarUser',
+        avatar_url: 'https://cdn.example/avatar.jpg',
+      }),
+    ]);
+
+    renderSocialPage();
+
+    const avatar = await screen.findByAltText('Avatar AvatarUser');
+    expect(avatar).toHaveAttribute('src', 'https://cdn.example/avatar.jpg');
+  });
+
   it('shows initial comment count from feed before loading thread comments', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makePostFeedItem({

@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
+import { compressImageFile } from '@/features/social/images';
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -205,12 +206,19 @@ export default function ProfilePage() {
 
     setAvatarUploadLoading(true);
     try {
-      const extension = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+      const compressed = await compressImageFile(file, {
+        maxDimension: 640,
+        targetBytes: 135 * 1024,
+        absoluteMaxBytes: 140 * 1024,
+        minDimension: 256,
+      });
+
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-avatars')
-        .upload(path, file, {
+        .upload(path, compressed.blob, {
+          contentType: 'image/jpeg',
           cacheControl: '31536000',
           upsert: false,
         });

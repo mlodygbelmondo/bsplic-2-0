@@ -1,9 +1,22 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export const SOCIAL_IMAGES_BUCKET = 'social-images';
-const MAX_IMAGE_DIMENSION = 1280;
-const TARGET_IMAGE_BYTES = 200 * 1024;
-const ABSOLUTE_MAX_IMAGE_BYTES = 280 * 1024;
+
+interface CompressImageOptions {
+  maxDimension?: number;
+  targetBytes?: number;
+  absoluteMaxBytes?: number;
+  minDimension?: number;
+  maxAttempts?: number;
+  qualities?: number[];
+}
+
+const DEFAULT_MAX_IMAGE_DIMENSION = 1280;
+const DEFAULT_TARGET_IMAGE_BYTES = 85 * 1024;
+const DEFAULT_ABSOLUTE_MAX_IMAGE_BYTES = 90 * 1024;
+const DEFAULT_MIN_IMAGE_DIMENSION = 320;
+const DEFAULT_MAX_ATTEMPTS = 5;
+const DEFAULT_QUALITIES = [0.8, 0.72, 0.64, 0.56, 0.48];
 
 interface LoadedImage {
   width: number;
@@ -83,13 +96,24 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
   });
 }
 
-export async function compressImageFile(file: File): Promise<CompressedImage> {
+export async function compressImageFile(file: File, options: CompressImageOptions = {}): Promise<CompressedImage> {
   const loaded = await loadImage(file);
+
+  const maxDimension = options.maxDimension ?? DEFAULT_MAX_IMAGE_DIMENSION;
+  const targetBytes = options.targetBytes ?? DEFAULT_TARGET_IMAGE_BYTES;
+  const absoluteMaxBytes = options.absoluteMaxBytes ?? DEFAULT_ABSOLUTE_MAX_IMAGE_BYTES;
+  const minDimension = options.minDimension ?? DEFAULT_MIN_IMAGE_DIMENSION;
+  const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  const qualities = options.qualities ?? DEFAULT_QUALITIES;
+
   let { width, height } = getScaledDimensions(
     loaded.width,
     loaded.height,
-    MAX_IMAGE_DIMENSION,
+    maxDimension,
   );
+
+  const minWidth = Math.min(width, minDimension);
+  const minHeight = Math.min(height, minDimension);
 
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
@@ -100,33 +124,32 @@ export async function compressImageFile(file: File): Promise<CompressedImage> {
   let bestBlob: Blob | null = null;
   let attempts = 0;
 
-  while (attempts < 4) {
+  while (attempts < maxAttempts) {
     attempts += 1;
     canvas.width = width;
     canvas.height = height;
     context.clearRect(0, 0, width, height);
     context.drawImage(loaded.element, 0, 0, width, height);
 
-    const qualities = [0.8, 0.72, 0.64, 0.56, 0.48];
     for (const quality of qualities) {
       const blob = await canvasToBlob(canvas, quality);
       if (!bestBlob || blob.size < bestBlob.size) {
         bestBlob = blob;
       }
-      if (blob.size <= TARGET_IMAGE_BYTES) {
+      if (blob.size <= targetBytes) {
         return { blob, width, height };
       }
     }
 
-    width = Math.max(480, Math.round(width * 0.82));
-    height = Math.max(480, Math.round(height * 0.82));
+    width = Math.max(minWidth, Math.round(width * 0.82));
+    height = Math.max(minHeight, Math.round(height * 0.82));
   }
 
   if (!bestBlob) {
     throw new Error('Nie udało się skompresować obrazu');
   }
 
-  if (bestBlob.size > ABSOLUTE_MAX_IMAGE_BYTES) {
+  if (bestBlob.size > absoluteMaxBytes) {
     throw new Error('Zdjęcie jest zbyt duże po kompresji. Spróbuj inne zdjęcie.');
   }
 

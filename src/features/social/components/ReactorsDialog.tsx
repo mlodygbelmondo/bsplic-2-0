@@ -100,7 +100,11 @@ export function ReactorsDialog({ open, onOpenChange, target, initialEmoji }: Rea
           >
             <TabsList className="w-full justify-start overflow-x-auto gap-1 h-auto whitespace-nowrap p-1">
               {availableTabs.map((type) => (
-                <TabsTrigger key={type} value={type} className="text-xs px-2.5 py-1.5">
+                <TabsTrigger
+                  key={type}
+                  value={type}
+                  className="text-xs px-2.5 py-1.5 border border-transparent data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                >
                   {REACTION_EMOJIS[type]} {reactorsByType[type].length}
                 </TabsTrigger>
               ))}

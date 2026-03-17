@@ -10,6 +10,7 @@ const storageGetPublicUrlMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const refreshProfileMock = vi.fn();
+const compressImageFileMock = vi.fn();
 
 vi.mock('@/components/Navbar', () => ({
   Navbar: () => <div>Navbar</div>,
@@ -46,6 +47,10 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
+vi.mock('@/features/social/images', () => ({
+  compressImageFile: (...args: unknown[]) => compressImageFileMock(...args),
+}));
+
 vi.mock('sonner', () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
@@ -57,6 +62,11 @@ describe('ProfilePage avatar upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     refreshProfileMock.mockResolvedValue(undefined);
+    compressImageFileMock.mockResolvedValue({
+      blob: new Blob(['avatar'], { type: 'image/jpeg' }),
+      width: 512,
+      height: 512,
+    });
 
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });

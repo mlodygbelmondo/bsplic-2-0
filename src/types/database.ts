@@ -144,6 +144,7 @@ export interface SocialComment {
   id: string;
   user_id: string;
   username: string;
+  avatar_url?: string | null;
   content: string;
   parent_id: string | null;
   created_at: string;

@@ -4,7 +4,6 @@ import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
 import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { useCoupon } from '@/contexts/CouponContext';
@@ -661,11 +660,14 @@ const FeedCard = memo(function FeedCard({
 }: FeedCardProps) {
   const expanded = expandedCoupons.has(item.id);
   const isCopying = copyingCoupons.has(item.id);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const hasAvatar = Boolean(item.avatar_url) && !avatarFailed;
 
   const commentsAsFlatComments: FlatComment[] = comments.map((c) => ({
     id: c.id,
     user_id: c.user_id,
     username: c.username,
+    avatar_url: c.avatar_url,
     content: c.content,
     parent_id: c.parent_id,
     created_at: c.created_at,
@@ -696,12 +698,21 @@ const FeedCard = memo(function FeedCard({
           to={`/profile/${item.user_id}`}
           className="flex items-center gap-2 group"
         >
-          <Avatar className="h-7 w-7 bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <AvatarImage src={item.avatar_url ?? undefined} alt={`Avatar ${item.username}`} />
-            <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
-              {item.username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="h-7 w-7 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors overflow-hidden shrink-0">
+            {hasAvatar ? (
+              <img
+                src={item.avatar_url ?? undefined}
+                alt={`Avatar ${item.username}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-[11px] font-bold text-primary">
+                {item.username.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
           <span className="text-sm font-semibold group-hover:text-primary transition-colors">
             {item.username}
           </span>
