@@ -29,10 +29,13 @@ function makeComment(overrides: Partial<FlatComment> & { id: string }): FlatComm
 }
 
 describe('CommentThread', () => {
+  const onOpenCommentReactors = vi.fn();
+
   const defaultProps = {
     comments: [] as FlatComment[],
     onAddComment: vi.fn().mockResolvedValue(undefined),
     onToggleReaction: vi.fn(),
+    onOpenCommentReactors,
     currentUserId: 'user-1',
   };
 
@@ -224,6 +227,24 @@ describe('CommentThread', () => {
     fireEvent.click(screen.getByLabelText('👍 2'));
 
     expect(onToggleReaction).toHaveBeenCalledWith('c1', 'like');
+  });
+
+  it('calls onOpenCommentReactors when clicking "Wyświetl reakcje"', () => {
+    const comments = [
+      makeComment({ id: 'c1', content: 'Has reactions', reactions: { like: 2 } }),
+    ];
+
+    render(
+      <CommentThread
+        {...defaultProps}
+        comments={comments}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText(/Pokaż komentarze/));
+    fireEvent.click(screen.getByRole('button', { name: 'Wyświetl reakcje' }));
+
+    expect(onOpenCommentReactors).toHaveBeenCalledWith('c1');
   });
 
   it('shows mention suggestions in comment input and inserts selected mention', async () => {

@@ -39,6 +39,7 @@ interface CommentThreadProps {
   onFirstExpand?: () => void;
   onAddComment: (content: string, parentId?: string, imageBlob?: Blob) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
+  onOpenCommentReactors?: (commentId: string) => void;
   disabled?: boolean;
   maxDepth?: number;
   currentUserId?: string;
@@ -51,6 +52,7 @@ export function CommentThread({
   onFirstExpand,
   onAddComment,
   onToggleReaction,
+  onOpenCommentReactors,
   disabled,
   maxDepth = 3,
   currentUserId,
@@ -99,6 +101,7 @@ export function CommentThread({
                 maxDepth={maxDepth}
                 onAddComment={onAddComment}
                 onToggleReaction={onToggleReaction}
+                onOpenCommentReactors={onOpenCommentReactors}
                 disabled={disabled}
                 currentUserId={currentUserId}
               />
@@ -137,6 +140,7 @@ interface CommentNodeViewProps {
   maxDepth: number;
   onAddComment: (content: string, parentId?: string, imageBlob?: Blob) => Promise<void>;
   onToggleReaction: (commentId: string, emoji: ReactionType) => void;
+  onOpenCommentReactors?: (commentId: string) => void;
   disabled?: boolean;
   currentUserId?: string;
 }
@@ -147,6 +151,7 @@ function CommentNodeView({
   maxDepth,
   onAddComment,
   onToggleReaction,
+  onOpenCommentReactors,
   disabled,
   currentUserId,
 }: CommentNodeViewProps) {
@@ -183,6 +188,7 @@ function CommentNodeView({
               reactions={node.reactions as ReactionCounts | null}
               myReaction={node.my_reaction as ReactionType | null}
               onToggle={(emoji) => onToggleReaction(node.id, emoji)}
+              onOpenReactors={() => onOpenCommentReactors?.(node.id)}
               disabled={disabled}
             />
             {canReply && (
@@ -220,6 +226,7 @@ function CommentNodeView({
           maxDepth={maxDepth}
           onAddComment={onAddComment}
           onToggleReaction={onToggleReaction}
+          onOpenCommentReactors={onOpenCommentReactors}
           disabled={disabled}
           currentUserId={currentUserId}
         />

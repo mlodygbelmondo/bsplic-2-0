@@ -13,6 +13,7 @@ const createPostMock = vi.fn<() => Promise<string>>();
 const fetchCommentsMock = vi.fn();
 const addCommentMock = vi.fn();
 const toggleReactionMock = vi.fn();
+const fetchReactorsMock = vi.fn();
 const fetchBetsByIdsMock = vi.fn();
 const addItemsMock = vi.fn();
 const setPreferredCouponTypeMock = vi.fn();
@@ -27,7 +28,7 @@ vi.mock('@/components/Navbar', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user-1', email: 'test@test.com' },
-    profile: { id: 'user-1', username: 'Tester' },
+    profile: { id: 'user-1', username: 'Tester', avatar_url: null },
     isAdmin: false,
     refreshProfile: vi.fn(),
   }),
@@ -40,6 +41,10 @@ vi.mock('@/features/social/api/social', () => ({
   fetchComments: (...args: unknown[]) => fetchCommentsMock(...args),
   addComment: (...args: unknown[]) => addCommentMock(...args),
   toggleReaction: (...args: unknown[]) => toggleReactionMock(...args),
+}));
+
+vi.mock('@/features/social/api/reactions', () => ({
+  fetchReactors: (...args: unknown[]) => fetchReactorsMock(...args),
 }));
 
 vi.mock('@/features/home/api/bets', () => ({
@@ -76,6 +81,7 @@ function makeCouponFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeed
     item_type: 'coupon',
     user_id: 'user-2',
     username: 'Typster',
+    avatar_url: null,
     content: null,
     total_odds: 2.1,
     stake: 10,
@@ -105,6 +111,7 @@ function makePostFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedIt
     item_type: 'post',
     user_id: 'user-3',
     username: 'Poster',
+    avatar_url: null,
     content: 'Cześć, to mój pierwszy post!',
     total_odds: null,
     stake: null,
@@ -158,6 +165,7 @@ describe('SocialPage', () => {
     createPostMock.mockResolvedValue('new-post-id');
     addCommentMock.mockResolvedValue('new-comment-id');
     toggleReactionMock.mockResolvedValue('like');
+    fetchReactorsMock.mockResolvedValue([]);
 
     fetchBetsByIdsMock.mockResolvedValue([
       {
@@ -280,6 +288,26 @@ describe('SocialPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wszystko' }));
     expect(screen.getByText('Kuponiarz')).toBeInTheDocument();
     expect(screen.getByText('Treść posta')).toBeInTheDocument();
+  });
+
+  it('opens reactors dialog when clicking "Wyświetl reakcje"', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-reactors',
+        reactions: { like: 2 },
+      }),
+    ]);
+
+    renderSocialPage();
+
+    const openReactorsButton = await screen.findByRole('button', { name: 'Wyświetl reakcje' });
+    fireEvent.click(openReactorsButton);
+
+    await waitFor(() => {
+      expect(fetchReactorsMock).toHaveBeenCalledWith({
+        postId: 'post-reactors',
+      });
+    });
   });
 
   it('shows initial comment count from feed before loading thread comments', async () => {

@@ -1,15 +1,17 @@
 import { cn } from '@/lib/utils';
-import { REACTION_EMOJIS, REACTION_TYPES, sortedReactions, type ReactionType, type ReactionCounts } from '../reactions';
+import { REACTION_EMOJIS, REACTION_TYPES, sortedReactions, totalReactions, type ReactionType, type ReactionCounts } from '../reactions';
 
 interface ReactionBarProps {
   reactions: ReactionCounts | null;
   myReaction: ReactionType | null;
   onToggle: (emoji: ReactionType) => void;
+  onOpenReactors?: () => void;
   disabled?: boolean;
 }
 
-export function ReactionBar({ reactions, myReaction, onToggle, disabled }: ReactionBarProps) {
+export function ReactionBar({ reactions, myReaction, onToggle, onOpenReactors, disabled }: ReactionBarProps) {
   const sorted = sortedReactions(reactions);
+  const reactionsTotal = totalReactions(reactions);
 
   return (
     <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Reakcje">
@@ -42,6 +44,17 @@ export function ReactionBar({ reactions, myReaction, onToggle, disabled }: React
         onToggle={onToggle}
         disabled={disabled}
       />
+
+      {onOpenReactors && reactionsTotal > 0 && (
+        <button
+          type="button"
+          onClick={onOpenReactors}
+          disabled={disabled}
+          className="ml-1 text-xs font-medium text-primary hover:underline disabled:no-underline"
+        >
+          Wyświetl reakcje
+        </button>
+      )}
     </div>
   );
 }

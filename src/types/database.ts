@@ -1,6 +1,7 @@
 export interface Profile {
   id: string;
   username: string;
+  avatar_url?: string | null;
   balance: number;
   current_streak: number;
   longest_streak: number;
@@ -119,13 +120,14 @@ export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry'
 
 export type FeedItemType = 'post' | 'coupon';
 
-export type NotificationType = 'mention_post' | 'mention_comment' | 'coupon_won';
+export type NotificationType = 'mention_post' | 'mention_comment' | 'coupon_won' | 'comment_post';
 
 export interface SocialFeedItem {
   id: string;
   item_type: FeedItemType;
   user_id: string;
   username: string;
+  avatar_url?: string | null;
   content: string | null;
   total_odds: number | null;
   stake: number | null;
@@ -167,6 +169,7 @@ export interface UserNotification {
 export interface PublicProfile {
   id: string;
   username: string;
+  avatar_url?: string | null;
   current_streak: number;
   longest_streak: number;
   created_at: string;
