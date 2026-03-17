@@ -40,6 +40,7 @@ export type Database = {
           bet_type: string
           category_id: string | null
           created_at: string
+          ends_at: string | null
           id: string
           options: Json
           status: string
@@ -50,6 +51,7 @@ export type Database = {
           bet_type: string
           category_id?: string | null
           created_at?: string
+          ends_at?: string | null
           id?: string
           options?: Json
           status?: string
@@ -60,6 +62,7 @@ export type Database = {
           bet_type?: string
           category_id?: string | null
           created_at?: string
+          ends_at?: string | null
           id?: string
           options?: Json
           status?: string
@@ -286,6 +289,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_credit_balance: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: number
+      }
       award_badge: {
         Args: { p_badge_key: string; p_user_id: string }
         Returns: undefined

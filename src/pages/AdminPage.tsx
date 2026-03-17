@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { Plus, X, Check, XCircle, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Skeleton } from '@/components/ui/skeleton';
-import { calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
+import { addCreditForUser, calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
 
 type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
 
@@ -35,6 +35,20 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 const normalizeCouponStatus = (value: string | null | undefined): CouponSettlementSnapshot['status'] => {
   if (value === 'won' || value === 'lost') return value;
   return 'pending';
+};
+
+const toInputDateTime = (value: Date | string) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
+};
+
+const getTomorrowAt2359 = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(23, 59, 0, 0);
+  return date;
 };
 
 interface BetOptionDraft {
@@ -134,7 +148,7 @@ function CreateBetTab() {
   const [categoryId, setCategoryId] = useState('');
   const [betType, setBetType] = useState<'1x2' | '12' | 'multi'>('12');
   const [isLive, setIsLive] = useState(false);
-  const [endsAt, setEndsAt] = useState('');
+  const [endsAt, setEndsAt] = useState(() => toInputDateTime(getTomorrowAt2359()));
   const [options, setOptions] = useState<BetOptionDraft[]>([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -205,6 +219,7 @@ function CreateBetTab() {
       if (error) throw error;
       toast.success('Zakład utworzony!');
       setTitle('');
+      setEndsAt(toInputDateTime(getTomorrowAt2359()));
       if (betType === '12') setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
       else if (betType === '1x2') setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
       else setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
@@ -303,13 +318,6 @@ function ManageBetsTab() {
   const [editing, setEditing] = useState<BetEditor | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
-
-  const toInputDateTime = (dateValue: string) => {
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return '';
-    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return offsetDate.toISOString().slice(0, 16);
-  };
 
   const normalizeType = (value: string): EditableBetType => {
     if (value === '1x2' || value === 'multi') return value;
@@ -444,8 +452,20 @@ function ManageBetsTab() {
 
   const resolveBet = async (bet: Bet, winningOption: string) => {
     try {
-      await supabase.from('bets').update({ winning_option: winningOption, is_active: false }).eq('id', bet.id);
-      const { data: placedBets } = await supabase.from('placed_bets').select('*').eq('bet_id', bet.id);
+      const { error: betUpdateError } = await supabase
+        .from('bets')
+        .update({ winning_option: winningOption, is_active: false })
+        .eq('id', bet.id);
+      if (betUpdateError) throw betUpdateError;
+
+      const { data: placedBets, error: placedBetsError } = await supabase
+        .from('placed_bets')
+        .select('*')
+        .eq('bet_id', bet.id);
+      if (placedBetsError) throw placedBetsError;
+
+      let creditsByUser: Record<string, number> = {};
+
       if (placedBets) {
         for (const pb of placedBets) {
           if (pb.result === 'won' || pb.result === 'lost') continue;
@@ -475,10 +495,11 @@ function ManageBetsTab() {
             oddsAtTime: Number(pb.odds_at_time),
           });
 
-          await supabase
+          const { error: legUpdateError } = await supabase
             .from('placed_bets')
             .update({ result: legOutcome.result, payout: legOutcome.payout })
             .eq('id', pb.id);
+          if (legUpdateError) throw legUpdateError;
 
           let couponAfter: CouponSettlementSnapshot | null = null;
           if (pb.coupon_id) {
@@ -505,12 +526,20 @@ function ManageBetsTab() {
             couponAfter,
           });
 
-          if (creditAmount > 0) {
-            const { data: profile } = await supabase.from('profiles').select('balance').eq('id', pb.user_id).single();
-            if (profile) {
-              await supabase.from('profiles').update({ balance: Number(profile.balance) + creditAmount }).eq('id', pb.user_id);
-            }
-          }
+          creditsByUser = addCreditForUser({
+            creditsByUser,
+            userId: pb.user_id,
+            amount: creditAmount,
+          });
+        }
+
+        const creditEntries = Object.entries(creditsByUser);
+        for (const [userId, creditAmount] of creditEntries) {
+          const { error: creditError } = await supabase.rpc('admin_credit_balance', {
+            p_user_id: userId,
+            p_amount: creditAmount,
+          });
+          if (creditError) throw creditError;
         }
       }
       toast.success('Wynik ogłoszony!');
@@ -831,6 +860,7 @@ function ProposalsTab() {
     user_id: string;
     title: string;
     category_id: string | null;
+    ends_at: string | null;
     bet_type: ProposalType;
     options: BetOption[];
     username: string;
@@ -852,11 +882,6 @@ function ProposalsTab() {
   const [editorLoading, setEditorLoading] = useState(false);
   const [editing, setEditing] = useState<ProposalEditor | null>(null);
 
-  const toInputDateTime = (date: Date) => {
-    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return offsetDate.toISOString().slice(0, 16);
-  };
-
   const normalizeType = (value: string): ProposalType => {
     if (value === '1x2' || value === 'multi') return value;
     return '12';
@@ -873,16 +898,16 @@ function ProposalsTab() {
   const lockOptionsByType = (type: ProposalType, current: BetOption[]) => {
     if (type === '12') {
       return [
-        { name: '1', odds: current[0]?.odds || 2 },
-        { name: '2', odds: current[1]?.odds || 2 },
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+        { name: current[1]?.name || '2', odds: current[1]?.odds || 2 },
       ];
     }
 
     if (type === '1x2') {
       return [
-        { name: '1', odds: current[0]?.odds || 2 },
-        { name: 'X', odds: current[1]?.odds || 3 },
-        { name: '2', odds: current[2]?.odds || 2 },
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+        { name: current[1]?.name || 'X', odds: current[1]?.odds || 3 },
+        { name: current[2]?.name || '2', odds: current[2]?.odds || 2 },
       ];
     }
 
@@ -909,6 +934,7 @@ function ProposalsTab() {
         user_id: proposal.user_id,
         title: proposal.title,
         category_id: proposal.category_id,
+        ends_at: proposal.ends_at,
         bet_type: normalizeType(proposal.bet_type),
         options: normalizeOptions(proposal.options),
         username: 'Użytkownik',
@@ -946,7 +972,7 @@ function ProposalsTab() {
       categoryId: proposal.category_id || '',
       betType: proposal.bet_type,
       options: lockedOptions,
-      endsAt: toInputDateTime(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      endsAt: proposal.ends_at ? toInputDateTime(proposal.ends_at) : toInputDateTime(getTomorrowAt2359()),
     });
     setEditorOpen(true);
   };

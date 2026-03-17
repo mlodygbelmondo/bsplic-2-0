@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Navigate, useParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { getDisplayedCouponOdds } from '@/features/coupons/display';
+import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 
 export default function ProfilePage() {
   const { user, profile } = useAuth();
@@ -230,6 +230,14 @@ export default function ProfilePage() {
                     totalOdds: Number(coupon.total_odds),
                     legs: (coupon.legs ?? []).map((leg) => ({ oddsAtTime: Number(leg.odds_at_time) })),
                   });
+                  const displayedWin = getDisplayedCouponWin({
+                    status: coupon.status,
+                    isAko: ako,
+                    stake: Number(coupon.stake),
+                    displayedOdds,
+                    couponPayout: Number(coupon.payout),
+                    legs: (coupon.legs ?? []).map((leg) => ({ legPayout: Number(leg.leg_payout ?? 0) })),
+                  });
 
                   return (
                     <div key={coupon.id} className="bg-muted rounded-lg card-shadow overflow-hidden">
@@ -276,7 +284,7 @@ export default function ProfilePage() {
                             )}
                           >
                             {coupon.status === 'won'
-                              ? `+${Number(coupon.payout).toFixed(2)} zł`
+                              ? `+${displayedWin.toFixed(2)} zł`
                               : coupon.status === 'lost'
                                 ? 'Przegrana'
                                 : 'W toku'}

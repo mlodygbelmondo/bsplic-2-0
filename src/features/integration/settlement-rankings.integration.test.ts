@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
+import { addCreditForUser, calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
 import { computeRankingStats, type RankingCoupon, type RankingPlacedBet } from '@/features/rankings/stats';
 
 interface SettleLegInput {
@@ -38,6 +38,64 @@ const settleLeg = ({
 };
 
 describe('settlement + rankings integration', () => {
+  it('aggregates credits for all winning users on the same settled bet', () => {
+    const couponBefore: CouponSettlementSnapshot = {
+      stake: 10,
+      totalOdds: 1,
+      status: 'pending',
+      payout: 0,
+    };
+
+    const couponAfter: CouponSettlementSnapshot = {
+      stake: 10,
+      totalOdds: 1,
+      status: 'won',
+      payout: 10,
+    };
+
+    const legA = settleLeg({
+      selectedOption: '1',
+      winningOption: '1',
+      stake: 10,
+      oddsAtTime: 2,
+      couponBefore,
+      couponAfter,
+    });
+
+    const legB = settleLeg({
+      selectedOption: '1',
+      winningOption: '1',
+      stake: 5,
+      oddsAtTime: 3,
+      couponBefore: {
+        ...couponBefore,
+        stake: 5,
+      },
+      couponAfter: {
+        ...couponAfter,
+        stake: 5,
+        payout: 5,
+      },
+    });
+
+    let creditsByUser: Record<string, number> = {};
+    creditsByUser = addCreditForUser({
+      creditsByUser,
+      userId: 'user-a',
+      amount: legA.credit,
+    });
+    creditsByUser = addCreditForUser({
+      creditsByUser,
+      userId: 'user-b',
+      amount: legB.credit,
+    });
+
+    expect(creditsByUser).toEqual({
+      'user-a': 20,
+      'user-b': 15,
+    });
+  });
+
   it('credits single win immediately and keeps ranking stats consistent', () => {
     const couponBefore: CouponSettlementSnapshot = {
       stake: 10,

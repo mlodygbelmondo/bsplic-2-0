@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
-import { getDisplayedCouponOdds } from '@/features/coupons/display';
+import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
@@ -643,6 +643,14 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       oddsAtTime: Number(leg.odds_at_time),
     })),
   });
+  const displayedWin = getDisplayedCouponWin({
+    status: item.status === 'won' || item.status === 'lost' ? item.status : 'pending',
+    isAko: ako,
+    stake: Number(item.stake),
+    displayedOdds,
+    couponPayout: Number(item.payout),
+    legs: (item.legs ?? []).map((leg) => ({ legPayout: Number(leg.leg_payout ?? 0) })),
+  });
 
   return (
     <>
@@ -690,7 +698,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
             )}
           >
             {item.status === 'won'
-              ? `+${Number(item.payout).toFixed(2)} zł`
+              ? `+${displayedWin.toFixed(2)} zł`
               : item.status === 'lost'
                 ? 'Przegrana'
                 : 'W toku'}

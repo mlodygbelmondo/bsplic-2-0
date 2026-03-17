@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  addCreditForUser,
   calculateCreditAmount,
   calculateLegOutcome,
   type CouponSettlementSnapshot,
@@ -184,5 +185,70 @@ describe('calculateCreditAmount', () => {
     });
 
     expect(credit).toBe(51);
+  });
+});
+
+describe('addCreditForUser', () => {
+  it('adds first credit entry for user', () => {
+    const credits = addCreditForUser({
+      creditsByUser: {},
+      userId: 'user-1',
+      amount: 12.5,
+    });
+
+    expect(credits).toEqual({
+      'user-1': 12.5,
+    });
+  });
+
+  it('accumulates multiple credits for the same user', () => {
+    const once = addCreditForUser({
+      creditsByUser: {},
+      userId: 'user-1',
+      amount: 12.5,
+    });
+
+    const twice = addCreditForUser({
+      creditsByUser: once,
+      userId: 'user-1',
+      amount: 7.25,
+    });
+
+    expect(twice).toEqual({
+      'user-1': 19.75,
+    });
+  });
+
+  it('accumulates credits for multiple users independently', () => {
+    const base = addCreditForUser({
+      creditsByUser: {},
+      userId: 'user-1',
+      amount: 10,
+    });
+
+    const next = addCreditForUser({
+      creditsByUser: base,
+      userId: 'user-2',
+      amount: 15,
+    });
+
+    expect(next).toEqual({
+      'user-1': 10,
+      'user-2': 15,
+    });
+  });
+
+  it('ignores non-positive credits', () => {
+    const credits = addCreditForUser({
+      creditsByUser: {
+        'user-1': 10,
+      },
+      userId: 'user-1',
+      amount: 0,
+    });
+
+    expect(credits).toEqual({
+      'user-1': 10,
+    });
   });
 });

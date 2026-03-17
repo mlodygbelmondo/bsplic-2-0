@@ -19,7 +19,23 @@ interface CalculateCreditAmountInput {
   couponAfter: CouponSettlementSnapshot | null;
 }
 
+interface AddCreditForUserInput {
+  creditsByUser: Record<string, number>;
+  userId: string;
+  amount: number;
+}
+
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
+
+export function addCreditForUser({ creditsByUser, userId, amount }: AddCreditForUserInput): Record<string, number> {
+  if (amount <= 0) return creditsByUser;
+
+  const previous = creditsByUser[userId] ?? 0;
+  return {
+    ...creditsByUser,
+    [userId]: roundMoney(previous + amount),
+  };
+}
 
 export function calculateLegOutcome({
   selectedOption,

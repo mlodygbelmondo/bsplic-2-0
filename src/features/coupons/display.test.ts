@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDisplayedCouponOdds } from './display';
+import { getDisplayedCouponOdds, getDisplayedCouponWin } from './display';
 
 describe('getDisplayedCouponOdds', () => {
   it('uses coupon total odds for AKO coupons', () => {
@@ -40,5 +40,47 @@ describe('getDisplayedCouponOdds', () => {
     });
 
     expect(displayedOdds).toBe(1);
+  });
+
+});
+
+describe('getDisplayedCouponWin', () => {
+  it('shows single coupon win as stake * displayed odds when coupon payout is stale', () => {
+    const amount = getDisplayedCouponWin({
+      status: 'won',
+      isAko: false,
+      stake: 100,
+      displayedOdds: 1.3,
+      couponPayout: 100,
+      legs: [{ legPayout: 130 }],
+    });
+
+    expect(amount).toBe(130);
+  });
+
+  it('shows AKO payout from coupon payout when available', () => {
+    const amount = getDisplayedCouponWin({
+      status: 'won',
+      isAko: true,
+      stake: 20,
+      displayedOdds: 4.2,
+      couponPayout: 84,
+      legs: [],
+    });
+
+    expect(amount).toBe(84);
+  });
+
+  it('returns 0 when coupon is not won', () => {
+    const amount = getDisplayedCouponWin({
+      status: 'pending',
+      isAko: false,
+      stake: 100,
+      displayedOdds: 1.3,
+      couponPayout: 100,
+      legs: [{ legPayout: 130 }],
+    });
+
+    expect(amount).toBe(0);
   });
 });
