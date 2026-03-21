@@ -1,24 +1,50 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
 import { useCouponPlacement } from '@/features/home/hooks/useCouponPlacement';
 import { getCouponCategoryEmoji } from '@/features/coupons/categoryEmoji';
+import { useMarketAssets } from '@/features/markets/hooks/useMarketAssets';
+import { useMarketTransactions } from '@/features/markets/hooks/useMarketTransactions';
+import { useMarketQuotes } from '@/features/markets/hooks/useMarketQuotes';
+import { useFxRatesToPln } from '@/features/markets/hooks/useFxRates';
+import { buildAssetBalancesById } from '@/features/markets/balances';
+import { convertPriceToPln, roundAssetAmount } from '@/features/markets/pricing';
+import { parseAssetAmount } from '@/features/markets/assets';
 import { Input } from '@/components/ui/input';
 import { X, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Category } from '@/types/database';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CouponDrawerProps {
   categoryMap: Record<string, Category>;
 }
 
 export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
+  const { user } = useAuth();
   const { items, removeItem, clearCoupon, preferredCouponType, setPreferredCouponType } = useCoupon();
   const [stake, setStake] = useState('10');
   const [singleStakes, setSingleStakes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
+  const [stakeMode, setStakeMode] = useState<'cash' | 'asset'>('cash');
+  const [stakeAssetId, setStakeAssetId] = useState('');
+  const [stakeAssetQuantity, setStakeAssetQuantity] = useState('');
   const stakePresets = ['5', '10', '25', '50'];
+
+  const { data: marketAssets = [] } = useMarketAssets();
+  const { data: marketTransactions = [] } = useMarketTransactions(user?.id);
+  const { data: marketQuotesPayload } = useMarketQuotes(marketAssets, {
+    refetchIntervalMs: 10_000,
+    staleTimeMs: 8_000,
+    refetchOnWindowFocus: true,
+  });
+  const { data: fxRatesToPln = { PLN: 1 } } = useFxRatesToPln();
+
+  const balancesByAssetId = useMemo(() => buildAssetBalancesById(marketTransactions), [marketTransactions]);
+  const quoteBySymbol = useMemo(() => marketQuotesPayload?.quotesBySymbol ?? {}, [marketQuotesPayload?.quotesBySymbol]);
 
   useEffect(() => {
     if (!preferredCouponType) {
@@ -41,6 +67,40 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
     });
   }, [items]);
 
+  const selectedStakeAsset = useMemo(() => {
+    if (stakeMode !== 'asset') return null;
+    const asset = marketAssets.find((entry) => entry.id === stakeAssetId);
+    if (!asset) return null;
+
+    const quote = quoteBySymbol[asset.symbol.toUpperCase()];
+    if (!quote) return null;
+
+    const unitPricePln = convertPriceToPln({
+      price: quote.price,
+      quoteCurrency: quote.quoteCurrency,
+      fxRatesToPln,
+    });
+
+    if (!unitPricePln) return null;
+
+    const parsedQty = parseAssetAmount(stakeAssetQuantity) ?? null;
+    const quantity = parsedQty ?? null;
+    const stakePln = quantity ? Math.round(quantity * unitPricePln * 100) / 100 : 0;
+
+    const fxRateToPln = quote.quoteCurrency.toUpperCase() === 'PLN'
+      ? 1
+      : fxRatesToPln[quote.quoteCurrency.toUpperCase()] ?? 0;
+
+    return {
+      asset,
+      quantity,
+      stakePln,
+      unitPricePln,
+      fxRateToPln,
+      balanceQuantity: balancesByAssetId[asset.id] ?? 0,
+    };
+  }, [balancesByAssetId, fxRatesToPln, marketAssets, quoteBySymbol, stakeAssetId, stakeAssetQuantity, stakeMode]);
+
   const { placing, placeBet, potentialWin, effectiveTotalOdds, totalStake } = useCouponPlacement(
     activeTab,
     stake,
@@ -48,9 +108,30 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
     () => {
       setStake('10');
       setSingleStakes({});
+      setStakeAssetQuantity('');
       handleClose();
+    },
+    {
+      useAssetStake: stakeMode === 'asset',
+      stakeAsset: selectedStakeAsset,
     }
   );
+
+  const requiredAssetQuantityForSingle = useMemo(() => {
+    if (activeTab !== 'single' || !selectedStakeAsset || selectedStakeAsset.unitPricePln <= 0) {
+      return null;
+    }
+
+    if (totalStake <= 0) return null;
+
+    return roundAssetAmount(totalStake / selectedStakeAsset.unitPricePln);
+  }, [activeTab, selectedStakeAsset, totalStake]);
+
+  const hasInsufficientAssetForSingle =
+    activeTab === 'single' &&
+    selectedStakeAsset !== null &&
+    requiredAssetQuantityForSingle !== null &&
+    requiredAssetQuantityForSingle > selectedStakeAsset.balanceQuantity;
 
   const handleClose = () => {
     setIsClosing(true);
@@ -182,37 +263,118 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
           <span className="text-[12px] text-muted-foreground">Potencjalna wygrana</span>
           <span className="text-[15px] font-bold text-success">{potentialWin.toFixed(2)} zł</span>
         </div>
-        {activeTab === 'ako' ? (
+        {items.length > 0 && (
           <>
-            <div className="text-[11px] text-muted-foreground">Współczynnik {effectiveTotalOdds.toFixed(2)}</div>
-            <Input
-              type="number"
-              value={stake}
-              onChange={(event) => setStake(event.target.value)}
-              min={0.01}
-              step={0.01}
-              className="text-center font-bold text-base md:text-[13px] h-9 bg-muted border-border"
-              placeholder="Stawka (zł)"
-            />
-            <div className="grid grid-cols-4 gap-1.5">
-              {stakePresets.map((preset) => (
-                <button
-                  key={preset}
-                  onClick={() => setStake(preset)}
-                  className={cn(
-                    'w-full text-[11px] font-semibold px-2 h-8 rounded-md transition-all duration-200',
-                    stake === preset
-                      ? 'bg-foreground text-background shadow-sm scale-[1.02]'
-                      : 'bg-card text-foreground hover:bg-muted'
-                  )}
-                >
-                  {preset} zł
-                </button>
-              ))}
+            {activeTab === 'ako' && (
+              <div className="text-[11px] text-muted-foreground">Współczynnik {effectiveTotalOdds.toFixed(2)}</div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-[11px]">Waluta stawki</Label>
+              <Select
+                value={stakeMode === 'cash' ? 'PLN' : stakeAssetId}
+                onValueChange={(value) => {
+                  if (value === 'PLN') {
+                    setStakeMode('cash');
+                    setStakeAssetId('');
+                    setStakeAssetQuantity('');
+                    return;
+                  }
+
+                  setStakeMode('asset');
+                  setStakeAssetId(value);
+                }}
+              >
+                <SelectTrigger className="h-8 text-[12px]">
+                  <SelectValue placeholder="Wybierz walutę stawki" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PLN">PLN</SelectItem>
+                  {marketAssets
+                    .filter((asset) => (balancesByAssetId[asset.id] ?? 0) > 0)
+                    .map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id}>
+                        {asset.symbol} ({roundAssetAmount(balancesByAssetId[asset.id] ?? 0)})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {stakeMode === 'cash' ? (
+              <>
+                {activeTab === 'ako' ? (
+                  <>
+                    <Input
+                      type="number"
+                      value={stake}
+                      onChange={(event) => setStake(event.target.value)}
+                      min={0.01}
+                      step={0.01}
+                      className="text-center font-bold text-base md:text-[13px] h-9 bg-muted border-border"
+                      placeholder="Stawka (zł)"
+                    />
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {stakePresets.map((preset) => (
+                        <button
+                          key={preset}
+                          onClick={() => setStake(preset)}
+                          className={cn(
+                            'w-full text-[11px] font-semibold px-2 h-8 rounded-md transition-all duration-200',
+                            stake === preset
+                              ? 'bg-foreground text-background shadow-sm scale-[1.02]'
+                              : 'bg-card text-foreground hover:bg-muted'
+                          )}
+                        >
+                          {preset} zł
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[11px] text-muted-foreground">Łączna stawka: {totalStake.toFixed(2)} zł</div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2 border border-border rounded-md p-2.5 bg-muted/30">
+                {activeTab === 'ako' ? (
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Ilość</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.00000001}
+                      value={stakeAssetQuantity}
+                      onChange={(event) => setStakeAssetQuantity(event.target.value)}
+                      className="h-8 text-center text-[12px]"
+                      placeholder="np. 2"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-muted-foreground">
+                    Wymagana ilość (z sumy stawek): {requiredAssetQuantityForSingle ?? 0}
+                  </div>
+                )}
+                <div className="text-[11px] text-muted-foreground">
+                  Wartość stawki: {totalStake.toFixed(2)} zł
+                </div>
+                {selectedStakeAsset && (
+                  <div className="text-[11px] text-muted-foreground">
+                    Min. dla {selectedStakeAsset.asset.symbol}: {Number(selectedStakeAsset.asset.min_bet_pln).toFixed(2)} zł
+                  </div>
+                )}
+                {selectedStakeAsset && (
+                  <div className="text-[11px] text-muted-foreground">
+                    Dostępna ilość: {roundAssetAmount(selectedStakeAsset.balanceQuantity)}
+                  </div>
+                )}
+                {hasInsufficientAssetForSingle && (
+                  <div className="text-[11px] text-destructive">
+                    Brak wystarczającej ilości aktywa dla sumy stawek
+                  </div>
+                )}
+              </div>
+            )}
           </>
-        ) : (
-          <div className="text-[11px] text-muted-foreground">Łączna stawka: {totalStake.toFixed(2)} zł</div>
         )}
         <button
           onClick={placeBet}

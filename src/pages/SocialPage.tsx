@@ -68,6 +68,11 @@ function formatEventsCount(count: number) {
   return `${count} zdarzeń`;
 }
 
+function formatAssetStake(quantity: number | null | undefined, symbol: string | null | undefined) {
+  if (!quantity || !symbol) return null;
+  return `${Number(quantity).toFixed(8).replace(/\.?0+$/, '')} ${symbol}`;
+}
+
 function formatTimeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -847,7 +852,16 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
           )}
         </div>
         <div className="text-right ml-3 shrink-0">
-          <p className="font-bold">{Number(item.stake).toFixed(2)} zł</p>
+          {item.stake_asset_id ? (
+            <>
+              <p className="font-bold">
+                {formatAssetStake(item.stake_asset_quantity, item.stake_asset_symbol) ?? '-'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">({Number(item.stake).toFixed(2)} zł)</p>
+            </>
+          ) : (
+            <p className="font-bold">{Number(item.stake).toFixed(2)} zł</p>
+          )}
           <p
             className={cn(
               'text-xs font-medium',

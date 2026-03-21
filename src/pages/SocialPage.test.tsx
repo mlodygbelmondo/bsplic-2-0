@@ -85,6 +85,12 @@ function makeCouponFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeed
     content: null,
     total_odds: 2.1,
     stake: 10,
+    stake_asset_id: null,
+    stake_asset_symbol: null,
+    stake_asset_type: null,
+    stake_asset_quantity: null,
+    stake_asset_unit_price_pln: null,
+    stake_asset_fx_rate_to_pln: null,
     payout: 0,
     status: 'pending',
     created_at: '2030-01-01T10:00:00.000Z',
@@ -115,6 +121,12 @@ function makePostFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedIt
     content: 'Cześć, to mój pierwszy post!',
     total_odds: null,
     stake: null,
+    stake_asset_id: null,
+    stake_asset_symbol: null,
+    stake_asset_type: null,
+    stake_asset_quantity: null,
+    stake_asset_unit_price_pln: null,
+    stake_asset_fx_rate_to_pln: null,
     payout: null,
     status: null,
     legs: null,
@@ -614,5 +626,25 @@ describe('SocialPage', () => {
 
     expect(await screen.findByText('Mecz A')).toBeInTheDocument();
     expect(screen.getByText('Mecz B')).toBeInTheDocument();
+  });
+
+  it('displays asset-backed coupon stake in quantity + symbol format', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCouponFeedItem({
+        id: 'coupon-asset',
+        stake: 100,
+        stake_asset_id: 'asset-1',
+        stake_asset_symbol: 'TSLA',
+        stake_asset_type: 'stock',
+        stake_asset_quantity: 2,
+        stake_asset_unit_price_pln: 50,
+        stake_asset_fx_rate_to_pln: 1,
+      }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('2 TSLA')).toBeInTheDocument();
+    expect(screen.getByText('(100.00 zł)')).toBeInTheDocument();
   });
 });

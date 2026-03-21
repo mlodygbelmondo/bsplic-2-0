@@ -5,6 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
+import { useMarketAssets } from '@/features/markets/hooks/useMarketAssets';
+import { useMarketQuotes } from '@/features/markets/hooks/useMarketQuotes';
+import { useFxRatesToPln } from '@/features/markets/hooks/useFxRates';
+import { convertPriceToPln } from '@/features/markets/pricing';
 
 interface RankEntry {
   id: string;
@@ -17,23 +21,52 @@ interface RankEntry {
   balance: number;
 }
 
+interface AssetCouponExposure {
+  user_id: string;
+  symbol: string;
+  quote_currency: string;
+  is_won: boolean;
+  quantity: number;
+  odds: number;
+}
+
 type SortKey = 'total_profit' | 'win_rate' | 'total_bets';
 
 export default function RankingsPage() {
   const [rankings, setRankings] = useState<RankEntry[]>([]);
+  const [assetExposure, setAssetExposure] = useState<AssetCouponExposure[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('total_profit');
   const { user } = useAuth();
 
+  const { data: assets = [] } = useMarketAssets();
+  const { data: quotesPayload } = useMarketQuotes(assets, {
+    refetchIntervalMs: 30_000,
+    staleTimeMs: 20_000,
+    refetchOnWindowFocus: true,
+  });
+  const { data: fxRatesToPln = { PLN: 1 } } = useFxRatesToPln();
+
+  const quotesBySymbol = useMemo(() => quotesPayload?.quotesBySymbol ?? {}, [quotesPayload?.quotesBySymbol]);
+
   useEffect(() => {
     const fetchRankings = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_rankings');
+      const [{ data, error }, { data: exposureData, error: exposureError }] = await Promise.all([
+        supabase.rpc('get_user_rankings'),
+        (supabase as never as {
+          rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+        }).rpc('get_rankings_asset_coupon_exposure'),
+      ]);
 
       if (error) {
         console.error('Rankings fetch error:', error);
         setLoading(false);
         return;
+      }
+
+      if (exposureError) {
+        console.error('Asset exposure fetch error:', exposureError);
       }
 
       if (data) {
@@ -50,15 +83,63 @@ export default function RankingsPage() {
         );
       }
 
+      if (!exposureError) {
+        setAssetExposure((exposureData as AssetCouponExposure[] | null) ?? []);
+      }
+
       setLoading(false);
     };
 
     fetchRankings();
   }, [user?.id]);
 
+  const currentUnitPriceBySymbol = useMemo(() => {
+    const map = new Map<string, number>();
+
+    Object.values(quotesBySymbol).forEach((quote) => {
+      const unitPricePln = convertPriceToPln({
+        price: quote.price,
+        quoteCurrency: quote.quoteCurrency,
+        fxRatesToPln,
+      });
+
+      if (unitPricePln) {
+        map.set(quote.symbol.toUpperCase(), unitPricePln);
+      }
+    });
+
+    return map;
+  }, [fxRatesToPln, quotesBySymbol]);
+
+  const dynamicAssetProfitByUser = useMemo(() => {
+    const map = new Map<string, number>();
+
+    assetExposure.forEach((row) => {
+      const currentUnitPricePln = currentUnitPriceBySymbol.get(row.symbol.toUpperCase());
+      if (!currentUnitPricePln) return;
+
+      const contribution = row.is_won
+        ? row.quantity * currentUnitPricePln * Math.max(row.odds - 1, 0)
+        : -row.quantity * currentUnitPricePln;
+
+      const previous = map.get(row.user_id) ?? 0;
+      map.set(row.user_id, Math.round((previous + contribution) * 100) / 100);
+    });
+
+    return map;
+  }, [assetExposure, currentUnitPriceBySymbol]);
+
   const sorted = useMemo(() => {
-    return [...rankings].sort((a, b) => b[sortBy] - a[sortBy]);
-  }, [rankings, sortBy]);
+    const adjusted = rankings.map((entry) => {
+      const dynamicAssetProfit = dynamicAssetProfitByUser.get(entry.id) ?? 0;
+      return {
+        ...entry,
+        total_profit: Math.round((entry.total_profit + dynamicAssetProfit) * 100) / 100,
+      };
+    });
+
+    return [...adjusted].sort((a, b) => b[sortBy] - a[sortBy]);
+  }, [dynamicAssetProfitByUser, rankings, sortBy]);
 
   const sortTabs: Array<{ key: SortKey; label: string }> = [
     { key: 'total_profit', label: 'Profit' },

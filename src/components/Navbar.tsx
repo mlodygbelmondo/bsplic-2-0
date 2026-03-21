@@ -63,6 +63,7 @@ export function Navbar() {
 
   const navLinks = [
     { to: "/", label: "Zakłady" },
+    { to: '/markets', label: 'Giełda' },
     { to: "/social", label: "Social" },
     { to: "/rankings", label: "Rankingi" },
   ];
@@ -94,6 +95,17 @@ export function Navbar() {
                 )}
               >
                 Zakłady
+              </Link>
+              <Link
+                to="/markets"
+                className={cn(
+                  'text-[13px] font-semibold hover:text-primary-foreground transition-colors',
+                  isActivePath('/markets')
+                    ? 'text-primary-foreground'
+                    : 'text-primary-foreground/70',
+                )}
+              >
+                Giełda
               </Link>
               <Link
                 to="/social"

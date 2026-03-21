@@ -71,7 +71,36 @@ describe('ProfilePage username route', () => {
 
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') {
-        return Promise.resolve({ data: [] });
+        return Promise.resolve({
+          data: [
+            {
+              id: 'coupon-asset',
+              total_odds: 1,
+              stake: 100,
+              stake_asset_id: 'asset-1',
+              stake_asset_symbol: 'TSLA',
+              stake_asset_type: 'stock',
+              stake_asset_quantity: 2,
+              stake_asset_unit_price_pln: 50,
+              stake_asset_fx_rate_to_pln: 1,
+              payout: 0,
+              status: 'pending',
+              created_at: '2026-01-01T00:00:00.000Z',
+              legs: [
+                {
+                  id: 'leg-1',
+                  bet_id: 'bet-1',
+                  selected_option: '1',
+                  odds_at_time: 2,
+                  leg_stake: 100,
+                  leg_payout: 0,
+                  result: 'pending',
+                  bet_title: 'Test bet',
+                },
+              ],
+            },
+          ],
+        });
       }
       if (fn === 'get_public_profile') {
         return Promise.resolve({
@@ -112,5 +141,7 @@ describe('ProfilePage username route', () => {
     });
 
     expect(screen.getByText('tester')).toBeInTheDocument();
+    expect(screen.getByText('2 TSLA')).toBeInTheDocument();
+    expect(screen.getByText('(100.00 zł)')).toBeInTheDocument();
   });
 });

@@ -91,6 +91,7 @@ describe("Navbar", () => {
     expect(screen.getByText("BSPLIC 2.0")).toBeInTheDocument();
     // Desktop links
     expect(screen.getByText("Zakłady")).toBeInTheDocument();
+    expect(screen.getByText('Giełda')).toBeInTheDocument();
     expect(screen.getByText("Social")).toBeInTheDocument();
     expect(screen.getByText("Rankingi")).toBeInTheDocument();
   });
