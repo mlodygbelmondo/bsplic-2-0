@@ -17,6 +17,15 @@ interface CalculateCreditAmountInput {
   legPayout: number;
   couponBefore: CouponSettlementSnapshot | null;
   couponAfter: CouponSettlementSnapshot | null;
+  useAssetStake?: boolean;
+}
+
+interface CalculateAssetCreditQuantityInput {
+  legWon: boolean;
+  oddsAtTime: number;
+  couponBefore: CouponSettlementSnapshot | null;
+  couponAfter: CouponSettlementSnapshot | null;
+  stakeAssetQuantity: number;
 }
 
 interface AddCreditForUserInput {
@@ -58,7 +67,12 @@ export function calculateCreditAmount({
   legPayout,
   couponBefore,
   couponAfter,
+  useAssetStake = false,
 }: CalculateCreditAmountInput): number {
+  if (useAssetStake) {
+    return 0;
+  }
+
   if (!legWon) return 0;
 
   if (!couponBefore || !couponAfter) {
@@ -77,6 +91,36 @@ export function calculateCreditAmount({
       : couponAfter.stake * couponAfter.totalOdds;
 
     return roundMoney(resolvedPayout);
+  }
+
+  return 0;
+}
+
+export function calculateAssetCreditQuantity({
+  legWon,
+  oddsAtTime,
+  couponBefore,
+  couponAfter,
+  stakeAssetQuantity,
+}: CalculateAssetCreditQuantityInput): number {
+  if (!legWon || stakeAssetQuantity <= 0) return 0;
+
+  if (!couponAfter) {
+    return roundMoney(stakeAssetQuantity * oddsAtTime);
+  }
+
+  const isAkoCoupon = couponAfter.totalOdds > 1;
+
+  if (!isAkoCoupon) {
+    return roundMoney(stakeAssetQuantity * oddsAtTime);
+  }
+
+  if (!couponBefore) {
+    return 0;
+  }
+
+  if (couponBefore.status !== 'won' && couponAfter.status === 'won') {
+    return roundMoney(stakeAssetQuantity * couponAfter.totalOdds);
   }
 
   return 0;

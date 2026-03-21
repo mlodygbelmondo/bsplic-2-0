@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addCreditForUser,
+  calculateAssetCreditQuantity,
   calculateCreditAmount,
   calculateLegOutcome,
   type CouponSettlementSnapshot,
@@ -162,6 +163,18 @@ describe('calculateCreditAmount', () => {
     expect(credit).toBe(0);
   });
 
+  it('does not credit PLN for asset-backed stake', () => {
+    const credit = calculateCreditAmount({
+      legWon: true,
+      legPayout: 70,
+      couponBefore: null,
+      couponAfter: null,
+      useAssetStake: true,
+    });
+
+    expect(credit).toBe(0);
+  });
+
   it('falls back to stake * total odds when won coupon payout is still zero', () => {
     const couponBefore: CouponSettlementSnapshot = {
       stake: 15,
@@ -185,6 +198,64 @@ describe('calculateCreditAmount', () => {
     });
 
     expect(credit).toBe(51);
+  });
+});
+
+describe('calculateAssetCreditQuantity', () => {
+  it('credits single win with odds multiplier', () => {
+    const quantity = calculateAssetCreditQuantity({
+      legWon: true,
+      oddsAtTime: 2.5,
+      couponBefore: null,
+      couponAfter: null,
+      stakeAssetQuantity: 2,
+    });
+
+    expect(quantity).toBe(5);
+  });
+
+  it('credits AKO only when coupon becomes won', () => {
+    const quantity = calculateAssetCreditQuantity({
+      legWon: true,
+      oddsAtTime: 1.8,
+      stakeAssetQuantity: 3,
+      couponBefore: {
+        stake: 200,
+        totalOdds: 4.2,
+        status: 'pending',
+        payout: 0,
+      },
+      couponAfter: {
+        stake: 200,
+        totalOdds: 4.2,
+        status: 'won',
+        payout: 840,
+      },
+    });
+
+    expect(quantity).toBe(12.6);
+  });
+
+  it('does not credit asset when leg or coupon is not won', () => {
+    const quantity = calculateAssetCreditQuantity({
+      legWon: false,
+      oddsAtTime: 2.2,
+      stakeAssetQuantity: 1,
+      couponBefore: {
+        stake: 100,
+        totalOdds: 3.1,
+        status: 'pending',
+        payout: 0,
+      },
+      couponAfter: {
+        stake: 100,
+        totalOdds: 3.1,
+        status: 'lost',
+        payout: 0,
+      },
+    });
+
+    expect(quantity).toBe(0);
   });
 });
 

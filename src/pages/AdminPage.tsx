@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,9 +16,23 @@ import { toast } from 'sonner';
 import { Plus, X, Check, XCircle, Trophy } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Skeleton } from '@/components/ui/skeleton';
-import { addCreditForUser, calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
+import {
+  addCreditForUser,
+  calculateAssetCreditQuantity,
+  calculateCreditAmount,
+  calculateLegOutcome,
+  type CouponSettlementSnapshot,
+} from '@/features/admin/settlement';
+import {
+  disableMarketDataRefreshCron,
+  fetchAllMarketAssetsForAdmin,
+  setupMarketDataRefreshCronProfile,
+  upsertMarketAsset,
+} from '@/features/markets/api';
+import { searchTwelveDataSymbols } from '@/features/markets/provider.twelvedata';
+import { MarketAsset, MarketAssetType } from '@/types/markets';
 
-type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories';
+type AdminTab = 'dashboard' | 'create' | 'manage' | 'proposals' | 'categories' | 'assets';
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (
@@ -75,6 +89,7 @@ export default function AdminPage() {
             ['manage', '📋 Zarządzaj'],
             ['proposals', '💡 Propozycje'],
             ['categories', '🏷️ Kategorie'],
+            ['assets', '📈 Aktywa'],
           ] as [AdminTab, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -91,6 +106,7 @@ export default function AdminPage() {
         {tab === 'manage' && <ManageBetsTab />}
         {tab === 'proposals' && <ProposalsTab />}
         {tab === 'categories' && <CategoriesTab />}
+        {tab === 'assets' && <MarketAssetsTab />}
       </div>
     </div>
   );
@@ -165,8 +181,11 @@ function CreateBetTab() {
       setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
     } else if (betType === '1x2') {
       setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
-    } else if (betType === 'multi' && options.length < 2) {
-      setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
+    } else if (betType === 'multi') {
+      setOptions((previous) => {
+        if (previous.length >= 2) return previous;
+        return [{ name: '', odds: '2' }, { name: '', odds: '2' }];
+      });
     }
   }, [betType]);
 
@@ -451,6 +470,16 @@ function ManageBetsTab() {
   };
 
   const resolveBet = async (bet: Bet, winningOption: string) => {
+    interface CouponSettlementRow {
+      stake: number;
+      total_odds: number;
+      status: string;
+      payout: number | null;
+      stake_asset_id: string | null;
+      stake_asset_quantity: number | null;
+      stake_asset_unit_price_pln: number | null;
+    }
+
     try {
       const { error: betUpdateError } = await supabase
         .from('bets')
@@ -471,19 +500,21 @@ function ManageBetsTab() {
           if (pb.result === 'won' || pb.result === 'lost') continue;
 
           let couponBefore: CouponSettlementSnapshot | null = null;
+          let couponBeforeRow: CouponSettlementRow | null = null;
           if (pb.coupon_id) {
             const { data: coupon } = await supabase
               .from('coupons')
-              .select('stake, total_odds, status, payout')
+              .select('stake, total_odds, status, payout, stake_asset_id, stake_asset_quantity, stake_asset_unit_price_pln')
               .eq('id', pb.coupon_id)
               .single();
 
             if (coupon) {
+              couponBeforeRow = coupon as unknown as CouponSettlementRow;
               couponBefore = {
-                stake: Number(coupon.stake),
-                totalOdds: Number(coupon.total_odds),
-                status: normalizeCouponStatus(coupon.status),
-                payout: Number(coupon.payout ?? 0),
+                stake: Number(couponBeforeRow.stake),
+                totalOdds: Number(couponBeforeRow.total_odds),
+                status: normalizeCouponStatus(couponBeforeRow.status),
+                payout: Number(couponBeforeRow.payout ?? 0),
               };
             }
           }
@@ -502,19 +533,21 @@ function ManageBetsTab() {
           if (legUpdateError) throw legUpdateError;
 
           let couponAfter: CouponSettlementSnapshot | null = null;
+          let couponAfterRow: CouponSettlementRow | null = null;
           if (pb.coupon_id) {
             const { data: coupon } = await supabase
               .from('coupons')
-              .select('stake, total_odds, status, payout')
+              .select('stake, total_odds, status, payout, stake_asset_id, stake_asset_quantity, stake_asset_unit_price_pln')
               .eq('id', pb.coupon_id)
               .single();
 
             if (coupon) {
+              couponAfterRow = coupon as unknown as CouponSettlementRow;
               couponAfter = {
-                stake: Number(coupon.stake),
-                totalOdds: Number(coupon.total_odds),
-                status: normalizeCouponStatus(coupon.status),
-                payout: Number(coupon.payout ?? 0),
+                stake: Number(couponAfterRow.stake),
+                totalOdds: Number(couponAfterRow.total_odds),
+                status: normalizeCouponStatus(couponAfterRow.status),
+                payout: Number(couponAfterRow.payout ?? 0),
               };
             }
           }
@@ -524,7 +557,33 @@ function ManageBetsTab() {
             legPayout: legOutcome.payout,
             couponBefore,
             couponAfter,
+            useAssetStake: Boolean(couponAfterRow?.stake_asset_id),
           });
+
+          if (couponAfterRow?.stake_asset_id) {
+            const creditQuantity = calculateAssetCreditQuantity({
+              legWon: legOutcome.won,
+              oddsAtTime: Number(pb.odds_at_time),
+              couponBefore,
+              couponAfter,
+              stakeAssetQuantity: Number(couponAfterRow.stake_asset_quantity ?? 0),
+            });
+
+            if (creditQuantity > 0) {
+              const { error: assetCreditError } = await (supabase as never as {
+                rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+              }).rpc('admin_credit_market_asset', {
+                p_user_id: pb.user_id,
+                p_asset_id: couponAfterRow.stake_asset_id,
+                p_quantity: creditQuantity,
+                p_unit_price_pln: Number(couponAfterRow.stake_asset_unit_price_pln ?? 0),
+              });
+
+              if (assetCreditError) {
+                throw assetCreditError;
+              }
+            }
+          }
 
           creditsByUser = addCreditForUser({
             creditsByUser,
@@ -882,10 +941,10 @@ function ProposalsTab() {
   const [editorLoading, setEditorLoading] = useState(false);
   const [editing, setEditing] = useState<ProposalEditor | null>(null);
 
-  const normalizeType = (value: string): ProposalType => {
+  const normalizeType = useCallback((value: string): ProposalType => {
     if (value === '1x2' || value === 'multi') return value;
     return '12';
-  };
+  }, []);
 
   const normalizeOptions = (options: unknown): BetOption[] => {
     if (!Array.isArray(options)) return [];
@@ -918,7 +977,7 @@ function ProposalsTab() {
     ];
   };
 
-  const fetchProposals = async () => {
+  const fetchProposals = useCallback(async () => {
     setLoading(true);
     try {
       const [{ data: proposalRows, error: proposalError }, { data: categoryRows }] = await Promise.all([
@@ -958,11 +1017,11 @@ function ProposalsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [normalizeType]);
 
   useEffect(() => {
     fetchProposals();
-  }, []);
+  }, [fetchProposals]);
 
   const openEditor = (proposal: ProposalRow) => {
     const lockedOptions = lockOptionsByType(proposal.bet_type, proposal.options);
@@ -1334,6 +1393,440 @@ function CategoriesTab() {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function MarketAssetsTab() {
+  const [assets, setAssets] = useState<MarketAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{
+    symbol: string;
+    displayName: string;
+    quoteCurrency: string;
+    type: MarketAssetType;
+  }>>([]);
+  const [cronConfig, setCronConfig] = useState({
+    projectUrl: import.meta.env.VITE_SUPABASE_URL || '',
+    anonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+    peakStartHour: '10',
+    peakEndHour: '16',
+    offpeakStepHours: '2',
+  });
+  const [cronSaving, setCronSaving] = useState(false);
+  const [cronDisabling, setCronDisabling] = useState(false);
+
+  const [form, setForm] = useState({
+    id: '',
+    symbol: '',
+    displayName: '',
+    type: 'stock' as MarketAssetType,
+    quoteCurrency: 'USD',
+    minBetPln: '5',
+    sortOrder: '0',
+    isActive: true,
+  });
+
+  const loadAssets = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAllMarketAssetsForAdmin();
+      setAssets(data);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Nie udało się pobrać aktywów'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAssets();
+  }, []);
+
+  const resetForm = () => {
+    setForm({
+      id: '',
+      symbol: '',
+      displayName: '',
+      type: 'stock',
+      quoteCurrency: 'USD',
+      minBetPln: '5',
+      sortOrder: '0',
+      isActive: true,
+    });
+  };
+
+  const runSearch = async () => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const results = await searchTwelveDataSymbols(query);
+      setSearchResults(results.slice(0, 30));
+      if (results.length === 0) {
+        toast.info('Brak wyników z API');
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Nie udało się wyszukać aktywów w API'));
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const pickResult = (result: {
+    symbol: string;
+    displayName: string;
+    quoteCurrency: string;
+    type: MarketAssetType;
+  }) => {
+    setForm((prev) => ({
+      ...prev,
+      symbol: result.symbol,
+      displayName: result.displayName,
+      quoteCurrency: result.quoteCurrency,
+      type: result.type,
+    }));
+  };
+
+  const saveAsset = async () => {
+    const minBetPln = Number(form.minBetPln);
+    const sortOrder = Number(form.sortOrder);
+
+    if (!form.symbol.trim() || !form.displayName.trim()) {
+      toast.error('Symbol i nazwa są wymagane');
+      return;
+    }
+
+    if (!Number.isFinite(minBetPln) || minBetPln <= 0) {
+      toast.error('Minimalna wartość zakładu musi być większa od 0');
+      return;
+    }
+
+    if (!Number.isFinite(sortOrder)) {
+      toast.error('Kolejność musi być liczbą');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await upsertMarketAsset({
+        id: form.id || undefined,
+        symbol: form.symbol,
+        displayName: form.displayName,
+        type: form.type,
+        quoteCurrency: form.quoteCurrency,
+        minBetPln,
+        sortOrder,
+        isActive: form.isActive,
+      });
+
+      toast.success(form.id ? 'Aktywo zaktualizowane' : 'Aktywo dodane');
+      resetForm();
+      await loadAssets();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Nie udało się zapisać aktywa'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const editAsset = (asset: MarketAsset) => {
+    setForm({
+      id: asset.id,
+      symbol: asset.symbol,
+      displayName: asset.display_name,
+      type: asset.type,
+      quoteCurrency: asset.quote_currency,
+      minBetPln: String(asset.min_bet_pln),
+      sortOrder: String(asset.sort_order),
+      isActive: asset.is_active,
+    });
+  };
+
+  const setupCronProfile = async () => {
+    const peakStartHour = Number(cronConfig.peakStartHour);
+    const peakEndHour = Number(cronConfig.peakEndHour);
+    const offpeakStepHours = Number(cronConfig.offpeakStepHours);
+
+    if (!cronConfig.projectUrl.trim() || !cronConfig.anonKey.trim()) {
+      toast.error('Podaj Project URL i klucz anon');
+      return;
+    }
+
+    if (!Number.isInteger(peakStartHour) || peakStartHour < 0 || peakStartHour > 23) {
+      toast.error('Peak start hour musi być liczbą 0-23');
+      return;
+    }
+
+    if (!Number.isInteger(peakEndHour) || peakEndHour < 0 || peakEndHour > 23) {
+      toast.error('Peak end hour musi być liczbą 0-23');
+      return;
+    }
+
+    if (peakStartHour > peakEndHour) {
+      toast.error('Peak start hour nie może być większy od peak end hour');
+      return;
+    }
+
+    if (!Number.isInteger(offpeakStepHours) || offpeakStepHours < 1 || offpeakStepHours > 12) {
+      toast.error('Off-peak co ile godzin: 1-12');
+      return;
+    }
+
+    setCronSaving(true);
+    try {
+      const result = await setupMarketDataRefreshCronProfile({
+        projectUrl: cronConfig.projectUrl,
+        anonKey: cronConfig.anonKey,
+        peakStartHour,
+        peakEndHour,
+        offpeakStepHours,
+      });
+
+      toast.success(
+        `Cron ustawiony: ${result.estimated_runs_per_day}/dzień (peak: ${result.peak_schedule}, off-peak: ${result.offpeak_schedule})`
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Nie udało się ustawić cron profilu'));
+    } finally {
+      setCronSaving(false);
+    }
+  };
+
+  const disableCronProfile = async () => {
+    setCronDisabling(true);
+    try {
+      await disableMarketDataRefreshCron();
+      toast.success('Cron odświeżania market-data wyłączony');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Nie udało się wyłączyć cron'));
+    } finally {
+      setCronDisabling(false);
+    }
+  };
+
+  const applyRecommendedCronPreset = () => {
+    setCronConfig((prev) => ({
+      ...prev,
+      peakStartHour: '10',
+      peakEndHour: '16',
+      offpeakStepHours: '2',
+    }));
+    toast.success('Ustawiono rekomendowany preset (10-16 co 30 min, off-peak co 2h)');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-xl p-4 card-shadow space-y-3">
+        <h3 className="font-bold">Harmonogram odświeżania quote (cron)</h3>
+        <p className="text-xs text-muted-foreground">
+          Profil domyślny: peak 10-16 co 30 min + off-peak co 2h (maks 25/dzień).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Project URL</Label>
+            <Input
+              value={cronConfig.projectUrl}
+              onChange={(event) => setCronConfig((prev) => ({ ...prev, projectUrl: event.target.value }))}
+              placeholder="https://<project-ref>.supabase.co"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Anon key</Label>
+            <Input
+              value={cronConfig.anonKey}
+              onChange={(event) => setCronConfig((prev) => ({ ...prev, anonKey: event.target.value }))}
+              placeholder="sb_publishable_..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Peak start hour (0-23)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={23}
+              value={cronConfig.peakStartHour}
+              onChange={(event) => setCronConfig((prev) => ({ ...prev, peakStartHour: event.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Peak end hour (0-23)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={23}
+              value={cronConfig.peakEndHour}
+              onChange={(event) => setCronConfig((prev) => ({ ...prev, peakEndHour: event.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Off-peak co ile godzin (1-12)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={12}
+              value={cronConfig.offpeakStepHours}
+              onChange={(event) => setCronConfig((prev) => ({ ...prev, offpeakStepHours: event.target.value }))}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={applyRecommendedCronPreset}>
+            Użyj rekomendowanego presetu
+          </Button>
+          <Button onClick={setupCronProfile} disabled={cronSaving}>
+            {cronSaving ? 'Ustawianie...' : 'Ustaw profil cron'}
+          </Button>
+          <Button variant="outline" onClick={disableCronProfile} disabled={cronDisabling}>
+            {cronDisabling ? 'Wyłączanie...' : 'Wyłącz cron'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-card rounded-xl p-4 card-shadow space-y-3">
+        <h3 className="font-bold">Wyszukiwarka API (TwelveData)</h3>
+        <div className="flex gap-2">
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="np. TSLA, SPY, BTC/USD" />
+          <Button onClick={runSearch} disabled={searching} variant="outline">
+            {searching ? 'Szukam...' : 'Szukaj'}
+          </Button>
+        </div>
+
+        {searchResults.length > 0 && (
+          <div className="max-h-56 overflow-y-auto border border-border rounded-md divide-y divide-border">
+            {searchResults.map((result) => (
+              <button
+                key={`${result.symbol}-${result.type}`}
+                onClick={() => pickResult(result)}
+                className="w-full text-left px-3 py-2 hover:bg-muted/40 transition-colors"
+              >
+                <p className="text-sm font-semibold">{result.symbol} - {result.displayName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {result.type.toUpperCase()} • {result.quoteCurrency}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-card rounded-xl p-4 card-shadow space-y-3">
+        <h3 className="font-bold">Dodaj / edytuj aktywo</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Symbol</Label>
+            <Input value={form.symbol} onChange={(event) => setForm((prev) => ({ ...prev, symbol: event.target.value }))} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Nazwa</Label>
+            <Input value={form.displayName} onChange={(event) => setForm((prev) => ({ ...prev, displayName: event.target.value }))} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Typ</Label>
+            <Select value={form.type} onValueChange={(value: MarketAssetType) => setForm((prev) => ({ ...prev, type: value }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stock">stock</SelectItem>
+                <SelectItem value="etf">etf</SelectItem>
+                <SelectItem value="crypto">crypto</SelectItem>
+                <SelectItem value="forex">forex</SelectItem>
+                <SelectItem value="commodity">commodity</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Waluta notowania</Label>
+            <Input value={form.quoteCurrency} onChange={(event) => setForm((prev) => ({ ...prev, quoteCurrency: event.target.value.toUpperCase() }))} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Minimalna wartość zakładu (PLN)</Label>
+            <Input type="number" min={0.01} step={0.01} value={form.minBetPln} onChange={(event) => setForm((prev) => ({ ...prev, minBetPln: event.target.value }))} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Kolejność</Label>
+            <Input type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch checked={form.isActive} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))} />
+          <Label>Aktywne</Label>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={saveAsset} disabled={saving}>{saving ? 'Zapisywanie...' : form.id ? 'Zapisz zmiany' : 'Dodaj aktywo'}</Button>
+          {form.id && (
+            <Button variant="outline" onClick={resetForm}>
+              Anuluj edycję
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-card rounded-xl p-4 card-shadow">
+        <h3 className="font-bold mb-3">Aktywa w bazie</h3>
+
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, index) => (
+              <Skeleton key={index} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="p-2">Symbol</th>
+                  <th className="p-2">Nazwa</th>
+                  <th className="p-2">Typ</th>
+                  <th className="p-2">Waluta</th>
+                  <th className="p-2">Min zakład</th>
+                  <th className="p-2">Aktywne</th>
+                  <th className="p-2">Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assets.map((asset) => (
+                  <tr key={asset.id} className="border-b border-border/50">
+                    <td className="p-2 font-semibold">{asset.symbol}</td>
+                    <td className="p-2">{asset.display_name}</td>
+                    <td className="p-2">{asset.type}</td>
+                    <td className="p-2">{asset.quote_currency}</td>
+                    <td className="p-2">{Number(asset.min_bet_pln).toFixed(2)} zł</td>
+                    <td className="p-2">{asset.is_active ? 'Tak' : 'Nie'}</td>
+                    <td className="p-2">
+                      <Button size="sm" variant="outline" onClick={() => editAsset(asset)}>
+                        Edytuj
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

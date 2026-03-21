@@ -12,6 +12,11 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { compressImageFile } from '@/features/social/images';
 
+function formatAssetStake(quantity: number | null | undefined, symbol: string | null | undefined) {
+  if (!quantity || !symbol) return null;
+  return `${Number(quantity).toFixed(8).replace(/\.?0+$/, '')} ${symbol}`;
+}
+
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
@@ -426,7 +431,16 @@ export default function ProfilePage() {
                           )}
                         </div>
                         <div className="text-right ml-3 shrink-0">
-                          <p className="font-bold">{Number(coupon.stake).toFixed(2)} zł</p>
+                          {coupon.stake_asset_id ? (
+                            <>
+                              <p className="font-bold">
+                                {formatAssetStake(coupon.stake_asset_quantity, coupon.stake_asset_symbol) ?? '-'}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">({Number(coupon.stake).toFixed(2)} zł)</p>
+                            </>
+                          ) : (
+                            <p className="font-bold">{Number(coupon.stake).toFixed(2)} zł</p>
+                          )}
                           <p
                             className={cn(
                               'text-xs font-medium',

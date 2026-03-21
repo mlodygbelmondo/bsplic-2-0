@@ -52,6 +52,66 @@ VITE_SUPABASE_URL=...
 VITE_SUPABASE_PUBLISHABLE_KEY=...
 ```
 
+Market quotes/search now go through Supabase Edge Function `market-data`.
+Set provider key as Supabase secret (not in frontend env):
+
+```bash
+supabase secrets set TWELVEDATA_API_KEY=...
+supabase functions deploy market-data
+```
+
+Then configure a scheduled invocation for `market-data` with body:
+
+```json
+{ "action": "refresh" }
+```
+
+Simple schedule (every 15 minutes):
+
+```text
+*/15 * * * *
+```
+
+If schedule UI is unavailable in your dashboard, run SQL once as admin:
+
+```sql
+select public.setup_market_data_refresh_cron(
+  p_project_url := 'https://<project-ref>.supabase.co',
+  p_anon_key := '<SUPABASE_ANON_KEY>',
+  p_schedule := '*/15 * * * *'
+);
+```
+
+Recommended low-usage profile (peak 10-16 twice/hour, off-peak every 2h, max 25/day):
+
+```sql
+select * from public.setup_market_data_refresh_cron_profile(
+  p_project_url := 'https://<project-ref>.supabase.co',
+  p_anon_key := '<SUPABASE_ANON_KEY>',
+  p_peak_start_hour := 10,
+  p_peak_end_hour := 16,
+  p_offpeak_step_hours := 2
+);
+```
+
+Disable scheduled refresh jobs:
+
+```sql
+select public.disable_market_data_refresh_cron();
+```
+
+For local seeding (dev DB only), also provide in shell:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=...
+SEED_TEST_PASSWORD=...
+# Optional (defaults shown)
+# SEED_TEST_EMAIL_PREFIX=testuser
+# SEED_TEST_EMAIL_DOMAIN=bsplic.dev
+# SEED_TEST_USERS_COUNT=4
+# SEED_TEST_BALANCE=1000
+```
+
 ### 4) Run locally
 
 ```bash
@@ -70,6 +130,16 @@ npm run preview     # preview production build
 npm run lint        # eslint
 npm run test        # vitest (single run)
 npm run test:watch  # vitest watch mode
+npm run seed:dev    # seed/update 4 dev test accounts
+```
+
+Optional integration test for asset-backed single-coupon settlement (requires local/dev Supabase env vars):
+
+```bash
+TEST_SUPABASE_URL=http://127.0.0.1:54321 \
+TEST_SUPABASE_ANON_KEY=... \
+TEST_SUPABASE_SERVICE_ROLE_KEY=... \
+npm run test -- src/features/integration/asset-stake-settlement.integration.test.ts
 ```
 
 Run a single test file:

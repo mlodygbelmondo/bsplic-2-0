@@ -320,6 +320,12 @@ $$;
 -- 7. Create all triggers
 -- ============================================================
 
+DROP TRIGGER IF EXISTS trg_update_streak ON public.placed_bets;
+DROP TRIGGER IF EXISTS trg_badges_on_insert ON public.placed_bets;
+DROP TRIGGER IF EXISTS trg_badges_on_result ON public.placed_bets;
+DROP TRIGGER IF EXISTS trg_resolve_coupon ON public.placed_bets;
+DROP TRIGGER IF EXISTS trg_badge_proposal ON public.bet_proposals;
+
 CREATE TRIGGER trg_update_streak
   AFTER INSERT ON public.placed_bets
   FOR EACH ROW

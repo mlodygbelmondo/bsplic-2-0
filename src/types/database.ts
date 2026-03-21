@@ -58,6 +58,12 @@ export interface Coupon {
   user_id: string;
   total_odds: number;
   stake: number;
+  stake_asset_id?: string | null;
+  stake_asset_symbol?: string | null;
+  stake_asset_type?: 'stock' | 'etf' | 'crypto' | 'forex' | 'commodity' | null;
+  stake_asset_quantity?: number | null;
+  stake_asset_unit_price_pln?: number | null;
+  stake_asset_fx_rate_to_pln?: number | null;
   payout: number;
   status: 'pending' | 'won' | 'lost';
   created_at: string;
@@ -103,6 +109,12 @@ export interface CouponHistoryEntry {
   id: string;
   total_odds: number;
   stake: number;
+  stake_asset_id?: string | null;
+  stake_asset_symbol?: string | null;
+  stake_asset_type?: 'stock' | 'etf' | 'crypto' | 'forex' | 'commodity' | null;
+  stake_asset_quantity?: number | null;
+  stake_asset_unit_price_pln?: number | null;
+  stake_asset_fx_rate_to_pln?: number | null;
   payout: number;
   status: 'pending' | 'won' | 'lost';
   created_at: string;
@@ -131,6 +143,12 @@ export interface SocialFeedItem {
   content: string | null;
   total_odds: number | null;
   stake: number | null;
+  stake_asset_id?: string | null;
+  stake_asset_symbol?: string | null;
+  stake_asset_type?: 'stock' | 'etf' | 'crypto' | 'forex' | 'commodity' | null;
+  stake_asset_quantity?: number | null;
+  stake_asset_unit_price_pln?: number | null;
+  stake_asset_fx_rate_to_pln?: number | null;
   payout: number | null;
   status: string | null;
   legs: CouponLeg[] | null;
