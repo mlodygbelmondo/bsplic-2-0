@@ -28,10 +28,11 @@ export interface Bet {
   id: string;
   title: string;
   category_id: string | null;
-  bet_type: '1x2' | '12' | 'multi';
+  bet_type: '1x2' | '12' | 'multi' | 'single';
   options: BetOption[];
   ends_at: string;
   is_live: boolean;
+  is_bsplicboost?: boolean;
   is_active: boolean;
   winning_option: string | null;
   bet_count: number;
@@ -46,7 +47,7 @@ export interface PlacedBet {
   selected_option: string;
   stake: number;
   odds_at_time: number;
-  result: 'pending' | 'won' | 'lost';
+  result: 'pending' | 'won' | 'lost' | 'refund';
   payout: number;
   coupon_id: string | null;
   created_at: string;
@@ -59,7 +60,7 @@ export interface Coupon {
   total_odds: number;
   stake: number;
   payout: number;
-  status: 'pending' | 'won' | 'lost';
+  status: 'pending' | 'won' | 'lost' | 'refund';
   created_at: string;
 }
 
@@ -68,7 +69,7 @@ export interface BetProposal {
   user_id: string;
   title: string;
   category_id: string | null;
-  bet_type: '1x2' | '12' | 'multi';
+  bet_type: '1x2' | '12' | 'multi' | 'single';
   options: BetOption[];
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
@@ -95,7 +96,7 @@ export interface CouponLeg {
   odds_at_time: number;
   leg_stake?: number;
   leg_payout?: number;
-  result: 'pending' | 'won' | 'lost';
+  result: 'pending' | 'won' | 'lost' | 'refund';
   bet_title: string | null;
 }
 
@@ -104,7 +105,7 @@ export interface CouponHistoryEntry {
   total_odds: number;
   stake: number;
   payout: number;
-  status: 'pending' | 'won' | 'lost';
+  status: 'pending' | 'won' | 'lost' | 'refund';
   created_at: string;
   legs: CouponLeg[] | null;
 }

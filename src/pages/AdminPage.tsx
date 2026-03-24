@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Plus, X, Check, XCircle, Trophy } from 'lucide-react';
+import { Plus, X, Check, XCircle, Trophy, RotateCcw, CircleOff, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Skeleton } from '@/components/ui/skeleton';
 import { addCreditForUser, calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
@@ -33,7 +33,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 const normalizeCouponStatus = (value: string | null | undefined): CouponSettlementSnapshot['status'] => {
-  if (value === 'won' || value === 'lost') return value;
+  if (value === 'won' || value === 'lost' || value === 'refund') return value;
   return 'pending';
 };
 
@@ -50,6 +50,9 @@ const getTomorrowAt2359 = () => {
   date.setHours(23, 59, 0, 0);
   return date;
 };
+
+const BET_WINNING_OPTION_REFUND = '__refund__';
+const BET_WINNING_OPTION_FORCED_LOSS = '__all_lost__';
 
 interface BetOptionDraft {
   name: string;
@@ -146,8 +149,9 @@ function DashboardTab() {
 function CreateBetTab() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [betType, setBetType] = useState<'1x2' | '12' | 'multi'>('12');
+  const [betType, setBetType] = useState<'single' | '1x2' | '12' | 'multi'>('12');
   const [isLive, setIsLive] = useState(false);
+  const [isBsplicboost, setIsBsplicboost] = useState(false);
   const [endsAt, setEndsAt] = useState(() => toInputDateTime(getTomorrowAt2359()));
   const [options, setOptions] = useState<BetOptionDraft[]>([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -161,7 +165,9 @@ function CreateBetTab() {
 
   // Lock options based on bet type
   useEffect(() => {
-    if (betType === '12') {
+    if (betType === 'single') {
+      setOptions([{ name: '1', odds: '2' }]);
+    } else if (betType === '12') {
       setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
     } else if (betType === '1x2') {
       setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
@@ -170,7 +176,7 @@ function CreateBetTab() {
     }
   }, [betType]);
 
-  const hasFixedOptionCount = betType === '12' || betType === '1x2';
+  const hasFixedOptionCount = betType === 'single' || betType === '12' || betType === '1x2';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,8 +191,9 @@ function CreateBetTab() {
       return;
     }
 
-    if (cleanedOptions.length < 2) {
-      toast.error('Dodaj co najmniej 2 opcje');
+    const minOptions = betType === 'single' ? 1 : 2;
+    if (cleanedOptions.length < minOptions) {
+      toast.error(minOptions === 1 ? 'Dodaj co najmniej 1 opcję' : 'Dodaj co najmniej 2 opcje');
       return;
     }
 
@@ -215,12 +222,15 @@ function CreateBetTab() {
         options: normalizedOptions as unknown as Json,
         ends_at: new Date(endsAt).toISOString(),
         is_live: isLive,
+        is_bsplicboost: isBsplicboost,
       }]);
       if (error) throw error;
       toast.success('Zakład utworzony!');
       setTitle('');
+      setIsBsplicboost(false);
       setEndsAt(toInputDateTime(getTomorrowAt2359()));
-      if (betType === '12') setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
+      if (betType === 'single') setOptions([{ name: '1', odds: '2' }]);
+      else if (betType === '12') setOptions([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
       else if (betType === '1x2') setOptions([{ name: '1', odds: '2' }, { name: 'X', odds: '3' }, { name: '2', odds: '2' }]);
       else setOptions([{ name: '', odds: '2' }, { name: '', odds: '2' }]);
     } catch (err: unknown) {
@@ -248,9 +258,10 @@ function CreateBetTab() {
         </div>
         <div className="space-y-2">
           <Label>Typ</Label>
-          <Select value={betType} onValueChange={(v: string) => setBetType(v as '1x2' | '12' | 'multi')}>
+          <Select value={betType} onValueChange={(v: string) => setBetType(v as 'single' | '1x2' | '12' | 'multi')}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="single">Single</SelectItem>
               <SelectItem value="12">1/2</SelectItem>
               <SelectItem value="1x2">1X2</SelectItem>
               <SelectItem value="multi">Multi</SelectItem>
@@ -265,6 +276,10 @@ function CreateBetTab() {
       <div className="flex items-center gap-2">
         <Switch checked={isLive} onCheckedChange={setIsLive} />
         <Label>Na żywo 🔴</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch checked={isBsplicboost} onCheckedChange={setIsBsplicboost} />
+        <Label>BSPLICBOOST</Label>
       </div>
       <div className="space-y-2">
         <Label>Opcje</Label>
@@ -296,7 +311,8 @@ function CreateBetTab() {
 }
 
 function ManageBetsTab() {
-  type EditableBetType = '1x2' | '12' | 'multi';
+  type EditableBetType = 'single' | '1x2' | '12' | 'multi';
+  type SettlementMode = 'normal' | 'refund' | 'force_lost';
 
   interface BetEditor {
     id: string;
@@ -306,6 +322,7 @@ function ManageBetsTab() {
     options: BetOption[];
     endsAt: string;
     isLive: boolean;
+    isBsplicboost: boolean;
     isActive: boolean;
   }
 
@@ -320,7 +337,7 @@ function ManageBetsTab() {
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
 
   const normalizeType = (value: string): EditableBetType => {
-    if (value === '1x2' || value === 'multi') return value;
+    if (value === 'single' || value === '1x2' || value === 'multi') return value;
     return '12';
   };
 
@@ -333,6 +350,12 @@ function ManageBetsTab() {
   };
 
   const lockOptionsByType = (type: EditableBetType, current: BetOption[]) => {
+    if (type === 'single') {
+      return [
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+      ];
+    }
+
     if (type === '12') {
       return [
         { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
@@ -388,6 +411,7 @@ function ManageBetsTab() {
       options,
       endsAt: toInputDateTime(bet.ends_at),
       isLive: Boolean(bet.is_live),
+      isBsplicboost: Boolean(bet.is_bsplicboost),
       isActive: Boolean(bet.is_active),
     });
     setEditorOpen(true);
@@ -411,8 +435,9 @@ function ManageBetsTab() {
       return;
     }
 
-    if (cleanedOptions.length < 2) {
-      toast.error('Zakład musi mieć minimum 2 opcje');
+    const minOptions = editing.betType === 'single' ? 1 : 2;
+    if (cleanedOptions.length < minOptions) {
+      toast.error(minOptions === 1 ? 'Zakład musi mieć minimum 1 opcję' : 'Zakład musi mieć minimum 2 opcje');
       return;
     }
 
@@ -433,6 +458,7 @@ function ManageBetsTab() {
           options: cleanedOptions as Json,
           ends_at: endsAtDate.toISOString(),
           is_live: editing.isLive,
+          is_bsplicboost: editing.isBsplicboost,
           is_active: editing.isActive,
         })
         .eq('id', editing.id);
@@ -450,11 +476,18 @@ function ManageBetsTab() {
     }
   };
 
-  const resolveBet = async (bet: Bet, winningOption: string) => {
+  const resolveBet = async (bet: Bet, winningOption: string, mode: SettlementMode = 'normal') => {
     try {
+      const winningOptionForDb =
+        mode === 'refund'
+          ? BET_WINNING_OPTION_REFUND
+          : mode === 'force_lost'
+            ? BET_WINNING_OPTION_FORCED_LOSS
+            : winningOption;
+
       const { error: betUpdateError } = await supabase
         .from('bets')
-        .update({ winning_option: winningOption, is_active: false })
+        .update({ winning_option: winningOptionForDb, is_active: false })
         .eq('id', bet.id);
       if (betUpdateError) throw betUpdateError;
 
@@ -468,7 +501,7 @@ function ManageBetsTab() {
 
       if (placedBets) {
         for (const pb of placedBets) {
-          if (pb.result === 'won' || pb.result === 'lost') continue;
+          if (pb.result === 'won' || pb.result === 'lost' || pb.result === 'refund') continue;
 
           let couponBefore: CouponSettlementSnapshot | null = null;
           if (pb.coupon_id) {
@@ -493,11 +526,16 @@ function ManageBetsTab() {
             winningOption,
             stake: Number(pb.stake),
             oddsAtTime: Number(pb.odds_at_time),
+            mode,
           });
+
+          const legUpdatePayload = mode === 'refund'
+            ? { result: legOutcome.result, payout: legOutcome.payout, odds_at_time: 1 }
+            : { result: legOutcome.result, payout: legOutcome.payout };
 
           const { error: legUpdateError } = await supabase
             .from('placed_bets')
-            .update({ result: legOutcome.result, payout: legOutcome.payout })
+            .update(legUpdatePayload)
             .eq('id', pb.id);
           if (legUpdateError) throw legUpdateError;
 
@@ -522,6 +560,7 @@ function ManageBetsTab() {
           const creditAmount = calculateCreditAmount({
             legWon: legOutcome.won,
             legPayout: legOutcome.payout,
+            legResult: legOutcome.result,
             couponBefore,
             couponAfter,
           });
@@ -542,8 +581,14 @@ function ManageBetsTab() {
           if (creditError) throw creditError;
         }
       }
-      toast.success('Wynik ogłoszony!');
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      if (mode === 'refund') {
+        toast.success('Zakład rozliczony jako zwrot');
+      } else if (mode === 'force_lost') {
+        toast.success('Zakład rozliczony jako przegrany dla wszystkich');
+      } else {
+        toast.success('Wynik ogłoszony!');
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
       setResolveModal(null);
       fetchBets();
     } catch (err: unknown) {
@@ -578,7 +623,7 @@ function ManageBetsTab() {
     }
   };
 
-  const hasFixedOptionCount = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
+  const hasFixedOptionCount = editing ? editing.betType === 'single' || editing.betType === '12' || editing.betType === '1x2' : false;
 
   return (
     <>
@@ -603,7 +648,16 @@ function ManageBetsTab() {
                 {bets.map(bet => (
                   <tr key={bet.id} className="border-b">
                     <td className="p-3 font-medium">{bet.title}</td>
-                    <td className="p-3">{bet.bet_type}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <span>{bet.bet_type}</span>
+                        {bet.is_bsplicboost && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                            <Sparkles className="h-3 w-3" /> BSPLBOOST
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3">{bet.bet_count}</td>
                     <td className="p-3">
                       {bet.winning_option ? (
@@ -620,9 +674,14 @@ function ManageBetsTab() {
                           Edytuj
                         </Button>
                         {!bet.winning_option && (
-                          <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
-                            <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => setResolveModal(bet)}>
+                              <Trophy className="h-3 w-3 mr-1" /> Ogłoś wynik
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => resolveBet(bet, '', 'refund')}>
+                              <RotateCcw className="h-3 w-3 mr-1" /> Rozlicz 1.00
+                            </Button>
+                          </>
                         )}
                         <Button
                           size="sm"
@@ -696,8 +755,8 @@ function ManageBetsTab() {
 
                 <div className="space-y-2">
                   <Label>Typ</Label>
-                  <Select
-                    value={editing.betType}
+                    <Select
+                      value={editing.betType}
                     onValueChange={(value: EditableBetType) =>
                       setEditing((prev) =>
                         prev
@@ -714,6 +773,7 @@ function ManageBetsTab() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
                       <SelectItem value="12">1/2</SelectItem>
                       <SelectItem value="1x2">1X2</SelectItem>
                       <SelectItem value="multi">Multi</SelectItem>
@@ -731,13 +791,21 @@ function ManageBetsTab() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <Label htmlFor="manage-bet-live">Na żywo</Label>
                   <Switch
                     id="manage-bet-live"
                     checked={editing.isLive}
                     onCheckedChange={(checked) => setEditing((prev) => (prev ? { ...prev, isLive: checked } : prev))}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <Label htmlFor="manage-bet-boost">BSPLICBOOST</Label>
+                  <Switch
+                    id="manage-bet-boost"
+                    checked={editing.isBsplicboost}
+                    onCheckedChange={(checked) => setEditing((prev) => (prev ? { ...prev, isBsplicboost: checked } : prev))}
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
@@ -844,6 +912,15 @@ function ManageBetsTab() {
                   <Check className="h-4 w-4 mr-2" /> {opt.name} ({opt.odds.toFixed(2)})
                 </Button>
               ))}
+              <div className="pt-2 border-t border-border" />
+              {resolveModal.is_bsplicboost && (
+                <Button variant="outline" className="w-full justify-start" onClick={() => resolveBet(resolveModal, '', 'force_lost')}>
+                  <CircleOff className="h-4 w-4 mr-2" /> Ogłoś przegraną (wszyscy)
+                </Button>
+              )}
+              <Button variant="outline" className="w-full justify-start" onClick={() => resolveBet(resolveModal, '', 'refund')}>
+                <RotateCcw className="h-4 w-4 mr-2" /> Rozlicz 1.00 (zwrot)
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -853,7 +930,7 @@ function ManageBetsTab() {
 }
 
 function ProposalsTab() {
-  type ProposalType = '1x2' | '12' | 'multi';
+  type ProposalType = 'single' | '1x2' | '12' | 'multi';
 
   interface ProposalRow {
     id: string;
@@ -883,7 +960,7 @@ function ProposalsTab() {
   const [editing, setEditing] = useState<ProposalEditor | null>(null);
 
   const normalizeType = (value: string): ProposalType => {
-    if (value === '1x2' || value === 'multi') return value;
+    if (value === 'single' || value === '1x2' || value === 'multi') return value;
     return '12';
   };
 
@@ -896,6 +973,12 @@ function ProposalsTab() {
   };
 
   const lockOptionsByType = (type: ProposalType, current: BetOption[]) => {
+    if (type === 'single') {
+      return [
+        { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
+      ];
+    }
+
     if (type === '12') {
       return [
         { name: current[0]?.name || '1', odds: current[0]?.odds || 2 },
@@ -987,8 +1070,9 @@ function ProposalsTab() {
         odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
       }));
 
-    if (cleanedOptions.length < 2) {
-      toast.error('Zakład musi mieć minimum 2 opcje');
+    const minOptions = editing.betType === 'single' ? 1 : 2;
+    if (cleanedOptions.length < minOptions) {
+      toast.error(minOptions === 1 ? 'Zakład musi mieć minimum 1 opcję' : 'Zakład musi mieć minimum 2 opcje');
       return;
     }
 
@@ -1051,7 +1135,7 @@ function ProposalsTab() {
     fetchProposals();
   };
 
-  const hasFixedOptionCount = editing ? editing.betType === '12' || editing.betType === '1x2' : false;
+  const hasFixedOptionCount = editing ? editing.betType === 'single' || editing.betType === '12' || editing.betType === '1x2' : false;
 
   if (loading) {
     return (
@@ -1134,7 +1218,7 @@ function ProposalsTab() {
                   <Label>Typ</Label>
                   <Select
                     value={editing.betType}
-                    onValueChange={(value: '1x2' | '12' | 'multi') =>
+                    onValueChange={(value: 'single' | '1x2' | '12' | 'multi') =>
                       setEditing((prev) =>
                         prev
                           ? {
@@ -1150,6 +1234,7 @@ function ProposalsTab() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
                       <SelectItem value="12">1/2</SelectItem>
                       <SelectItem value="1x2">1X2</SelectItem>
                       <SelectItem value="multi">Multi</SelectItem>

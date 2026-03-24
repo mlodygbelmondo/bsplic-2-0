@@ -4,17 +4,30 @@ import {
   addCreditForUser,
   calculateCreditAmount,
   calculateLegOutcome,
+  type LegSettlementMode,
   type CouponSettlementSnapshot,
 } from './settlement';
 
+const createLegOutcomeInput = (
+  overrides: Partial<{
+    selectedOption: string;
+    winningOption: string;
+    stake: number;
+    oddsAtTime: number;
+    mode: LegSettlementMode;
+  }> = {},
+) => ({
+  selectedOption: '1',
+  winningOption: '1',
+  stake: 25,
+  oddsAtTime: 2.4,
+  mode: 'normal' as LegSettlementMode,
+  ...overrides,
+});
+
 describe('calculateLegOutcome', () => {
   it('marks winning leg and calculates payout', () => {
-    const outcome = calculateLegOutcome({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 25,
-      oddsAtTime: 2.4,
-    });
+    const outcome = calculateLegOutcome(createLegOutcomeInput());
 
     expect(outcome).toEqual({
       result: 'won',
@@ -24,17 +37,32 @@ describe('calculateLegOutcome', () => {
   });
 
   it('marks losing leg and returns zero payout', () => {
-    const outcome = calculateLegOutcome({
-      selectedOption: '1',
-      winningOption: '2',
-      stake: 25,
-      oddsAtTime: 2.4,
-    });
+    const outcome = calculateLegOutcome(createLegOutcomeInput({ winningOption: '2' }));
 
     expect(outcome).toEqual({
       result: 'lost',
       won: false,
       payout: 0,
+    });
+  });
+
+  it('forces loss regardless of selected and winning option', () => {
+    const outcome = calculateLegOutcome(createLegOutcomeInput({ mode: 'force_lost' }));
+
+    expect(outcome).toEqual({
+      result: 'lost',
+      won: false,
+      payout: 0,
+    });
+  });
+
+  it('marks refund and returns stake payout', () => {
+    const outcome = calculateLegOutcome(createLegOutcomeInput({ winningOption: '2', mode: 'refund' }));
+
+    expect(outcome).toEqual({
+      result: 'refund',
+      won: false,
+      payout: 25,
     });
   });
 });
@@ -55,6 +83,7 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: false,
       legPayout: 0,
+      legResult: 'lost',
       couponBefore: null,
       couponAfter: null,
     });
@@ -80,6 +109,7 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: true,
       legPayout: 20,
+      legResult: 'won',
       couponBefore,
       couponAfter,
     });
@@ -105,6 +135,7 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: true,
       legPayout: 20,
+      legResult: 'won',
       couponBefore,
       couponAfter,
     });
@@ -130,6 +161,7 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: true,
       legPayout: 20,
+      legResult: 'won',
       couponBefore,
       couponAfter,
     });
@@ -155,6 +187,7 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: false,
       legPayout: 0,
+      legResult: 'lost',
       couponBefore,
       couponAfter,
     });
@@ -180,11 +213,64 @@ describe('calculateCreditAmount', () => {
     const credit = calculateCreditAmount({
       legWon: true,
       legPayout: 17,
+      legResult: 'won',
       couponBefore,
       couponAfter,
     });
 
     expect(credit).toBe(51);
+  });
+
+  it('credits stake when single coupon leg is refunded', () => {
+    const couponBefore: CouponSettlementSnapshot = {
+      stake: 15,
+      totalOdds: 1,
+      status: 'pending',
+      payout: 0,
+    };
+
+    const couponAfter: CouponSettlementSnapshot = {
+      stake: 15,
+      totalOdds: 1,
+      status: 'refund',
+      payout: 15,
+    };
+
+    const credit = calculateCreditAmount({
+      legWon: false,
+      legPayout: 15,
+      legResult: 'refund',
+      couponBefore,
+      couponAfter,
+    });
+
+    expect(credit).toBe(15);
+  });
+
+  it('credits full stake when AKO coupon transitions to refund', () => {
+    const couponBefore: CouponSettlementSnapshot = {
+      stake: 30,
+      totalOdds: 4,
+      status: 'pending',
+      payout: 0,
+    };
+
+    const couponAfter: CouponSettlementSnapshot = {
+      stake: 30,
+      totalOdds: 4,
+      status: 'refund',
+      payout: 30,
+    };
+
+    const credit = calculateCreditAmount({
+      legWon: false,
+      legPayout: 10,
+      legResult: 'refund',
+      couponBefore,
+      couponAfter,
+    });
+
+    expect(credit).toBe(30);
   });
 });
 

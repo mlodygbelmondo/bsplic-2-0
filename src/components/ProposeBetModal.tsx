@@ -33,13 +33,15 @@ interface OptionDraft {
 }
 
 const FIXED_OPTION_COUNTS: Record<string, number> = {
+  single: 1,
   "12": 2,
   "1x2": 3,
 };
 
 const hasFixedOptionCount = (type: string) => type in FIXED_OPTION_COUNTS;
 
-const OPTION_DEFAULTS: Record<"1x2" | "12" | "multi", string[]> = {
+const OPTION_DEFAULTS: Record<"single" | "1x2" | "12" | "multi", string[]> = {
+  single: ["1"],
   "12": ["1", "2"],
   "1x2": ["1", "X", "2"],
   multi: ["", ""],
@@ -65,7 +67,7 @@ export function ProposeBetModal({
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [betType, setBetType] = useState<"1x2" | "12" | "multi">("12");
+  const [betType, setBetType] = useState<"single" | "1x2" | "12" | "multi">("12");
   const [endsAt, setEndsAt] = useState(() => toInputDateTime(getTomorrowAt2359()));
   const [options, setOptions] = useState<OptionDraft[]>([
     { name: "1", odds: "2" },
@@ -109,8 +111,12 @@ export function ProposeBetModal({
       return;
     }
 
-    if (preparedOptions.length < 2) {
-      toast.error("Dodaj co najmniej 2 opcje");
+    const minOptions = betType === "single" ? 1 : 2;
+
+    if (preparedOptions.length < minOptions) {
+      toast.error(
+        minOptions === 1 ? "Dodaj co najmniej 1 opcję" : "Dodaj co najmniej 2 opcje",
+      );
       return;
     }
 
@@ -201,7 +207,7 @@ export function ProposeBetModal({
               <Label>Typ</Label>
               <Select
                 value={betType}
-                onValueChange={(value: "1x2" | "12" | "multi") =>
+                onValueChange={(value: "single" | "1x2" | "12" | "multi") =>
                   setBetType(value)
                 }
               >
@@ -209,6 +215,7 @@ export function ProposeBetModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="single">Single</SelectItem>
                   <SelectItem value="12">1/2</SelectItem>
                   <SelectItem value="1x2">1X2</SelectItem>
                   <SelectItem value="multi">Multi</SelectItem>

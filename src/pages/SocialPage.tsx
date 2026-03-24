@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
-import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
+import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
@@ -798,14 +798,20 @@ interface CouponContentProps {
 }
 
 function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
+  const derivedStatus = deriveCouponStatus({
+    status: item.status as 'pending' | 'won' | 'lost' | 'refund' | null,
+    legs: (item.legs ?? []).map((leg) => ({ result: leg.result })),
+  });
+
   const displayedOdds = getDisplayedCouponOdds({
     totalOdds: Number(item.total_odds),
     legs: (item.legs ?? []).map((leg) => ({
       oddsAtTime: Number(leg.odds_at_time),
+      result: leg.result,
     })),
   });
   const displayedWin = getDisplayedCouponWin({
-    status: item.status === 'won' || item.status === 'lost' ? item.status : 'pending',
+    status: derivedStatus,
     isAko: ako,
     stake: Number(item.stake),
     displayedOdds,
@@ -851,17 +857,21 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
           <p
             className={cn(
               'text-xs font-medium',
-              item.status === 'won'
+              derivedStatus === 'won'
                 ? 'text-success'
-                : item.status === 'lost'
+                : derivedStatus === 'lost'
                   ? 'text-destructive'
+                  : derivedStatus === 'refund'
+                    ? 'text-primary'
                   : 'text-muted-foreground',
             )}
           >
-            {item.status === 'won'
+            {derivedStatus === 'won'
               ? `+${displayedWin.toFixed(2)} zł`
-              : item.status === 'lost'
+              : derivedStatus === 'lost'
                 ? 'Przegrana'
+                : derivedStatus === 'refund'
+                  ? `Zwrot ${displayedWin.toFixed(2)} zł`
                 : 'W toku'}
           </p>
         </div>
@@ -885,6 +895,8 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                     ? 'bg-success/10 text-success'
                     : leg.result === 'lost'
                       ? 'bg-destructive/10 text-destructive'
+                      : leg.result === 'refund'
+                        ? 'bg-primary/10 text-primary'
                       : 'bg-muted-foreground/10 text-muted-foreground',
                 )}
               >
@@ -892,6 +904,8 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                   ? 'Wygrana'
                   : leg.result === 'lost'
                     ? 'Przegrana'
+                    : leg.result === 'refund'
+                      ? 'Zwrot'
                     : 'W toku'}
               </span>
             </div>

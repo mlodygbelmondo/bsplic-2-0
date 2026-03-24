@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
+import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
 import { compressImageFile } from '@/features/social/images';
 
 export default function ProfilePage() {
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     winRate: number;
     totalProfit: number;
   } | null>(null);
-  const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending'>('all');
+  const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending' | 'refund'>('all');
   const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
@@ -188,7 +188,15 @@ export default function ProfilePage() {
   const winRate = rankingStats ? rankingStats.winRate.toFixed(1) : '0';
   const totalProfit = rankingStats?.totalProfit ?? 0;
 
-  const filtered = coupons.filter((c) => filter === 'all' || c.status === filter);
+  const couponsWithDerivedStatus = coupons.map((coupon) => ({
+    ...coupon,
+    status: deriveCouponStatus({
+      status: coupon.status,
+      legs: (coupon.legs ?? []).map((leg) => ({ result: leg.result })),
+    }),
+  }));
+
+  const filtered = couponsWithDerivedStatus.filter((c) => filter === 'all' || c.status === filter);
   const isAko = (c: CouponHistoryEntry) => c.legs !== null && c.legs.length > 1;
   const displayAvatarUrl = avatarOverrideUrl ?? (isOwnProfile ? profile?.avatar_url ?? null : publicProfile?.avatar_url ?? null);
 
@@ -351,7 +359,7 @@ export default function ProfilePage() {
           <h2 className="font-bold mb-3">Historia zakładów</h2>
           <div className="-mx-1 mb-3 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
             <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
-              {(['all', 'won', 'lost', 'pending'] as const).map((value) => (
+              {(['all', 'won', 'lost', 'pending', 'refund'] as const).map((value) => (
                 <button
                   key={value}
                   onClick={() => setFilter(value)}
@@ -360,7 +368,7 @@ export default function ProfilePage() {
                     filter === value ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-muted'
                   )}
                 >
-                  {{ all: 'Wszystkie', won: 'Wygrane', lost: 'Przegrane', pending: 'W toku' }[value]}
+                  {{ all: 'Wszystkie', won: 'Wygrane', lost: 'Przegrane', pending: 'W toku', refund: 'Zwroty' }[value]}
                 </button>
               ))}
             </div>
@@ -382,7 +390,10 @@ export default function ProfilePage() {
                   const expanded = expandedCoupons.has(coupon.id);
                   const displayedOdds = getDisplayedCouponOdds({
                     totalOdds: Number(coupon.total_odds),
-                    legs: (coupon.legs ?? []).map((leg) => ({ oddsAtTime: Number(leg.odds_at_time) })),
+                    legs: (coupon.legs ?? []).map((leg) => ({
+                      oddsAtTime: Number(leg.odds_at_time),
+                      result: leg.result,
+                    })),
                   });
                   const displayedWin = getDisplayedCouponWin({
                     status: coupon.status,
@@ -434,6 +445,8 @@ export default function ProfilePage() {
                                 ? 'text-success'
                                 : coupon.status === 'lost'
                                   ? 'text-destructive'
+                                  : coupon.status === 'refund'
+                                    ? 'text-primary'
                                   : 'text-muted-foreground'
                             )}
                           >
@@ -441,6 +454,8 @@ export default function ProfilePage() {
                               ? `+${displayedWin.toFixed(2)} zł`
                               : coupon.status === 'lost'
                                 ? 'Przegrana'
+                                : coupon.status === 'refund'
+                                  ? `Zwrot ${displayedWin.toFixed(2)} zł`
                                 : 'W toku'}
                           </p>
                         </div>
@@ -464,10 +479,12 @@ export default function ProfilePage() {
                                     ? 'bg-success/10 text-success'
                                     : leg.result === 'lost'
                                       ? 'bg-destructive/10 text-destructive'
+                                      : leg.result === 'refund'
+                                        ? 'bg-primary/10 text-primary'
                                       : 'bg-muted-foreground/10 text-muted-foreground'
                                 )}
                               >
-                                {leg.result === 'won' ? 'Wygrana' : leg.result === 'lost' ? 'Przegrana' : 'W toku'}
+                                {leg.result === 'won' ? 'Wygrana' : leg.result === 'lost' ? 'Przegrana' : leg.result === 'refund' ? 'Zwrot' : 'W toku'}
                               </span>
                             </div>
                           ))}

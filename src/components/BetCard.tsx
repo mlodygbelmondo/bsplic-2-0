@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
-import { Users } from 'lucide-react';
+import { Sparkles, Users } from 'lucide-react';
 
 interface BetCardProps {
   bet: Bet;
@@ -34,6 +34,7 @@ export function BetCard({ bet, category }: BetCardProps) {
   const isInProgress = isExpired && bet.winning_option === null;
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = (bet.options as unknown as BetOption[]) || [];
+  const isBsplicboost = Boolean(bet.is_bsplicboost);
   const useTwoColumnMultiLayout = bet.bet_type === 'multi' && (options.length === 4 || options.length === 5);
   const useThreeColumnMultiLayout = bet.bet_type === 'multi' && options.length >= 6;
   const shouldCenterLastMultiOption = useTwoColumnMultiLayout && options.length % 2 === 1;
@@ -50,14 +51,20 @@ export function BetCard({ bet, category }: BetCardProps) {
   return (
     <div className={cn(
       'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+      isBsplicboost && 'bsplicboost-card border border-red-300/40',
       bet.is_live && 'ring-1 ring-primary/30'
     )}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-muted/50 border-b border-border">
+      <div className={cn('flex items-center justify-between px-3 py-1.5 border-b border-border', isBsplicboost ? 'bsplicboost-topbar' : 'bg-muted/50')}>
         <div className="flex items-center gap-1.5">
           {category && (
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+            <span className={cn('text-[11px] font-medium flex items-center gap-1', isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground')}>
               <span>{category.emoji}</span> {category.name}
+            </span>
+          )}
+          {isBsplicboost && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-100/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-red-50 ring-1 ring-red-200/30">
+              <Sparkles className="h-3 w-3" /> BSPLBOOST
             </span>
           )}
           {bet.is_live && (
@@ -67,7 +74,7 @@ export function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+        <div className={cn('flex items-center gap-2 text-[10px]', isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground')}>
           <span className="flex items-center gap-0.5"><Users className="h-3 w-3" /> {bet.bet_count}</span>
         </div>
       </div>
@@ -93,6 +100,8 @@ export function BetCard({ bet, category }: BetCardProps) {
               ? 'grid-cols-2'
               : useThreeColumnMultiLayout
                 ? 'grid-cols-3'
+                : options.length === 1
+                  ? 'grid-cols-1'
                 : options.length === 3
                   ? 'grid-cols-3'
                   : options.length === 2

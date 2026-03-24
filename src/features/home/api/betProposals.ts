@@ -10,7 +10,7 @@ interface CreateBetProposalParams {
   userId: string;
   title: string;
   categoryId: string | null;
-  betType: '1x2' | '12' | 'multi';
+  betType: '1x2' | '12' | 'multi' | 'single';
   options: ProposalOption[];
   endsAt: string;
 }

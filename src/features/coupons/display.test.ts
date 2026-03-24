@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDisplayedCouponOdds, getDisplayedCouponWin } from './display';
+import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from './display';
 
 describe('getDisplayedCouponOdds', () => {
   it('uses coupon total odds for AKO coupons', () => {
@@ -40,6 +40,18 @@ describe('getDisplayedCouponOdds', () => {
     });
 
     expect(displayedOdds).toBe(1);
+  });
+
+  it('treats refunded AKO leg as odds 1.00 in displayed odds', () => {
+    const displayedOdds = getDisplayedCouponOdds({
+      totalOdds: 3.8,
+      legs: [
+        { oddsAtTime: 2, result: 'won' },
+        { oddsAtTime: 1.9, result: 'refund' },
+      ],
+    });
+
+    expect(displayedOdds).toBe(2);
   });
 
 });
@@ -82,5 +94,78 @@ describe('getDisplayedCouponWin', () => {
     });
 
     expect(amount).toBe(0);
+  });
+
+  it('shows refunded amount when coupon status is refund', () => {
+    const amount = getDisplayedCouponWin({
+      status: 'refund',
+      isAko: true,
+      stake: 50,
+      displayedOdds: 3.2,
+      couponPayout: 50,
+      legs: [],
+    });
+
+    expect(amount).toBe(50);
+  });
+});
+
+describe('deriveCouponStatus', () => {
+  it('marks coupon as lost immediately when at least one leg is lost', () => {
+    const status = deriveCouponStatus({
+      status: 'pending',
+      legs: [
+        { result: 'won' },
+        { result: 'lost' },
+        { result: 'pending' },
+      ],
+    });
+
+    expect(status).toBe('lost');
+  });
+
+  it('marks coupon as won when all legs are resolved and none is lost', () => {
+    const status = deriveCouponStatus({
+      status: 'pending',
+      legs: [
+        { result: 'won' },
+        { result: 'won' },
+      ],
+    });
+
+    expect(status).toBe('won');
+  });
+
+  it('keeps pending status when there are unresolved legs and no losses', () => {
+    const status = deriveCouponStatus({
+      status: 'pending',
+      legs: [
+        { result: 'won' },
+        { result: 'pending' },
+      ],
+    });
+
+    expect(status).toBe('pending');
+  });
+
+  it('returns refund for refunded coupons when all legs are refunded', () => {
+    const status = deriveCouponStatus({
+      status: 'refund',
+      legs: [{ result: 'refund' }],
+    });
+
+    expect(status).toBe('refund');
+  });
+
+  it('marks as won when there is no lost leg and all legs are won or refund', () => {
+    const status = deriveCouponStatus({
+      status: 'pending',
+      legs: [
+        { result: 'won' },
+        { result: 'refund' },
+      ],
+    });
+
+    expect(status).toBe('won');
   });
 });

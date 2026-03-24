@@ -4,7 +4,7 @@ interface CouponLegForCopy {
   id: string;
   bet_id?: string | null;
   selected_option: string;
-  result?: 'pending' | 'won' | 'lost';
+  result?: 'pending' | 'won' | 'lost' | 'refund';
 }
 
 interface BuildCouponItemsInput {

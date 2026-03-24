@@ -1,6 +1,6 @@
 export interface RankingPlacedBet {
   couponId: string | null;
-  result: 'pending' | 'won' | 'lost';
+  result: 'pending' | 'won' | 'lost' | 'refund';
   stake: number;
   payout: number;
 }
@@ -13,7 +13,7 @@ export interface RankingCoupon {
 }
 
 interface RankingUnit {
-  result: 'pending' | 'won' | 'lost';
+  result: 'pending' | 'won' | 'lost' | 'refund';
 }
 
 interface ComputeRankingStatsInput {
@@ -35,9 +35,11 @@ const roundPercent = (value: number) => Math.round(value * 10) / 10;
 
 function computeCouponUnit(legs: RankingPlacedBet[]): RankingUnit {
   const lostCount = legs.filter((leg) => leg.result === 'lost').length;
-  const resolvedCount = legs.filter((leg) => leg.result === 'won' || leg.result === 'lost').length;
+  const resolvedCount = legs.filter((leg) => leg.result === 'won' || leg.result === 'lost' || leg.result === 'refund').length;
+  const refundCount = legs.filter((leg) => leg.result === 'refund').length;
 
   if (lostCount > 0) return { result: 'lost' };
+  if (legs.length > 0 && refundCount === legs.length) return { result: 'refund' };
   if (legs.length > 0 && resolvedCount === legs.length) return { result: 'won' };
   return { result: 'pending' };
 }
@@ -105,10 +107,15 @@ export function computeRankingStats(input: ComputeRankingStatsInput): RankingSta
     if (!coupon) continue;
 
     const lostCount = legs.filter((leg) => leg.result === 'lost').length;
-    const resolvedCount = legs.filter((leg) => leg.result === 'won' || leg.result === 'lost').length;
+    const resolvedCount = legs.filter((leg) => leg.result === 'won' || leg.result === 'lost' || leg.result === 'refund').length;
+    const refundCount = legs.filter((leg) => leg.result === 'refund').length;
 
     if (lostCount > 0) {
       totalProfitRaw -= coupon.stake;
+      continue;
+    }
+
+    if (legs.length > 0 && refundCount === legs.length) {
       continue;
     }
 

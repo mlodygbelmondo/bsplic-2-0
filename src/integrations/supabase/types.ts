@@ -88,6 +88,7 @@ export type Database = {
           ends_at: string
           id: string
           is_active: boolean
+          is_bsplicboost: boolean
           is_live: boolean
           options: Json
           title: string
@@ -101,6 +102,7 @@ export type Database = {
           ends_at: string
           id?: string
           is_active?: boolean
+          is_bsplicboost?: boolean
           is_live?: boolean
           options?: Json
           title: string
@@ -114,6 +116,7 @@ export type Database = {
           ends_at?: string
           id?: string
           is_active?: boolean
+          is_bsplicboost?: boolean
           is_live?: boolean
           options?: Json
           title?: string

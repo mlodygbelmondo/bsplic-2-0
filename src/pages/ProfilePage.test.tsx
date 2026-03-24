@@ -111,6 +111,6 @@ describe('ProfilePage username route', () => {
       });
     });
 
-    expect(screen.getByText('tester')).toBeInTheDocument();
+    expect(await screen.findByText('tester')).toBeInTheDocument();
   });
 });

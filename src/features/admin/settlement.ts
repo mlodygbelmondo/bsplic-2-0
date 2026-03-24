@@ -1,20 +1,25 @@
 export interface CouponSettlementSnapshot {
   stake: number;
   totalOdds: number;
-  status: 'pending' | 'won' | 'lost';
+  status: 'pending' | 'won' | 'lost' | 'refund';
   payout: number;
 }
+
+export type LegSettlementMode = 'normal' | 'refund' | 'force_lost';
+export type LegResult = 'won' | 'lost' | 'refund';
 
 interface CalculateLegOutcomeInput {
   selectedOption: string;
   winningOption: string;
   stake: number;
   oddsAtTime: number;
+  mode?: LegSettlementMode;
 }
 
 interface CalculateCreditAmountInput {
   legWon: boolean;
   legPayout: number;
+  legResult?: LegResult;
   couponBefore: CouponSettlementSnapshot | null;
   couponAfter: CouponSettlementSnapshot | null;
 }
@@ -42,7 +47,24 @@ export function calculateLegOutcome({
   winningOption,
   stake,
   oddsAtTime,
-}: CalculateLegOutcomeInput): { result: 'won' | 'lost'; won: boolean; payout: number } {
+  mode = 'normal',
+}: CalculateLegOutcomeInput): { result: LegResult; won: boolean; payout: number } {
+  if (mode === 'force_lost') {
+    return {
+      result: 'lost',
+      won: false,
+      payout: 0,
+    };
+  }
+
+  if (mode === 'refund') {
+    return {
+      result: 'refund',
+      won: false,
+      payout: roundMoney(stake),
+    };
+  }
+
   const won = selectedOption === winningOption;
   const payout = won ? roundMoney(stake * oddsAtTime) : 0;
 
@@ -56,25 +78,44 @@ export function calculateLegOutcome({
 export function calculateCreditAmount({
   legWon,
   legPayout,
+  legResult,
   couponBefore,
   couponAfter,
 }: CalculateCreditAmountInput): number {
-  if (!legWon) return 0;
+  const resolvedLegResult: LegResult = legResult ?? (legWon ? 'won' : 'lost');
+
+  if (resolvedLegResult === 'lost') return 0;
 
   if (!couponBefore || !couponAfter) {
-    return legPayout;
+    if (resolvedLegResult === 'refund') {
+      return roundMoney(legPayout);
+    }
+
+    return legWon ? legPayout : 0;
   }
 
   const isAkoCoupon = couponBefore.totalOdds > 1 || couponAfter.totalOdds > 1;
 
   if (!isAkoCoupon) {
-    return legPayout;
+    if (resolvedLegResult === 'refund') {
+      return roundMoney(legPayout);
+    }
+
+    return legWon ? legPayout : 0;
   }
 
   if (couponBefore.status !== 'won' && couponAfter.status === 'won') {
     const resolvedPayout = couponAfter.payout > 0
       ? couponAfter.payout
       : couponAfter.stake * couponAfter.totalOdds;
+
+    return roundMoney(resolvedPayout);
+  }
+
+  if (couponBefore.status !== 'refund' && couponAfter.status === 'refund') {
+    const resolvedPayout = couponAfter.payout > 0
+      ? couponAfter.payout
+      : couponAfter.stake;
 
     return roundMoney(resolvedPayout);
   }

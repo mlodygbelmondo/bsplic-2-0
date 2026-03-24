@@ -126,4 +126,38 @@ describe('computeRankingStats', () => {
     expect(stats.winRate).toBe(100);
     expect(stats.totalProfit).toBe(36);
   });
+
+  it('marks refunded AKO as refund unit and keeps profit neutral', () => {
+    const coupons = [createCoupon('ako-r', 3.4, 15, 15)];
+    const placedBets: RankingPlacedBet[] = [
+      createBet({ couponId: 'ako-r', result: 'refund' }),
+      createBet({ couponId: 'ako-r', result: 'refund' }),
+    ];
+
+    const stats = computeRankingStats({ placedBets, coupons });
+
+    expect(stats.totalBets).toBe(1);
+    expect(stats.wonBets).toBe(0);
+    expect(stats.lostBets).toBe(0);
+    expect(stats.resolvedBets).toBe(0);
+    expect(stats.winRate).toBe(0);
+    expect(stats.totalProfit).toBe(0);
+  });
+
+  it('treats mixed won+refund AKO as won without loss', () => {
+    const coupons = [createCoupon('ako-wr', 2.8, 20, 56)];
+    const placedBets: RankingPlacedBet[] = [
+      createBet({ couponId: 'ako-wr', result: 'won' }),
+      createBet({ couponId: 'ako-wr', result: 'refund' }),
+    ];
+
+    const stats = computeRankingStats({ placedBets, coupons });
+
+    expect(stats.totalBets).toBe(1);
+    expect(stats.wonBets).toBe(1);
+    expect(stats.lostBets).toBe(0);
+    expect(stats.resolvedBets).toBe(1);
+    expect(stats.winRate).toBe(100);
+    expect(stats.totalProfit).toBe(36);
+  });
 });
