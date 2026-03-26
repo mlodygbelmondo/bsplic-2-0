@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ function formatBetDate(endsAt: string) {
     .replace(',', '');
 }
 
-export function BetCard({ bet, category }: BetCardProps) {
+export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   const { items, addItem, removeItem } = useCoupon();
   const selectedInCoupon = items.find(i => i.bet.id === bet.id);
   const endTimestamp = useMemo(() => new Date(bet.ends_at).getTime(), [bet.ends_at]);
@@ -165,4 +165,6 @@ export function BetCard({ bet, category }: BetCardProps) {
       </div>
     </div>
   );
-}
+});
+
+BetCard.displayName = 'BetCard';

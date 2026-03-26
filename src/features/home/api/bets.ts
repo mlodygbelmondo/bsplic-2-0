@@ -1,5 +1,10 @@
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Bet } from '@/types/database';
+
+type BetRow = Database['public']['Tables']['bets']['Row'];
 
 export async function fetchActiveBets(selectedCategory: string | null) {
   let query = supabase.from('bets').select('*').eq('is_active', true);
@@ -31,10 +36,10 @@ export async function fetchBetsByIds(ids: string[]) {
   return (data ?? []) as unknown as Bet[];
 }
 
-export function subscribeToBetsChanges(onChange: () => void) {
+export function subscribeToBetsChanges(onChange: (payload: RealtimePostgresChangesPayload<BetRow>) => void) {
   const channel = supabase
     .channel('bets-realtime')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, onChange)
+    .on<BetRow>('postgres_changes', { event: '*', schema: 'public', table: 'bets' }, onChange)
     .subscribe();
 
   return () => {
