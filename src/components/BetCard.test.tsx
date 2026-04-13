@@ -81,4 +81,19 @@ describe('BetCard', () => {
 
     expect(screen.queryByText('W trakcie')).not.toBeInTheDocument();
   });
+
+  it('hides in-progress badge for multi-winner resolved events (JSON array)', () => {
+    const bet = createBet({
+      ends_at: new Date(Date.now() - 60_000).toISOString(),
+      winning_option: '["Legia","Lech"]',
+    });
+
+    render(
+      <CouponProvider>
+        <BetCard bet={bet} />
+      </CouponProvider>,
+    );
+
+    expect(screen.queryByText('W trakcie')).not.toBeInTheDocument();
+  });
 });

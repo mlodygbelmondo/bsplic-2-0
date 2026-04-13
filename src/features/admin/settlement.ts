@@ -24,6 +24,15 @@ interface CalculateCreditAmountInput {
   couponAfter: CouponSettlementSnapshot | null;
 }
 
+interface CalculateCreditDeltaAmountInput {
+  previousLegResult: LegResult | 'pending';
+  previousLegPayout: number;
+  nextLegResult: LegResult;
+  nextLegPayout: number;
+  couponBefore: CouponSettlementSnapshot | null;
+  couponAfter: CouponSettlementSnapshot | null;
+}
+
 interface AddCreditForUserInput {
   creditsByUser: Record<string, number>;
   userId: string;
@@ -32,14 +41,61 @@ interface AddCreditForUserInput {
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
+const getLegBalanceImpact = (result: LegResult | 'pending', payout: number): number => {
+  if (result === 'won' || result === 'refund') return roundMoney(payout);
+  return 0;
+};
+
+const getCouponBalanceImpact = (coupon: CouponSettlementSnapshot | null): number => {
+  if (!coupon) return 0;
+
+  if (coupon.status === 'won') {
+    const resolvedPayout = coupon.payout > 0
+      ? coupon.payout
+      : coupon.stake * coupon.totalOdds;
+    return roundMoney(resolvedPayout);
+  }
+
+  if (coupon.status === 'refund') {
+    const resolvedPayout = coupon.payout > 0
+      ? coupon.payout
+      : coupon.stake;
+    return roundMoney(resolvedPayout);
+  }
+
+  return 0;
+};
+
 export function addCreditForUser({ creditsByUser, userId, amount }: AddCreditForUserInput): Record<string, number> {
-  if (amount <= 0) return creditsByUser;
+  if (amount === 0) return creditsByUser;
 
   const previous = creditsByUser[userId] ?? 0;
   return {
     ...creditsByUser,
     [userId]: roundMoney(previous + amount),
   };
+}
+
+export function calculateCreditDeltaAmount({
+  previousLegResult,
+  previousLegPayout,
+  nextLegResult,
+  nextLegPayout,
+  couponBefore,
+  couponAfter,
+}: CalculateCreditDeltaAmountInput): number {
+  const isAkoCoupon = Boolean(couponBefore || couponAfter)
+    && ((couponBefore?.totalOdds ?? 1) > 1 || (couponAfter?.totalOdds ?? 1) > 1);
+
+  if (!isAkoCoupon) {
+    const beforeImpact = getLegBalanceImpact(previousLegResult, previousLegPayout);
+    const afterImpact = getLegBalanceImpact(nextLegResult, nextLegPayout);
+    return roundMoney(afterImpact - beforeImpact);
+  }
+
+  const beforeImpact = getCouponBalanceImpact(couponBefore);
+  const afterImpact = getCouponBalanceImpact(couponAfter);
+  return roundMoney(afterImpact - beforeImpact);
 }
 
 export function calculateLegOutcome({
@@ -83,42 +139,14 @@ export function calculateCreditAmount({
   couponAfter,
 }: CalculateCreditAmountInput): number {
   const resolvedLegResult: LegResult = legResult ?? (legWon ? 'won' : 'lost');
+  const delta = calculateCreditDeltaAmount({
+    previousLegResult: 'pending',
+    previousLegPayout: 0,
+    nextLegResult: resolvedLegResult,
+    nextLegPayout: legPayout,
+    couponBefore,
+    couponAfter,
+  });
 
-  if (resolvedLegResult === 'lost') return 0;
-
-  if (!couponBefore || !couponAfter) {
-    if (resolvedLegResult === 'refund') {
-      return roundMoney(legPayout);
-    }
-
-    return legWon ? legPayout : 0;
-  }
-
-  const isAkoCoupon = couponBefore.totalOdds > 1 || couponAfter.totalOdds > 1;
-
-  if (!isAkoCoupon) {
-    if (resolvedLegResult === 'refund') {
-      return roundMoney(legPayout);
-    }
-
-    return legWon ? legPayout : 0;
-  }
-
-  if (couponBefore.status !== 'won' && couponAfter.status === 'won') {
-    const resolvedPayout = couponAfter.payout > 0
-      ? couponAfter.payout
-      : couponAfter.stake * couponAfter.totalOdds;
-
-    return roundMoney(resolvedPayout);
-  }
-
-  if (couponBefore.status !== 'refund' && couponAfter.status === 'refund') {
-    const resolvedPayout = couponAfter.payout > 0
-      ? couponAfter.payout
-      : couponAfter.stake;
-
-    return roundMoney(resolvedPayout);
-  }
-
-  return 0;
+  return delta > 0 ? delta : 0;
 }

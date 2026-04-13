@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addCreditForUser,
   calculateCreditAmount,
+  calculateCreditDeltaAmount,
   calculateLegOutcome,
   type LegSettlementMode,
   type CouponSettlementSnapshot,
@@ -324,7 +325,7 @@ describe('addCreditForUser', () => {
     });
   });
 
-  it('ignores non-positive credits', () => {
+  it('ignores zero credits', () => {
     const credits = addCreditForUser({
       creditsByUser: {
         'user-1': 10,
@@ -336,5 +337,93 @@ describe('addCreditForUser', () => {
     expect(credits).toEqual({
       'user-1': 10,
     });
+  });
+
+  it('accumulates negative credits for corrections', () => {
+    const credits = addCreditForUser({
+      creditsByUser: {
+        'user-1': 120,
+      },
+      userId: 'user-1',
+      amount: -40,
+    });
+
+    expect(credits).toEqual({
+      'user-1': 80,
+    });
+  });
+});
+
+describe('calculateCreditDeltaAmount', () => {
+  it('returns negative delta when single bet changes won -> lost', () => {
+    const delta = calculateCreditDeltaAmount({
+      previousLegResult: 'won',
+      previousLegPayout: 120,
+      nextLegResult: 'lost',
+      nextLegPayout: 0,
+      couponBefore: null,
+      couponAfter: null,
+    });
+
+    expect(delta).toBe(-120);
+  });
+
+  it('returns zero delta when single bet payout does not change', () => {
+    const delta = calculateCreditDeltaAmount({
+      previousLegResult: 'won',
+      previousLegPayout: 120,
+      nextLegResult: 'won',
+      nextLegPayout: 120,
+      couponBefore: null,
+      couponAfter: null,
+    });
+
+    expect(delta).toBe(0);
+  });
+
+  it('returns coupon-level negative delta for AKO correction', () => {
+    const delta = calculateCreditDeltaAmount({
+      previousLegResult: 'won',
+      previousLegPayout: 20,
+      nextLegResult: 'lost',
+      nextLegPayout: 0,
+      couponBefore: {
+        stake: 50,
+        totalOdds: 4,
+        status: 'won',
+        payout: 200,
+      },
+      couponAfter: {
+        stake: 50,
+        totalOdds: 4,
+        status: 'lost',
+        payout: 0,
+      },
+    });
+
+    expect(delta).toBe(-200);
+  });
+
+  it('returns coupon-level positive delta for AKO correction to won', () => {
+    const delta = calculateCreditDeltaAmount({
+      previousLegResult: 'lost',
+      previousLegPayout: 0,
+      nextLegResult: 'won',
+      nextLegPayout: 20,
+      couponBefore: {
+        stake: 50,
+        totalOdds: 4,
+        status: 'lost',
+        payout: 0,
+      },
+      couponAfter: {
+        stake: 50,
+        totalOdds: 4,
+        status: 'won',
+        payout: 200,
+      },
+    });
+
+    expect(delta).toBe(200);
   });
 });

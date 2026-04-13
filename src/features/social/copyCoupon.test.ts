@@ -69,6 +69,7 @@ describe('buildCouponItemsFromSocial', () => {
       createLeg({ id: 'leg-resolved', bet_id: 'bet-leg-resolved', result: 'won' }),
       createLeg({ id: 'ended', bet_id: 'bet-ended' }),
       createLeg({ id: 'resolved', bet_id: 'bet-resolved' }),
+      createLeg({ id: 'multi-resolved', bet_id: 'bet-multi-resolved' }),
       createLeg({ id: 'inactive', bet_id: 'bet-inactive' }),
       createLeg({ id: 'missing-option', bet_id: 'bet-missing-option' }),
       createLeg({ id: 'not-found', bet_id: 'bet-not-found' }),
@@ -80,6 +81,7 @@ describe('buildCouponItemsFromSocial', () => {
       createBet({ id: 'bet-leg-resolved' }),
       createBet({ id: 'bet-ended', ends_at: '2030-01-01T10:30:00.000Z' }),
       createBet({ id: 'bet-resolved', winning_option: 'Dom' }),
+      createBet({ id: 'bet-multi-resolved', winning_option: '["Dom","Wyjazd"]' }),
       createBet({ id: 'bet-inactive', is_active: false }),
       createBet({
         id: 'bet-missing-option',
@@ -98,6 +100,6 @@ describe('buildCouponItemsFromSocial', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0].bet.id).toBe('bet-ok');
-    expect(result.skippedCount).toBe(7);
+    expect(result.skippedCount).toBe(8);
   });
 });
