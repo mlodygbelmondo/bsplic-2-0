@@ -106,7 +106,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
           <button
             onClick={() => setActiveTab('single')}
             className={cn(
-              'py-1.5 text-[12px] font-semibold text-center rounded-md transition-colors',
+              'py-1.5 text-[13px] font-semibold text-center rounded-md transition-colors',
               activeTab === 'single' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
             )}
           >
@@ -115,7 +115,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
           <button
             onClick={() => setActiveTab('ako')}
             className={cn(
-              'py-1.5 text-[12px] font-semibold text-center rounded-md transition-colors',
+              'py-1.5 text-[13px] font-semibold text-center rounded-md transition-colors',
               activeTab === 'ako' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
             )}
           >
@@ -179,7 +179,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
 
       <div className="border-t border-border p-3 space-y-2.5 shrink-0 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="flex items-center justify-between">
-          <span className="text-[12px] text-muted-foreground">Potencjalna wygrana</span>
+          <span className="text-[14px] text-muted-foreground">Potencjalna wygrana</span>
           <span className="text-[15px] font-bold text-success">{potentialWin.toFixed(2)} zł</span>
         </div>
         {activeTab === 'ako' ? (
@@ -212,7 +212,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
             </div>
           </>
         ) : (
-          <div className="text-[11px] text-muted-foreground">Łączna stawka: {totalStake.toFixed(2)} zł</div>
+          <div className="text-[12px] text-muted-foreground">Łączna stawka: {totalStake.toFixed(2)} zł</div>
         )}
         <button
           onClick={placeBet}

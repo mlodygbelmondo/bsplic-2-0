@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { Category, BetOption } from '@/types/database';
@@ -27,6 +27,8 @@ export default function CreateBetTab() {
   const [options, setOptions] = useState<BetOptionDraft[]>([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const [desktopRightHeight, setDesktopRightHeight] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
@@ -47,6 +49,34 @@ export default function CreateBetTab() {
   }, [betType]);
 
   const hasFixedOptionCount = betType === 'single' || betType === '12' || betType === '1x2';
+
+  useEffect(() => {
+    const syncHeight = () => {
+      if (window.innerWidth < 1024 || !leftColumnRef.current) {
+        setDesktopRightHeight(null);
+        return;
+      }
+
+      const nextHeight = Math.ceil(leftColumnRef.current.getBoundingClientRect().height);
+      setDesktopRightHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    };
+
+    syncHeight();
+
+    const observer = typeof ResizeObserver !== 'undefined' && leftColumnRef.current
+      ? new ResizeObserver(syncHeight)
+      : null;
+
+    if (observer && leftColumnRef.current) {
+      observer.observe(leftColumnRef.current);
+    }
+
+    window.addEventListener('resize', syncHeight);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', syncHeight);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,150 +143,191 @@ export default function CreateBetTab() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-2xl md:bg-card md:rounded-xl md:p-6 md:card-shadow"
+      className="space-y-6 pb-24 md:pb-6"
     >
-      {/* Title */}
-      <div className="space-y-2">
-        <Label htmlFor="create-title">Tytuł</Label>
-        <Input
-          id="create-title"
-          aria-label="Tytuł zakładu"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          className="w-full"
-        />
-      </div>
-
-      {/* Category + Type */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-        <div className="space-y-2">
-          <Label htmlFor="create-category">Kategoria</Label>
-          <Select value={categoryId} onValueChange={setCategoryId}>
-            <SelectTrigger id="create-category" aria-label="Wybierz kategorię">
-              <SelectValue placeholder="Wybierz" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.emoji} {c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="create-bet-type">Typ zakładu</Label>
-          <Select value={betType} onValueChange={(v: string) => setBetType(v as EditableBetType)}>
-            <SelectTrigger id="create-bet-type" aria-label="Typ zakładu">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single">Single</SelectItem>
-              <SelectItem value="12">1/2</SelectItem>
-              <SelectItem value="1x2">1X2</SelectItem>
-              <SelectItem value="multi">Multi</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* End date */}
-      <div className="space-y-2 mt-5">
-        <Label htmlFor="create-ends-at">Data zakończenia</Label>
-        <Input
-          id="create-ends-at"
-          type="datetime-local"
-          aria-label="Data zakończenia zakładu"
-          value={endsAt}
-          onChange={(e) => setEndsAt(e.target.value)}
-          required
-          className="w-full"
-        />
-      </div>
-
-      {/* Toggles */}
-      <div className="mt-6 pt-5 border-t border-border space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Opcje dodatkowe</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <Label htmlFor="create-live" className="cursor-pointer">Na żywo</Label>
-            <Switch id="create-live" checked={isLive} onCheckedChange={setIsLive} aria-label="Zakład na żywo" />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <Label htmlFor="create-boost" className="cursor-pointer">BSPLICBOOST</Label>
-            <Switch id="create-boost" checked={isBsplicboost} onCheckedChange={setIsBsplicboost} aria-label="Włącz BSPLICBOOST" />
-          </div>
-        </div>
-      </div>
-
-      {/* Options */}
-      <div className="space-y-2 mt-6">
-        <Label>Opcje zakładu</Label>
-        <div className="bg-muted/40 border border-border rounded-lg p-3 sm:p-4 space-y-2">
-          {options.map((opt, i) => (
-            <div key={i} className="flex gap-2 items-center">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,1.05fr)] lg:items-start">
+        <div ref={leftColumnRef} className="space-y-6">
+          {/* Sekcja 1: Podstawowe informacje */}
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm space-y-4">
+            <h3 className="font-semibold text-base sm:text-lg mb-2">Podstawowe informacje</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="create-title" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tytuł zakładu</Label>
               <Input
-                value={opt.name}
-                onChange={(e) => {
-                  const n = [...options];
-                  n[i].name = e.target.value;
-                  setOptions(n);
-                }}
-                placeholder={`Opcja ${i + 1}`}
-                aria-label={`Nazwa opcji ${i + 1}`}
-                className="flex-1"
+                id="create-title"
+                aria-label="Tytuł zakładu"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="np. Kto wygra mecz Polska - Niemcy?"
+                required
+                className="w-full bg-background"
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-category" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kategoria</Label>
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger id="create-category" aria-label="Wybierz kategorię" className="bg-background">
+                    <SelectValue placeholder="Wybierz kategorię" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.emoji} {c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-bet-type" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Typ zakładu</Label>
+                <Select value={betType} onValueChange={(v: string) => setBetType(v as EditableBetType)}>
+                  <SelectTrigger id="create-bet-type" aria-label="Typ zakładu" className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single (1 opcja)</SelectItem>
+                    <SelectItem value="12">1/2 (Dwie opcje)</SelectItem>
+                    <SelectItem value="1x2">1X2 (Trzy opcje)</SelectItem>
+                    <SelectItem value="multi">Multi (Wiele opcji)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-ends-at" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data zakończenia</Label>
               <Input
-                type="number"
-                step="0.01"
-                min="1"
-                value={opt.odds}
-                onChange={(e) => {
-                  const n = [...options];
-                  n[i].odds = e.target.value;
-                  setOptions(n);
-                }}
-                className="w-20"
-                placeholder="Kurs"
-                aria-label={`Kurs opcji ${i + 1}`}
+                id="create-ends-at"
+                type="datetime-local"
+                aria-label="Data zakończenia zakładu"
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                required
+                className="w-full bg-background"
               />
-              {!hasFixedOptionCount && options.length > 2 && (
-                <button
+            </div>
+          </div>
+
+          {/* Sekcja 2: Opcje dodatkowe */}
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm space-y-4">
+            <h3 className="font-semibold text-base sm:text-lg mb-2">Opcje dodatkowe</h3>
+          
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-background hover:bg-muted/50 transition-colors">
+                <div className="space-y-0.5">
+                  <Label htmlFor="create-live" className="text-sm font-medium cursor-pointer">Na żywo</Label>
+                  <p className="text-xs text-muted-foreground">Oznacz jako wydarzenie live</p>
+                </div>
+                <Switch id="create-live" checked={isLive} onCheckedChange={setIsLive} aria-label="Zakład na żywo" />
+              </div>
+            
+              <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-background hover:bg-muted/50 transition-colors">
+                <div className="space-y-0.5">
+                  <Label htmlFor="create-boost" className="text-sm font-medium cursor-pointer text-primary">BSPLICBOOST</Label>
+                  <p className="text-xs text-muted-foreground">Wyróżnij wyższym kursem</p>
+                </div>
+                <Switch id="create-boost" checked={isBsplicboost} onCheckedChange={setIsBsplicboost} aria-label="Włącz BSPLICBOOST" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="flex min-h-0 flex-col gap-4"
+          style={desktopRightHeight ? { height: `${desktopRightHeight}px` } : undefined}
+        >
+          {/* Sekcja 3: Opcje zakładu */}
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-sm flex min-h-0 flex-1 flex-col space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-base sm:text-lg">Możliwe typy</h3>
+              {!hasFixedOptionCount && (
+                <Button
                   type="button"
-                  onClick={() => setOptions(options.filter((_, j) => j !== i))}
-                  className="text-slate-900 hover:text-destructive transition-colors"
-                  aria-label={`Usuń opcję ${i + 1}`}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs bg-background"
+                  onClick={() => setOptions([...options, { name: '', odds: '2' }])}
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
+                </Button>
               )}
             </div>
-          ))}
-          {!hasFixedOptionCount && (
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="space-y-3 px-1 py-1">
+                {options.map((opt, i) => (
+                  <div key={i} className="group flex min-w-0 items-center gap-3">
+                    <div className="relative min-w-0 flex-1">
+                      <Label className="sr-only">Nazwa opcji {i + 1}</Label>
+                      <Input
+                        value={opt.name}
+                        onChange={(e) => {
+                          const n = [...options];
+                          n[i].name = e.target.value;
+                          setOptions(n);
+                        }}
+                        placeholder={`Nazwa opcji (np. Polska)`}
+                        aria-label={`Nazwa opcji ${i + 1}`}
+                        className="w-full bg-background"
+                      />
+                    </div>
+                    <div className="relative w-24 shrink-0">
+                      <Label className="sr-only">Kurs opcji {i + 1}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        value={opt.odds}
+                        onChange={(e) => {
+                          const n = [...options];
+                          n[i].odds = e.target.value;
+                          setOptions(n);
+                        }}
+                        className="w-full bg-background text-center font-semibold text-primary"
+                        placeholder="Kurs"
+                        aria-label={`Kurs opcji ${i + 1}`}
+                      />
+                    </div>
+                    {!hasFixedOptionCount && options.length > 2 ? (
+                      <button
+                        type="button"
+                        onClick={() => setOptions(options.filter((_, j) => j !== i))}
+                        className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border border-transparent text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors"
+                        aria-label={`Usuń opcję ${i + 1}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:block">
             <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1"
-              onClick={() => setOptions([...options, { name: '', odds: '2' }])}
+              type="submit"
+              size="lg"
+              disabled={submitting}
+              className="w-full gradient-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 rounded-xl h-12 text-base"
+              aria-label={submitting ? 'Tworzenie zakładu w toku' : 'Utwórz zakład'}
             >
-              <Plus className="h-3 w-3 mr-1 text-slate-900" /> Dodaj opcję
+              {submitting ? 'Tworzenie...' : 'Utwórz zakład'}
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Spacer so fixed button on mobile doesn't overlap content */}
-      <div className="h-20 md:hidden" aria-hidden="true" />
-
-      {/* Submit — fixed to bottom on mobile, inline on md+ */}
-      <div className="fixed bottom-0 inset-x-0 z-30 p-3 bg-background/95 backdrop-blur border-t border-border md:static md:border-0 md:bg-transparent md:backdrop-blur-none md:p-0 md:mt-6 md:z-auto">
+      {/* Submit */}
+      <div className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 p-4 bg-background/80 backdrop-blur-md border-t border-border lg:hidden">
         <Button
           type="submit"
+          size="lg"
           disabled={submitting}
-          className="w-full gradient-primary text-primary-foreground font-semibold"
+          className="w-full gradient-primary text-primary-foreground font-bold shadow-lg shadow-primary/25 rounded-xl h-12 text-base"
           aria-label={submitting ? 'Tworzenie zakładu w toku' : 'Utwórz zakład'}
         >
-          {submitting ? 'Tworzenie…' : 'Utwórz zakład'}
+          {submitting ? 'Tworzenie...' : 'Utwórz zakład'}
         </Button>
       </div>
     </form>

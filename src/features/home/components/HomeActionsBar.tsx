@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Lightbulb } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Lightbulb } from "lucide-react";
 
 interface HomeActionsBarProps {
   onProposeClick: () => void;
@@ -11,9 +11,9 @@ export function HomeActionsBar({ onProposeClick }: HomeActionsBarProps) {
       <Button
         onClick={onProposeClick}
         size="sm"
-        className="text-[11px] font-bold h-8 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
+        className="propose-cta-button relative flex items-center overflow-hidden text-[14px] font-bold h-8 px-4 py-2 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
       >
-        <Lightbulb className="h-3 w-3 mr-1" /> Zaproponuj zakład
+        <Lightbulb className="h-3 w-3" /> Zaproponuj zakład
       </Button>
     </div>
   );

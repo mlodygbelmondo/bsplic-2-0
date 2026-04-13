@@ -21,11 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -55,6 +50,7 @@ import {
   calculateLegOutcome,
   type CouponSettlementSnapshot,
 } from '../settlement';
+import { filterBets, type BetStatusFilter, type BetTypeFilter } from './manageBetsFilters';
 
 type SettlementMode = 'normal' | 'refund' | 'force_lost';
 type CorrectionScope = 'pending_only' | 'all';
@@ -81,6 +77,8 @@ export default function ManageBetsTab() {
 
   // Search & pagination
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<BetStatusFilter>('all');
+  const [betTypeFilter, setBetTypeFilter] = useState<BetTypeFilter>('all');
   const [page, setPage] = useState(0);
 
   // Editor
@@ -132,17 +130,20 @@ export default function ManageBetsTab() {
 
   // Filtered + paginated
   const filtered = useMemo(() => {
-    if (!search.trim()) return bets;
-    const q = search.toLowerCase();
-    return bets.filter((b) => b.title.toLowerCase().includes(q));
-  }, [bets, search]);
+    return filterBets({
+      bets,
+      search,
+      status: statusFilter,
+      betType: betTypeFilter,
+    });
+  }, [bets, search, statusFilter, betTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const paginated = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   // Reset page when search changes
-  useEffect(() => { setPage(0); }, [search]);
+  useEffect(() => { setPage(0); }, [search, statusFilter, betTypeFilter]);
 
   // --- Editor ---
   const openEditor = (bet: Bet) => {
@@ -403,12 +404,12 @@ export default function ManageBetsTab() {
       const winners = parseWinningOptions(bet.winning_option);
       const isRefund = winners.includes(BET_WINNING_OPTION_REFUND);
       const isForceLost = winners.includes(BET_WINNING_OPTION_FORCED_LOSS);
-      if (isRefund) return <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full font-semibold">Zwrot</span>;
-      if (isForceLost) return <span className="text-xs bg-destructive/15 text-destructive px-2.5 py-0.5 rounded-full font-semibold">Przegrana</span>;
-      return <span className="text-xs bg-success/20 text-success px-2.5 py-0.5 rounded-full font-semibold">Rozstrzygnięty</span>;
+      if (isRefund) return <span className="text-[11px] border border-muted-foreground/30 bg-muted/50 text-muted-foreground px-2 py-0.5 rounded-md font-semibold tracking-wide">ZWROT</span>;
+      if (isForceLost) return <span className="text-[11px] border border-destructive/30 bg-destructive/10 text-destructive px-2 py-0.5 rounded-md font-semibold tracking-wide">PRZEGRANA</span>;
+      return <span className="text-[11px] border border-success/30 bg-success/10 text-success px-2 py-0.5 rounded-md font-semibold tracking-wide">ROZSTRZYGNIĘTY</span>;
     }
-    if (bet.is_active) return <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold">Aktywny</span>;
-    return <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full font-semibold">Zamknięty</span>;
+    if (bet.is_active) return <span className="text-[11px] border border-primary/30 bg-primary/10 text-primary px-2 py-0.5 rounded-md font-semibold tracking-wide">AKTYWNY</span>;
+    return <span className="text-[11px] border border-muted-foreground/30 bg-muted/50 text-muted-foreground px-2 py-0.5 rounded-md font-semibold tracking-wide">ZAMKNIĘTY</span>;
   };
 
   const submitNormalSettlement = () => {
@@ -431,73 +432,104 @@ export default function ManageBetsTab() {
   return (
     <>
       {/* Search bar */}
-      <div className="mb-4 flex items-start">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Szukaj zakładów..."
-            className="pl-9"
-            aria-label="Szukaj zakładów"
-          />
+      <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Szukaj zakładów..."
+              className="pl-10 bg-white border-border h-11 rounded-xl shadow-[0_8px_24px_rgba(15,23,42,0.06)] focus-visible:ring-primary/20"
+              aria-label="Szukaj zakładów"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:w-auto md:min-w-[360px]">
+            <Select value={statusFilter} onValueChange={(value: BetStatusFilter) => setStatusFilter(value)}>
+              <SelectTrigger className="h-11 rounded-xl bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie statusy</SelectItem>
+                <SelectItem value="active">Aktywne</SelectItem>
+                <SelectItem value="resolved">Rozstrzygnięte</SelectItem>
+                <SelectItem value="closed">Zamknięte</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={betTypeFilter} onValueChange={(value: BetTypeFilter) => setBetTypeFilter(value)}>
+              <SelectTrigger className="h-11 rounded-xl bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <SelectValue placeholder="Typ zakładu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie typy</SelectItem>
+                <SelectItem value="single">Single</SelectItem>
+                <SelectItem value="12">1/2</SelectItem>
+                <SelectItem value="1x2">1X2</SelectItem>
+                <SelectItem value="multi">Multi</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Pagination — top */}
       {!loading && filtered.length > PAGE_SIZE && (
-        <PaginationBar currentPage={safePage} totalPages={totalPages} onPageChange={setPage} className="mb-3" />
+        <PaginationBar currentPage={safePage} totalPages={totalPages} onPageChange={setPage} className="mb-4" />
       )}
 
       {/* Mobile card list */}
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-4 md:hidden pb-20">
         {loading ? (
           [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)
         ) : paginated.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8 text-sm">Brak zakładów</p>
+          <div className="text-center bg-card border border-border rounded-xl p-8 text-muted-foreground">Brak zakładów</div>
         ) : (
           paginated.map((bet) => (
-            <div key={bet.id} className="bg-card rounded-xl p-3 card-shadow">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[15px] truncate">{bet.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-muted-foreground uppercase">{bet.bet_type}</span>
-                    {bet.is_bsplicboost && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-primary">
-                        <Sparkles className="h-3 w-3" /> BOOST
-                      </span>
-                    )}
-                    <span className="text-[11px] text-muted-foreground">{bet.bet_count} zakł.</span>
+            <div key={bet.id} className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="font-bold text-[15px] leading-tight text-foreground line-clamp-2">{bet.title}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{bet.bet_type}</span>
+                      {bet.is_bsplicboost && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-primary">
+                          <Sparkles className="h-3 w-3" /> BOOST
+                        </span>
+                      )}
+                      <span className="text-[11px] text-muted-foreground font-medium">{bet.bet_count} zakł.</span>
+                    </div>
                   </div>
+                  <div className="shrink-0">{statusBadge(bet)}</div>
                 </div>
-                {statusBadge(bet)}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <Button size="sm" variant="outline" className="h-7 text-[13px]" onClick={() => openEditor(bet)} aria-label={`Edytuj ${bet.title}`}>
-                  Edytuj
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[13px]"
-                  onClick={() => openResolveModal(bet)}
-                  disabled={resolvingBetId === bet.id}
-                  aria-label={`${bet.winning_option ? 'Korekta wyniku dla' : 'Ogłoś wynik dla'} ${bet.title}`}
-                >
-                  {resolvingBetId === bet.id
-                    ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    : <Trophy className="h-3 w-3 mr-1 text-gray-950" />}
-                  {bet.winning_option ? 'Korekta' : 'Wynik'}
-                </Button>
-                {!bet.winning_option && (
-                  <Button size="sm" variant="outline" className="h-7 text-[13px]" onClick={() => resolveBet(bet, [], 'refund')} disabled={resolvingBetId === bet.id}>
-                    <RotateCcw className="h-3 w-3 mr-1 text-gray-950" /> 1.00
+                
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button size="sm" variant="secondary" className="h-8 rounded-lg text-xs font-medium" onClick={() => openEditor(bet)} aria-label={`Edytuj ${bet.title}`}>
+                    Edytuj
                   </Button>
-                )}
-                <Button size="sm" variant="destructive" className="h-7 text-[13px]" onClick={() => deleteBet(bet)} disabled={deletingBetId === bet.id}>
-                  {deletingBetId === bet.id ? '...' : 'Usuń'}
-                </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-8 rounded-lg text-xs font-semibold gradient-primary shadow-sm"
+                    onClick={() => openResolveModal(bet)}
+                    disabled={resolvingBetId === bet.id}
+                  >
+                    {resolvingBetId === bet.id
+                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      : <Trophy className="h-3 w-3 mr-1" />}
+                    {bet.winning_option ? 'Korekta' : 'Wynik'}
+                  </Button>
+                  {!bet.winning_option && (
+                    <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs font-medium border-border hover:bg-muted" onClick={() => resolveBet(bet, [], 'refund')} disabled={resolvingBetId === bet.id}>
+                      <RotateCcw className="h-3 w-3 mr-1" /> 1.00
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-auto" onClick={() => deleteBet(bet)} disabled={deletingBetId === bet.id}>
+                    {deletingBetId === bet.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           ))
@@ -505,21 +537,21 @@ export default function ManageBetsTab() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-card rounded-xl card-shadow overflow-hidden">
+      <div className="hidden md:block bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-4 space-y-3">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[1060px] table-fixed text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="p-3">Tytuł</th>
-                  <th className="p-3">Typ</th>
-                  <th className="p-3">Zakłady</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Akcje</th>
+                  <th className="px-4 py-3">Tytuł</th>
+                  <th className="w-[130px] whitespace-nowrap px-5 py-3">Typ</th>
+                  <th className="w-[130px] whitespace-nowrap px-5 py-3">Zakłady</th>
+                  <th className="w-[170px] whitespace-nowrap px-5 py-3">Status</th>
+                  <th className="w-[360px] whitespace-nowrap px-4 py-3 text-left">Akcje</th>
                 </tr>
               </thead>
               <tbody>
@@ -527,8 +559,8 @@ export default function ManageBetsTab() {
                   <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Brak zakładów</td></tr>
                 ) : paginated.map((bet) => (
                   <tr key={bet.id} className="border-b hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium max-w-[200px] truncate">{bet.title}</td>
-                    <td className="p-3">
+                    <td className="px-4 py-3 font-medium truncate">{bet.title}</td>
+                    <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <span>{bet.bet_type}</span>
                         {bet.is_bsplicboost && (
@@ -538,42 +570,34 @@ export default function ManageBetsTab() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3">{bet.bet_count}</td>
-                    <td className="p-3">{statusBadge(bet)}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-0.5">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => openEditor(bet)}
-                              aria-label={`Edytuj ${bet.title}`}
-                            >
-                              <Pencil className="h-3.5 w-3.5 text-gray-950" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edytuj</TooltipContent>
-                        </Tooltip>
+                    <td className="px-5 py-3">{bet.bet_count}</td>
+                    <td className="px-5 py-3">{statusBadge(bet)}</td>
+                    <td className="w-[360px] px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 w-[132px] justify-center rounded-lg bg-background"
+                          onClick={() => openEditor(bet)}
+                          aria-label={`Edytuj ${bet.title}`}
+                        >
+                          <Pencil className="mr-2 h-3.5 w-3.5" />
+                          Edytuj
+                        </Button>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => openResolveModal(bet)}
-                              disabled={resolvingBetId === bet.id}
-                              aria-label={`${bet.winning_option ? 'Korekta wyniku dla' : 'Ogłoś wynik dla'} ${bet.title}`}
-                            >
-                              {resolvingBetId === bet.id
-                                ? <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
-                                : <Trophy className="h-3.5 w-3.5 text-amber-600" />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{bet.winning_option ? 'Korekta wyniku' : 'Ogłoś wynik'}</TooltipContent>
-                        </Tooltip>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-9 w-[168px] justify-center rounded-lg gradient-primary shadow-sm"
+                          onClick={() => openResolveModal(bet)}
+                          disabled={resolvingBetId === bet.id}
+                          aria-label={`${bet.winning_option ? 'Korekta wyniku dla' : 'Ogłoś wynik dla'} ${bet.title}`}
+                        >
+                          {resolvingBetId === bet.id
+                            ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                            : <Trophy className="mr-2 h-3.5 w-3.5" />}
+                          {bet.winning_option ? 'Korekta wyniku' : 'Ogłoś wynik'}
+                        </Button>
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -738,14 +762,14 @@ export default function ManageBetsTab() {
                     className="gap-2"
                     aria-label="Zakres korekty wyniku"
                   >
-                    <label className="flex items-start gap-2 rounded-md border border-border p-2 cursor-pointer hover:bg-muted/40">
-                      <RadioGroupItem value="pending_only" className="mt-1" />
+                    <label className="flex items-center gap-2 rounded-md border border-border p-2 cursor-pointer hover:bg-muted/40">
+                      <RadioGroupItem value="pending_only" />
                       <span className="text-xs">
                         Tylko zakłady nadal <span className="font-semibold">pending</span>
                       </span>
                     </label>
-                    <label className="flex items-start gap-2 rounded-md border border-border p-2 cursor-pointer hover:bg-muted/40">
-                      <RadioGroupItem value="all" className="mt-1" />
+                    <label className="flex items-center gap-2 rounded-md border border-border p-2 cursor-pointer hover:bg-muted/40">
+                      <RadioGroupItem value="all" />
                       <span className="text-xs">
                         Wszystkie zakłady (także już rozliczone, z korektą salda)
                       </span>
@@ -857,12 +881,13 @@ function PaginationBar({
   const pages = getPaginationRange(currentPage, totalPages);
 
   return (
-    <Pagination className={className} aria-label="Nawigacja po stronach">
-      <PaginationContent>
-        <PaginationItem>
+      <Pagination className={className} aria-label="Nawigacja po stronach">
+      <PaginationContent className="w-full flex-wrap justify-center gap-2 md:flex-nowrap">
+        <PaginationItem className="shrink-0">
           <PaginationLink
             onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-            className={cn('gap-1 pl-2.5 cursor-pointer select-none', currentPage === 0 && 'pointer-events-none opacity-50')}
+            size="default"
+            className={cn('gap-1 px-3 cursor-pointer select-none', currentPage === 0 && 'pointer-events-none opacity-50')}
             aria-label="Poprzednia strona"
             aria-disabled={currentPage === 0}
           >
@@ -877,10 +902,10 @@ function PaginationBar({
               <PaginationEllipsis />
             </PaginationItem>
           ) : (
-            <PaginationItem key={p}>
-              <PaginationLink
-                isActive={p === currentPage}
-                onClick={() => onPageChange(p)}
+              <PaginationItem key={p} className="shrink-0">
+                <PaginationLink
+                  isActive={p === currentPage}
+                  onClick={() => onPageChange(p)}
                 className="cursor-pointer select-none"
                 aria-label={`Strona ${p + 1}`}
                 aria-current={p === currentPage ? 'page' : undefined}
@@ -891,10 +916,11 @@ function PaginationBar({
           )
         )}
 
-        <PaginationItem>
+        <PaginationItem className="shrink-0">
           <PaginationLink
             onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-            className={cn('gap-1 pr-2.5 cursor-pointer select-none', currentPage >= totalPages - 1 && 'pointer-events-none opacity-50')}
+            size="default"
+            className={cn('gap-1 px-3 cursor-pointer select-none', currentPage >= totalPages - 1 && 'pointer-events-none opacity-50')}
             aria-label="Następna strona"
             aria-disabled={currentPage >= totalPages - 1}
           >

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -10,6 +10,7 @@ import {
   ListChecks,
   Lightbulb,
   Tag,
+  BadgePlus
 } from 'lucide-react';
 
 import DashboardTab from './DashboardTab';
@@ -27,8 +28,8 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { key: 'dashboard', label: 'Dashboard', shortLabel: 'Dashboard', icon: LayoutDashboard },
-  { key: 'create', label: 'Utwórz zakład', shortLabel: 'Utwórz', icon: PlusCircle },
   { key: 'manage', label: 'Zarządzaj', shortLabel: 'Zarządzaj', icon: ListChecks },
+  { key: 'create', label: 'Utwórz zakład', shortLabel: 'Utwórz', icon: PlusCircle },
   { key: 'proposals', label: 'Propozycje', shortLabel: 'Propozycje', icon: Lightbulb },
   { key: 'categories', label: 'Kategorie', shortLabel: 'Kategorie', icon: Tag },
 ];
@@ -37,35 +38,48 @@ export default function AdminLayout() {
   const { isAdmin, loading } = useAuth();
   const [tab, setTab] = useState<AdminTab>('dashboard');
 
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
   if (loading) return null;
   if (!isAdmin) return <Navigate to="/" />;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-safe-screen overflow-hidden bg-muted/30 flex flex-col">
       <Navbar />
 
       {/* Desktop sidebar + content */}
-      <div className="flex-1 flex">
+      <div className="flex min-h-0 flex-1">
         {/* Sidebar — hidden on mobile */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border bg-card">
-          <div className="p-4 border-b border-border">
-            <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-              Panel Admin
-            </h2>
+        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border bg-card overflow-y-auto">
+          <div className="p-6 border-b border-border/50">
+              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Panel Admina
+              </h2>
           </div>
-          <nav className="flex-1 py-2">
+          <nav className="flex-1 py-4 px-3 space-y-1">
             {TABS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left',
+                  'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors text-left',
                   tab === key
-                    ? 'border-r-2 border-primary text-primary font-semibold'
+                    ? 'bg-primary/10 text-primary font-semibold'
                     : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={cn("h-4 w-4 shrink-0", tab === key ? "text-primary" : "")} />
                 {label}
               </button>
             ))}
@@ -73,18 +87,19 @@ export default function AdminLayout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 pb-20 md:pb-4">
-          <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-6">
+        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[4.75rem] md:pb-0">
+          <div className="h-full overflow-y-auto overscroll-contain">
+            <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
             {/* Mobile page header */}
-            <div className="md:hidden mb-4">
-              <h1 className="text-lg font-bold">
+            <div className="md:hidden mb-6 flex items-center justify-between">
+              <h1 className="text-2xl font-bold tracking-tight">
                 {TABS.find((t) => t.key === tab)?.label}
               </h1>
             </div>
 
             {/* Desktop page header */}
-            <div className="hidden md:block mb-6">
-              <h1 className="text-xl font-bold">
+            <div className="hidden md:flex mb-8 items-center justify-between">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {TABS.find((t) => t.key === tab)?.label}
               </h1>
             </div>
@@ -94,28 +109,49 @@ export default function AdminLayout() {
             {tab === 'manage' && <ManageBetsTab />}
             {tab === 'proposals' && <ProposalsTab />}
             {tab === 'categories' && <CategoriesTab />}
+            </div>
           </div>
         </main>
       </div>
 
-      {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border safe-area-bottom">
-        <div className="flex">
-          {TABS.map(({ key, shortLabel, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={cn(
-                'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-                tab === key
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
-              )}
-            >
-              <Icon className={cn('h-5 w-5', tab === key && 'text-primary')} />
-              {shortLabel}
-            </button>
-          ))}
+      {/* Mobile bottom tab bar - Pill style */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none safe-area-bottom">
+        <div className="bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] flex items-center justify-around px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto relative overflow-visible">
+          {TABS.map(({ key, shortLabel, icon: Icon }) => {
+            const isCenter = key === 'create';
+            const isActive = tab === key;
+            
+            if (isCenter) {
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className="relative -top-4 flex flex-col items-center justify-center shrink-0 w-16"
+                >
+                  <div className={cn(
+                    "flex items-center justify-center h-[58px] w-[58px] rounded-full text-white shadow-lg transition-transform active:scale-95 border-4 border-background",
+                    isActive ? "gradient-primary" : "bg-primary hover:brightness-110"
+                  )}>
+                    <Icon className="h-6 w-6" strokeWidth={2.5} />
+                  </div>
+                </button>
+              );
+            }
+            
+            return (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={cn(
+                  'flex flex-col items-center gap-1.5 py-1 px-2 w-[64px] transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Icon className={cn('h-5 w-5', isActive ? 'text-primary' : 'text-muted-foreground')} strokeWidth={isActive ? 2.5 : 2} />
+                <span className={cn("text-[11px] font-medium leading-none", isActive && "font-bold")}>{shortLabel}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>

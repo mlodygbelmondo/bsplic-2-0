@@ -79,7 +79,7 @@ export function Navbar() {
           <div className="flex items-center gap-5">
             <Link
               to="/"
-              className="text-[15px] font-black text-primary-foreground tracking-tight hover:brightness-110 transition"
+              className="text-[15px] lg:text-[17px] font-black text-primary-foreground tracking-tight hover:brightness-110 transition leading-none"
             >
               BSPLIC 2.0
             </Link>
@@ -87,7 +87,7 @@ export function Navbar() {
               <Link
                 to="/"
                 className={cn(
-                  "text-[13px] font-semibold hover:text-primary-foreground hover:brightness-110 transition-colors",
+                  "text-[14px] font-semibold hover:text-primary-foreground hover:brightness-110 transition-colors leading-none",
                   isActivePath("/")
                     ? "text-primary-foreground"
                     : "text-primary-foreground/70",
@@ -98,7 +98,7 @@ export function Navbar() {
               <Link
                 to="/social"
                 className={cn(
-                  "text-[13px] font-semibold hover:text-primary-foreground transition-colors",
+                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
                   isActivePath("/social")
                     ? "text-primary-foreground"
                     : "text-primary-foreground/70",
@@ -109,7 +109,7 @@ export function Navbar() {
               <Link
                 to="/rankings"
                 className={cn(
-                  "text-[13px] font-semibold hover:text-primary-foreground transition-colors",
+                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
                   isActivePath("/rankings")
                     ? "text-primary-foreground"
                     : "text-primary-foreground/70",
@@ -121,19 +121,19 @@ export function Navbar() {
                 <Link
                   to="/admin"
                   className={cn(
-                    "text-[13px] font-semibold hover:text-primary-foreground transition-colors flex items-center gap-1",
+                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
                     isActivePath("/admin")
                       ? "text-primary-foreground"
                       : "text-primary-foreground/70",
                   )}
                 >
-                  <ShieldCheck className="h-3.5 w-3.5" /> Admin
+                  <ShieldCheck className="h-4 w-4 shrink-0" /> Admin
                 </Link>
               )}
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2.5">
             <NotificationsBell userId={user?.id} />
             {profile && (
               <button
@@ -176,16 +176,16 @@ export function Navbar() {
             </button>
           </div>
 
-          <div className="lg:hidden flex items-center gap-1">
-            <NotificationsBell userId={user?.id} />
+          <div className="lg:hidden flex items-center gap-4">
+            <NotificationsBell userId={user?.id} className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6" />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button
                   type="button"
                   aria-label="Otwórz menu"
-                  className="text-primary-foreground/90 flex items-center hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/90 flex items-center justify-center hover:text-primary-foreground transition-colors p-1"
                 >
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-6 w-6" />
                 </button>
               </SheetTrigger>
               <SheetContent

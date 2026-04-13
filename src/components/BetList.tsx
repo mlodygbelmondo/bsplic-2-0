@@ -27,7 +27,7 @@ export function BetList({
         <button
           onClick={() => setSort("newest")}
           className={cn(
-            "px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors",
+            "px-4 py-2 text-[14px] font-semibold border-b-2 -mb-[1px] transition-colors",
             sort === "newest"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground",
@@ -38,7 +38,7 @@ export function BetList({
         <button
           onClick={() => setSort("popular")}
           className={cn(
-            "px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors",
+            "px-4 py-2 text-[14px] font-semibold border-b-2 -mb-[1px] transition-colors",
             sort === "popular"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground",
@@ -49,7 +49,7 @@ export function BetList({
         <button
           onClick={() => setSort("ending_soon")}
           className={cn(
-            "px-4 py-2 text-[13px] font-semibold border-b-2 -mb-[1px] transition-colors",
+            "px-4 py-2 text-[14px] font-semibold border-b-2 -mb-[1px] transition-colors",
             sort === "ending_soon"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground",

@@ -89,7 +89,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
               W trakcie
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground font-medium mt-1" title={bet.ends_at}>{endsAtLabel}</p>
+          <p className="text-[12px] text-muted-foreground font-medium mt-1" title={bet.ends_at}>{endsAtLabel}</p>
         </div>
 
         {/* Odds buttons */}
@@ -128,7 +128,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
               >
                 <span
                   className={cn(
-                    'text-[10px] mb-0.5 truncate w-full text-center transition-colors duration-200',
+                  'text-[12px] mb-0.5 truncate w-full text-center transition-colors duration-200',
                     isSelected ? 'text-[#f6bf2b]' : index % 2 === 0 ? 'text-zinc-900' : 'text-zinc-800'
                   )}
                 >

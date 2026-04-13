@@ -119,6 +119,15 @@
   .gradient-cta {
     background: linear-gradient(135deg, hsl(355 100% 50%), hsl(15 90% 55%));
   }
+  .propose-cta-button::after {
+    content: '';
+    position: absolute;
+    inset: -35% -65%;
+    background: linear-gradient(108deg, transparent 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+    transform: translateX(-145%) skewX(-18deg);
+    animation: propose-cta-shine 5.2s ease-in-out infinite;
+    pointer-events: none;
+  }
   .pulse-live {
     animation: pulse-dot 1.5s ease-in-out infinite;
   }
@@ -152,6 +161,23 @@
     100% {
       filter: brightness(1);
       opacity: 1;
+    }
+  }
+  @keyframes propose-cta-shine {
+    0%, 74% {
+      transform: translateX(-145%) skewX(-18deg);
+      opacity: 0;
+    }
+    80% {
+      opacity: 0.35;
+    }
+    92% {
+      transform: translateX(145%) skewX(-18deg);
+      opacity: 0.45;
+    }
+    100% {
+      transform: translateX(145%) skewX(-18deg);
+      opacity: 0;
     }
   }
   .coupon-drawer-enter {
@@ -220,6 +246,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .propose-cta-button::after {
+      animation: none;
+      opacity: 0;
+    }
     .bsplicboost-card::after {
       animation: none;
       opacity: 0;

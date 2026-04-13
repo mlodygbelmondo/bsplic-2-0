@@ -270,7 +270,7 @@ export default function CategoriesTab() {
               <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nazwa</th>
               <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kolor</th>
               <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kolejność</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Akcje</th>
+              <th className="w-[220px] px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Akcje</th>
             </tr>
           </thead>
           <tbody>
@@ -285,8 +285,8 @@ export default function CategoriesTab() {
                   />
                 </td>
                 <td className="px-3 py-2 tabular-nums text-muted-foreground">{cat.sort_order}</td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-1.5">
+                <td className="w-[220px] px-3 py-2">
+                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEditModal(cat)} aria-label={`Edytuj ${cat.name}`}>
                       <Pencil className="h-3 w-3 mr-1 text-gray-950" /> Edytuj
                     </Button>
@@ -385,11 +385,12 @@ function CategoryPagination({
 
   return (
     <Pagination aria-label="Nawigacja po stronach kategorii">
-      <PaginationContent>
-        <PaginationItem>
+      <PaginationContent className="w-full flex-wrap justify-center gap-2 md:flex-nowrap">
+        <PaginationItem className="shrink-0">
           <PaginationLink
             onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-            className={cn('gap-1 pl-2.5 cursor-pointer select-none', currentPage === 0 && 'pointer-events-none opacity-50')}
+            size="default"
+            className={cn('gap-1 px-3 cursor-pointer select-none', currentPage === 0 && 'pointer-events-none opacity-50')}
             aria-label="Poprzednia strona"
             aria-disabled={currentPage === 0}
           >
@@ -404,7 +405,7 @@ function CategoryPagination({
               <PaginationEllipsis />
             </PaginationItem>
           ) : (
-            <PaginationItem key={p}>
+            <PaginationItem key={p} className="shrink-0">
               <PaginationLink
                 isActive={p === currentPage}
                 onClick={() => onPageChange(p)}
@@ -418,10 +419,11 @@ function CategoryPagination({
           )
         )}
 
-        <PaginationItem>
+        <PaginationItem className="shrink-0">
           <PaginationLink
             onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-            className={cn('gap-1 pr-2.5 cursor-pointer select-none', currentPage >= totalPages - 1 && 'pointer-events-none opacity-50')}
+            size="default"
+            className={cn('gap-1 px-3 cursor-pointer select-none', currentPage >= totalPages - 1 && 'pointer-events-none opacity-50')}
             aria-label="Następna strona"
             aria-disabled={currentPage >= totalPages - 1}
           >
