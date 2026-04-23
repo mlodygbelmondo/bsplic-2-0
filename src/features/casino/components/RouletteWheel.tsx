@@ -160,7 +160,7 @@ export function RouletteWheel({
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.1, type: 'spring', stiffness: 100 }}
-      className="relative mx-auto w-full max-w-[260px] sm:max-w-[300px]"
+      className="relative mx-auto w-full max-w-full sm:max-w-[300px]"
     >
       {/* Ambient glow */}
       <div

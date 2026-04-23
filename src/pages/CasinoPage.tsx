@@ -27,14 +27,16 @@ export default function CasinoPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden casino-page-bg">
+    <div className="h-safe-screen flex flex-col overflow-hidden casino-page-bg">
       <Navbar />
-      <main className="mx-auto max-w-7xl p-4 pb-10 pt-6 md:p-6 md:pb-14">
-        <CasinoLobby
-          userId={user.id}
-          balance={Number(profile.balance)}
-          refreshProfile={refreshProfile}
-        />
+      <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-7xl p-4 pb-10 pt-6 md:p-6 md:pb-14">
+          <CasinoLobby
+            userId={user.id}
+            balance={Number(profile.balance)}
+            refreshProfile={refreshProfile}
+          />
+        </div>
       </main>
     </div>
   );
