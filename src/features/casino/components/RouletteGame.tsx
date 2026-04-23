@@ -130,7 +130,7 @@ export function RouletteGame({
   };
 
   return (
-    <div className="space-y-5 overflow-x-hidden pb-16 md:pb-0">
+    <div className="space-y-5 pb-16 md:pb-0">
       <GameStatusBar
         round={table.currentRound}
         countdownLabel={table.countdownLabel}
