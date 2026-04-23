@@ -56,6 +56,7 @@ export default function DashboardTab() {
           { count: resolvedToday, error: e5 },
           { data: categoryData, error: e6 },
           { data: recentResolved, error: e7 },
+          { data: allCategories, error: e8 },
         ] = await Promise.all([
           supabase.from('placed_bets').select('*', { count: 'exact', head: true }),
           supabase.from('placed_bets').select('stake'),
@@ -83,9 +84,10 @@ export default function DashboardTab() {
             .not('winning_option', 'is', null)
             .order('created_at', { ascending: false })
             .limit(5),
+          supabase.from('categories').select('id, emoji, name'),
         ]);
 
-        const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7;
+        const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
         if (firstError) throw firstError;
 
         const totalPool = stakes?.reduce((acc, b) => acc + Number(b.stake), 0) || 0;
@@ -98,11 +100,7 @@ export default function DashboardTab() {
           }
           const topId = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
           if (topId) {
-            const { data: cat } = await supabase
-              .from('categories')
-              .select('emoji, name')
-              .eq('id', topId)
-              .single();
+            const cat = allCategories?.find((c) => c.id === topId);
             if (cat) topCategory = `${cat.emoji} ${cat.name}`;
           }
         }
