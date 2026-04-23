@@ -189,6 +189,144 @@ export type Database = {
         }
         Relationships: []
       }
+      casino_rounds: {
+        Row: {
+          balance_after: number
+          bet_type: string
+          bet_value: string
+          created_at: string
+          game_key: string
+          id: string
+          payout: number
+          stake: number
+          user_id: string
+          winning_color: string
+          winning_number: number
+        }
+        Insert: {
+          balance_after: number
+          bet_type: string
+          bet_value: string
+          created_at?: string
+          game_key?: string
+          id?: string
+          payout?: number
+          stake: number
+          user_id: string
+          winning_color: string
+          winning_number: number
+        }
+        Update: {
+          balance_after?: number
+          bet_type?: string
+          bet_value?: string
+          created_at?: string
+          game_key?: string
+          id?: string
+          payout?: number
+          stake?: number
+          user_id?: string
+          winning_color?: string
+          winning_number?: number
+        }
+        Relationships: []
+      }
+      casino_roulette_bets: {
+        Row: {
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean | null
+          payout: number
+          round_id: string
+          settled_at: string | null
+          stake: number
+          user_id: string
+        }
+        Insert: {
+          bet_type: string
+          bet_value: string
+          created_at?: string
+          id?: string
+          is_win?: boolean | null
+          payout?: number
+          round_id: string
+          settled_at?: string | null
+          stake: number
+          user_id: string
+        }
+        Update: {
+          bet_type?: string
+          bet_value?: string
+          created_at?: string
+          id?: string
+          is_win?: boolean | null
+          payout?: number
+          round_id?: string
+          settled_at?: string | null
+          stake?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casino_roulette_bets_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "casino_roulette_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casino_roulette_bets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casino_roulette_rounds: {
+        Row: {
+          betting_closes_at: string
+          betting_opens_at: string
+          created_at: string
+          id: string
+          phase: string
+          round_number: number
+          settled_at: string | null
+          spin_started_at: string | null
+          table_key: string
+          winning_color: string | null
+          winning_number: number | null
+        }
+        Insert: {
+          betting_closes_at: string
+          betting_opens_at: string
+          created_at?: string
+          id?: string
+          phase: string
+          round_number: number
+          settled_at?: string | null
+          spin_started_at?: string | null
+          table_key?: string
+          winning_color?: string | null
+          winning_number?: number | null
+        }
+        Update: {
+          betting_closes_at?: string
+          betting_opens_at?: string
+          created_at?: string
+          id?: string
+          phase?: string
+          round_number?: number
+          settled_at?: string | null
+          spin_started_at?: string | null
+          table_key?: string
+          winning_color?: string | null
+          winning_number?: number | null
+        }
+        Relationships: []
+      }
       placed_bets: {
         Row: {
           bet_id: string
@@ -344,6 +482,117 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      play_roulette_round: {
+        Args: {
+          p_bet_type: string
+          p_bet_value: string
+          p_stake: number
+          p_user_id: string
+        }
+        Returns: {
+          balance_after: number
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean
+          net_change: number
+          payout: number
+          stake: number
+          winning_color: string
+          winning_number: number
+        }[]
+      }
+      advance_roulette_round_if_due: {
+        Args: { p_table_key?: string }
+        Returns: undefined
+      }
+      get_current_roulette_round: {
+        Args: { p_table_key?: string }
+        Returns: {
+          betting_closes_at: string
+          betting_opens_at: string
+          created_at: string
+          id: string
+          phase: string
+          round_number: number
+          settled_at: string | null
+          spin_started_at: string | null
+          table_key: string
+          winning_color: string | null
+          winning_number: number | null
+        }[]
+      }
+      get_my_current_roulette_bets: {
+        Args: { p_round_id: string }
+        Returns: {
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean | null
+          payout: number
+          round_id: string
+          settled_at: string | null
+          stake: number
+          user_id: string
+        }[]
+      }
+      get_recent_roulette_spins: {
+        Args: { p_limit?: number; p_table_key?: string }
+        Returns: {
+          betting_closes_at: string
+          betting_opens_at: string
+          created_at: string
+          id: string
+          phase: string
+          round_number: number
+          settled_at: string | null
+          spin_started_at: string | null
+          table_key: string
+          winning_color: string | null
+          winning_number: number | null
+        }[]
+      }
+      get_recent_roulette_wins: {
+        Args: { p_limit?: number; p_table_key?: string }
+        Returns: {
+          avatar_url: string | null
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean | null
+          payout: number
+          round_id: string
+          round_number: number
+          settled_at: string | null
+          stake: number
+          user_id: string
+          username: string
+        }[]
+      }
+      place_roulette_bet: {
+        Args: {
+          p_bet_type: string
+          p_bet_value: string
+          p_round_id: string
+          p_stake: number
+          p_user_id: string
+        }
+        Returns: {
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean | null
+          payout: number
+          round_id: string
+          settled_at: string | null
+          stake: number
+          user_id: string
+        }[]
       }
       secure_daily_topup: {
         Args: { p_user_id: string }

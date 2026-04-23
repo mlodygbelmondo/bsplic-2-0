@@ -63,6 +63,7 @@ export function Navbar() {
 
   const navLinks = [
     { to: "/", label: "Zakłady" },
+    { to: "/casino", label: "Kasyno" },
     { to: "/social", label: "Social" },
     { to: "/rankings", label: "Rankingi" },
   ];
@@ -94,6 +95,17 @@ export function Navbar() {
                 )}
               >
                 Zakłady
+              </Link>
+              <Link
+                to="/casino"
+                className={cn(
+                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
+                  isActivePath("/casino")
+                    ? "text-primary-foreground"
+                    : "text-primary-foreground/70",
+                )}
+              >
+                Kasyno
               </Link>
               <Link
                 to="/social"

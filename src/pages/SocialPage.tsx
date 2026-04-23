@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg } from '@/types/database';
+import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg, FeedItemType } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,6 +26,14 @@ import {
   addComment,
   toggleReaction,
 } from '@/features/social/api/social';
+import {
+  getLocalCasinoShares,
+} from '@/features/social/casinoShares';
+import {
+  formatRouletteBetValue,
+  getRouletteBetTypeLabel,
+  getRouletteColor,
+} from '@/features/casino/lib/roulette';
 import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 import type { FlatComment } from '@/features/social/thread';
 
@@ -82,7 +90,8 @@ function formatTimeAgo(dateStr: string) {
 
 export default function SocialPage() {
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
-  const [feedFilter, setFeedFilter] = useState<'all' | 'coupon' | 'post'>('all');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'coupon' | 'post' | 'casino'>('all');
+  const [localCasinoItems, setLocalCasinoItems] = useState<SocialFeedItem[]>(() => getLocalCasinoShares());
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -113,10 +122,18 @@ export default function SocialPage() {
       : null;
   const targetItemId = targetItemIdParam && targetItemIdParam.length > 0 ? targetItemIdParam : null;
 
+  const mergedFeedItems = useMemo(() => {
+    // Merge local casino shares on top so they appear first
+    const casinoOnly = localCasinoItems.filter(
+      (c) => !feedItems.some((f) => f.id === c.id && f.item_type === c.item_type),
+    );
+    return [...casinoOnly, ...feedItems];
+  }, [feedItems, localCasinoItems]);
+
   const filteredFeedItems = useMemo(() => {
-    if (feedFilter === 'all') return feedItems;
-    return feedItems.filter((item) => item.item_type === feedFilter);
-  }, [feedItems, feedFilter]);
+    if (feedFilter === 'all') return mergedFeedItems;
+    return mergedFeedItems.filter((item) => item.item_type === feedFilter);
+  }, [mergedFeedItems, feedFilter]);
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
@@ -319,7 +336,7 @@ export default function SocialPage() {
   // ── Comments ───────────────────────────────────────────────
 
   const loadComments = useCallback(
-    async (itemId: string, itemType: 'post' | 'coupon') => {
+    async (itemId: string, itemType: FeedItemType) => {
       setCommentsLoadingMap((prev) => ({ ...prev, [itemId]: true }));
       try {
         const target =
@@ -348,7 +365,7 @@ export default function SocialPage() {
   const handleAddComment = useCallback(
     async (
       itemId: string,
-      itemType: 'post' | 'coupon',
+      itemType: FeedItemType,
       content: string,
       parentId?: string,
       imageBlob?: Blob,
@@ -389,15 +406,17 @@ export default function SocialPage() {
   const handleToggleReaction = useCallback(
     async (
       itemId: string,
-      itemType: 'post' | 'coupon',
+      itemType: FeedItemType,
       emoji: ReactionType,
     ) => {
       if (!user) return;
+      if (itemType === 'casino') return; // local only, no server reaction
       const nextReaction = await toggleReaction({
         userId: user.id,
         emoji: emoji as ReactionEmoji,
         postId: itemType === 'post' ? itemId : undefined,
         couponId: itemType === 'coupon' ? itemId : undefined,
+        // casino items don't have dedicated reaction target yet; skip server call
       });
 
       setFeedItems((prev) =>
@@ -419,7 +438,7 @@ export default function SocialPage() {
       commentId: string,
       emoji: ReactionType,
       itemId: string,
-      _itemType: 'post' | 'coupon',
+      _itemType: FeedItemType,
     ) => {
       if (!user) return;
       const nextReaction = await toggleReaction({
@@ -452,6 +471,7 @@ export default function SocialPage() {
   );
 
   const handleOpenItemReactors = useCallback((item: SocialFeedItem) => {
+    if (item.item_type === 'casino') return;
     const firstReactionType = REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
 
     setReactorsTarget(
@@ -519,6 +539,18 @@ export default function SocialPage() {
             onClick={() => setFeedFilter('post')}
           >
             Posty
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+              feedFilter === 'casino'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            )}
+            onClick={() => setFeedFilter('casino')}
+          >
+            Kasyno
           </button>
         </div>
 
@@ -612,11 +644,11 @@ interface FeedCardProps {
   isLoggedIn: boolean;
   onToggleCoupon: (id: string) => void;
   onCopyCoupon: (item: SocialFeedItem) => void;
-  onToggleReaction: (itemId: string, itemType: 'post' | 'coupon', emoji: ReactionType) => void | Promise<void>;
-  onFirstExpandComments: (itemId: string, itemType: 'post' | 'coupon') => void | Promise<void>;
+  onToggleReaction: (itemId: string, itemType: FeedItemType, emoji: ReactionType) => void | Promise<void>;
+  onFirstExpandComments: (itemId: string, itemType: FeedItemType) => void | Promise<void>;
   onAddComment: (
     itemId: string,
-    itemType: 'post' | 'coupon',
+    itemType: FeedItemType,
     content: string,
     parentId?: string,
     imageBlob?: Blob,
@@ -625,7 +657,7 @@ interface FeedCardProps {
     commentId: string,
     emoji: ReactionType,
     itemId: string,
-    itemType: 'post' | 'coupon',
+    itemType: FeedItemType,
   ) => void | Promise<void>;
   isAko: boolean;
   formatTimeAgo: (dateStr: string) => string;
@@ -741,11 +773,12 @@ const FeedCard = memo(function FeedCard({
       </div>
 
       {/* Content */}
-      {item.item_type === 'post' ? (
+      {item.item_type === 'post' && (
         <div className="px-4 py-2">
           <SocialContentBlock content={item.content} imageAlt="Zdjęcie w poście" />
         </div>
-      ) : (
+      )}
+      {item.item_type === 'coupon' && (
         <CouponContent
           item={item}
           ako={ako}
@@ -753,6 +786,9 @@ const FeedCard = memo(function FeedCard({
           onToggle={() => onToggleCoupon(item.id)}
           formatEventsCount={formatEventsCount}
         />
+      )}
+      {item.item_type === 'casino' && (
+        <CasinoContent item={item} />
       )}
 
       {/* Reactions + Comments */}
@@ -786,6 +822,50 @@ const FeedCard = memo(function FeedCard({
     </div>
   );
 });
+
+// ── Casino content ──────────────────────────────────────────
+
+interface CasinoContentProps {
+  item: SocialFeedItem;
+}
+
+function CasinoContent({ item }: CasinoContentProps) {
+  const color = item.casino_winning_color ?? 'green';
+  const colorClass =
+    color === 'red'
+      ? 'text-red-400 border-red-500/30 bg-red-500/10'
+      : color === 'black'
+        ? 'text-stone-300 border-stone-500/30 bg-stone-500/10'
+        : 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 text-lg font-black',
+            colorClass,
+          )}
+        >
+          {item.casino_winning_number ?? '?'}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-white">
+            {getRouletteBetTypeLabel(item.casino_bet_type ?? 'straight')}:{' '}
+            {formatRouletteBetValue(item.casino_bet_type ?? 'straight', item.casino_bet_value ?? '')}
+          </p>
+          <p className="text-xs text-white/50">
+            Stawka {(item.casino_stake ?? 0).toFixed(2)} zł • Wygrana{' '}
+            <span className="font-bold text-emerald-400">
+              +{(item.casino_payout ?? 0).toFixed(2)} zł
+            </span>{' '}
+            • Runda #{item.casino_round_number}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Coupon content ──────────────────────────────────────────
 
