@@ -10,6 +10,59 @@ export interface Profile {
   created_at: string;
 }
 
+export type RouletteBetType = 'straight' | 'color' | 'parity' | 'range';
+
+export type RouletteColor = 'red' | 'black' | 'green';
+
+export type RouletteRoundPhase = 'waiting' | 'spinning' | 'settled';
+
+export interface RouletteRoundResult {
+  id: string;
+  bet_type: RouletteBetType;
+  bet_value: string;
+  stake: number;
+  winning_number: number;
+  winning_color: RouletteColor;
+  payout: number;
+  balance_after: number;
+  created_at: string;
+  is_win: boolean;
+  net_change: number;
+}
+
+export interface RouletteTableRound {
+  id: string;
+  table_key: string;
+  round_number: number;
+  phase: RouletteRoundPhase;
+  betting_opens_at: string;
+  betting_closes_at: string;
+  spin_started_at: string | null;
+  settled_at: string | null;
+  winning_number: number | null;
+  winning_color: RouletteColor | null;
+  created_at: string;
+}
+
+export interface RouletteBetRecord {
+  id: string;
+  round_id: string;
+  user_id?: string;
+  bet_type: RouletteBetType;
+  bet_value: string;
+  stake: number;
+  payout: number;
+  is_win: boolean | null;
+  created_at: string;
+  settled_at?: string | null;
+}
+
+export interface RouletteRecentWin extends RouletteBetRecord {
+  username: string;
+  avatar_url?: string | null;
+  round_number: number;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -119,7 +172,7 @@ export interface SocialCouponEntry extends CouponHistoryEntry {
 
 export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry' | 'fire';
 
-export type FeedItemType = 'post' | 'coupon';
+export type FeedItemType = 'post' | 'coupon' | 'casino';
 
 export type NotificationType = 'mention_post' | 'mention_comment' | 'coupon_won' | 'comment_post';
 
@@ -139,6 +192,14 @@ export interface SocialFeedItem {
   reactions: Partial<Record<ReactionEmoji, number>> | null;
   comment_count: number;
   my_reaction: ReactionEmoji | null;
+  // Optional casino fields
+  casino_bet_type?: RouletteBetType | null;
+  casino_bet_value?: string | null;
+  casino_stake?: number | null;
+  casino_payout?: number | null;
+  casino_round_number?: number | null;
+  casino_winning_number?: number | null;
+  casino_winning_color?: RouletteColor | null;
 }
 
 export interface SocialComment {
