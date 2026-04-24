@@ -130,7 +130,7 @@ export function RouletteGame({
   };
 
   return (
-    <div className="space-y-5 pb-16 md:pb-0">
+    <div className="w-full max-w-full min-w-0 space-y-5 pb-16 md:pb-0">
       <GameStatusBar
         round={table.currentRound}
         countdownLabel={table.countdownLabel}
@@ -154,9 +154,9 @@ export function RouletteGame({
         </motion.div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* Main column */}
-        <div className="order-2 space-y-5 lg:order-1">
+        <div className="order-2 min-w-0 space-y-5 lg:order-1">
           <RouletteWheel
             phase={table.phase}
             winningNumber={table.currentRound?.winning_number ?? null}
@@ -170,7 +170,7 @@ export function RouletteGame({
         </div>
 
         {/* Sidebar */}
-        <div className="order-1 space-y-5 lg:order-2">
+        <div className="order-1 min-w-0 space-y-5 lg:order-2">
           <BettingPanel
             betType={betType}
             betValue={betValue}

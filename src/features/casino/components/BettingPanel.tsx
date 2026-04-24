@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Hash, Palette, ArrowUpDown, ArrowDownUp } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -91,14 +91,13 @@ export function BettingPanel({
       </div>
 
       {/* Bet value selector with swipe animation */}
-      <AnimatePresence mode="wait">
+      <div className="overflow-hidden">
         {betType && (
           <motion.div
             key={betType}
-            initial={{ opacity: 0, x: 40 }}
+            initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 760, damping: 44 }}
           >
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">
@@ -131,7 +130,7 @@ export function BettingPanel({
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }

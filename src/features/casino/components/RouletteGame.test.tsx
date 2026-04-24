@@ -178,6 +178,32 @@ describe('RouletteGame', () => {
     expect(screen.getByRole('spinbutton')).toHaveValue(50);
   });
 
+  it('lets the desktop stake bar be hidden and reopened', async () => {
+    useRouletteTableMock.mockReturnValue(baseTableMock);
+
+    render(
+      <RouletteGame
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schowaj stawkę' }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'Postaw' }),
+      ).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Pokaż stawkę/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Postaw' })).toBeInTheDocument();
+    });
+  });
+
   it('disables betting controls once the wheel is spinning', () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
@@ -6,17 +6,16 @@ import {
   getRouletteColor,
   ROULETTE_SPIN_REVEAL_MS,
 } from '@/features/casino/lib/roulette';
+import {
+  computeRouletteTargetRotation,
+  getRouletteWheelSegmentAngle,
+  ROULETTE_WHEEL_NUMBERS,
+} from '@/features/casino/lib/rouletteWheel';
 
-const WHEEL_NUMBERS = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
-  24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-];
-
-const SEGMENT_ANGLE = 360 / WHEEL_NUMBERS.length;
-const FULL_SPINS = 5;
 const CX = 160;
 const CY = 160;
 const R = 150;
+const SEGMENT_ANGLE = getRouletteWheelSegmentAngle();
 
 function polar(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -58,20 +57,9 @@ export function RouletteWheel({
 
   const targetIndex = useMemo(() => {
     if (winningNumber == null) return 0;
-    const idx = WHEEL_NUMBERS.indexOf(winningNumber);
+    const idx = ROULETTE_WHEEL_NUMBERS.indexOf(winningNumber);
     return idx >= 0 ? idx : 0;
   }, [winningNumber]);
-
-  const computeTargetRotation = useCallback(
-    (fromRotation: number, targetIdx: number) => {
-      const currentBase = fromRotation % 360;
-      const targetBase = -(targetIdx * SEGMENT_ANGLE);
-      let delta = targetBase - currentBase;
-      if (delta > 0) delta -= 360;
-      return fromRotation + delta - FULL_SPINS * 360;
-    },
-    [],
-  );
 
   useEffect(() => {
     if (phase === 'waiting') {
@@ -97,7 +85,7 @@ export function RouletteWheel({
           )
         : ROULETTE_SPIN_REVEAL_MS;
 
-      const nextRotation = computeTargetRotation(
+      const nextRotation = computeRouletteTargetRotation(
         rotationRef.current,
         targetIndex,
       );
@@ -119,7 +107,7 @@ export function RouletteWheel({
     }
 
     if (phase === 'settled' && winningNumber != null) {
-      const settledRotation = computeTargetRotation(
+      const settledRotation = computeRouletteTargetRotation(
         rotationRef.current,
         targetIndex,
       );
@@ -127,10 +115,10 @@ export function RouletteWheel({
       setRotation(settledRotation);
       setIsSpinning(false);
     }
-  }, [phase, winningNumber, spinStartedAt, roundId, targetIndex, computeTargetRotation]);
+  }, [phase, winningNumber, spinStartedAt, roundId, targetIndex]);
 
   const segments = useMemo(() => {
-    return WHEEL_NUMBERS.map((num, i) => {
+    return ROULETTE_WHEEL_NUMBERS.map((num, i) => {
       const startAngle = i * SEGMENT_ANGLE;
       const endAngle = (i + 1) * SEGMENT_ANGLE;
       const d = segmentPath(CX, CY, R, startAngle, endAngle);
@@ -160,7 +148,7 @@ export function RouletteWheel({
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.1, type: 'spring', stiffness: 100 }}
-      className="relative mx-auto w-full max-w-full sm:max-w-[300px]"
+      className="relative mx-auto w-full max-w-full sm:max-w-[300px] lg:max-w-[380px]"
     >
       {/* Ambient glow */}
       <div

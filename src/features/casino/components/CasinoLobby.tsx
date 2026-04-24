@@ -14,7 +14,7 @@ export function CasinoLobby({
   refreshProfile,
 }: CasinoLobbyProps) {
   return (
-    <div className="space-y-5 text-white">
+    <div className="w-full max-w-full min-w-0 space-y-5 text-white">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
