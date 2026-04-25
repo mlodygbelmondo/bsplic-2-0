@@ -454,6 +454,19 @@ export type Database = {
         Args: { p_user_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
+      get_casino_rankings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          username: string
+          total_bets: number
+          won_bets: number
+          lost_bets: number
+          win_rate: number
+          total_profit: number
+          balance: number
+        }[]
+      }
       get_user_rankings: {
         Args: Record<PropertyKey, never>
         Returns: {

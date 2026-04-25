@@ -23,12 +23,15 @@ export default function RankingsPage() {
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('total_profit');
+  const [filter, setFilter] = useState<'sports' | 'casino'>('sports');
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchRankings = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_rankings');
+      const { data, error } = await supabase.rpc(
+        filter === 'casino' ? 'get_casino_rankings' : 'get_user_rankings'
+      );
 
       if (error) {
         console.error('Rankings fetch error:', error);
@@ -54,7 +57,7 @@ export default function RankingsPage() {
     };
 
     fetchRankings();
-  }, [user?.id]);
+  }, [user?.id, filter]);
 
   const sorted = useMemo(() => {
     return [...rankings].sort((a, b) => b[sortBy] - a[sortBy]);
@@ -70,7 +73,36 @@ export default function RankingsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="max-w-3xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Rankingi</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Rankingi</h1>
+
+          <div className="flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              onClick={() => setFilter('sports')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-l-md transition-colors",
+                filter === 'sports'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+              )}
+            >
+              Sport
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('casino')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-r-md transition-colors",
+                filter === 'casino'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+              )}
+            >
+              Kasyno
+            </button>
+          </div>
+        </div>
 
         <div className="-mx-1 mb-4 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
           <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
