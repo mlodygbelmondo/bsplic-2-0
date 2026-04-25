@@ -15,6 +15,7 @@ const addCommentMock = vi.fn();
 const toggleReactionMock = vi.fn();
 const fetchReactorsMock = vi.fn();
 const fetchBetsByIdsMock = vi.fn();
+const getLocalCasinoSharesMock = vi.fn<() => SocialFeedItem[]>();
 const addItemsMock = vi.fn();
 const setPreferredCouponTypeMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -28,7 +29,7 @@ vi.mock('@/components/Navbar', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user-1', email: 'test@test.com' },
-    profile: { id: 'user-1', username: 'Tester', avatar_url: null },
+    profile: { id: 'user-1', username: 'Tester', avatar_url: 'https://cdn.example/tester.jpg' },
     isAdmin: false,
     refreshProfile: vi.fn(),
   }),
@@ -49,6 +50,10 @@ vi.mock('@/features/social/api/reactions', () => ({
 
 vi.mock('@/features/home/api/bets', () => ({
   fetchBetsByIds: (...args: unknown[]) => fetchBetsByIdsMock(...args),
+}));
+
+vi.mock('@/features/social/casinoShares', () => ({
+  getLocalCasinoShares: () => getLocalCasinoSharesMock(),
 }));
 
 vi.mock('@/contexts/CouponContext', () => ({
@@ -126,6 +131,34 @@ function makePostFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedIt
   };
 }
 
+function makeCasinoFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedItem {
+  return {
+    id: 'casino-1',
+    item_type: 'casino',
+    user_id: 'user-1',
+    username: 'Ty',
+    avatar_url: null,
+    content: 'Wygrana w ruletce: 40.00 zł. Numer 7.',
+    total_odds: null,
+    stake: 20,
+    payout: 40,
+    status: 'won',
+    legs: null,
+    created_at: '2030-01-01T12:00:00.000Z',
+    reactions: null,
+    comment_count: 0,
+    my_reaction: null,
+    casino_bet_type: 'color',
+    casino_bet_value: 'red',
+    casino_stake: 20,
+    casino_payout: 40,
+    casino_round_number: 123,
+    casino_winning_number: 7,
+    casino_winning_color: 'red',
+    ...overrides,
+  };
+}
+
 function renderSocialPage() {
   return render(
     <MemoryRouter>
@@ -159,6 +192,7 @@ function makePostPage(size: number, start = 0): SocialFeedItem[] {
 describe('SocialPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getLocalCasinoSharesMock.mockReturnValue([]);
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
     fetchSocialFeedItemMock.mockResolvedValue(null);
     fetchCommentsMock.mockResolvedValue([]);
@@ -323,6 +357,39 @@ describe('SocialPage', () => {
 
     const avatar = await screen.findByAltText('Avatar AvatarUser');
     expect(avatar).toHaveAttribute('src', 'https://cdn.example/avatar.jpg');
+  });
+
+  it('renders casino win shares with the real username and coupon-like layout', async () => {
+    fetchSocialFeedMock.mockResolvedValue([]);
+    getLocalCasinoSharesMock.mockReturnValue([makeCasinoFeedItem()]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Tester')).toBeInTheDocument();
+    expect(screen.queryByText('Ty')).not.toBeInTheDocument();
+    expect(screen.getByAltText('Avatar Tester')).toHaveAttribute('src', 'https://cdn.example/tester.jpg');
+    expect(screen.getByText('Ruletka')).toBeInTheDocument();
+    expect(screen.getByText('Kolor: Czerwone')).toBeInTheDocument();
+    expect(screen.getByText('+40.00 zł')).toBeInTheDocument();
+    expect(screen.getByText('Runda #123')).toBeInTheDocument();
+  });
+
+  it('shows a missing-result fallback instead of question marks for old casino shares', async () => {
+    fetchSocialFeedMock.mockResolvedValue([]);
+    getLocalCasinoSharesMock.mockReturnValue([
+      makeCasinoFeedItem({
+        casino_bet_type: 'straight',
+        casino_bet_value: '0',
+        casino_winning_number: null,
+        casino_winning_color: null,
+      }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Numer: 0')).toBeInTheDocument();
+    expect(screen.getByText('Wynik niedostępny • Stawka 20.00 zł')).toBeInTheDocument();
+    expect(screen.queryByText('?')).not.toBeInTheDocument();
   });
 
   it('shows initial comment count from feed before loading thread comments', async () => {

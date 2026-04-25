@@ -35,6 +35,9 @@ export function RecentSpinsCarousel({ spins }: RecentSpinsCarouselProps) {
     };
     emblaApi.on('select', onSelect);
     onSelect();
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
   }, [emblaApi]);
 
   if (spins.length === 0) return null;

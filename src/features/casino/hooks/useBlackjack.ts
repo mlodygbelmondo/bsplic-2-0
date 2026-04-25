@@ -4,9 +4,11 @@ import { toast } from 'sonner';
 import {
   type Card,
   type BlackjackGameStatus,
+  type BlackjackGameState,
   placeBlackjackBet,
-  settleBlackjackGame,
-  addBlackjackStake,
+  blackjackHit,
+  blackjackStand,
+  blackjackDoubleDown,
 } from '@/features/casino/api/blackjack';
 
 export interface UseBlackjackArgs {
@@ -14,34 +16,11 @@ export interface UseBlackjackArgs {
   refreshProfile: () => Promise<void>;
 }
 
-const SUITS: Card['suit'][] = ['hearts', 'diamonds', 'clubs', 'spades'];
-const RANKS: Card['rank'][] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
-function getCardValue(rank: Card['rank']): number {
-  if (rank === 'A') return 11;
-  if (['J', 'Q', 'K'].includes(rank)) return 10;
-  return parseInt(rank, 10);
-}
-
-function createDeck(): Card[] {
-  const deck: Card[] = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      deck.push({ suit, rank, value: getCardValue(rank) });
-    }
-  }
-  return deck;
-}
-
-function shuffleDeck(deck: Card[]): Card[] {
-  const newDeck = [...deck];
-  for (let i = newDeck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
-  }
-  return newDeck;
-}
-
+/**
+ * Calculates the optimal blackjack value of a hand. Mirrors the server-side
+ * scoring (`_blackjack_hand_value`) for display purposes only — never used to
+ * settle the game; the backend is authoritative.
+ */
 export function calculateHandValue(hand: Card[]): number {
   let value = 0;
   let aces = 0;
@@ -62,190 +41,95 @@ export function calculateHandValue(hand: Card[]): number {
 }
 
 export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
-  const [deck, setDeck] = useState<Card[]>([]);
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
   const [dealerHand, setDealerHand] = useState<Card[]>([]);
   const [status, setStatus] = useState<BlackjackGameStatus>('betting');
   const [stake, setStake] = useState(0);
   const [gameId, setGameId] = useState<string | null>(null);
   const [isDealing, setIsDealing] = useState(false);
+  // Guards against rapid double-clicks calling action RPCs concurrently.
+  const [isResolving, setIsResolving] = useState(false);
+  const [doubleDownUsed, setDoubleDownUsed] = useState(false);
 
-  // Can add split functionality later, keeping it simple for now (1 hand).
-
-  const getCards = useCallback((currentDeck: Card[], count: number) => {
-    let newDeck = [...currentDeck];
-
-    // Auto shuffle 2 decks if running low
-    if (newDeck.length < count) {
-      newDeck = shuffleDeck([...createDeck(), ...createDeck()]);
-    }
-
-    const drawnCards = newDeck.slice(0, count);
-    newDeck = newDeck.slice(count);
-
-    return { newDeck, drawnCards };
+  const applyState = useCallback((next: BlackjackGameState) => {
+    setGameId(next.id);
+    setStake(next.stake);
+    setPlayerHand(next.playerHand);
+    setDealerHand(next.dealerHand);
+    setStatus(next.status);
+    setDoubleDownUsed(next.doubleDownUsed);
   }, []);
 
   const startGame = useCallback(
     async (betAmount: number) => {
+      if (isDealing || isResolving) return;
       setIsDealing(true);
       try {
-        const result = await placeBlackjackBet({ userId, stake: betAmount });
-        setGameId(result.id);
-        setStake(result.stake);
+        const next = await placeBlackjackBet({ userId, stake: betAmount });
+        applyState(next);
         await refreshProfile();
-
-        // Initial setup
-        const currentDeck = deck.length < 15 ? shuffleDeck([...createDeck(), ...createDeck()]) : [...deck];
-
-        const { newDeck: d1, drawnCards: playerInitial } = getCards(currentDeck, 2);
-        const { newDeck: d2, drawnCards: dealerInitial } = getCards(d1, 2);
-
-        setDeck(d2);
-        setPlayerHand(playerInitial);
-        setDealerHand(dealerInitial);
-        setStatus('playing');
-
-        const initialPlayerValue = calculateHandValue(playerInitial);
-        const initialDealerValue = calculateHandValue(dealerInitial);
-
-        // Blackjack checking
-        if (initialPlayerValue === 21) {
-            let finalStatus: 'won' | 'push' = 'won';
-            let payout = result.stake * 2.5; // 3:2 payout
-
-            if (initialDealerValue === 21) {
-                finalStatus = 'push';
-                payout = result.stake;
-            }
-
-            await settleBlackjackGame({
-                gameId: result.id,
-                userId,
-                status: finalStatus,
-                payout,
-                playerHand: playerInitial,
-                dealerHand: dealerInitial
-            });
-            setStatus(finalStatus);
-            await refreshProfile();
-        }
-
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Nie udało się rozpocząć gry');
       } finally {
         setIsDealing(false);
       }
     },
-    [userId, refreshProfile, getCards, deck]
+    [userId, refreshProfile, applyState, isDealing, isResolving]
   );
 
   const hit = useCallback(async () => {
-    if (status !== 'playing' || !gameId) return;
-
-    const { newDeck, drawnCards } = getCards(deck, 1);
-    const newHand = [...playerHand, ...drawnCards];
-
-    setDeck(newDeck);
-    setPlayerHand(newHand);
-
-    const val = calculateHandValue(newHand);
-
-    if (val > 21) {
-      // Bust
-      await settleBlackjackGame({
-        gameId,
-        userId,
-        status: 'lost',
-        payout: 0,
-        playerHand: newHand,
-        dealerHand
-      });
-      setStatus('lost');
-    }
-  }, [deck, playerHand, getCards, status, gameId, userId, dealerHand]);
-
-  const dealerPlay = useCallback(async (currentDealerHand: Card[], currentDeck: Card[], pHand: Card[], cStake: number) => {
-    let dHand = [...currentDealerHand];
-    let dDeck = [...currentDeck];
-    let dValue = calculateHandValue(dHand);
-
-    while (dValue < 17) {
-        const { newDeck, drawnCards } = getCards(dDeck, 1);
-        dHand = [...dHand, ...drawnCards];
-        dDeck = newDeck;
-        dValue = calculateHandValue(dHand);
-    }
-
-    setDeck(dDeck);
-    setDealerHand(dHand);
-
-    const pValue = calculateHandValue(pHand);
-    let finalStatus: 'won' | 'lost' | 'push' = 'lost';
-    let payout = 0;
-
-    if (dValue > 21 || pValue > dValue) {
-        finalStatus = 'won';
-        payout = cStake * 2;
-    } else if (dValue === pValue) {
-        finalStatus = 'push';
-        payout = cStake;
-    }
-
-    if (gameId) {
-        await settleBlackjackGame({
-            gameId,
-            userId,
-            status: finalStatus,
-            payout,
-            playerHand: pHand,
-            dealerHand: dHand
-        });
-        setStatus(finalStatus);
+    if (status !== 'playing' || !gameId || isResolving) return;
+    setIsResolving(true);
+    try {
+      const next = await blackjackHit({ gameId, userId });
+      applyState(next);
+      if (next.status !== 'playing') {
         await refreshProfile();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Nie udało się dobrać karty');
+    } finally {
+      setIsResolving(false);
     }
-  }, [getCards, gameId, userId, refreshProfile]);
-
+  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
 
   const stand = useCallback(async () => {
-    if (status !== 'playing' || !gameId) return;
-    await dealerPlay(dealerHand, deck, playerHand, stake);
-  }, [status, gameId, dealerPlay, dealerHand, deck, playerHand, stake]);
+    if (status !== 'playing' || !gameId || isResolving) return;
+    setIsResolving(true);
+    try {
+      const next = await blackjackStand({ gameId, userId });
+      applyState(next);
+      await refreshProfile();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Nie udało się zakończyć gry');
+    } finally {
+      setIsResolving(false);
+    }
+  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
 
   const doubleDown = useCallback(async () => {
-    if (status !== 'playing' || !gameId || playerHand.length !== 2) return;
-
+    if (status !== 'playing' || !gameId || isResolving || doubleDownUsed) return;
+    if (playerHand.length !== 2) return;
+    setIsResolving(true);
     try {
-      await addBlackjackStake({ gameId, userId, additionalStake: stake });
-      const newStake = stake * 2;
-      setStake(newStake);
+      const next = await blackjackDoubleDown({ gameId, userId });
+      applyState(next);
       await refreshProfile();
-
-      const { newDeck, drawnCards } = getCards(deck, 1);
-      const newHand = [...playerHand, ...drawnCards];
-
-      setDeck(newDeck);
-      setPlayerHand(newHand);
-
-      const val = calculateHandValue(newHand);
-
-      if (val > 21) {
-          await settleBlackjackGame({
-              gameId,
-              userId,
-              status: 'lost',
-              payout: 0,
-              playerHand: newHand,
-              dealerHand
-          });
-          setStatus('lost');
-      } else {
-          await dealerPlay(dealerHand, newDeck, newHand, newStake);
-      }
-    } catch(err) {
+    } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Nie udało się podwoić stawki');
+    } finally {
+      setIsResolving(false);
     }
-  }, [status, gameId, playerHand, stake, userId, refreshProfile, getCards, deck, dealerHand, dealerPlay]);
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    doubleDownUsed,
+    playerHand.length,
+    applyState,
+    refreshProfile,
+  ]);
 
   const resetGame = useCallback(() => {
     setPlayerHand([]);
@@ -253,6 +137,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setStatus('betting');
     setStake(0);
     setGameId(null);
+    setDoubleDownUsed(false);
   }, []);
 
   return {
@@ -261,11 +146,13 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     status,
     stake,
     isDealing,
+    isResolving,
     startGame,
     hit,
     stand,
     doubleDown,
     resetGame,
-    canDoubleDown: status === 'playing' && playerHand.length === 2,
+    canDoubleDown:
+      status === 'playing' && playerHand.length === 2 && !doubleDownUsed && !isResolving,
   };
 }

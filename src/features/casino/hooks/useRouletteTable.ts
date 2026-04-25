@@ -6,6 +6,7 @@ import {
   getMyCurrentRouletteBets,
   getRecentRouletteSpins,
   getRecentRouletteWins,
+  getRouletteRoundParticipants,
   placeRouletteBet,
   subscribeToRouletteRounds,
 } from '@/features/casino/api/roulette';
@@ -17,6 +18,7 @@ import type {
   RouletteBetRecord,
   RouletteBetType,
   RouletteRecentWin,
+  RouletteRoundParticipant,
   RouletteRoundPhase,
   RouletteTableRound,
 } from '@/types/database';
@@ -37,6 +39,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
   const [recentSpins, setRecentSpins] = useState<RouletteTableRound[]>([]);
   const [recentWins, setRecentWins] = useState<RouletteRecentWin[]>([]);
   const [activeBets, setActiveBets] = useState<RouletteBetRecord[]>([]);
+  const [roundParticipants, setRoundParticipants] = useState<RouletteRoundParticipant[]>([]);
   const [countdownMs, setCountdownMs] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -68,10 +71,15 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       setRecentWins(wins);
 
       if (round) {
-        const bets = await getMyCurrentRouletteBets(round.id);
+        const [bets, participants] = await Promise.all([
+          getMyCurrentRouletteBets(round.id),
+          getRouletteRoundParticipants(round.id),
+        ]);
         setActiveBets(bets);
+        setRoundParticipants(participants);
       } else {
         setActiveBets([]);
+        setRoundParticipants([]);
       }
 
       const newestSettled = spins[0] ?? null;
@@ -173,6 +181,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       recentSpins,
       recentWins,
       activeBets,
+      roundParticipants,
       latestSettledRound,
       phase,
       countdownMs,
@@ -190,6 +199,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       recentSpins,
       recentWins,
       activeBets,
+      roundParticipants,
       latestSettledRound,
       phase,
       countdownMs,

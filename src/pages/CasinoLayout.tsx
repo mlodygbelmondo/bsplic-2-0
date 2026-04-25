@@ -1,13 +1,14 @@
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { LoginPage } from '@/components/LoginPage';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CasinoLayout() {
   const { user, profile, loading } = useAuth();
-  const location = useLocation();
 
-  if (loading) {
+  // Show spinner while auth is loading, OR while we have a user but the
+  // profile hasn't been fetched yet (avoids flashing the login page).
+  if (loading || (user && !profile)) {
     return (
       <div className="min-safe-screen gradient-primary flex items-center justify-center">
         <div className="h-10 w-10 border-4 border-primary-foreground border-t-transparent rounded-full animate-spin" />
@@ -16,12 +17,8 @@ export default function CasinoLayout() {
   }
 
   if (!user || !profile) {
-    // We render LoginPage directly on the /casino route if not logged in
     return <LoginPage />;
   }
-
-  // If we are exactly on /casino, we let the index route handle it
-  // But we provide the layout for all nested routes too
 
   return (
     <div className="h-safe-screen w-full max-w-full flex flex-col overflow-hidden casino-page-bg">

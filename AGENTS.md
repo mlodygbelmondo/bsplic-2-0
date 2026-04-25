@@ -11,10 +11,12 @@
 - Therefore, this `AGENTS.md` is the primary rule source for agent behavior in this repo.
 
 ## Project Snapshot
-- Stack: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui + Supabase.
+- Stack: Vite 5 + React 18 + TypeScript + Tailwind CSS + shadcn/ui + Supabase.
 - Package manager: use `npm` commands by default.
 - Test stack: Vitest + Testing Library (`jsdom` environment).
 - E2E tooling exists: Playwright config is present.
+- PWA support exists via `vite-plugin-pwa`; build outputs may update `dist/` and `dev-dist/`.
+- Motion/visual effects use `framer-motion` and targeted libraries like `canvas-confetti`.
 - Dev server: Vite on port `8080`.
 
 ## Repository Layout
@@ -24,9 +26,12 @@
 - Context/state: `src/contexts/`
 - Shared types: `src/types/`
 - Supabase client/types: `src/integrations/supabase/`
+- Casino feature modules: `src/features/casino/`
+- Social feature modules: `src/features/social/`
 - Unit tests: `src/**/*.{test,spec}.{ts,tsx}`
 - Test setup: `src/test/setup.ts`
 - DB migrations: `supabase/migrations/`
+- Static casino/PWA assets: `public/`
 
 ## Environment Notes
 - Required env vars include:
@@ -106,6 +111,10 @@
   - update UI state
   - notify user (`toast`) where appropriate
 - Realtime channels must be unsubscribed/removed in cleanup.
+- For new RPCs, add a migration under `supabase/migrations/` and keep `src/integrations/supabase/types.ts` in sync if generation is not available.
+- Current app-level RPCs include sportsbook coupon history/rankings, public profiles, social feeds/comments/reactions, daily top-up, admin balance credit, roulette table state/actions, blackjack actions, casino history, and casino rankings.
+- Casino roulette uses realtime-backed shared table data in `casino_roulette_rounds` and `casino_roulette_bets`; blackjack uses server-authoritative `casino_blackjack_games` plus action RPCs.
+- RLS can prevent direct profile/history reads for other users; prefer SECURITY DEFINER RPCs for public profile, public history, and ranking views.
 
 ## Error Handling
 - Wrap async UI actions in `try/catch/finally` when loading state is involved.
@@ -120,6 +129,8 @@
 - Use `cn(...)` from `src/lib/utils.ts` for conditional className composition.
 - Prefer existing shadcn/ui primitives before creating custom base components.
 - Keep responsive behavior intact for mobile and desktop.
+- Casino pages intentionally use dark, image-backed shells and motion-heavy presentation; preserve that visual direction when changing casino UI.
+- Social feed cards should keep coupon/casino activity visually aligned: compact header, rounded card, clear stake/payout block, reactions and comments below.
 
 ## Naming Conventions
 - Components/pages: `PascalCase` file names and exports.
@@ -148,6 +159,8 @@
 - Be careful editing generated or scaffolded code.
 - `src/integrations/supabase/types.ts` is typically generated from schema.
 - If schema changes, prefer regeneration workflow over manual large edits.
+- Manual narrow edits to `src/integrations/supabase/types.ts` are acceptable when adding a migration in the same change and Supabase type generation is unavailable.
+- Treat `dist/` and `dev-dist/` as build outputs; do not edit them manually.
 - Avoid cosmetic churn in `src/components/ui/*` unless needed for the task.
 
 ## Change Scope and Safety

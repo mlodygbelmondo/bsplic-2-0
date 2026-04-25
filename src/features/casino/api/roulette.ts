@@ -7,6 +7,7 @@ import type {
   RouletteBetType,
   RouletteColor,
   RouletteRecentWin,
+  RouletteRoundParticipant,
   RouletteTableRound,
 } from '@/types/database';
 
@@ -30,6 +31,8 @@ type RecentSpinRpcRow =
   Database['public']['Functions']['get_recent_roulette_spins']['Returns'][number];
 type RecentWinRpcRow =
   Database['public']['Functions']['get_recent_roulette_wins']['Returns'][number];
+type RoundParticipantRpcRow =
+  Database['public']['Functions']['get_roulette_round_participants']['Returns'][number];
 
 export async function playRouletteRoundLegacy({
   userId,
@@ -121,6 +124,23 @@ export async function getMyCurrentRouletteBets(
   }
 
   return (data ?? []).map((bet) => normalizeRouletteBet(bet as RouletteBetRow));
+}
+
+export async function getRouletteRoundParticipants(
+  roundId: string,
+): Promise<RouletteRoundParticipant[]> {
+  const { data, error } = await supabase.rpc('get_roulette_round_participants', {
+    p_round_id: roundId,
+  });
+
+  if (error) {
+    if (error.message?.includes('get_roulette_round_participants')) {
+      return [];
+    }
+    throw new Error(error.message || 'Nie udało się pobrać graczy rundy');
+  }
+
+  return ((data ?? []) as RoundParticipantRpcRow[]).map(normalizeRoundParticipant);
 }
 
 export async function placeRouletteBet({
@@ -244,5 +264,17 @@ function normalizeRecentWin(win: RecentWinRpcRow): RouletteRecentWin {
     created_at: win.created_at,
     settled_at: win.settled_at,
     round_number: Number(win.round_number),
+  };
+}
+
+function normalizeRoundParticipant(
+  participant: RoundParticipantRpcRow,
+): RouletteRoundParticipant {
+  return {
+    user_id: participant.user_id,
+    username: participant.username,
+    avatar_url: participant.avatar_url,
+    total_stake: Number(participant.total_stake),
+    bet_count: Number(participant.bet_count),
   };
 }

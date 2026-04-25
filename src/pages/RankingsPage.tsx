@@ -23,12 +23,15 @@ export default function RankingsPage() {
   const [rankings, setRankings] = useState<RankEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('total_profit');
+  const [rankingType, setRankingType] = useState<'sportsbook' | 'casino'>('sportsbook');
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchRankings = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_rankings');
+      const { data, error } = await supabase.rpc(
+        rankingType === 'sportsbook' ? 'get_user_rankings' : 'get_casino_rankings'
+      );
 
       if (error) {
         console.error('Rankings fetch error:', error);
@@ -54,7 +57,7 @@ export default function RankingsPage() {
     };
 
     fetchRankings();
-  }, [user?.id]);
+  }, [rankingType, user?.id]);
 
   const sorted = useMemo(() => {
     return [...rankings].sort((a, b) => b[sortBy] - a[sortBy]);
@@ -70,7 +73,29 @@ export default function RankingsPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="max-w-3xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Rankingi</h1>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold">Rankingi</h1>
+          <div className="inline-flex w-max items-center rounded-lg border border-border bg-card p-1">
+            {([
+              ['sportsbook', 'Zakłady'],
+              ['casino', 'Kasyno'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setRankingType(value)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                  rankingType === value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="-mx-1 mb-4 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
           <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
@@ -163,8 +188,10 @@ export default function RankingsPage() {
                 );
               })}
               {sorted.length === 0 && (
-                <p className="text-center py-8 text-muted-foreground">
-                  Brak danych — nikt jeszcze nie postawił zakładu
+              <p className="text-center py-8 text-muted-foreground">
+                  {rankingType === 'sportsbook'
+                    ? 'Brak danych — nikt jeszcze nie postawił zakładu'
+                    : 'Brak danych — nikt jeszcze nie zagrał w kasynie'}
                 </p>
               )}
             </>

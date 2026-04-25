@@ -454,6 +454,32 @@ export type Database = {
         Args: { p_user_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
+      get_user_casino_history: {
+        Args: { p_user_id: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          bet_label: string
+          created_at: string
+          game_type: string
+          id: string
+          payout: number
+          round_label: string | null
+          stake: number
+          status: string
+        }[]
+      }
+      get_casino_rankings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          balance: number
+          id: string
+          lost_bets: number
+          total_bets: number
+          total_profit: number
+          username: string
+          win_rate: number
+          won_bets: number
+        }[]
+      }
       get_user_rankings: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -539,6 +565,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_roulette_round_participants: {
+        Args: { p_round_id: string }
+        Returns: {
+          avatar_url: string | null
+          bet_count: number
+          total_stake: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_recent_roulette_spins: {
         Args: { p_limit?: number; p_table_key?: string }
         Returns: {
@@ -597,6 +633,58 @@ export type Database = {
       secure_daily_topup: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      place_blackjack_bet: {
+        Args: { p_stake: number; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+        }[]
+      }
+      blackjack_hit: {
+        Args: { p_game_id: string; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+        }[]
+      }
+      blackjack_stand: {
+        Args: { p_game_id: string; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+        }[]
+      }
+      blackjack_double_down: {
+        Args: { p_game_id: string; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+        }[]
       }
     }
     Enums: {

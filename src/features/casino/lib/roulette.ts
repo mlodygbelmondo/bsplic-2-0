@@ -109,7 +109,7 @@ export function getRoulettePhaseLabel(phase: RouletteRoundPhase): string {
     case 'waiting':
       return 'Przyjmowanie zakładów';
     case 'spinning':
-      return 'Koło się kręci';
+      return '';
     case 'settled':
       return 'Runda rozliczona';
   }
@@ -181,6 +181,10 @@ function isValidRouletteBetValue(
   betValue: string,
 ): boolean {
   if (betType === 'straight') {
+    if (betValue.trim() === '') {
+      return false;
+    }
+
     const parsedNumber = Number(betValue);
     return Number.isInteger(parsedNumber) && parsedNumber >= 0 && parsedNumber <= 36;
   }
