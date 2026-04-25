@@ -13,13 +13,13 @@ describe('CasinoHub', () => {
     );
 
     expect(screen.getByTestId('casino-hub-page')).toHaveStyle({
-      backgroundImage: "url('/casino/hub-image.png')",
+      backgroundImage: "url('/casino/hub-image.webp')",
     });
     expect(screen.getByTestId('casino-roulette-card-art')).toHaveStyle({
-      backgroundImage: "url('/casino/roulette-button.png')",
+      backgroundImage: "url('/casino/roulette-button.webp')",
     });
     expect(screen.getByTestId('casino-blackjack-card-art')).toHaveStyle({
-      backgroundImage: "url('/casino/blackjack-button.png')",
+      backgroundImage: "url('/casino/blackjack-button.webp')",
     });
   });
 });

@@ -48,7 +48,7 @@ describe('RouletteWheel', () => {
     vi.useRealTimers();
   });
 
-  it('renders the roulette wheel PNG asset without exceeding its native size', () => {
+  it('renders the roulette wheel WebP asset without exceeding its native size', () => {
     render(
       <RouletteWheel
         phase="waiting"
@@ -60,7 +60,7 @@ describe('RouletteWheel', () => {
 
     const wheelImage = screen.getByRole('img', { name: 'Koło ruletki' });
 
-    expect(wheelImage.getAttribute('src')).toBe('/casino/roulette-wheel-new-3.png');
+    expect(wheelImage.getAttribute('src')).toBe('/casino/roulette-wheel-new-3.webp');
     expect(wheelImage.getAttribute('width')).toBe('1138');
     expect(wheelImage.getAttribute('height')).toBe('1138');
     expect(screen.getByTestId('roulette-wheel-frame').classList.contains('max-w-[1138px]')).toBe(true);
@@ -177,8 +177,8 @@ describe('RouletteWheel', () => {
 
     const ball = screen.getByTestId('roulette-ball');
     expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('settled');
-    expect(ball.style.top).toBe('25.5%');
-    expect(ball.style.transition).toContain('top 0.9s');
+    expect(ball.style.top).toBe('25.3%');
+    expect(ball.style.transition).toContain('top 0.8s');
 
     restoreAnimationFrameMocks();
   });
@@ -191,7 +191,7 @@ describe('RouletteWheel', () => {
       <RouletteWheel
         phase="spinning"
         winningNumber={13}
-        spinStartedAt="2026-04-25T12:00:00.000Z"
+        spinStartedAt={null}
         roundId="round-2"
       />,
     );
@@ -332,7 +332,7 @@ describe('RouletteWheel', () => {
       Number(ballOrbit.getAttribute('data-target-angle')),
       2,
     );
-    expect(ball.style.top).toBe('25.5%');
+    expect(ball.style.top).toBe('25.3%');
   });
 
   it('continues a staged spin when the same round timestamp refreshes before the next frame', () => {

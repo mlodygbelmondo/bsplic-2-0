@@ -17,14 +17,16 @@ import {
   ROULETTE_WHEEL_NUMBERS,
 } from "@/features/casino/lib/rouletteWheel";
 
-const ROULETTE_WHEEL_IMAGE = "/casino/roulette-wheel-new-3.png";
+const ROULETTE_WHEEL_IMAGE = "/casino/roulette-wheel-new-3.webp";
 const ROULETTE_WHEEL_IMAGE_SIZE = 1138;
+const ROULETTE_WHEEL_IMAGE_FILTER =
+  "brightness(0.87) contrast(1.11) saturate(0.94) drop-shadow(0 34px 48px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 30px rgba(127, 29, 29, 0.38))";
 const ROULETTE_WHEEL_MAX_WIDTH_CLASS =
   "max-w-full sm:max-w-[420px] xl:max-w-[560px]";
 const ROULETTE_WHEEL_FRAME_MAX_WIDTH_CLASS = "max-w-[1138px]";
 
 const ROULETTE_BALL_SIZE = "clamp(8px, 2.8%, 16px)";
-const ROULETTE_BALL_ANGLE_OFFSET_DEG = 0;
+const ROULETTE_BALL_ANGLE_OFFSET_DEG = -1;
 const ROULETTE_BALL_SPINNING_TOP_START = "8%";
 const ROULETTE_BALL_SPINNING_TOP_END = "12%";
 const ROULETTE_BALL_SETTLED_TOP = "25.3%";
@@ -33,8 +35,8 @@ const ROULETTE_BALL_TRANSLATE_X = "-50%";
 const ROULETTE_BALL_TRANSLATE_Y = "-50%";
 const ROULETTE_BALL_SETTLE_DELAY_MS = 100;
 const ROULETTE_BALL_SETTLE_DURATION_MS = 800;
-const ROULETTE_BALL_MIN_SPIN_DURATION_MS = 4500;
-const ROULETTE_BALL_MAX_SPIN_DURATION_MS = 6000;
+const ROULETTE_BALL_MIN_SPIN_DURATION_MS = 6000;
+const ROULETTE_BALL_MAX_SPIN_DURATION_MS = 9000;
 
 interface ActiveBallSpin {
   durationMs: number;
@@ -261,7 +263,7 @@ export const RouletteWheel = memo(function RouletteWheel({
       <div
         className={cn(
           "absolute inset-0 scale-90 rounded-full blur-3xl transition-colors duration-700",
-          isSpinning ? "bg-amber-500/30" : "bg-amber-500/10",
+          isSpinning ? "bg-red-950/60" : "bg-red-950/25",
         )}
       />
 
@@ -272,13 +274,28 @@ export const RouletteWheel = memo(function RouletteWheel({
           ROULETTE_WHEEL_FRAME_MAX_WIDTH_CLASS,
         )}
       >
+        <div
+          aria-hidden="true"
+          className="absolute inset-[7%] rounded-full bg-black/70 blur-3xl"
+        />
+
         <img
           src={ROULETTE_WHEEL_IMAGE}
           alt="Koło ruletki"
           width={ROULETTE_WHEEL_IMAGE_SIZE}
           height={ROULETTE_WHEEL_IMAGE_SIZE}
           draggable={false}
-          className="block h-full opacity-90 w-full select-none object-contain"
+          className="relative z-10 block h-full w-full select-none object-contain opacity-95"
+          style={{ filter: ROULETTE_WHEEL_IMAGE_FILTER }}
+        />
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 rounded-full bg-[radial-gradient(circle_at_50%_48%,transparent_42%,rgba(8,3,3,0.34)_68%,rgba(0,0,0,0.74)_100%)] mix-blend-multiply"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-[8%] z-10 rounded-full shadow-[inset_0_0_60px_rgba(0,0,0,0.58),0_0_68px_rgba(127,29,29,0.28)]"
         />
 
         {activeSpin && (

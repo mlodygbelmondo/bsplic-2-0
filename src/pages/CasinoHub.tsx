@@ -6,7 +6,7 @@ export default function CasinoHub() {
     <div
       data-testid="casino-hub-page"
       className="relative mx-auto min-h-full w-full overflow-hidden bg-cover bg-center bg-no-repeat p-4 pb-10 pt-6 md:p-6 md:pb-14"
-      style={{ backgroundImage: "url('/casino/hub-image.png')" }}
+      style={{ backgroundImage: "url('/casino/hub-image.webp')" }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),transparent_34%),linear-gradient(180deg,rgba(10,5,8,0.54),rgba(5,4,7,0.92)_58%,rgba(5,4,7,0.98))]" />
       <div className="relative z-10 mx-auto w-full max-w-7xl space-y-8">
@@ -29,7 +29,7 @@ export default function CasinoHub() {
                 data-testid="casino-roulette-card-art"
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out md:bg-[center_center]"
                 style={{
-                  backgroundImage: "url('/casino/roulette-button.png')",
+                  backgroundImage: "url('/casino/roulette-button.webp')",
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/48 to-black/10" />
@@ -56,7 +56,7 @@ export default function CasinoHub() {
                 data-testid="casino-blackjack-card-art"
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out md:bg-[center_center]"
                 style={{
-                  backgroundImage: "url('/casino/blackjack-button.png')",
+                  backgroundImage: "url('/casino/blackjack-button.webp')",
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />

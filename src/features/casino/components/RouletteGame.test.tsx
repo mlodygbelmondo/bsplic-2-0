@@ -658,6 +658,84 @@ describe('RouletteGame', () => {
     });
   });
 
+  it('shows a new win toast after dismissing the previous win toast', () => {
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      phase: 'settled',
+      currentRound: {
+        ...baseTableMock.currentRound,
+        id: 'round-previous',
+        phase: 'settled' as const,
+        round_number: 123,
+        winning_number: 7,
+        winning_color: 'red' as const,
+      },
+      activeBets: [
+        {
+          id: 'win-user-1',
+          round_id: 'round-previous',
+          user_id: 'user-1',
+          bet_type: 'color' as const,
+          bet_value: 'red',
+          payout: 40,
+          stake: 20,
+          is_win: true,
+          created_at: '2026-04-17T12:00:04.000Z',
+          settled_at: '2026-04-17T12:00:20.000Z',
+        },
+      ],
+    });
+
+    const { rerender } = render(
+      <RouletteGame
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Zamknij powiadomienie o wygranej/i }));
+    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      phase: 'settled',
+      currentRound: {
+        ...baseTableMock.currentRound,
+        id: 'round-next-win',
+        phase: 'settled' as const,
+        round_number: 124,
+        winning_number: 12,
+        winning_color: 'red' as const,
+      },
+      activeBets: [
+        {
+          id: 'win-user-2',
+          round_id: 'round-next-win',
+          user_id: 'user-1',
+          bet_type: 'color' as const,
+          bet_value: 'red',
+          payout: 60,
+          stake: 30,
+          is_win: true,
+          created_at: '2026-04-17T12:01:04.000Z',
+          settled_at: '2026-04-17T12:01:20.000Z',
+        },
+      ],
+    });
+
+    rerender(
+      <RouletteGame
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Wygrałeś 60.00 zł!')).toBeInTheDocument();
+  });
+
   it('shares a freshly settled win with the settled spin result', () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,

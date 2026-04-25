@@ -57,8 +57,7 @@ export function RouletteGame({
   const table = useRouletteTable({ userId, refreshProfile });
   const submitDisabled = table.phase !== 'waiting' || !table.currentRound;
 
-  const [hasCelebrated, setHasCelebrated] = useState(false);
-  const [winBannerDismissed, setWinBannerDismissed] = useState(false);
+  const [dismissedWinId, setDismissedWinId] = useState<string | null>(null);
   const announcedWinIdsRef = useRef<Set<string>>(new Set());
   const pendingWinRoundIdsRef = useRef<Set<string>>(new Set());
 
@@ -78,20 +77,13 @@ export function RouletteGame({
   const totalWin = latestUserWin?.payout ?? 0;
 
   const showWinBanner =
-    totalWin > 0 && !winBannerDismissed;
+    totalWin > 0 && latestUserWin?.id !== dismissedWinId;
 
   useEffect(() => {
-    if (table.phase !== 'settled' && !latestUserWin) {
-      setHasCelebrated(false);
-      setWinBannerDismissed(false);
-      return;
-    }
-    if (latestUserWin && !hasCelebrated) {
-      setHasCelebrated(true);
-      if (!announcedWinIdsRef.current.has(latestUserWin.id)) {
-        announcedWinIdsRef.current.add(latestUserWin.id);
-        toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
-      }
+    if (latestUserWin && !announcedWinIdsRef.current.has(latestUserWin.id)) {
+      announcedWinIdsRef.current.add(latestUserWin.id);
+      setDismissedWinId(null);
+      toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
       confetti({
         particleCount: 150,
         spread: 70,
@@ -99,7 +91,7 @@ export function RouletteGame({
         colors: ['#fbbf24', '#f59e0b', '#ef4444', '#22c55e', '#ffffff'],
       });
     }
-  }, [table.phase, latestUserWin, hasCelebrated]);
+  }, [latestUserWin]);
 
   const handleBetTypeChange = (value: RouletteBetType) => {
     setBetType(value);
@@ -171,7 +163,13 @@ export function RouletteGame({
     addLocalCasinoShare(shareItem);
     pendingWinRoundIdsRef.current.delete(winBet.round_id);
     toast.success('Wygrana udostępniona na Socialu!');
-    setWinBannerDismissed(true);
+    setDismissedWinId(winBet.id);
+  };
+
+  const handleDismissWin = () => {
+    if (latestUserWin) {
+      setDismissedWinId(latestUserWin.id);
+    }
   };
 
   const bettingPanel = (
@@ -218,7 +216,7 @@ export function RouletteGame({
         visible={showWinBanner}
         amount={totalWin}
         onShare={handleShareWin}
-        onDismiss={() => setWinBannerDismissed(true)}
+        onDismiss={handleDismissWin}
       />
 
       {table.tableMessage && (
