@@ -15,7 +15,6 @@ const addCommentMock = vi.fn();
 const toggleReactionMock = vi.fn();
 const fetchReactorsMock = vi.fn();
 const fetchBetsByIdsMock = vi.fn();
-const getLocalCasinoSharesMock = vi.fn<() => SocialFeedItem[]>();
 const addItemsMock = vi.fn();
 const setPreferredCouponTypeMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -50,10 +49,6 @@ vi.mock('@/features/social/api/reactions', () => ({
 
 vi.mock('@/features/home/api/bets', () => ({
   fetchBetsByIds: (...args: unknown[]) => fetchBetsByIdsMock(...args),
-}));
-
-vi.mock('@/features/social/casinoShares', () => ({
-  getLocalCasinoShares: () => getLocalCasinoSharesMock(),
 }));
 
 vi.mock('@/contexts/CouponContext', () => ({
@@ -192,7 +187,6 @@ function makePostPage(size: number, start = 0): SocialFeedItem[] {
 describe('SocialPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getLocalCasinoSharesMock.mockReturnValue([]);
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
     fetchSocialFeedItemMock.mockResolvedValue(null);
     fetchCommentsMock.mockResolvedValue([]);
@@ -360,8 +354,7 @@ describe('SocialPage', () => {
   });
 
   it('renders casino win shares with the real username and coupon-like layout', async () => {
-    fetchSocialFeedMock.mockResolvedValue([]);
-    getLocalCasinoSharesMock.mockReturnValue([makeCasinoFeedItem()]);
+    fetchSocialFeedMock.mockResolvedValue([makeCasinoFeedItem({ username: 'Tester', avatar_url: 'https://cdn.example/tester.jpg' })]);
 
     renderSocialPage();
 
@@ -375,8 +368,7 @@ describe('SocialPage', () => {
   });
 
   it('shows a missing-result fallback instead of question marks for old casino shares', async () => {
-    fetchSocialFeedMock.mockResolvedValue([]);
-    getLocalCasinoSharesMock.mockReturnValue([
+    fetchSocialFeedMock.mockResolvedValue([
       makeCasinoFeedItem({
         casino_bet_type: 'straight',
         casino_bet_value: '0',
@@ -638,6 +630,34 @@ describe('SocialPage', () => {
 
     expect(fetchSocialFeedMock).toHaveBeenCalledTimes(1);
     expect(await screen.findByLabelText('👍 2')).toBeInTheDocument();
+  });
+
+  it('toggles casino reaction through the server feed target', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCasinoFeedItem({
+        id: 'casino-reaction',
+        reactions: { fire: 2 },
+      }),
+    ]);
+    toggleReactionMock.mockResolvedValue('fire');
+
+    renderSocialPage();
+
+    const reactionButton = await screen.findByLabelText('🔥 2');
+    fireEvent.click(reactionButton);
+
+    await waitFor(() => {
+      expect(toggleReactionMock).toHaveBeenCalledWith({
+        userId: 'user-1',
+        emoji: 'fire',
+        postId: undefined,
+        couponId: undefined,
+        casinoShareId: 'casino-reaction',
+      });
+    });
+
+    expect(fetchSocialFeedMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByLabelText('🔥 3')).toBeInTheDocument();
   });
 
   // ── AKO coupon toggle ────────────────────────────────────

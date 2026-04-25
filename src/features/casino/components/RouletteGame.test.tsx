@@ -5,7 +5,7 @@ import { RouletteGame } from './RouletteGame';
 
 const useRouletteTableMock = vi.fn();
 const useIsMobileMock = vi.fn(() => false);
-const addLocalCasinoShareMock = vi.fn();
+const createCasinoShareMock = vi.fn();
 const getStoredRouletteBetTypeMock = vi.fn();
 const storeRouletteBetTypeMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -19,8 +19,8 @@ vi.mock('@/hooks/use-mobile', () => ({
   useIsMobile: () => useIsMobileMock(),
 }));
 
-vi.mock('@/features/social/casinoShares', () => ({
-  addLocalCasinoShare: (...args: unknown[]) => addLocalCasinoShareMock(...args),
+vi.mock('@/features/social/api/social', () => ({
+  createCasinoShare: (...args: unknown[]) => createCasinoShareMock(...args),
 }));
 
 vi.mock('@/features/casino/lib/preferences', () => ({
@@ -45,6 +45,7 @@ describe('RouletteGame', () => {
     vi.clearAllMocks();
     getStoredRouletteBetTypeMock.mockReturnValue(null);
     useIsMobileMock.mockReturnValue(false);
+    createCasinoShareMock.mockResolvedValue('casino-share-1');
   });
 
   afterEach(() => {
@@ -736,7 +737,7 @@ describe('RouletteGame', () => {
     expect(screen.getByText('Wygrałeś 60.00 zł!')).toBeInTheDocument();
   });
 
-  it('shares a freshly settled win with the settled spin result', () => {
+  it('shares a freshly settled win with the settled spin result', async () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
       phase: 'settled',
@@ -792,15 +793,110 @@ describe('RouletteGame', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Udostępnij/i }));
 
-    expect(addLocalCasinoShareMock).toHaveBeenCalledWith(
-      expect.objectContaining({
+    await waitFor(() => {
+      expect(createCasinoShareMock).toHaveBeenCalledWith({
+        userId: 'user-1',
+        betId: 'win-user-1',
         content: expect.stringContaining('Numer 7'),
-        username: 'Tester',
-        avatar_url: 'https://cdn.example/tester.jpg',
-        casino_round_number: 123,
-        casino_winning_number: 7,
-        casino_winning_color: 'red',
-      }),
+        betType: 'color',
+        betValue: 'red',
+        stake: 20,
+        payout: 40,
+        roundNumber: 123,
+        winningNumber: 7,
+        winningColor: 'red',
+      });
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith('Wygrana udostępniona na Socialu!');
+  });
+
+  it('does not show the same logical win again after sharing it', async () => {
+    const sharedWin = {
+      id: 'win-user-1',
+      round_id: 'round-previous',
+      user_id: 'user-1',
+      bet_type: 'color' as const,
+      bet_value: 'red',
+      payout: 40,
+      stake: 20,
+      is_win: true,
+      created_at: '2026-04-17T12:00:04.000Z',
+      settled_at: '2026-04-17T12:00:20.000Z',
+    };
+
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      phase: 'settled',
+      currentRound: {
+        ...baseTableMock.currentRound,
+        id: 'round-previous',
+        phase: 'settled' as const,
+        round_number: 123,
+        winning_number: 7,
+        winning_color: 'red' as const,
+      },
+      activeBets: [sharedWin],
+      recentSpins: [
+        {
+          id: 'round-previous',
+          table_key: 'main',
+          round_number: 123,
+          phase: 'settled' as const,
+          betting_closes_at: '2026-04-17T12:00:15.000Z',
+          betting_opens_at: '2026-04-17T12:00:00.000Z',
+          spin_started_at: '2026-04-17T12:00:15.000Z',
+          settled_at: '2026-04-17T12:00:20.000Z',
+          winning_number: 7,
+          winning_color: 'red' as const,
+          created_at: '2026-04-17T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const { rerender } = render(
+      <RouletteGame
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
     );
+
+    expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Udostępnij/i }));
+
+    await waitFor(() => {
+      expect(createCasinoShareMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      phase: 'settled',
+      currentRound: {
+        ...baseTableMock.currentRound,
+        id: 'round-previous',
+        phase: 'settled' as const,
+        round_number: 123,
+        winning_number: 7,
+        winning_color: 'red' as const,
+      },
+      activeBets: [
+        {
+          ...sharedWin,
+          id: 'win-user-1-from-refresh',
+        },
+      ],
+    });
+
+    rerender(
+      <RouletteGame
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+    expect(toastSuccessMock).toHaveBeenCalledTimes(2);
   });
 });

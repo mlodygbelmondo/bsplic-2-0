@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
+import { createCasinoShare } from '@/features/social/api/social';
 import { validateRouletteBetInput } from '@/features/casino/lib/roulette';
 import {
   getStoredRouletteBetType,
@@ -12,7 +13,6 @@ import {
 import type { RouletteBetType, RouletteRoundPhase } from '@/types/database';
 
 import { useIsMobile } from '@/hooks/use-mobile';
-import { addLocalCasinoShare } from '@/features/social/casinoShares';
 import {
   getRouletteColor,
 } from '@/features/casino/lib/roulette';
@@ -52,13 +52,15 @@ export function RouletteGame({
   const [betType, setBetType] = useState<RouletteBetType | ''>(() => getStoredRouletteBetType() ?? 'straight');
   const [betValue, setBetValue] = useState('');
   const [stake, setStake] = useState('10');
+  const [isSharingWin, setIsSharingWin] = useState(false);
   const isMobile = useIsMobile();
 
   const table = useRouletteTable({ userId, refreshProfile });
   const submitDisabled = table.phase !== 'waiting' || !table.currentRound;
 
-  const [dismissedWinId, setDismissedWinId] = useState<string | null>(null);
-  const announcedWinIdsRef = useRef<Set<string>>(new Set());
+  const [dismissedWinKey, setDismissedWinKey] = useState<string | null>(null);
+  const announcedWinKeysRef = useRef<Set<string>>(new Set());
+  const sharedWinKeysRef = useRef<Set<string>>(new Set());
   const pendingWinRoundIdsRef = useRef<Set<string>>(new Set());
 
   const settledActiveWins = useMemo(
@@ -75,14 +77,20 @@ export function RouletteGame({
   );
   const latestUserWin = settledActiveWins[0] ?? recentSessionWins[0] ?? null;
   const totalWin = latestUserWin?.payout ?? 0;
+  const latestUserWinKey = latestUserWin
+    ? `${latestUserWin.round_id}:${latestUserWin.bet_type}:${latestUserWin.bet_value}:${latestUserWin.stake}:${latestUserWin.payout}`
+    : null;
 
   const showWinBanner =
-    totalWin > 0 && latestUserWin?.id !== dismissedWinId;
+    totalWin > 0
+    && latestUserWinKey !== null
+    && latestUserWinKey !== dismissedWinKey
+    && !sharedWinKeysRef.current.has(latestUserWinKey);
 
   useEffect(() => {
-    if (latestUserWin && !announcedWinIdsRef.current.has(latestUserWin.id)) {
-      announcedWinIdsRef.current.add(latestUserWin.id);
-      setDismissedWinId(null);
+    if (latestUserWin && latestUserWinKey && !announcedWinKeysRef.current.has(latestUserWinKey)) {
+      announcedWinKeysRef.current.add(latestUserWinKey);
+      setDismissedWinKey((current) => (current && current !== latestUserWinKey ? null : current));
       toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
       confetti({
         particleCount: 150,
@@ -91,7 +99,7 @@ export function RouletteGame({
         colors: ['#fbbf24', '#f59e0b', '#ef4444', '#22c55e', '#ffffff'],
       });
     }
-  }, [latestUserWin]);
+  }, [latestUserWin, latestUserWinKey]);
 
   const handleBetTypeChange = (value: RouletteBetType) => {
     setBetType(value);
@@ -122,53 +130,49 @@ export function RouletteGame({
     }
   };
 
-  const handleShareWin = () => {
+  const handleShareWin = async () => {
     const winBet = latestUserWin;
-    if (!winBet || !table.currentRound) return;
+    if (!winBet || !table.currentRound || !latestUserWinKey || isSharingWin) return;
 
-    const settledRound = table.recentSpins.find((round) => round.id === winBet.round_id)
-      ?? (table.currentRound.id === winBet.round_id ? table.currentRound : null);
-    const winningNumber = settledRound?.winning_number ?? null;
-    const winningColor = settledRound?.winning_color
-      ?? (winningNumber === null ? null : getRouletteColor(winningNumber));
-    const winRoundNumber = settledRound?.round_number ?? table.currentRound.round_number;
-
-    const shareItem = {
-      id: `casino-${winBet.id}-${Date.now()}`,
-      item_type: 'casino' as const,
-      user_id: userId,
-      username,
-      avatar_url: avatarUrl,
-      content: winningNumber === null
+    setIsSharingWin(true);
+    try {
+      const settledRound = table.recentSpins.find((round) => round.id === winBet.round_id)
+        ?? (table.currentRound.id === winBet.round_id ? table.currentRound : null);
+      const winningNumber = settledRound?.winning_number ?? null;
+      const winningColor = settledRound?.winning_color
+        ?? (winningNumber === null ? null : getRouletteColor(winningNumber));
+      const winRoundNumber = settledRound?.round_number ?? table.currentRound.round_number;
+      const content = winningNumber === null
         ? `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł`
-        : `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł. Numer ${winningNumber}.`,
-      total_odds: null,
-      stake: winBet.stake,
-      payout: winBet.payout,
-      status: 'won',
-      legs: null,
-      created_at: new Date().toISOString(),
-      reactions: null,
-      comment_count: 0,
-      my_reaction: null,
-      casino_bet_type: winBet.bet_type,
-      casino_bet_value: winBet.bet_value,
-      casino_stake: winBet.stake,
-      casino_payout: winBet.payout,
-      casino_round_number: winRoundNumber,
-      casino_winning_number: winningNumber,
-      casino_winning_color: winningColor,
-    };
+        : `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł. Numer ${winningNumber}.`;
 
-    addLocalCasinoShare(shareItem);
-    pendingWinRoundIdsRef.current.delete(winBet.round_id);
-    toast.success('Wygrana udostępniona na Socialu!');
-    setDismissedWinId(winBet.id);
+      await createCasinoShare({
+        userId,
+        betId: winBet.id,
+        content,
+        betType: winBet.bet_type,
+        betValue: winBet.bet_value,
+        stake: winBet.stake,
+        payout: winBet.payout,
+        roundNumber: winRoundNumber,
+        winningNumber,
+        winningColor,
+      });
+
+      pendingWinRoundIdsRef.current.delete(winBet.round_id);
+      sharedWinKeysRef.current.add(latestUserWinKey);
+      setDismissedWinKey(latestUserWinKey);
+      toast.success('Wygrana udostępniona na Socialu!');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nie udało się udostępnić wygranej.');
+    } finally {
+      setIsSharingWin(false);
+    }
   };
 
   const handleDismissWin = () => {
-    if (latestUserWin) {
-      setDismissedWinId(latestUserWin.id);
+    if (latestUserWinKey) {
+      setDismissedWinKey(latestUserWinKey);
     }
   };
 
@@ -215,7 +219,7 @@ export function RouletteGame({
       <WinBanner
         visible={showWinBanner}
         amount={totalWin}
-        onShare={handleShareWin}
+        onShare={() => void handleShareWin()}
         onDismiss={handleDismissWin}
       />
 

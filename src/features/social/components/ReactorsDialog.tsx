@@ -8,7 +8,7 @@ import { REACTION_EMOJIS, REACTION_TYPES, type ReactionType } from '@/features/s
 interface ReactorsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  target: { postId?: string; couponId?: string; commentId?: string } | null;
+  target: { postId?: string; couponId?: string; casinoShareId?: string; commentId?: string } | null;
   initialEmoji: ReactionType | null;
 }
 

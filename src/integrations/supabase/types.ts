@@ -327,6 +327,59 @@ export type Database = {
         }
         Relationships: []
       }
+      casino_social_shares: {
+        Row: {
+          casino_bet_type: string
+          casino_bet_value: string
+          casino_payout: number
+          casino_round_number: number | null
+          casino_stake: number
+          casino_winning_color: string | null
+          casino_winning_number: number | null
+          content: string
+          created_at: string
+          id: string
+          roulette_bet_id: string | null
+          user_id: string
+        }
+        Insert: {
+          casino_bet_type: string
+          casino_bet_value: string
+          casino_payout: number
+          casino_round_number?: number | null
+          casino_stake: number
+          casino_winning_color?: string | null
+          casino_winning_number?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          roulette_bet_id?: string | null
+          user_id: string
+        }
+        Update: {
+          casino_bet_type?: string
+          casino_bet_value?: string
+          casino_payout?: number
+          casino_round_number?: number | null
+          casino_stake?: number
+          casino_winning_color?: string | null
+          casino_winning_number?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          roulette_bet_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casino_social_shares_roulette_bet_id_fkey"
+            columns: ["roulette_bet_id"]
+            isOneToOne: false
+            referencedRelation: "casino_roulette_bets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       placed_bets: {
         Row: {
           bet_id: string
@@ -479,6 +532,21 @@ export type Database = {
           win_rate: number
           won_bets: number
         }[]
+      }
+      create_casino_social_share: {
+        Args: {
+          p_casino_bet_type: string
+          p_casino_bet_value: string
+          p_casino_payout: number
+          p_casino_round_number?: number | null
+          p_casino_stake: number
+          p_casino_winning_color?: string | null
+          p_casino_winning_number?: number | null
+          p_content: string
+          p_roulette_bet_id: string
+          p_user_id: string
+        }
+        Returns: string
       }
       get_user_rankings: {
         Args: Record<PropertyKey, never>

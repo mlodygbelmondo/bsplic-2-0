@@ -119,9 +119,8 @@ export const RouletteWheel = memo(function RouletteWheel({
         targetIndex,
       );
 
-      // If we joined late and spin is almost over, shorten transition.
       const durationMs = Math.max(
-        ROULETTE_BALL_MIN_SPIN_DURATION_MS,
+        0,
         Math.min(ROULETTE_BALL_MAX_SPIN_DURATION_MS, remainingMs),
       );
       const targetAngle = getRouletteBallPocketAngle(targetIndex);

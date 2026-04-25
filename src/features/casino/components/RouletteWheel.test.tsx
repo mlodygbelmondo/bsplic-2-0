@@ -154,6 +154,30 @@ describe('RouletteWheel', () => {
     restoreAnimationFrameMocks();
   });
 
+  it('shortens the ball transition for late-joined spins', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-25T12:00:05.000Z'));
+    const restoreAnimationFrameMocks = mockRequestAnimationFrame();
+
+    render(
+      <RouletteWheel
+        phase="spinning"
+        winningNumber={13}
+        spinStartedAt="2026-04-25T12:00:00.000Z"
+        roundId="round-2"
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(32);
+    });
+
+    const ball = screen.getByTestId('roulette-ball');
+    expect(ball.style.transition).toContain('top 1s');
+
+    restoreAnimationFrameMocks();
+  });
+
   it('uses a dedicated transition duration when the spinning ball settles', () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
