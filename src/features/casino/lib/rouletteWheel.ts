@@ -4,21 +4,37 @@ export const ROULETTE_WHEEL_NUMBERS = [
 ];
 
 const SEGMENT_ANGLE = 360 / ROULETTE_WHEEL_NUMBERS.length;
-const FULL_SPINS = 5;
-const POINTER_ANGLE = 270;
+const BALL_FULL_SPINS = 4;
+
+const normalizeRotation = (rotation: number) =>
+  ((rotation % 360) + 360) % 360;
 
 export function getRouletteWheelSegmentAngle() {
   return SEGMENT_ANGLE;
 }
 
-export function computeRouletteTargetRotation(
+export function getRouletteBallPocketAngle(targetIdx: number) {
+  return targetIdx * SEGMENT_ANGLE;
+}
+
+export function computeRouletteBallRotation(
   fromRotation: number,
   targetIdx: number,
 ) {
-  const currentBase = fromRotation % 360;
-  const targetSegmentCenter = targetIdx * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
-  const targetBase = POINTER_ANGLE - targetSegmentCenter;
+  const currentBase = normalizeRotation(fromRotation);
+  const targetBase = getRouletteBallPocketAngle(targetIdx);
   let delta = targetBase - currentBase;
-  if (delta > 0) delta -= 360;
-  return fromRotation + delta - FULL_SPINS * 360;
+  if (delta < 0) delta += 360;
+  return fromRotation + delta + BALL_FULL_SPINS * 360;
+}
+
+export function computeRouletteBallSettledRotation(
+  fromRotation: number,
+  targetIdx: number,
+) {
+  const currentBase = normalizeRotation(fromRotation);
+  const targetBase = getRouletteBallPocketAngle(targetIdx);
+  let delta = targetBase - currentBase;
+  if (delta < 0) delta += 360;
+  return fromRotation + delta;
 }

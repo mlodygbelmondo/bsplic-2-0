@@ -2,7 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Badge, BADGE_DEFINITIONS, CouponHistoryEntry, PublicProfile } from '@/types/database';
+import { Badge, BADGE_DEFINITIONS, CasinoHistoryEntry, CouponHistoryEntry, PublicProfile } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Navigate, useParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,6 +77,7 @@ export default function ProfilePage() {
   const isOwnProfile = !normalizedUserRef || (targetUserId !== null && targetUserId === user?.id);
 
   const [coupons, setCoupons] = useState<CouponHistoryEntry[]>([]);
+  const [casinoHistory, setCasinoHistory] = useState<CasinoHistoryEntry[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
   const [rankingStats, setRankingStats] = useState<{
@@ -87,7 +88,9 @@ export default function ProfilePage() {
     totalProfit: number;
   } | null>(null);
   const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending' | 'refund'>('all');
+  const [historyType, setHistoryType] = useState<'sportsbook' | 'casino'>('sportsbook');
   const [loadingCoupons, setLoadingCoupons] = useState(true);
+  const [loadingCasinoHistory, setLoadingCasinoHistory] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
   const [avatarUploadLoading, setAvatarUploadLoading] = useState(false);
@@ -104,6 +107,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!targetUserId) return;
+    setLoadingCoupons(true);
+    setLoadingCasinoHistory(true);
 
     // Fetch coupon history via RPC
     supabase
@@ -111,6 +116,19 @@ export default function ProfilePage() {
       .then(({ data }) => {
         if (data) setCoupons(data as unknown as CouponHistoryEntry[]);
         setLoadingCoupons(false);
+      });
+
+    supabase
+      .rpc('get_user_casino_history', { p_user_id: targetUserId, p_limit: 100, p_offset: 0 })
+      .then(({ data }) => {
+        if (data) {
+          setCasinoHistory((data as unknown as CasinoHistoryEntry[]).map((entry) => ({
+            ...entry,
+            stake: Number(entry.stake),
+            payout: Number(entry.payout),
+          })));
+        }
+        setLoadingCasinoHistory(false);
       });
 
     // Fetch badges
@@ -354,10 +372,35 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Coupon history */}
+        {/* History */}
         <div className="bg-card rounded-xl p-4 card-shadow">
-          <h2 className="font-bold mb-3">Historia zakładów</h2>
-          <div className="-mx-1 mb-3 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-bold">Historia</h2>
+            <div className="inline-flex w-max items-center rounded-lg border border-border bg-muted/40 p-1">
+              {([
+                ['sportsbook', 'Zakłady'],
+                ['casino', 'Kasyno'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setHistoryType(value)}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                    historyType === value
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-background hover:text-foreground'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {historyType === 'sportsbook' && (
+          <>
+            <div className="-mx-1 mb-3 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
             <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
               {(['all', 'won', 'lost', 'pending', 'refund'] as const).map((value) => (
                 <button
@@ -496,6 +539,61 @@ export default function ProfilePage() {
               )}
             </div>
           )}
+          </>
+          )}
+
+          {historyType === 'casino' && (loadingCasinoHistory ? (
+            <div className="space-y-2">
+              {[...Array(3)].map((_, index) => (
+                <Skeleton key={index} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {casinoHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Brak betów z kasyna</p>
+              ) : (
+                casinoHistory.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm card-shadow">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{entry.game_type}</p>
+                        {entry.round_label && (
+                          <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                            {entry.round_label}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{entry.bet_label}</p>
+                    </div>
+                    <div className="ml-3 shrink-0 text-right">
+                      <p className="font-bold">{entry.stake.toFixed(2)} zł</p>
+                      <p
+                        className={cn(
+                          'text-xs font-medium',
+                          entry.status === 'won'
+                            ? 'text-success'
+                            : entry.status === 'lost'
+                              ? 'text-destructive'
+                              : entry.status === 'push'
+                                ? 'text-primary'
+                              : 'text-muted-foreground'
+                        )}
+                      >
+                        {entry.status === 'won'
+                          ? `+${entry.payout.toFixed(2)} zł`
+                          : entry.status === 'lost'
+                            ? 'Przegrana'
+                            : entry.status === 'push'
+                              ? `Zwrot ${entry.payout.toFixed(2)} zł`
+                            : 'W toku'}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Badges — only on own profile */}

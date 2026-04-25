@@ -21,12 +21,13 @@ export function RecentWinsFeed({ wins }: RecentWinsFeedProps) {
         transition={{ delay: 0.25 }}
         className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm"
       >
-        <div className="flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-white/30" />
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
-            Brak ostatnich wygranych
+        <div className="mb-2 flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-400" />
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+            Ostatnie wygrane
           </p>
         </div>
+        <p className="text-sm text-white/40">Brak ostatnich wygranych</p>
       </motion.div>
     );
   }

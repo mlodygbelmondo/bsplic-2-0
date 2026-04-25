@@ -27,9 +27,6 @@ import {
   toggleReaction,
 } from '@/features/social/api/social';
 import {
-  getLocalCasinoShares,
-} from '@/features/social/casinoShares';
-import {
   formatRouletteBetValue,
   getRouletteBetTypeLabel,
   getRouletteColor,
@@ -91,7 +88,6 @@ function formatTimeAgo(dateStr: string) {
 export default function SocialPage() {
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
   const [feedFilter, setFeedFilter] = useState<'all' | 'coupon' | 'post' | 'casino'>('all');
-  const [localCasinoItems, setLocalCasinoItems] = useState<SocialFeedItem[]>(() => getLocalCasinoShares());
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -104,36 +100,29 @@ export default function SocialPage() {
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(null);
   const [reactorsOpen, setReactorsOpen] = useState(false);
   const [reactorsEmoji, setReactorsEmoji] = useState<ReactionType | null>(null);
   const [reactorsTarget, setReactorsTarget] = useState<{
     postId?: string;
     couponId?: string;
+    casinoShareId?: string;
     commentId?: string;
   } | null>(null);
 
   const targetItemTypeParam = searchParams.get('itemType');
   const targetItemIdParam = searchParams.get('itemId');
   const targetItemType =
-    targetItemTypeParam === 'post' || targetItemTypeParam === 'coupon'
+    targetItemTypeParam === 'post' || targetItemTypeParam === 'coupon' || targetItemTypeParam === 'casino'
       ? targetItemTypeParam
       : null;
   const targetItemId = targetItemIdParam && targetItemIdParam.length > 0 ? targetItemIdParam : null;
 
-  const mergedFeedItems = useMemo(() => {
-    // Merge local casino shares on top so they appear first
-    const casinoOnly = localCasinoItems.filter(
-      (c) => !feedItems.some((f) => f.id === c.id && f.item_type === c.item_type),
-    );
-    return [...casinoOnly, ...feedItems];
-  }, [feedItems, localCasinoItems]);
-
   const filteredFeedItems = useMemo(() => {
-    if (feedFilter === 'all') return mergedFeedItems;
-    return mergedFeedItems.filter((item) => item.item_type === feedFilter);
-  }, [mergedFeedItems, feedFilter]);
+    if (feedFilter === 'all') return feedItems;
+    return feedItems.filter((item) => item.item_type === feedFilter);
+  }, [feedItems, feedFilter]);
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
@@ -340,7 +329,11 @@ export default function SocialPage() {
       setCommentsLoadingMap((prev) => ({ ...prev, [itemId]: true }));
       try {
         const target =
-          itemType === 'post' ? { postId: itemId } : { couponId: itemId };
+          itemType === 'post'
+            ? { postId: itemId }
+            : itemType === 'coupon'
+              ? { couponId: itemId }
+              : { casinoShareId: itemId };
         const data = await fetchComments(target, user?.id);
         setCommentsMap((prev) => ({ ...prev, [itemId]: data }));
         setCommentsLoadedMap((prev) => ({ ...prev, [itemId]: true }));
@@ -382,6 +375,7 @@ export default function SocialPage() {
         content: payload,
         postId: itemType === 'post' ? itemId : undefined,
         couponId: itemType === 'coupon' ? itemId : undefined,
+        casinoShareId: itemType === 'casino' ? itemId : undefined,
         parentId,
       });
 
@@ -410,13 +404,12 @@ export default function SocialPage() {
       emoji: ReactionType,
     ) => {
       if (!user) return;
-      if (itemType === 'casino') return; // local only, no server reaction
       const nextReaction = await toggleReaction({
         userId: user.id,
         emoji: emoji as ReactionEmoji,
         postId: itemType === 'post' ? itemId : undefined,
         couponId: itemType === 'coupon' ? itemId : undefined,
-        // casino items don't have dedicated reaction target yet; skip server call
+        casinoShareId: itemType === 'casino' ? itemId : undefined,
       });
 
       setFeedItems((prev) =>
@@ -471,13 +464,14 @@ export default function SocialPage() {
   );
 
   const handleOpenItemReactors = useCallback((item: SocialFeedItem) => {
-    if (item.item_type === 'casino') return;
     const firstReactionType = REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
 
     setReactorsTarget(
       item.item_type === 'post'
         ? { postId: item.id }
-        : { couponId: item.id },
+        : item.item_type === 'coupon'
+          ? { couponId: item.id }
+          : { casinoShareId: item.id },
     );
     setReactorsEmoji(firstReactionType);
     setReactorsOpen(true);
@@ -830,6 +824,7 @@ interface CasinoContentProps {
 }
 
 function CasinoContent({ item }: CasinoContentProps) {
+  const hasWinningNumber = typeof item.casino_winning_number === 'number';
   const color = item.casino_winning_color ?? 'green';
   const colorClass =
     color === 'red'
@@ -839,27 +834,47 @@ function CasinoContent({ item }: CasinoContentProps) {
         : 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
 
   return (
-    <div className="px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border-2 text-lg font-black',
-            colorClass,
-          )}
-        >
-          {item.casino_winning_number ?? '?'}
-        </div>
+    <div className="px-4 py-2">
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/70 p-3 text-sm">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              Ruletka
+            </span>
+            {item.casino_round_number && (
+              <span className="text-xs font-medium text-muted-foreground">
+                Runda #{item.casino_round_number}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 font-medium truncate">
             {getRouletteBetTypeLabel(item.casino_bet_type ?? 'straight')}:{' '}
             {formatRouletteBetValue(item.casino_bet_type ?? 'straight', item.casino_bet_value ?? '')}
           </p>
-          <p className="text-xs text-white/50">
-            Stawka {(item.casino_stake ?? 0).toFixed(2)} zł • Wygrana{' '}
-            <span className="font-bold text-emerald-400">
-              +{(item.casino_payout ?? 0).toFixed(2)} zł
-            </span>{' '}
-            • Runda #{item.casino_round_number}
+          <p className="text-xs text-muted-foreground">
+            {hasWinningNumber
+              ? `Numer: ${item.casino_winning_number} • Stawka ${(item.casino_stake ?? 0).toFixed(2)} zł`
+              : `Wynik niedostępny • Stawka ${(item.casino_stake ?? 0).toFixed(2)} zł`}
+          </p>
+        </div>
+        {hasWinningNumber ? (
+          <div
+            className={cn(
+              'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-black',
+              colorClass,
+            )}
+          >
+            {item.casino_winning_number}
+          </div>
+        ) : (
+          <div className="flex h-10 min-w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-border/70 bg-background px-2 text-[10px] font-semibold text-muted-foreground">
+            Brak
+          </div>
+        )}
+        <div className="shrink-0 text-right">
+          <p className="font-bold">{(item.casino_stake ?? 0).toFixed(2)} zł</p>
+          <p className="text-xs font-medium text-success">
+            +{(item.casino_payout ?? 0).toFixed(2)} zł
           </p>
         </div>
       </div>

@@ -1,59 +1,74 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { motion } from "framer-motion";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
+import { ROULETTE_SPIN_REVEAL_MS } from "@/features/casino/lib/roulette";
 import {
-  getRouletteColor,
-  ROULETTE_SPIN_REVEAL_MS,
-} from '@/features/casino/lib/roulette';
-import {
-  computeRouletteTargetRotation,
-  getRouletteWheelSegmentAngle,
+  computeRouletteBallRotation,
+  computeRouletteBallSettledRotation,
+  getRouletteBallPocketAngle,
   ROULETTE_WHEEL_NUMBERS,
-} from '@/features/casino/lib/rouletteWheel';
+} from "@/features/casino/lib/rouletteWheel";
 
-const CX = 160;
-const CY = 160;
-const R = 150;
-const SEGMENT_ANGLE = getRouletteWheelSegmentAngle();
+const ROULETTE_WHEEL_IMAGE = "/casino/roulette-wheel-new-3.webp";
+const ROULETTE_WHEEL_IMAGE_SIZE = 1138;
+const ROULETTE_WHEEL_IMAGE_FILTER =
+  "brightness(0.87) contrast(1.11) saturate(0.94) drop-shadow(0 34px 48px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 30px rgba(127, 29, 29, 0.38))";
+const ROULETTE_WHEEL_MAX_WIDTH_CLASS =
+  "max-w-full sm:max-w-[420px] xl:max-w-[560px]";
+const ROULETTE_WHEEL_FRAME_MAX_WIDTH_CLASS = "max-w-[1138px]";
 
-function polar(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: cx + r * Math.cos(rad),
-    y: cy + r * Math.sin(rad),
-  };
-}
+const ROULETTE_BALL_SIZE = "clamp(8px, 2.8%, 16px)";
+const ROULETTE_BALL_ANGLE_OFFSET_DEG = -1;
+const ROULETTE_BALL_SPINNING_TOP_START = "8%";
+const ROULETTE_BALL_SPINNING_TOP_END = "12%";
+const ROULETTE_BALL_SETTLED_TOP = "25.3%";
+const ROULETTE_BALL_ORBIT_ORIGIN = "50% 50%";
+const ROULETTE_BALL_TRANSLATE_X = "-50%";
+const ROULETTE_BALL_TRANSLATE_Y = "-50%";
+const ROULETTE_BALL_SETTLE_DELAY_MS = 100;
+const ROULETTE_BALL_SETTLE_DURATION_MS = 800;
+const ROULETTE_BALL_MIN_SPIN_DURATION_MS = 6000;
+const ROULETTE_BALL_MAX_SPIN_DURATION_MS = 9000;
 
-function segmentPath(
-  cx: number,
-  cy: number,
-  r: number,
-  startAngle: number,
-  endAngle: number,
-) {
-  const start = polar(cx, cy, r, startAngle);
-  const end = polar(cx, cy, r, endAngle);
-  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y} Z`;
+interface ActiveBallSpin {
+  durationMs: number;
+  fromRotation: number;
+  phase: "staged" | "spinning" | "settled";
+  roundId: string;
+  targetAngle: number;
+  targetIndex: number;
+  targetNumber: number;
+  targetRotation: number;
 }
 
 interface RouletteWheelProps {
-  phase: 'waiting' | 'spinning' | 'settled';
+  phase: "waiting" | "spinning" | "settled";
   winningNumber: number | null;
   spinStartedAt: string | null;
   roundId: string | null;
 }
 
-export function RouletteWheel({
+export const RouletteWheel = memo(function RouletteWheel({
   phase,
   winningNumber,
   spinStartedAt,
   roundId,
 }: RouletteWheelProps) {
-  const [rotation, setRotation] = useState(0);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const rotationRef = useRef(0);
+  const [activeSpin, setActiveSpin] = useState<ActiveBallSpin | null>(null);
+  const ballRotationRef = useRef(0);
   const triggeredRoundRef = useRef<string | null>(null);
+  const cleanupRef = useRef<{
+    settleTimer: number | null;
+    rafIds: number[];
+  }>({ rafIds: [], settleTimer: null });
 
   const targetIndex = useMemo(() => {
     if (winningNumber == null) return 0;
@@ -62,14 +77,25 @@ export function RouletteWheel({
   }, [winningNumber]);
 
   useEffect(() => {
-    if (phase === 'waiting') {
+    const clearPendingAnimationWork = () => {
+      cleanupRef.current.rafIds.forEach((rafId) => {
+        window.cancelAnimationFrame(rafId);
+      });
+      cleanupRef.current.rafIds = [];
+
+      if (cleanupRef.current.settleTimer !== null) {
+        window.clearTimeout(cleanupRef.current.settleTimer);
+        cleanupRef.current.settleTimer = null;
+      }
+    };
+
+    if (phase === "waiting") {
       triggeredRoundRef.current = null;
-      setIsSpinning(false);
       return;
     }
 
     if (
-      phase === 'spinning' &&
+      phase === "spinning" &&
       winningNumber != null &&
       roundId &&
       triggeredRoundRef.current !== roundId
@@ -85,190 +111,224 @@ export function RouletteWheel({
           )
         : ROULETTE_SPIN_REVEAL_MS;
 
-      const nextRotation = computeRouletteTargetRotation(
-        rotationRef.current,
+      clearPendingAnimationWork();
+
+      const fromRotation = ballRotationRef.current;
+      const targetRotation = computeRouletteBallRotation(
+        ballRotationRef.current,
         targetIndex,
       );
-      rotationRef.current = nextRotation;
-      setRotation(nextRotation);
 
-      // If we joined late and spin is almost over, shorten transition
-      const duration = Math.max(1.5, remainingMs / 1000);
-      setIsSpinning(true);
+      const durationMs = Math.max(
+        0,
+        Math.min(ROULETTE_BALL_MAX_SPIN_DURATION_MS, remainingMs),
+      );
+      const targetAngle = getRouletteBallPocketAngle(targetIndex);
+      const targetNumber = winningNumber;
 
-      // Auto-clear spinning state after transition finishes
-      const timer = window.setTimeout(() => {
-        setIsSpinning(false);
-      }, duration * 1000 + 200);
+      setActiveSpin({
+        durationMs,
+        fromRotation,
+        phase: "staged",
+        roundId,
+        targetAngle,
+        targetIndex,
+        targetNumber,
+        targetRotation,
+      });
 
-      return () => {
-        window.clearTimeout(timer);
-      };
+      const firstRaf = window.requestAnimationFrame(() => {
+        const secondRaf = window.requestAnimationFrame(() => {
+          ballRotationRef.current = targetRotation;
+          setActiveSpin((current) =>
+            current?.roundId === roundId
+              ? { ...current, phase: "spinning" }
+              : current,
+          );
+        });
+
+        cleanupRef.current.rafIds = cleanupRef.current.rafIds.filter(
+          (rafId) => rafId !== firstRaf,
+        );
+        cleanupRef.current.rafIds.push(secondRaf);
+      });
+
+      cleanupRef.current.rafIds.push(firstRaf);
+
+      cleanupRef.current.settleTimer = window.setTimeout(() => {
+        setActiveSpin((current) => {
+          if (current?.roundId !== roundId) return current;
+          const settledRotation = computeRouletteBallSettledRotation(
+            current.targetRotation,
+            current.targetIndex,
+          );
+          ballRotationRef.current = settledRotation;
+          return {
+            ...current,
+            phase: "settled",
+            targetRotation: settledRotation,
+          };
+        });
+        cleanupRef.current.settleTimer = null;
+      }, durationMs + ROULETTE_BALL_SETTLE_DELAY_MS);
+
+      return undefined;
     }
 
-    if (phase === 'settled' && winningNumber != null) {
-      const settledRotation = computeRouletteTargetRotation(
-        rotationRef.current,
-        targetIndex,
-      );
-      rotationRef.current = settledRotation;
-      setRotation(settledRotation);
-      setIsSpinning(false);
+    if (phase === "settled" && winningNumber != null) {
+      setActiveSpin((current) => {
+        const targetAngle = getRouletteBallPocketAngle(targetIndex);
+        if (!current) {
+          const settledRotation = computeRouletteBallSettledRotation(
+            ballRotationRef.current,
+            targetIndex,
+          );
+          ballRotationRef.current = settledRotation;
+          return {
+            durationMs: 0,
+            fromRotation: settledRotation,
+            phase: "settled",
+            roundId: roundId ?? `settled-${winningNumber}`,
+            targetAngle,
+            targetIndex,
+            targetNumber: winningNumber,
+            targetRotation: settledRotation,
+          };
+        }
+
+        if (current.targetNumber !== winningNumber) return current;
+        if (current.phase === "staged" || current.phase === "spinning") {
+          return current;
+        }
+
+        const settledRotation = computeRouletteBallSettledRotation(
+          current.targetRotation,
+          targetIndex,
+        );
+        ballRotationRef.current = settledRotation;
+        return {
+          ...current,
+          phase: "settled",
+          targetRotation: settledRotation,
+        };
+      });
     }
   }, [phase, winningNumber, spinStartedAt, roundId, targetIndex]);
 
-  const segments = useMemo(() => {
-    return ROULETTE_WHEEL_NUMBERS.map((num, i) => {
-      const startAngle = i * SEGMENT_ANGLE;
-      const endAngle = (i + 1) * SEGMENT_ANGLE;
-      const d = segmentPath(CX, CY, R, startAngle, endAngle);
-      const color = getRouletteColor(num);
-      const fill =
-        color === 'red'
-          ? '#991b1b'
-          : color === 'green'
-            ? '#047857'
-            : '#262626';
-      const midAngle = startAngle + SEGMENT_ANGLE / 2;
-      const textPos = polar(CX, CY, R * 0.72, midAngle);
-      return { num, d, fill, textPos, midAngle };
-    });
+  useEffect(() => {
+    const cleanup = cleanupRef.current;
+
+    return () => {
+      cleanup.rafIds.forEach((rafId) => {
+        window.cancelAnimationFrame(rafId);
+      });
+      if (cleanup.settleTimer !== null) {
+        window.clearTimeout(cleanup.settleTimer);
+      }
+    };
   }, []);
 
-  const transitionStyle = isSpinning
-    ? `transform ${Math.max(2, Math.min(6, (spinStartedAt
-        ? Math.max(0, new Date(spinStartedAt).getTime() + ROULETTE_SPIN_REVEAL_MS - Date.now())
-        : ROULETTE_SPIN_REVEAL_MS) / 1000))}s cubic-bezier(0.2, 0.8, 0.25, 1)`
-    : 'none';
-
-  const isRevealed = !isSpinning && (phase === 'settled' || (phase === 'spinning' && winningNumber != null && !isSpinning));
+  const ballOrbitTransition =
+    activeSpin?.phase === "spinning"
+      ? `transform ${activeSpin.durationMs / 1000}s cubic-bezier(0.2, 0.8, 0.25, 1)`
+      : "none";
+  const ballRotation =
+    activeSpin?.phase === "staged"
+      ? activeSpin.fromRotation
+      : (activeSpin?.targetRotation ?? 0);
+  const adjustedBallRotation = ballRotation + ROULETTE_BALL_ANGLE_OFFSET_DEG;
+  const isSpinning = activeSpin?.phase === "spinning";
+  const ballTop =
+    activeSpin?.phase === "staged"
+      ? ROULETTE_BALL_SPINNING_TOP_START
+      : activeSpin?.phase === "spinning"
+        ? ROULETTE_BALL_SPINNING_TOP_END
+        : ROULETTE_BALL_SETTLED_TOP;
+  const ballTransition =
+    activeSpin?.phase === "spinning"
+      ? `top ${activeSpin.durationMs / 1000}s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
+      : activeSpin?.phase === "settled"
+        ? `top ${ROULETTE_BALL_SETTLE_DURATION_MS / 1000}s cubic-bezier(0.18, 0.72, 0.2, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
+        : "none";
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.1, type: 'spring', stiffness: 100 }}
-      className="relative mx-auto w-full max-w-full sm:max-w-[300px] lg:max-w-[380px]"
+      transition={{ delay: 0.1, type: "spring", stiffness: 100 }}
+      className={cn("relative mx-auto w-full", ROULETTE_WHEEL_MAX_WIDTH_CLASS)}
     >
       {/* Ambient glow */}
       <div
         className={cn(
-          'absolute inset-0 scale-90 rounded-full blur-3xl transition-colors duration-700',
-          isSpinning ? 'bg-amber-500/30' : 'bg-amber-500/10',
+          "absolute inset-0 scale-90 rounded-full blur-3xl transition-colors duration-700",
+          isSpinning ? "bg-red-950/60" : "bg-red-950/25",
         )}
       />
 
-      <div className="relative">
-        <svg
-          viewBox="0 0 320 320"
-          className="w-full"
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transition: transitionStyle,
-          }}
-        >
-          {/* Outer decorative rings */}
-          <circle
-            cx={CX}
-            cy={CY}
-            r={R + 2}
-            fill="none"
-            stroke="#f59e0b"
-            strokeWidth="3"
-          />
-          <circle
-            cx={CX}
-            cy={CY}
-            r={R - 1}
-            fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1"
-          />
+      <div
+        data-testid="roulette-wheel-frame"
+        className={cn(
+          "relative mx-auto aspect-square w-full",
+          ROULETTE_WHEEL_FRAME_MAX_WIDTH_CLASS,
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-[7%] rounded-full bg-black/70 blur-3xl"
+        />
 
-          {segments.map((seg, i) => (
-            <g key={i}>
-              <path
-                d={seg.d}
-                fill={seg.fill}
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth="1"
-              />
-              <g
-                transform={`rotate(${seg.midAngle}, ${seg.textPos.x}, ${seg.textPos.y})`}
-              >
-                <text
-                  x={seg.textPos.x}
-                  y={seg.textPos.y}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="white"
-                  fontSize="11"
-                  fontWeight="700"
-                  transform={`rotate(90, ${seg.textPos.x}, ${seg.textPos.y})`}
-                >
-                  {seg.num}
-                </text>
-              </g>
-            </g>
-          ))}
+        <img
+          src={ROULETTE_WHEEL_IMAGE}
+          alt="Koło ruletki"
+          width={ROULETTE_WHEEL_IMAGE_SIZE}
+          height={ROULETTE_WHEEL_IMAGE_SIZE}
+          draggable={false}
+          className="relative z-10 block h-full w-full select-none object-contain opacity-95"
+          style={{ filter: ROULETTE_WHEEL_IMAGE_FILTER }}
+        />
 
-          {/* Inner hub ring */}
-          <circle
-            cx={CX}
-            cy={CY}
-            r={50}
-            fill="#09090b"
-            stroke="#fbbf24"
-            strokeWidth="2"
-          />
-          <circle
-            cx={CX}
-            cy={CY}
-            r={42}
-            fill="none"
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth="1"
-          />
-        </svg>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 rounded-full bg-[radial-gradient(circle_at_50%_48%,transparent_42%,rgba(8,3,3,0.34)_68%,rgba(0,0,0,0.74)_100%)] mix-blend-multiply"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-[8%] z-10 rounded-full shadow-[inset_0_0_60px_rgba(0,0,0,0.58),0_0_68px_rgba(127,29,29,0.28)]"
+        />
 
-        {/* Pointer */}
-        <div className="absolute -top-1.5 left-1/2 z-10 -translate-x-1/2">
-          <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[20px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-[0_4px_8px_rgba(245,158,11,0.5)]" />
-        </div>
-
-        {/* Center number overlay */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        {activeSpin && (
           <div
-            className={cn(
-              'flex items-center justify-center rounded-full border-2 bg-black/80 backdrop-blur-sm transition-all duration-500',
-              isRevealed && winningNumber != null
-                ? 'h-[72px] w-[72px] border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.2)] sm:h-20 sm:w-20'
-                : 'h-[72px] w-[72px] border-white/10',
-            )}
+            aria-hidden="true"
+            data-testid="roulette-ball-orbit"
+            data-animation-state={activeSpin.phase}
+            data-target-angle={activeSpin.targetAngle.toFixed(3)}
+            data-target-index={activeSpin.targetIndex}
+            data-target-number={activeSpin.targetNumber}
+            className="pointer-events-none absolute inset-0 z-20 transform-gpu"
+            style={{
+              transform: `rotate(${adjustedBallRotation}deg)`,
+              transformOrigin: ROULETTE_BALL_ORBIT_ORIGIN,
+              transition: ballOrbitTransition,
+            }}
           >
-            {isRevealed && winningNumber != null ? (
-              <motion.span
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className={cn(
-                  'text-2xl font-black sm:text-3xl',
-                  getRouletteColor(winningNumber) === 'red' && 'text-red-400',
-                  getRouletteColor(winningNumber) === 'black' &&
-                    'text-stone-300',
-                  getRouletteColor(winningNumber) === 'green' &&
-                    'text-emerald-400',
-                )}
-              >
-                {winningNumber}
-              </motion.span>
-            ) : (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-                BSPLIC
-              </span>
-            )}
+            <div
+              data-testid="roulette-ball"
+              className="absolute left-1/2 rounded-full border border-white/90 bg-[radial-gradient(circle_at_35%_30%,#ffffff_0%,#fff7d6_30%,#d8b46a_58%,#7b4a18_100%)] shadow-[0_0_12px_rgba(255,246,198,0.85),0_5px_12px_rgba(0,0,0,0.55)]"
+              style={
+                {
+                  "--roulette-ball-size": ROULETTE_BALL_SIZE,
+                  height: "var(--roulette-ball-size)",
+                  top: ballTop,
+                  transform: `translate3d(${ROULETTE_BALL_TRANSLATE_X}, ${ROULETTE_BALL_TRANSLATE_Y}, 0)`,
+                  transition: ballTransition,
+                  width: "var(--roulette-ball-size)",
+                } as CSSProperties & { "--roulette-ball-size": string }
+              }
+            />
           </div>
-        </div>
+        )}
       </div>
     </motion.div>
   );
-}
+});

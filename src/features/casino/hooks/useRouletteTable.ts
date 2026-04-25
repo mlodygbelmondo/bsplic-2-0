@@ -6,6 +6,7 @@ import {
   getMyCurrentRouletteBets,
   getRecentRouletteSpins,
   getRecentRouletteWins,
+  getRouletteRoundParticipants,
   placeRouletteBet,
   subscribeToRouletteRounds,
 } from '@/features/casino/api/roulette';
@@ -17,6 +18,7 @@ import type {
   RouletteBetRecord,
   RouletteBetType,
   RouletteRecentWin,
+  RouletteRoundParticipant,
   RouletteRoundPhase,
   RouletteTableRound,
 } from '@/types/database';
@@ -37,6 +39,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
   const [recentSpins, setRecentSpins] = useState<RouletteTableRound[]>([]);
   const [recentWins, setRecentWins] = useState<RouletteRecentWin[]>([]);
   const [activeBets, setActiveBets] = useState<RouletteBetRecord[]>([]);
+  const [roundParticipants, setRoundParticipants] = useState<RouletteRoundParticipant[]>([]);
   const [countdownMs, setCountdownMs] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -44,17 +47,23 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
   const [tableMessage, setTableMessage] = useState<string | null>(null);
   const refreshProfileRef = useRef(refreshProfile);
   const lastSettledRoundIdRef = useRef<string | null>(null);
+  const syncSnapshotPromiseRef = useRef<Promise<void> | null>(null);
+  const lastCountdownSecondRef = useRef<number | null>(null);
 
   useEffect(() => {
     refreshProfileRef.current = refreshProfile;
   }, [refreshProfile]);
 
-  const syncSnapshot = useCallback(async (withSpinner = false) => {
+  const syncSnapshot = useCallback((withSpinner = false) => {
+    if (syncSnapshotPromiseRef.current) {
+      return syncSnapshotPromiseRef.current;
+    }
+
     if (withSpinner) {
       setIsRefreshing(true);
     }
 
-    try {
+    const snapshotPromise = (async () => {
       await advanceRouletteRoundIfDue();
 
       const [round, spins, wins] = await Promise.all([
@@ -68,30 +77,42 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       setRecentWins(wins);
 
       if (round) {
-        const bets = await getMyCurrentRouletteBets(round.id);
+        const [bets, participants] = await Promise.all([
+          getMyCurrentRouletteBets(round.id),
+          getRouletteRoundParticipants(round.id),
+        ]);
         setActiveBets(bets);
+        setRoundParticipants(participants);
       } else {
         setActiveBets([]);
+        setRoundParticipants([]);
       }
 
-      const newestSettled = spins[0] ?? null;
-      if (newestSettled?.id && newestSettled.id !== lastSettledRoundIdRef.current) {
-        lastSettledRoundIdRef.current = newestSettled.id;
+      const newestUserSettledWin = wins.find((win) => win.user_id === userId) ?? null;
+      if (
+        newestUserSettledWin?.round_id
+        && newestUserSettledWin.round_id !== lastSettledRoundIdRef.current
+      ) {
+        lastSettledRoundIdRef.current = newestUserSettledWin.round_id;
         await refreshProfileRef.current();
       }
 
       setTableMessage(null);
-    } catch (error) {
+    })().catch((error) => {
       setTableMessage(
         error instanceof Error
           ? error.message
           : 'Nie udało się zsynchronizować stołu ruletki.',
       );
-    } finally {
+    }).finally(() => {
       setIsLoading(false);
       setIsRefreshing(false);
-    }
-  }, []);
+      syncSnapshotPromiseRef.current = null;
+    });
+
+    syncSnapshotPromiseRef.current = snapshotPromise;
+    return snapshotPromise;
+  }, [userId]);
 
   useEffect(() => {
     void syncSnapshot(true);
@@ -101,7 +122,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
     });
 
     const advanceInterval = window.setInterval(() => {
-      void advanceRouletteRoundIfDue().then(() => syncSnapshot()).catch(() => undefined);
+      void syncSnapshot();
     }, 3000);
 
     return () => {
@@ -113,21 +134,30 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
   useEffect(() => {
     const updateCountdown = () => {
       if (!currentRound) {
+        lastCountdownSecondRef.current = null;
         setCountdownMs(0);
         return;
       }
 
       const targetMs = getRouletteCountdownTargetMs(currentRound);
       if (!targetMs) {
+        lastCountdownSecondRef.current = null;
         setCountdownMs(0);
         return;
       }
 
-      setCountdownMs(Math.max(0, targetMs - Date.now()));
+      const nextCountdownMs = Math.max(0, targetMs - Date.now());
+      const nextCountdownSecond = Math.ceil(nextCountdownMs / 1000);
+      if (lastCountdownSecondRef.current === nextCountdownSecond) {
+        return;
+      }
+
+      lastCountdownSecondRef.current = nextCountdownSecond;
+      setCountdownMs(nextCountdownMs);
     };
 
     updateCountdown();
-    const timer = window.setInterval(updateCountdown, 250);
+    const timer = window.setInterval(updateCountdown, 1000);
 
     return () => {
       window.clearInterval(timer);
@@ -173,6 +203,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       recentSpins,
       recentWins,
       activeBets,
+      roundParticipants,
       latestSettledRound,
       phase,
       countdownMs,
@@ -190,6 +221,7 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       recentSpins,
       recentWins,
       activeBets,
+      roundParticipants,
       latestSettledRound,
       phase,
       countdownMs,

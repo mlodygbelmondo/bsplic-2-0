@@ -57,10 +57,29 @@ export interface RouletteBetRecord {
   settled_at?: string | null;
 }
 
+export interface RouletteRoundParticipant {
+  user_id: string;
+  username: string;
+  avatar_url?: string | null;
+  total_stake: number;
+  bet_count: number;
+}
+
 export interface RouletteRecentWin extends RouletteBetRecord {
   username: string;
   avatar_url?: string | null;
   round_number: number;
+}
+
+export interface CasinoHistoryEntry {
+  id: string;
+  game_type: string;
+  bet_label: string;
+  stake: number;
+  payout: number;
+  status: 'pending' | 'won' | 'lost' | 'push';
+  round_label: string | null;
+  created_at: string;
 }
 
 export interface Category {

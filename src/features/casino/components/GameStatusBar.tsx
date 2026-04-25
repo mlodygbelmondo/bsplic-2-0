@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { Radio } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
   getRoulettePhaseLabel,
@@ -48,18 +47,15 @@ export function GameStatusBar({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="border-amber-500/30 bg-amber-500/10 text-[10px] tracking-wider text-amber-300"
-              >
-                LIVE
-              </Badge>
+              <span className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200/70">
+                Kasyno Premium
+              </span>
               <span className="font-mono text-xs text-white/50">
                 #{round?.round_number ?? '—'}
               </span>
             </div>
             <h2 className="mt-0.5 text-lg font-bold text-white">
-              {getRoulettePhaseLabel(phase)}
+              Ruletka
             </h2>
           </div>
         </div>

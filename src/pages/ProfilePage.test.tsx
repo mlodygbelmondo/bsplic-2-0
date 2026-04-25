@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProfilePage from '@/pages/ProfilePage';
@@ -73,6 +73,22 @@ describe('ProfilePage username route', () => {
       if (fn === 'get_user_coupon_history') {
         return Promise.resolve({ data: [] });
       }
+      if (fn === 'get_user_casino_history') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'casino-1',
+              game_type: 'Ruletka',
+              bet_label: 'Kolor: czerwone',
+              stake: 20,
+              payout: 40,
+              status: 'won',
+              round_label: '#123',
+              created_at: '2026-01-02T00:00:00.000Z',
+            },
+          ],
+        });
+      }
       if (fn === 'get_public_profile') {
         return Promise.resolve({
           data: {
@@ -112,5 +128,24 @@ describe('ProfilePage username route', () => {
     });
 
     expect(await screen.findByText('tester')).toBeInTheDocument();
+  });
+
+  it('switches profile history between sportsbook coupons and casino bets', async () => {
+    render(
+      <MemoryRouter initialEntries={['/profile/current-user-id']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Historia' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zakłady' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kasyno' }));
+
+    expect(await screen.findByText('Ruletka')).toBeInTheDocument();
+    expect(screen.getByText('Kolor: czerwone')).toBeInTheDocument();
+    expect(screen.getByText('+40.00 zł')).toBeInTheDocument();
   });
 });
