@@ -7,6 +7,7 @@ import type {
   RouletteBetType,
   RouletteColor,
   RouletteRecentWin,
+  RouletteRoundParticipantBet,
   RouletteRoundParticipant,
   RouletteTableRound,
 } from '@/types/database';
@@ -32,7 +33,9 @@ type RecentSpinRpcRow =
 type RecentWinRpcRow =
   Database['public']['Functions']['get_recent_roulette_wins']['Returns'][number];
 type RoundParticipantRpcRow =
-  Database['public']['Functions']['get_roulette_round_participants']['Returns'][number];
+  Database['public']['Functions']['get_roulette_round_participants']['Returns'][number] & {
+    bets?: unknown;
+  };
 
 export async function playRouletteRoundLegacy({
   userId,
@@ -276,5 +279,32 @@ function normalizeRoundParticipant(
     avatar_url: participant.avatar_url,
     total_stake: Number(participant.total_stake),
     bet_count: Number(participant.bet_count),
+    bets: normalizeParticipantBets(participant.bets),
   };
+}
+
+function normalizeParticipantBets(bets: unknown): RouletteRoundParticipantBet[] {
+  if (!Array.isArray(bets)) {
+    return [];
+  }
+
+  return bets
+    .map((bet) => {
+      if (!bet || typeof bet !== 'object') {
+        return null;
+      }
+
+      const rawBet = bet as Record<string, unknown>;
+      return {
+        bet_type: rawBet.bet_type as RouletteBetType,
+        bet_value: String(rawBet.bet_value ?? ''),
+        stake: Number(rawBet.stake),
+      };
+    })
+    .filter((bet): bet is RouletteRoundParticipantBet => (
+      Boolean(bet)
+      && ['straight', 'color', 'parity', 'range'].includes(bet.bet_type)
+      && bet.bet_value !== ''
+      && Number.isFinite(bet.stake)
+    ));
 }

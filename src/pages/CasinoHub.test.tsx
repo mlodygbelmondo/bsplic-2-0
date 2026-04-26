@@ -13,13 +13,16 @@ describe('CasinoHub', () => {
     );
 
     expect(screen.getByTestId('casino-hub-page')).toHaveStyle({
-      backgroundImage: "url('/casino/hub-image.webp')",
+      '--casino-bg-desktop': "url('/casino/hub-image.webp')",
+      '--casino-bg-mobile': "url('/casino/hub-mobile-background.webp')",
     });
     expect(screen.getByTestId('casino-roulette-card-art')).toHaveStyle({
-      backgroundImage: "url('/casino/roulette-button.webp')",
+      '--casino-bg-desktop': "url('/casino/roulette-button.webp')",
+      '--casino-bg-mobile': "url('/casino/roulette-button.webp')",
     });
     expect(screen.getByTestId('casino-blackjack-card-art')).toHaveStyle({
-      backgroundImage: "url('/casino/blackjack-button.webp')",
+      '--casino-bg-desktop': "url('/casino/blackjack-button.webp')",
+      '--casino-bg-mobile': "url('/casino/blackjack-button.webp')",
     });
   });
 });

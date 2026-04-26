@@ -263,6 +263,14 @@
       radial-gradient(900px 620px at 50% 35%, rgba(180, 83, 9, 0.08), transparent 60%),
       linear-gradient(180deg, #09090b 0%, #13070b 28%, #0c0a10 62%, #07070a 100%);
   }
+  .casino-responsive-bg {
+    background-image: var(--casino-bg-mobile);
+  }
+  @media (min-width: 768px) {
+    .casino-responsive-bg {
+      background-image: var(--casino-bg-desktop);
+    }
+  }
   .casino-card {
     background:
       linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)),

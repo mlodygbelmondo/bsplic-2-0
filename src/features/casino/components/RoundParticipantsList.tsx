@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 
+import {
+  formatRouletteBetValue,
+  getRouletteBetTypeLabel,
+} from '@/features/casino/lib/roulette';
 import type { RouletteRoundParticipant } from '@/types/database';
 
 interface RoundParticipantsListProps {
@@ -36,33 +40,48 @@ export function RoundParticipantsList({ participants }: RoundParticipantsListPro
           {participants.map((participant) => (
             <div
               key={participant.user_id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3"
+              className="rounded-xl border border-white/10 bg-white/[0.02] p-3"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-amber-500/10 text-xs font-bold text-amber-200">
-                  {participant.avatar_url ? (
-                    <img
-                      src={participant.avatar_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    participant.username.slice(0, 2).toUpperCase()
-                  )}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-amber-500/10 text-xs font-bold text-amber-200">
+                    {participant.avatar_url ? (
+                      <img
+                        src={participant.avatar_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      participant.username.slice(0, 2).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {participant.username}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-white/35">
+                      {participant.bet_count}{' '}
+                      {participant.bet_count === 1 ? 'zakład' : 'zakłady'}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {participant.username}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-white/35">
-                    {participant.bet_count}{' '}
-                    {participant.bet_count === 1 ? 'zakład' : 'zakłady'}
-                  </p>
-                </div>
+                <span className="flex-shrink-0 font-mono text-sm font-bold text-amber-200">
+                  {participant.total_stake.toFixed(2)} zł
+                </span>
               </div>
-              <span className="flex-shrink-0 font-mono text-sm font-bold text-amber-200">
-                {participant.total_stake.toFixed(2)} zł
-              </span>
+              {participant.bets.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5 pl-12">
+                  {participant.bets.map((bet, index) => (
+                    <span
+                      key={`${bet.bet_type}-${bet.bet_value}-${index}`}
+                      className="rounded-full border border-amber-300/15 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold text-amber-100/90"
+                    >
+                      {getRouletteBetTypeLabel(bet.bet_type)}:{' '}
+                      {formatRouletteBetValue(bet.bet_type, bet.bet_value)}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

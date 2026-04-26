@@ -57,12 +57,19 @@ export interface RouletteBetRecord {
   settled_at?: string | null;
 }
 
+export interface RouletteRoundParticipantBet {
+  bet_type: RouletteBetType;
+  bet_value: string;
+  stake: number;
+}
+
 export interface RouletteRoundParticipant {
   user_id: string;
   username: string;
   avatar_url?: string | null;
   total_stake: number;
   bet_count: number;
+  bets: RouletteRoundParticipantBet[];
 }
 
 export interface RouletteRecentWin extends RouletteBetRecord {
