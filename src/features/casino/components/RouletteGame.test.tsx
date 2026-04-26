@@ -356,6 +356,7 @@ describe('RouletteGame', () => {
           avatar_url: null,
           total_stake: 35,
           bet_count: 2,
+          bets: [],
         },
       ],
     });
@@ -482,6 +483,10 @@ describe('RouletteGame', () => {
           avatar_url: null,
           total_stake: 35,
           bet_count: 2,
+          bets: [
+            { bet_type: 'color' as const, bet_value: 'red', stake: 25 },
+            { bet_type: 'straight' as const, bet_value: '7', stake: 10 },
+          ],
         },
         {
           user_id: 'user-2',
@@ -489,6 +494,9 @@ describe('RouletteGame', () => {
           avatar_url: null,
           total_stake: 20,
           bet_count: 1,
+          bets: [
+            { bet_type: 'color' as const, bet_value: 'black', stake: 20 },
+          ],
         },
       ],
     });
@@ -505,6 +513,9 @@ describe('RouletteGame', () => {
     expect(screen.getByText('LuckyFox')).toBeInTheDocument();
     expect(screen.getByText('35.00 zł')).toBeInTheDocument();
     expect(screen.getByText('2 zakłady')).toBeInTheDocument();
+    expect(screen.getByText('Kolor: Czerwone')).toBeInTheDocument();
+    expect(screen.getByText('Numer: 7')).toBeInTheDocument();
+    expect(screen.getByText('Kolor: Czarne')).toBeInTheDocument();
   });
 
   it('does not show an old user win when entering the table later', () => {

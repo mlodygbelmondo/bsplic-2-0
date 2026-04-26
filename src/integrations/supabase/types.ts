@@ -638,6 +638,7 @@ export type Database = {
         Returns: {
           avatar_url: string | null
           bet_count: number
+          bets: Json
           total_stake: number
           user_id: string
           username: string
