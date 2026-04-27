@@ -56,7 +56,6 @@ export default function DashboardTab() {
           { count: resolvedToday, error: e5 },
           { data: categoryData, error: e6 },
           { data: recentResolved, error: e7 },
-          { data: allCategories, error: e8 },
         ] = await Promise.all([
           supabase.from('placed_bets').select('*', { count: 'exact', head: true }),
           supabase.from('placed_bets').select('stake'),
@@ -75,7 +74,7 @@ export default function DashboardTab() {
             .gte('created_at', todayStart.toISOString()),
           supabase
             .from('bets')
-            .select('category_id')
+            .select('category_id, categories(id, emoji, name)')
             .eq('is_active', true)
             .not('category_id', 'is', null),
           supabase
@@ -84,10 +83,9 @@ export default function DashboardTab() {
             .not('winning_option', 'is', null)
             .order('created_at', { ascending: false })
             .limit(5),
-          supabase.from('categories').select('id, emoji, name'),
         ]);
 
-        const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8;
+        const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7;
         if (firstError) throw firstError;
 
         const totalPool = stakes?.reduce((acc, b) => acc + Number(b.stake), 0) || 0;
@@ -95,14 +93,16 @@ export default function DashboardTab() {
         let topCategory: string | null = null;
         if (categoryData && categoryData.length > 0) {
           const freq: Record<string, number> = {};
+          const categoryLabels: Record<string, string> = {};
           for (const row of categoryData) {
-            if (row.category_id) freq[row.category_id] = (freq[row.category_id] || 0) + 1;
+            if (!row.category_id) continue;
+            freq[row.category_id] = (freq[row.category_id] || 0) + 1;
+            if (row.categories) {
+              categoryLabels[row.category_id] = `${row.categories.emoji} ${row.categories.name}`;
+            }
           }
           const topId = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-          if (topId) {
-            const cat = allCategories?.find((c) => c.id === topId);
-            if (cat) topCategory = `${cat.emoji} ${cat.name}`;
-          }
+          topCategory = topId ? categoryLabels[topId] || null : null;
         }
 
         setStats({
