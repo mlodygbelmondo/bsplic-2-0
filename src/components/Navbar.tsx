@@ -63,6 +63,7 @@ export function Navbar() {
 
   const navLinks = [
     { to: "/", label: "Zakłady" },
+    { to: "/casino", label: "Kasyno" },
     { to: "/social", label: "Social" },
     { to: "/rankings", label: "Rankingi" },
   ];
@@ -79,7 +80,7 @@ export function Navbar() {
           <div className="flex items-center gap-5">
             <Link
               to="/"
-              className="text-[15px] lg:text-[17px] font-black text-primary-foreground tracking-tight hover:brightness-110 transition leading-none"
+              className="text-[17px] font-black text-primary-foreground tracking-tight hover:brightness-110 transition leading-none"
             >
               BSPLIC 2.0
             </Link>
@@ -94,6 +95,17 @@ export function Navbar() {
                 )}
               >
                 Zakłady
+              </Link>
+              <Link
+                to="/casino"
+                className={cn(
+                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
+                  isActivePath("/casino")
+                    ? "text-primary-foreground"
+                    : "text-primary-foreground/70",
+                )}
+              >
+                Kasyno
               </Link>
               <Link
                 to="/social"
@@ -159,7 +171,10 @@ export function Navbar() {
                 className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition"
               >
                 <Avatar className="h-6 w-6 bg-primary-foreground/20">
-                  <AvatarImage src={profile.avatar_url ?? undefined} alt={`Avatar ${profile.username}`} />
+                  <AvatarImage
+                    src={profile.avatar_url ?? undefined}
+                    alt={`Avatar ${profile.username}`}
+                  />
                   <AvatarFallback className="bg-primary-foreground/20 text-[10px] font-bold text-primary-foreground">
                     {profile.username.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -176,8 +191,11 @@ export function Navbar() {
             </button>
           </div>
 
-          <div className="lg:hidden flex items-center gap-4">
-            <NotificationsBell userId={user?.id} className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6" />
+          <div className="lg:hidden flex items-center gap-2">
+            <NotificationsBell
+              userId={user?.id}
+              className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
+            />
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button
@@ -250,7 +268,10 @@ export function Navbar() {
                             className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-background transition-colors"
                           >
                             <Avatar className="h-7 w-7 bg-primary/10">
-                              <AvatarImage src={profile.avatar_url ?? undefined} alt={`Avatar ${profile.username}`} />
+                              <AvatarImage
+                                src={profile.avatar_url ?? undefined}
+                                alt={`Avatar ${profile.username}`}
+                              />
                               <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
                                 {profile.username.charAt(0).toUpperCase()}
                               </AvatarFallback>
