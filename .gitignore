@@ -18,6 +18,8 @@ dist-ssr
 .env.test.local
 .env.production.local
 .env.dawdal
+.codex
+.learnings
 
 # Editor directories and files
 .vscode/*
