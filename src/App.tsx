@@ -12,6 +12,11 @@ import SocialPage from "./pages/SocialPage";
 import AdminPage from "./pages/AdminPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
+import CasinoLayout from "./pages/CasinoLayout";
+import CasinoHub from "./pages/CasinoHub";
+import CasinoRoulettePage from "./pages/CasinoRoulettePage";
+import CasinoBlackjackPage from "./pages/CasinoBlackjackPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,6 +32,13 @@ const App = () => (
               <Route path="/profile/:userId" element={<ProfilePage />} />
               <Route path="/rankings" element={<RankingsPage />} />
               <Route path="/social" element={<SocialPage />} />
+
+              <Route path="/casino" element={<CasinoLayout />}>
+                <Route index element={<CasinoHub />} />
+                <Route path="roulette" element={<CasinoRoulettePage />} />
+                <Route path="blackjack" element={<CasinoBlackjackPage />} />
+              </Route>
+
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
