@@ -112,6 +112,7 @@
   - notify user (`toast`) where appropriate
 - Realtime channels must be unsubscribed/removed in cleanup.
 - For new RPCs, add a migration under `supabase/migrations/` and keep `src/integrations/supabase/types.ts` in sync if generation is not available.
+- Never edit or extend an already existing Supabase migration file if it has been deployed; create a new timestamped migration file for every follow-up change.
 - Current app-level RPCs include sportsbook coupon history/rankings, public profiles, social feeds/comments/reactions, daily top-up, admin balance credit, roulette table state/actions, blackjack actions, casino history, and casino rankings.
 - Casino roulette uses realtime-backed shared table data in `casino_roulette_rounds` and `casino_roulette_bets`; blackjack uses server-authoritative `casino_blackjack_games` plus action RPCs.
 - RLS can prevent direct profile/history reads for other users; prefer SECURITY DEFINER RPCs for public profile, public history, and ranking views.
