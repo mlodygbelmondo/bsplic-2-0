@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSocialContent, parseSocialContent } from '@/features/social/content';
+import { buildSocialContent, parseSocialContent, getImageMarkerLength } from '@/features/social/content';
 
 describe('social content parser', () => {
   it('returns plain text when marker is missing', () => {
@@ -18,5 +18,22 @@ describe('social content parser', () => {
 
   it('builds payload with marker', () => {
     expect(buildSocialContent('Czesc', 'u1/abc.jpg')).toBe('Czesc\n[[img:u1/abc.jpg]]');
+  });
+
+  describe('getImageMarkerLength', () => {
+    it('returns correct length for a standard path', () => {
+      const path = 'user/123.jpg';
+      expect(getImageMarkerLength(path)).toBe(20);
+    });
+
+    it('returns correct length for an empty path', () => {
+      const path = '';
+      expect(getImageMarkerLength(path)).toBe(8);
+    });
+
+    it('returns correct length for a path with special characters', () => {
+      const path = 'user/abc-123_456.png?v=1';
+      expect(getImageMarkerLength(path)).toBe(path.length + 8);
+    });
   });
 });
