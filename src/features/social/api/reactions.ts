@@ -13,12 +13,14 @@ export interface ReactorUser {
 export async function fetchReactors(params: {
   postId?: string;
   couponId?: string;
+  casinoShareId?: string;
   commentId?: string;
   emoji?: ReactionType;
 }): Promise<ReactorUser[]> {
   const { data, error } = await rpc('get_reactors_for_target', {
     p_post_id: params.postId ?? null,
     p_coupon_id: params.couponId ?? null,
+    p_casino_share_id: params.casinoShareId ?? null,
     p_comment_id: params.commentId ?? null,
     p_emoji: params.emoji ?? null,
   });

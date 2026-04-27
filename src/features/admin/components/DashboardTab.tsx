@@ -74,7 +74,7 @@ export default function DashboardTab() {
             .gte('created_at', todayStart.toISOString()),
           supabase
             .from('bets')
-            .select('category_id')
+            .select('category_id, categories(id, emoji, name)')
             .eq('is_active', true)
             .not('category_id', 'is', null),
           supabase
@@ -93,18 +93,16 @@ export default function DashboardTab() {
         let topCategory: string | null = null;
         if (categoryData && categoryData.length > 0) {
           const freq: Record<string, number> = {};
+          const categoryLabels: Record<string, string> = {};
           for (const row of categoryData) {
-            if (row.category_id) freq[row.category_id] = (freq[row.category_id] || 0) + 1;
+            if (!row.category_id) continue;
+            freq[row.category_id] = (freq[row.category_id] || 0) + 1;
+            if (row.categories) {
+              categoryLabels[row.category_id] = `${row.categories.emoji} ${row.categories.name}`;
+            }
           }
           const topId = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-          if (topId) {
-            const { data: cat } = await supabase
-              .from('categories')
-              .select('emoji, name')
-              .eq('id', topId)
-              .single();
-            if (cat) topCategory = `${cat.emoji} ${cat.name}`;
-          }
+          topCategory = topId ? categoryLabels[topId] || null : null;
         }
 
         setStats({
