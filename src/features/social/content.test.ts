@@ -23,20 +23,17 @@ describe('social content parser', () => {
   describe('getImageMarkerLength', () => {
     it('returns correct length for a standard path', () => {
       const path = 'user/123.jpg';
-      const expected = `[[img:${path}]]`.length;
-      expect(getImageMarkerLength(path)).toBe(expected);
+      expect(getImageMarkerLength(path)).toBe(20);
     });
 
     it('returns correct length for an empty path', () => {
       const path = '';
-      const expected = `[[img:${path}]]`.length;
-      expect(getImageMarkerLength(path)).toBe(expected);
+      expect(getImageMarkerLength(path)).toBe(8);
     });
 
     it('returns correct length for a path with special characters', () => {
       const path = 'user/abc-123_456.png?v=1';
-      const expected = `[[img:${path}]]`.length;
-      expect(getImageMarkerLength(path)).toBe(expected);
+      expect(getImageMarkerLength(path)).toBe(path.length + 8);
     });
   });
 });
