@@ -109,7 +109,7 @@ export function getRoulettePhaseLabel(phase: RouletteRoundPhase): string {
     case 'waiting':
       return 'Przyjmowanie zakładów';
     case 'spinning':
-      return '';
+      return 'Koło się kręci';
     case 'settled':
       return 'Runda rozliczona';
   }

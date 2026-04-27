@@ -33,4 +33,5 @@ dist-ssr
 *.sw?
 
 .ai*
-docs*
+docs/design-references/
+docs/roulette-inspiration/

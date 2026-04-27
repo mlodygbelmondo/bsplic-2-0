@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RouletteWheel } from './RouletteWheel';
 
 const normalizeRotation = (rotation: number) => ((rotation % 360) + 360) % 360;
+const ROULETTE_BALL_ANGLE_OFFSET_DEG = -1;
 
 function getRotation(style: string) {
   const match = style.match(/rotate\(([-\d.]+)deg\)/);
@@ -110,7 +111,9 @@ describe('RouletteWheel', () => {
     let ballOrbit = screen.getByTestId('roulette-ball-orbit');
     expect(ballOrbit.getAttribute('data-animation-state')).toBe('staged');
     expect(ballOrbit.getAttribute('style') ?? '').toContain('transition: none');
-    expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBe(0);
+    expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBe(
+      normalizeRotation(ROULETTE_BALL_ANGLE_OFFSET_DEG),
+    );
 
     act(() => {
       vi.advanceTimersByTime(32);
@@ -120,7 +123,7 @@ describe('RouletteWheel', () => {
     expect(ballOrbit.getAttribute('data-animation-state')).toBe('spinning');
     expect(ballOrbit.getAttribute('style') ?? '').not.toContain('transition: none');
     expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBeCloseTo(
-      Number(ballOrbit.getAttribute('data-target-angle')),
+      Number(ballOrbit.getAttribute('data-target-angle')) + ROULETTE_BALL_ANGLE_OFFSET_DEG,
       2,
     );
 
@@ -353,7 +356,7 @@ describe('RouletteWheel', () => {
     expect(ballOrbit.getAttribute('data-animation-state')).toBe('settled');
     expect(ballOrbit.getAttribute('data-target-number')).toBe('13');
     expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBeCloseTo(
-      Number(ballOrbit.getAttribute('data-target-angle')),
+      Number(ballOrbit.getAttribute('data-target-angle')) + ROULETTE_BALL_ANGLE_OFFSET_DEG,
       2,
     );
     expect(ball.style.top).toBe('25.3%');
