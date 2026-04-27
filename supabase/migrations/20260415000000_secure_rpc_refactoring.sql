@@ -1,6 +1,9 @@
 -- Migration: Refactor RPCs to respect RLS and follow security best practices.
 -- This migration hardens functions that were previously bypassing RLS without explicit checks.
 
+CREATE SCHEMA IF NOT EXISTS private;
+GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
+
 -- ============================================================
 -- 0. Gatekeeper function (SECURITY INVOKER)
 --    Uses the caller's context to check if a profile is visible.
@@ -18,15 +21,15 @@ AS $$
 $$;
 
 -- ============================================================
--- 1. Internal helper for stats (SECURITY DEFINER)
+-- 1. Internal stats helper (SECURITY DEFINER)
 --    Returns only aggregated, non-sensitive data.
 -- ============================================================
-CREATE OR REPLACE FUNCTION public._get_user_stats_internal(p_user_id UUID)
+CREATE OR REPLACE FUNCTION private.get_user_stats_for_rpc(p_user_id UUID)
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, private
 AS $$
 DECLARE
   v_stats JSON;
@@ -59,9 +62,9 @@ BEGIN
   ),
   ranking_stats AS (
     SELECT
-      COUNT(*)                                              AS total_bets,
-      COUNT(*) FILTER (WHERE unit_result = 'won')           AS won_bets,
-      COUNT(*) FILTER (WHERE unit_result = 'lost')          AS lost_bets,
+      COUNT(*)                                               AS total_bets,
+      COUNT(*) FILTER (WHERE unit_result = 'won')            AS won_bets,
+      COUNT(*) FILTER (WHERE unit_result = 'lost')           AS lost_bets,
       COUNT(*) FILTER (WHERE unit_result IN ('won', 'lost')) AS resolved_bets
     FROM ranking_units
   ),
@@ -123,34 +126,33 @@ BEGIN
 END;
 $$;
 
--- Restrict direct execution to prevent RPC abuse
-REVOKE EXECUTE ON FUNCTION public._get_user_stats_internal(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.get_user_stats_for_rpc(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION private.get_user_stats_for_rpc(UUID) TO anon, authenticated, service_role;
 
 -- ============================================================
--- 2. get_public_profile (SECURITY DEFINER + gatekeeper)
+-- 2. get_public_profile (SECURITY INVOKER gate + private helper)
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.get_public_profile(p_user_id UUID)
+CREATE OR REPLACE FUNCTION private.get_public_profile_for_rpc(p_user_id UUID)
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, private
 AS $$
 DECLARE
   v_profile RECORD;
   v_stats   JSON;
 BEGIN
-  -- Gatekeeper check: Uses SECURITY INVOKER logic to check visibility
-  IF NOT public.check_profile_access(p_user_id) THEN
-    RETURN '{}'::JSON;
-  END IF;
-
   SELECT id, username, avatar_url, current_streak, longest_streak, created_at
   INTO v_profile
   FROM public.profiles
   WHERE id = p_user_id;
 
-  v_stats := public._get_user_stats_internal(p_user_id);
+  IF v_profile.id IS NULL THEN
+    RETURN '{}'::JSON;
+  END IF;
+
+  v_stats := private.get_user_stats_for_rpc(p_user_id);
 
   RETURN json_build_object(
     'id', v_profile.id,
@@ -168,10 +170,29 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION private.get_public_profile_for_rpc(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION private.get_public_profile_for_rpc(UUID) TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.get_public_profile(p_user_id UUID)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = public, private
+AS $$
+BEGIN
+  IF NOT public.check_profile_access(p_user_id) THEN
+    RETURN '{}'::JSON;
+  END IF;
+
+  RETURN private.get_public_profile_for_rpc(p_user_id);
+END;
+$$;
+
 -- ============================================================
--- 3. get_user_coupon_history (SECURITY DEFINER + gatekeeper)
+-- 3. get_user_coupon_history (SECURITY INVOKER gate + private helper)
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.get_user_coupon_history(
+CREATE OR REPLACE FUNCTION private.get_user_coupon_history_for_rpc(
   p_user_id UUID,
   p_limit   INTEGER DEFAULT 50,
   p_offset  INTEGER DEFAULT 0
@@ -180,16 +201,11 @@ RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, private
 AS $$
 DECLARE
   v_result JSON;
 BEGIN
-  -- Gatekeeper check
-  IF NOT public.check_profile_access(p_user_id) THEN
-    RETURN '[]'::JSON;
-  END IF;
-
   SELECT json_agg(row_to_json(c_row))
     INTO v_result
     FROM (
@@ -229,18 +245,42 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- 4. get_social_coupon_feed (SECURITY DEFINER + gatekeeper filter)
--- ============================================================
-CREATE OR REPLACE FUNCTION public.get_social_coupon_feed(
-  p_limit   INTEGER DEFAULT 30,
+REVOKE ALL ON FUNCTION private.get_user_coupon_history_for_rpc(UUID, INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION private.get_user_coupon_history_for_rpc(UUID, INTEGER, INTEGER) TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.get_user_coupon_history(
+  p_user_id UUID,
+  p_limit   INTEGER DEFAULT 50,
   p_offset  INTEGER DEFAULT 0
 )
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
+SECURITY INVOKER
+SET search_path = public, private
+AS $$
+BEGIN
+  IF NOT public.check_profile_access(p_user_id) THEN
+    RETURN '[]'::JSON;
+  END IF;
+
+  RETURN private.get_user_coupon_history_for_rpc(p_user_id, p_limit, p_offset);
+END;
+$$;
+
+-- ============================================================
+-- 4. get_social_coupon_feed (SECURITY INVOKER filter + private helper)
+-- ============================================================
+CREATE OR REPLACE FUNCTION private.get_social_coupon_feed_for_rpc(
+  p_visible_user_ids UUID[],
+  p_limit            INTEGER DEFAULT 30,
+  p_offset           INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, private
 AS $$
 DECLARE
   v_result JSON;
@@ -274,9 +314,8 @@ BEGIN
           WHERE pb.coupon_id = c.id
         ) AS legs
       FROM public.coupons c
-      -- Join with gatekeeper: ensure we only show coupons from visible profiles
       JOIN public.profiles p ON p.id = c.user_id
-      WHERE public.check_profile_access(c.user_id)
+      WHERE c.user_id = ANY(p_visible_user_ids)
       ORDER BY c.created_at DESC
       LIMIT p_limit
       OFFSET p_offset
@@ -286,8 +325,32 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION private.get_social_coupon_feed_for_rpc(UUID[], INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION private.get_social_coupon_feed_for_rpc(UUID[], INTEGER, INTEGER) TO anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.get_social_coupon_feed(
+  p_limit   INTEGER DEFAULT 30,
+  p_offset  INTEGER DEFAULT 0
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = public, private
+AS $$
+DECLARE
+  v_visible_user_ids UUID[];
+BEGIN
+  SELECT COALESCE(array_agg(p.id), ARRAY[]::UUID[])
+  INTO v_visible_user_ids
+  FROM public.profiles p;
+
+  RETURN private.get_social_coupon_feed_for_rpc(v_visible_user_ids, p_limit, p_offset);
+END;
+$$;
+
 -- ============================================================
--- 5. get_user_rankings (SECURITY DEFINER + gatekeeper filter)
+-- 5. get_user_rankings (SECURITY INVOKER profile filter + private stats helper)
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_user_rankings()
 RETURNS TABLE (
@@ -302,8 +365,8 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 STABLE
-SECURITY DEFINER
-SET search_path = public
+SECURITY INVOKER
+SET search_path = public, private
 AS $$
 BEGIN
   RETURN QUERY
@@ -317,9 +380,10 @@ BEGIN
     (s.stats->>'total_profit')::NUMERIC AS total_profit,
     p.balance
   FROM public.profiles p
-  CROSS JOIN LATERAL public._get_user_stats_internal(p.id) AS s(stats)
-  WHERE public.check_profile_access(p.id)
-    AND (s.stats->>'total_bets')::BIGINT > 0
+  CROSS JOIN LATERAL (
+    SELECT private.get_user_stats_for_rpc(p.id) AS stats
+  ) AS s
+  WHERE (s.stats->>'total_bets')::BIGINT > 0
   ORDER BY (s.stats->>'total_profit')::NUMERIC DESC;
 END;
 $$;
