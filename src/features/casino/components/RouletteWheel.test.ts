@@ -1,16 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   computeRouletteBallRotation,
   computeRouletteBallSettledRotation,
+  getRouletteBallAngleOffset,
   getRouletteBallPocketAngle,
+  ROULETTE_BALL_DEFAULT_ANGLE_OFFSET_DEG,
+  ROULETTE_BALL_NUMBER_ANGLE_OFFSETS_DEG,
   ROULETTE_WHEEL_NUMBERS,
-} from '@/features/casino/lib/rouletteWheel';
+} from "@/features/casino/lib/rouletteWheel";
 
 const normalizeRotation = (rotation: number) => ((rotation % 360) + 360) % 360;
 
-describe('computeRouletteBallRotation', () => {
-  it('lands the static-wheel ball on the winning pocket after full spins', () => {
+describe("computeRouletteBallRotation", () => {
+  it("lands the static-wheel ball on the winning pocket after full spins", () => {
     const targetIndex = ROULETTE_WHEEL_NUMBERS.indexOf(13);
     const rotation = computeRouletteBallRotation(0, targetIndex);
 
@@ -21,13 +24,19 @@ describe('computeRouletteBallRotation', () => {
     );
   });
 
-  it('maps known PNG pocket centers clockwise from zero at the top', () => {
-    expect(getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(0))).toBeCloseTo(0, 4);
-    expect(getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(13))).toBeCloseTo(116.7568, 4);
-    expect(getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(26))).toBeCloseTo(350.2703, 4);
+  it("maps known PNG pocket centers clockwise from zero at the top", () => {
+    expect(
+      getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(0)),
+    ).toBeCloseTo(0, 4);
+    expect(
+      getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(13)),
+    ).toBeCloseTo(116.7568, 4);
+    expect(
+      getRouletteBallPocketAngle(ROULETTE_WHEEL_NUMBERS.indexOf(26)),
+    ).toBeCloseTo(350.2703, 4);
   });
 
-  it('settles forward to the target pocket without jumping backward', () => {
+  it("settles forward to the target pocket without jumping backward", () => {
     const targetIndex = ROULETTE_WHEEL_NUMBERS.indexOf(13);
     const rotation = computeRouletteBallSettledRotation(1700, targetIndex);
 
@@ -38,7 +47,7 @@ describe('computeRouletteBallRotation', () => {
     );
   });
 
-  it('lands every roulette number on its exact PNG pocket angle', () => {
+  it("lands every roulette number on its exact PNG pocket angle", () => {
     ROULETTE_WHEEL_NUMBERS.forEach((number, targetIndex) => {
       const spinRotation = computeRouletteBallRotation(731.25, targetIndex);
       const settledRotation = computeRouletteBallSettledRotation(
@@ -55,7 +64,21 @@ describe('computeRouletteBallRotation', () => {
         `settled ${number}`,
       ).toBeCloseTo(getRouletteBallPocketAngle(targetIndex), 4);
       expect(spinRotation, `spin progresses ${number}`).toBeGreaterThan(731.25);
-      expect(settledRotation, `settled progresses ${number}`).toBeGreaterThanOrEqual(731.25);
+      expect(
+        settledRotation,
+        `settled progresses ${number}`,
+      ).toBeGreaterThanOrEqual(731.25);
     });
+  });
+
+  it("uses a default ball angle offset when a number has no override", () => {
+    expect(ROULETTE_BALL_DEFAULT_ANGLE_OFFSET_DEG).toBe(-1);
+    expect(ROULETTE_BALL_NUMBER_ANGLE_OFFSETS_DEG[4]).toBeUndefined();
+    expect(getRouletteBallAngleOffset(4)).toBe(-1);
+  });
+
+  it("uses per-number ball angle offsets as absolute final offsets", () => {
+    expect(getRouletteBallAngleOffset(10, { 10: -2 })).toBe(-2);
+    expect(getRouletteBallAngleOffset(13, { 10: -2 })).toBe(-1);
   });
 });

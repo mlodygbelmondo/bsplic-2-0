@@ -1,10 +1,11 @@
-import { act, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RouletteWheel } from './RouletteWheel';
+import { getRouletteBallAngleOffset } from "@/features/casino/lib/rouletteWheel";
+
+import { RouletteWheel } from "./RouletteWheel";
 
 const normalizeRotation = (rotation: number) => ((rotation % 360) + 360) % 360;
-const ROULETTE_BALL_ANGLE_OFFSET_DEG = -1;
 
 function getRotation(style: string) {
   const match = style.match(/rotate\(([-\d.]+)deg\)/);
@@ -16,7 +17,7 @@ function mockRequestAnimationFrame() {
   const timeouts = new Map<number, number>();
 
   const requestAnimationFrameSpy = vi
-    .spyOn(window, 'requestAnimationFrame')
+    .spyOn(window, "requestAnimationFrame")
     .mockImplementation((callback: FrameRequestCallback) => {
       const rafId = nextRafId;
       nextRafId += 1;
@@ -29,7 +30,7 @@ function mockRequestAnimationFrame() {
     });
 
   const cancelAnimationFrameSpy = vi
-    .spyOn(window, 'cancelAnimationFrame')
+    .spyOn(window, "cancelAnimationFrame")
     .mockImplementation((rafId: number) => {
       const timeoutId = timeouts.get(rafId);
       if (timeoutId !== undefined) {
@@ -44,12 +45,12 @@ function mockRequestAnimationFrame() {
   };
 }
 
-describe('RouletteWheel', () => {
+describe("RouletteWheel", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('renders the roulette wheel WebP asset without exceeding its native size', () => {
+  it("renders the roulette wheel WebP asset without exceeding its native size", () => {
     render(
       <RouletteWheel
         phase="waiting"
@@ -59,16 +60,22 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    const wheelImage = screen.getByRole('img', { name: 'Koło ruletki' });
+    const wheelImage = screen.getByRole("img", { name: "Koło ruletki" });
 
-    expect(wheelImage.getAttribute('src')).toBe('/casino/roulette-wheel-new-3.webp');
-    expect(wheelImage.getAttribute('width')).toBe('1138');
-    expect(wheelImage.getAttribute('height')).toBe('1138');
-    expect(screen.getByTestId('roulette-wheel-frame').classList.contains('max-w-[1138px]')).toBe(true);
-    expect(document.querySelector('svg')).toBeNull();
+    expect(wheelImage.getAttribute("src")).toBe(
+      "/casino/roulette-wheel-new-3.webp",
+    );
+    expect(wheelImage.getAttribute("width")).toBe("1138");
+    expect(wheelImage.getAttribute("height")).toBe("1138");
+    expect(
+      screen
+        .getByTestId("roulette-wheel-frame")
+        .classList.contains("max-w-[1138px]"),
+    ).toBe(true);
+    expect(document.querySelector("svg")).toBeNull();
   });
 
-  it('keeps the wheel image static and animates a responsive ball to the winning pocket', () => {
+  it("keeps the wheel image static and animates a responsive ball to the winning pocket", () => {
     render(
       <RouletteWheel
         phase="spinning"
@@ -78,24 +85,24 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    const wheelImage = screen.getByRole('img', { name: 'Koło ruletki' });
-    const ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    const ball = screen.getByTestId('roulette-ball');
+    const wheelImage = screen.getByRole("img", { name: "Koło ruletki" });
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    const ball = screen.getByTestId("roulette-ball");
 
-    expect(wheelImage.getAttribute('style') ?? '').not.toContain('rotate(');
-    expect(ballOrbit.getAttribute('data-target-number')).toBe('13');
-    expect(ballOrbit.getAttribute('data-target-index')).toBe('12');
-    expect(Number(ballOrbit.getAttribute('data-target-angle'))).toBeCloseTo(
+    expect(wheelImage.getAttribute("style") ?? "").not.toContain("rotate(");
+    expect(ballOrbit.getAttribute("data-target-number")).toBe("13");
+    expect(ballOrbit.getAttribute("data-target-index")).toBe("12");
+    expect(Number(ballOrbit.getAttribute("data-target-angle"))).toBeCloseTo(
       116.756,
       2,
     );
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('staged');
-    expect(ball.style.getPropertyValue('--roulette-ball-size')).toBe(
-      'clamp(8px, 2.8%, 16px)',
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("staged");
+    expect(ball.style.getPropertyValue("--roulette-ball-size")).toBe(
+      "clamp(8px, 2.8%, 16px)",
     );
   });
 
-  it('stages the ball before starting the transform transition', () => {
+  it("stages the ball before starting the transform transition", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -108,29 +115,38 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    let ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('staged');
-    expect(ballOrbit.getAttribute('style') ?? '').toContain('transition: none');
-    expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBe(
-      normalizeRotation(ROULETTE_BALL_ANGLE_OFFSET_DEG),
-    );
+    let ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("staged");
+    expect(ballOrbit.getAttribute("style") ?? "").toContain("transition: none");
+    expect(
+      normalizeRotation(
+        getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
+      ),
+    ).toBe(normalizeRotation(getRouletteBallAngleOffset(13)));
 
     act(() => {
       vi.advanceTimersByTime(32);
     });
 
-    ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('spinning');
-    expect(ballOrbit.getAttribute('style') ?? '').not.toContain('transition: none');
-    expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBeCloseTo(
-      Number(ballOrbit.getAttribute('data-target-angle')) + ROULETTE_BALL_ANGLE_OFFSET_DEG,
+    ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("spinning");
+    expect(ballOrbit.getAttribute("style") ?? "").not.toContain(
+      "transition: none",
+    );
+    expect(
+      normalizeRotation(
+        getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
+      ),
+    ).toBeCloseTo(
+      Number(ballOrbit.getAttribute("data-target-angle")) +
+        getRouletteBallAngleOffset(13),
       2,
     );
 
     restoreAnimationFrameMocks();
   });
 
-  it('moves the spinning ball from the configured start top to the configured end top', () => {
+  it("moves the spinning ball from the configured start top to the configured end top", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -143,23 +159,23 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    let ball = screen.getByTestId('roulette-ball');
-    expect(ball.style.top).toBe('8%');
+    let ball = screen.getByTestId("roulette-ball");
+    expect(ball.style.top).toBe("8%");
 
     act(() => {
       vi.advanceTimersByTime(32);
     });
 
-    ball = screen.getByTestId('roulette-ball');
-    expect(ball.style.top).toBe('12%');
-    expect(ball.style.transition).toContain('top 6s');
+    ball = screen.getByTestId("roulette-ball");
+    expect(ball.style.top).toBe("12%");
+    expect(ball.style.transition).toContain("top 6s");
 
     restoreAnimationFrameMocks();
   });
 
-  it('shortens the ball transition for late-joined spins', () => {
+  it("shortens the ball transition for late-joined spins", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-04-25T12:00:05.000Z'));
+    vi.setSystemTime(new Date("2026-04-25T12:00:05.000Z"));
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
     render(
@@ -175,13 +191,13 @@ describe('RouletteWheel', () => {
       vi.advanceTimersByTime(32);
     });
 
-    const ball = screen.getByTestId('roulette-ball');
-    expect(ball.style.transition).toContain('top 1s');
+    const ball = screen.getByTestId("roulette-ball");
+    expect(ball.style.transition).toContain("top 1s");
 
     restoreAnimationFrameMocks();
   });
 
-  it('uses a dedicated transition duration when the spinning ball settles', () => {
+  it("uses a dedicated transition duration when the spinning ball settles", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -202,15 +218,19 @@ describe('RouletteWheel', () => {
       vi.advanceTimersByTime(6100);
     });
 
-    const ball = screen.getByTestId('roulette-ball');
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('settled');
-    expect(ball.style.top).toBe('25.3%');
-    expect(ball.style.transition).toContain('top 0.8s');
+    const ball = screen.getByTestId("roulette-ball");
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("settled");
+    expect(ball.style.top).toBe("25.3%");
+    expect(ball.style.transition).toContain("top 0.8s");
 
     restoreAnimationFrameMocks();
   });
 
-  it('keeps the previous ball settled while waiting for the next spin', () => {
+  it("keeps the previous ball settled while waiting for the next spin", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -236,19 +256,23 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-target-number')).toBe('13');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-target-number"),
+    ).toBe("13");
 
     act(() => {
       vi.advanceTimersByTime(6900);
     });
 
-    const ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('settled');
-    expect(ballOrbit.getAttribute('data-target-number')).toBe('13');
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("settled");
+    expect(ballOrbit.getAttribute("data-target-number")).toBe("13");
     restoreAnimationFrameMocks();
   });
 
-  it('replaces the persistent settled ball when the next spin starts', () => {
+  it("replaces the persistent settled ball when the next spin starts", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -261,7 +285,11 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-target-number')).toBe('13');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-target-number"),
+    ).toBe("13");
 
     rerender(
       <RouletteWheel
@@ -272,13 +300,13 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    const ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('staged');
-    expect(ballOrbit.getAttribute('data-target-number')).toBe('26');
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("staged");
+    expect(ballOrbit.getAttribute("data-target-number")).toBe("26");
     restoreAnimationFrameMocks();
   });
 
-  it('does not let an early settled phase interrupt the local spin animation', () => {
+  it("does not let an early settled phase interrupt the local spin animation", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -304,11 +332,15 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('spinning');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("spinning");
     restoreAnimationFrameMocks();
   });
 
-  it('does not let settled before the start frame interrupt a staged spin', () => {
+  it("does not let settled before the start frame interrupt a staged spin", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -330,17 +362,25 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('staged');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("staged");
 
     act(() => {
       vi.advanceTimersByTime(32);
     });
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('spinning');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("spinning");
     restoreAnimationFrameMocks();
   });
 
-  it('shows a settled ball when the component receives a settled round directly', () => {
+  it("shows a settled ball when the component receives a settled round directly", () => {
     render(
       <RouletteWheel
         phase="settled"
@@ -350,19 +390,111 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    const ballOrbit = screen.getByTestId('roulette-ball-orbit');
-    const ball = screen.getByTestId('roulette-ball');
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    const ball = screen.getByTestId("roulette-ball");
 
-    expect(ballOrbit.getAttribute('data-animation-state')).toBe('settled');
-    expect(ballOrbit.getAttribute('data-target-number')).toBe('13');
-    expect(normalizeRotation(getRotation(ballOrbit.getAttribute('style') ?? '') ?? 0)).toBeCloseTo(
-      Number(ballOrbit.getAttribute('data-target-angle')) + ROULETTE_BALL_ANGLE_OFFSET_DEG,
+    expect(ballOrbit.getAttribute("data-animation-state")).toBe("settled");
+    expect(ballOrbit.getAttribute("data-target-number")).toBe("13");
+    expect(
+      normalizeRotation(
+        getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
+      ),
+    ).toBeCloseTo(
+      Number(ballOrbit.getAttribute("data-target-angle")) +
+        getRouletteBallAngleOffset(13),
       2,
     );
-    expect(ball.style.top).toBe('25.3%');
+    expect(ball.style.top).toBe("25.3%");
   });
 
-  it('continues a staged spin when the same round timestamp refreshes before the next frame', () => {
+  it("applies a per-number angle offset to the final ball rotation", () => {
+    render(
+      <RouletteWheel
+        angleOffsetsDeg={{ 13: -2 }}
+        phase="settled"
+        winningNumber={13}
+        spinStartedAt={null}
+        roundId="round-2"
+      />,
+    );
+
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+
+    expect(ballOrbit.getAttribute("data-angle-offset")).toBe("-2");
+    expect(
+      normalizeRotation(
+        getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
+      ),
+    ).toBeCloseTo(Number(ballOrbit.getAttribute("data-target-angle")) - 2, 2);
+  });
+
+  it("uses custom animation timing for quick preview spins", () => {
+    vi.useFakeTimers();
+    const restoreAnimationFrameMocks = mockRequestAnimationFrame();
+
+    render(
+      <RouletteWheel
+        animationTiming={{
+          settleDelayMs: 0,
+          settleDurationMs: 0,
+          spinDurationMs: 300,
+        }}
+        phase="spinning"
+        winningNumber={13}
+        spinStartedAt={null}
+        roundId="round-2"
+      />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(32);
+    });
+
+    expect(screen.getByTestId("roulette-ball").style.transition).toContain(
+      "top 0.3s",
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("settled");
+    expect(screen.getByTestId("roulette-ball").style.transition).toContain(
+      "top 0s",
+    );
+
+    restoreAnimationFrameMocks();
+  });
+
+  it("updates a direct settled preview when the winning number changes", () => {
+    const { rerender } = render(
+      <RouletteWheel
+        phase="settled"
+        winningNumber={13}
+        spinStartedAt={null}
+        roundId="round-2"
+      />,
+    );
+
+    rerender(
+      <RouletteWheel
+        phase="settled"
+        winningNumber={26}
+        spinStartedAt={null}
+        roundId="round-3"
+      />,
+    );
+
+    const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    expect(ballOrbit.getAttribute("data-target-number")).toBe("26");
+    expect(ballOrbit.getAttribute("data-target-index")).toBe("36");
+  });
+
+  it("continues a staged spin when the same round timestamp refreshes before the next frame", () => {
     vi.useFakeTimers();
     const restoreAnimationFrameMocks = mockRequestAnimationFrame();
 
@@ -388,11 +520,15 @@ describe('RouletteWheel', () => {
       vi.advanceTimersByTime(32);
     });
 
-    expect(screen.getByTestId('roulette-ball-orbit').getAttribute('data-animation-state')).toBe('spinning');
+    expect(
+      screen
+        .getByTestId("roulette-ball-orbit")
+        .getAttribute("data-animation-state"),
+    ).toBe("spinning");
     restoreAnimationFrameMocks();
   });
 
-  it('does not render the winning number as a center overlay', () => {
+  it("does not render the winning number as a center overlay", () => {
     render(
       <RouletteWheel
         phase="settled"
@@ -402,6 +538,6 @@ describe('RouletteWheel', () => {
       />,
     );
 
-    expect(screen.queryByText('13')).toBeNull();
+    expect(screen.queryByText("13")).toBeNull();
   });
 });
