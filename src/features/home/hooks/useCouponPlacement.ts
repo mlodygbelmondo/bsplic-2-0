@@ -12,23 +12,45 @@ interface UseCouponPlacementResult {
   totalStake: number;
 }
 
-function parseStake(value: string): number {
+export function parseStake(value: string): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.round(parsed * 100) / 100;
 }
 
-function validateStakePrecision(value: number): boolean {
-  return value === Math.round(value * 100) / 100;
+export function isPositiveStakeInput(value: string): boolean {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
+export function validateStakePrecision(value: string): boolean {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed === Math.round(parsed * 100) / 100;
+}
+
+function distributeStakeAcrossItems(
+  totalStake: number,
+  itemCount: number,
+): number[] {
+  if (itemCount <= 0) return [];
+
+  const totalCents = Math.round(totalStake * 100);
+  const baseCents = Math.floor(totalCents / itemCount);
+  const remainder = totalCents % itemCount;
+
+  return Array.from({ length: itemCount }, (_, index) => {
+    const cents = baseCents + (index < remainder ? 1 : 0);
+    return cents / 100;
+  });
 }
 
 export function useCouponPlacement(
   activeTab: 'single' | 'ako',
   stake: string,
   singleStakes: Record<string, string>,
-  onSuccess: () => void
+  onSuccess: () => void,
 ): UseCouponPlacementResult {
-  const { items, clearCoupon, totalOdds } = useCoupon();
+  const { items, clearCoupon, removeItem, totalOdds } = useCoupon();
   const { user, profile, refreshProfile } = useAuth();
   const [placing, setPlacing] = useState(false);
 
@@ -55,13 +77,10 @@ export function useCouponPlacement(
       return Math.round(parseStake(stake) * effectiveTotalOdds * 100) / 100;
     }
 
-    return items.reduce(
-      (sum, item) => {
-        const win = parseStake(singleStakes[item.bet.id] || '') * item.odds;
-        return Math.round((sum + win) * 100) / 100;
-      },
-      0
-    );
+    return items.reduce((sum, item) => {
+      const win = parseStake(singleStakes[item.bet.id] || '') * item.odds;
+      return Math.round((sum + win) * 100) / 100;
+    }, 0);
   }, [activeTab, effectiveTotalOdds, items, singleStakes, stake]);
 
   const placeBet = async () => {
@@ -77,23 +96,22 @@ export function useCouponPlacement(
 
     if (activeTab === 'single') {
       for (const item of items) {
-        const itemStake = parseStake(singleStakes[item.bet.id] || '');
-        if (itemStake <= 0) {
+        const rawItemStake = singleStakes[item.bet.id] || '';
+        if (!isPositiveStakeInput(rawItemStake)) {
           toast.error('Uzupełnij stawkę dla każdego zakładu');
           return;
         }
-        if (!validateStakePrecision(itemStake)) {
+        if (!validateStakePrecision(rawItemStake)) {
           toast.error('Stawka może mieć maksymalnie 2 miejsca po przecinku');
           return;
         }
       }
     } else {
-      const akoStake = parseStake(stake);
-      if (akoStake <= 0) {
+      if (!isPositiveStakeInput(stake)) {
         toast.error('Stawka musi być większa od 0');
         return;
       }
-      if (!validateStakePrecision(akoStake)) {
+      if (!validateStakePrecision(stake)) {
         toast.error('Stawka może mieć maksymalnie 2 miejsca po przecinku');
         return;
       }
@@ -113,25 +131,62 @@ export function useCouponPlacement(
 
     setPlacing(true);
 
+    const placedSingleBetIds: string[] = [];
+
     try {
-      await placeCouponSecure({
-        userId: user.id,
-        totalOdds: activeTab === 'ako' ? effectiveTotalOdds : 1,
-        stake: totalStake,
-        items: items.map((item) => ({
-          betId: item.bet.id,
-          selectedOption: item.selectedOption,
-          odds: item.odds,
-          stake: activeTab === 'single' ? parseStake(singleStakes[item.bet.id] || '') : Math.round((totalStake / items.length) * 100) / 100,
-        })),
-      });
+      if (activeTab === 'single') {
+        for (const item of items) {
+          const itemStake = parseStake(singleStakes[item.bet.id] || '');
+
+          await placeCouponSecure({
+            userId: user.id,
+            totalOdds: 1,
+            stake: itemStake,
+            items: [
+              {
+                betId: item.bet.id,
+                selectedOption: item.selectedOption,
+                odds: item.odds,
+                stake: itemStake,
+              },
+            ],
+          });
+
+          placedSingleBetIds.push(item.bet.id);
+        }
+      } else {
+        const distributedStakes = distributeStakeAcrossItems(
+          totalStake,
+          items.length,
+        );
+
+        await placeCouponSecure({
+          userId: user.id,
+          totalOdds: effectiveTotalOdds,
+          stake: totalStake,
+          items: items.map((item, index) => ({
+            betId: item.bet.id,
+            selectedOption: item.selectedOption,
+            odds: item.odds,
+            stake: distributedStakes[index],
+          })),
+        });
+      }
 
       await refreshProfile();
       clearCoupon();
       onSuccess();
       toast.success('Kupon postawiony pomyślnie!');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Nie udało się postawić kuponu';
+      if (placedSingleBetIds.length > 0) {
+        placedSingleBetIds.forEach(removeItem);
+        await refreshProfile();
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się postawić kuponu';
       toast.error(message);
     } finally {
       setPlacing(false);

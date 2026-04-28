@@ -15,6 +15,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import CasinoLayout from "./pages/CasinoLayout";
 import CasinoHub from "./pages/CasinoHub";
 import CasinoRoulettePage from "./pages/CasinoRoulettePage";
+import CasinoRouletteDevPage from "./pages/CasinoRouletteDevPage";
 import CasinoBlackjackPage from "./pages/CasinoBlackjackPage";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,10 @@ const App = () => (
               <Route path="/casino" element={<CasinoLayout />}>
                 <Route index element={<CasinoHub />} />
                 <Route path="roulette" element={<CasinoRoulettePage />} />
+                <Route
+                  path="roulette/dev"
+                  element={<CasinoRouletteDevPage />}
+                />
                 <Route path="blackjack" element={<CasinoBlackjackPage />} />
               </Route>
 

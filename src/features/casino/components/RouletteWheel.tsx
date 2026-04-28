@@ -13,7 +13,9 @@ import { ROULETTE_SPIN_REVEAL_MS } from "@/features/casino/lib/roulette";
 import {
   computeRouletteBallRotation,
   computeRouletteBallSettledRotation,
+  getRouletteBallAngleOffset,
   getRouletteBallPocketAngle,
+  type RouletteBallAngleOffsets,
   ROULETTE_WHEEL_NUMBERS,
 } from "@/features/casino/lib/rouletteWheel";
 
@@ -26,7 +28,6 @@ const ROULETTE_WHEEL_MAX_WIDTH_CLASS =
 const ROULETTE_WHEEL_FRAME_MAX_WIDTH_CLASS = "max-w-[1138px]";
 
 const ROULETTE_BALL_SIZE = "clamp(8px, 2.8%, 16px)";
-const ROULETTE_BALL_ANGLE_OFFSET_DEG = -1;
 const ROULETTE_BALL_SPINNING_TOP_START = "8%";
 const ROULETTE_BALL_SPINNING_TOP_END = "12%";
 const ROULETTE_BALL_SETTLED_TOP = "25.3%";
@@ -37,6 +38,12 @@ const ROULETTE_BALL_SETTLE_DELAY_MS = 100;
 const ROULETTE_BALL_SETTLE_DURATION_MS = 800;
 const ROULETTE_BALL_MIN_SPIN_DURATION_MS = 6000;
 const ROULETTE_BALL_MAX_SPIN_DURATION_MS = 9000;
+
+interface RouletteWheelAnimationTiming {
+  settleDelayMs?: number;
+  settleDurationMs?: number;
+  spinDurationMs?: number;
+}
 
 interface ActiveBallSpin {
   durationMs: number;
@@ -50,6 +57,8 @@ interface ActiveBallSpin {
 }
 
 interface RouletteWheelProps {
+  angleOffsetsDeg?: RouletteBallAngleOffsets;
+  animationTiming?: RouletteWheelAnimationTiming;
   phase: "waiting" | "spinning" | "settled";
   winningNumber: number | null;
   spinStartedAt: string | null;
@@ -57,6 +66,8 @@ interface RouletteWheelProps {
 }
 
 export const RouletteWheel = memo(function RouletteWheel({
+  angleOffsetsDeg,
+  animationTiming,
   phase,
   winningNumber,
   spinStartedAt,
@@ -119,10 +130,9 @@ export const RouletteWheel = memo(function RouletteWheel({
         targetIndex,
       );
 
-      const durationMs = Math.max(
-        0,
-        Math.min(ROULETTE_BALL_MAX_SPIN_DURATION_MS, remainingMs),
-      );
+      const durationMs =
+        animationTiming?.spinDurationMs ??
+        Math.max(0, Math.min(ROULETTE_BALL_MAX_SPIN_DURATION_MS, remainingMs));
       const targetAngle = getRouletteBallPocketAngle(targetIndex);
       const targetNumber = winningNumber;
 
@@ -155,22 +165,26 @@ export const RouletteWheel = memo(function RouletteWheel({
 
       cleanupRef.current.rafIds.push(firstRaf);
 
-      cleanupRef.current.settleTimer = window.setTimeout(() => {
-        setActiveSpin((current) => {
-          if (current?.roundId !== roundId) return current;
-          const settledRotation = computeRouletteBallSettledRotation(
-            current.targetRotation,
-            current.targetIndex,
-          );
-          ballRotationRef.current = settledRotation;
-          return {
-            ...current,
-            phase: "settled",
-            targetRotation: settledRotation,
-          };
-        });
-        cleanupRef.current.settleTimer = null;
-      }, durationMs + ROULETTE_BALL_SETTLE_DELAY_MS);
+      cleanupRef.current.settleTimer = window.setTimeout(
+        () => {
+          setActiveSpin((current) => {
+            if (current?.roundId !== roundId) return current;
+            const settledRotation = computeRouletteBallSettledRotation(
+              current.targetRotation,
+              current.targetIndex,
+            );
+            ballRotationRef.current = settledRotation;
+            return {
+              ...current,
+              phase: "settled",
+              targetRotation: settledRotation,
+            };
+          });
+          cleanupRef.current.settleTimer = null;
+        },
+        durationMs +
+          (animationTiming?.settleDelayMs ?? ROULETTE_BALL_SETTLE_DELAY_MS),
+      );
 
       return undefined;
     }
@@ -196,7 +210,24 @@ export const RouletteWheel = memo(function RouletteWheel({
           };
         }
 
-        if (current.targetNumber !== winningNumber) return current;
+        if (current.targetNumber !== winningNumber) {
+          const settledRotation = computeRouletteBallSettledRotation(
+            ballRotationRef.current,
+            targetIndex,
+          );
+          ballRotationRef.current = settledRotation;
+          return {
+            durationMs: 0,
+            fromRotation: settledRotation,
+            phase: "settled",
+            roundId: roundId ?? `settled-${winningNumber}`,
+            targetAngle,
+            targetIndex,
+            targetNumber: winningNumber,
+            targetRotation: settledRotation,
+          };
+        }
+
         if (current.phase === "staged" || current.phase === "spinning") {
           return current;
         }
@@ -213,7 +244,15 @@ export const RouletteWheel = memo(function RouletteWheel({
         };
       });
     }
-  }, [phase, winningNumber, spinStartedAt, roundId, targetIndex]);
+  }, [
+    phase,
+    winningNumber,
+    spinStartedAt,
+    roundId,
+    targetIndex,
+    animationTiming?.settleDelayMs,
+    animationTiming?.spinDurationMs,
+  ]);
 
   useEffect(() => {
     const cleanup = cleanupRef.current;
@@ -236,7 +275,10 @@ export const RouletteWheel = memo(function RouletteWheel({
     activeSpin?.phase === "staged"
       ? activeSpin.fromRotation
       : (activeSpin?.targetRotation ?? 0);
-  const adjustedBallRotation = ballRotation + ROULETTE_BALL_ANGLE_OFFSET_DEG;
+  const angleOffsetDeg = activeSpin
+    ? getRouletteBallAngleOffset(activeSpin.targetNumber, angleOffsetsDeg)
+    : 0;
+  const adjustedBallRotation = ballRotation + angleOffsetDeg;
   const isSpinning = activeSpin?.phase === "spinning";
   const ballTop =
     activeSpin?.phase === "staged"
@@ -248,7 +290,7 @@ export const RouletteWheel = memo(function RouletteWheel({
     activeSpin?.phase === "spinning"
       ? `top ${activeSpin.durationMs / 1000}s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
       : activeSpin?.phase === "settled"
-        ? `top ${ROULETTE_BALL_SETTLE_DURATION_MS / 1000}s cubic-bezier(0.18, 0.72, 0.2, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
+        ? `top ${(animationTiming?.settleDurationMs ?? ROULETTE_BALL_SETTLE_DURATION_MS) / 1000}s cubic-bezier(0.18, 0.72, 0.2, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
         : "none";
 
   return (
@@ -301,6 +343,8 @@ export const RouletteWheel = memo(function RouletteWheel({
           <div
             aria-hidden="true"
             data-testid="roulette-ball-orbit"
+            data-adjusted-target-angle={adjustedBallRotation.toFixed(3)}
+            data-angle-offset={angleOffsetDeg}
             data-animation-state={activeSpin.phase}
             data-target-angle={activeSpin.targetAngle.toFixed(3)}
             data-target-index={activeSpin.targetIndex}
