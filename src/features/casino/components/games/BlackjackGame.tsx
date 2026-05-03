@@ -175,14 +175,14 @@ export function BlackjackGame() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex min-h-0 flex-col items-center gap-2"
+            className="flex min-h-0 w-full max-w-full flex-col items-center gap-2"
           >
             <span className="bg-black/50 text-white/80 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10">
               Krupier: {dealerValue}
             </span>
             <div
               data-testid="dealer-hand"
-              className="isolate flex max-w-full justify-center overflow-visible px-2 pb-2 -space-x-4 sm:-space-x-5"
+              className="isolate mx-auto flex w-fit max-w-full justify-start overflow-x-auto px-2 pb-2 -space-x-7 [scrollbar-width:none] sm:-space-x-8 [&::-webkit-scrollbar]:hidden"
             >
               {dealerSlots.map(({ card, hidden, index, key, testId }) => (
                 <PlayingCard

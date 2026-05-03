@@ -155,7 +155,8 @@ describe('BlackjackGame', () => {
     );
     expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
       'max-w-full',
-      'overflow-visible',
+      'overflow-x-auto',
+      '[scrollbar-width:none]',
     );
     expect(screen.getByTestId('dealer-hidden-card')).toBeInTheDocument();
     expect(container.querySelector('[data-card-id="p-1"]')).toBeInTheDocument();
@@ -492,7 +493,8 @@ describe('BlackjackGame', () => {
 
     expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
       'isolate',
-      '-space-x-4',
+      '-space-x-7',
+      '[&::-webkit-scrollbar]:hidden',
     );
     expect(hiddenSlot).toHaveClass('h-28', 'w-20', 'bg-slate-950');
     expect(hiddenSlot).not.toHaveClass('border-2', 'bg-indigo-900');
