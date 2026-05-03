@@ -3,13 +3,20 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const migrationPath = resolve(
+const persistentMigrationPath = resolve(
   process.cwd(),
   'supabase/migrations/20260503010000_blackjack_persistent_tables.sql',
 );
+const ambiguityFixMigrationPath = resolve(
+  process.cwd(),
+  'supabase/migrations/20260503011000_fix_blackjack_shoe_column_ambiguity.sql',
+);
 
 describe('blackjack persistent table migration', () => {
-  it('qualifies shoe draw output columns so PL/pgSQL variables stay unambiguous', () => {
+  it.each([
+    ['persistent migration', persistentMigrationPath],
+    ['follow-up ambiguity fix migration', ambiguityFixMigrationPath],
+  ])('qualifies shoe draw output columns in the %s', (_name, migrationPath) => {
     const migration = readFileSync(migrationPath, 'utf8');
 
     expect(migration).not.toMatch(
