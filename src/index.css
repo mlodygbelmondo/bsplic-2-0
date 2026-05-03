@@ -60,11 +60,13 @@
     --sidebar-border: 220 13% 90%;
     --sidebar-ring: 355 100% 44%;
 
-    --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10);
-    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 12px 32px rgba(0,0,0,0.14);
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-card-hover:
+      0 4px 12px rgba(0, 0, 0, 0.1), 0 12px 32px rgba(0, 0, 0, 0.14);
 
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --app-viewport-height: 100dvh;
   }
 }
 
@@ -74,11 +76,20 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: var(--app-viewport-height, 100dvh);
   }
 
   #root {
-    min-height: 100dvh;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: var(--app-viewport-height, 100dvh);
   }
 }
 
@@ -104,10 +115,12 @@
   .min-safe-screen {
     min-height: 100vh;
     min-height: 100svh;
+    min-height: var(--app-viewport-height, 100dvh);
   }
   .h-safe-screen {
     height: 100vh;
     height: 100dvh;
+    height: var(--app-viewport-height, 100dvh);
   }
   .safe-pad-y {
     padding-top: calc(1rem + var(--safe-area-top));
@@ -123,7 +136,12 @@
     content: '';
     position: absolute;
     inset: -35% -65%;
-    background: linear-gradient(108deg, transparent 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+    background: linear-gradient(
+      108deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.22) 50%,
+      transparent 58%
+    );
     transform: translateX(-145%) skewX(-18deg);
     animation: propose-cta-shine 5.2s ease-in-out infinite;
     pointer-events: none;
@@ -132,8 +150,13 @@
     animation: pulse-dot 1.5s ease-in-out infinite;
   }
   @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
   }
   .odds-green {
     background: hsl(var(--odds-bg));
@@ -164,7 +187,8 @@
     }
   }
   @keyframes propose-cta-shine {
-    0%, 74% {
+    0%,
+    74% {
       transform: translateX(-145%) skewX(-18deg);
       opacity: 0;
     }
@@ -209,9 +233,21 @@
   .bsplicboost-card {
     position: relative;
     background:
-      radial-gradient(140% 130% at 0% 0%, rgba(239, 68, 68, 0.26) 0%, rgba(239, 68, 68, 0) 52%),
-      radial-gradient(120% 130% at 100% 100%, rgba(127, 29, 29, 0.2) 0%, rgba(127, 29, 29, 0) 56%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(220, 38, 38, 0.04)),
+      radial-gradient(
+        140% 130% at 0% 0%,
+        rgba(239, 68, 68, 0.26) 0%,
+        rgba(239, 68, 68, 0) 52%
+      ),
+      radial-gradient(
+        120% 130% at 100% 100%,
+        rgba(127, 29, 29, 0.2) 0%,
+        rgba(127, 29, 29, 0) 56%
+      ),
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.02),
+        rgba(220, 38, 38, 0.04)
+      ),
       hsl(var(--card));
     overflow: hidden;
   }
@@ -219,17 +255,27 @@
     content: '';
     position: absolute;
     inset: -30% 0;
-    background: linear-gradient(110deg, transparent 36%, rgba(255, 240, 240, 0.22) 50%, transparent 64%);
+    background: linear-gradient(
+      110deg,
+      transparent 36%,
+      rgba(255, 240, 240, 0.22) 50%,
+      transparent 64%
+    );
     transform: translateX(-140%) skewX(-14deg);
     animation: bsplicboost-shimmer 5.5s ease-in-out infinite;
     pointer-events: none;
     z-index: 1;
   }
   .bsplicboost-topbar {
-    background: linear-gradient(90deg, rgba(185, 28, 28, 0.92), rgba(127, 29, 29, 0.86));
+    background: linear-gradient(
+      90deg,
+      rgba(185, 28, 28, 0.92),
+      rgba(127, 29, 29, 0.86)
+    );
   }
   @keyframes bsplicboost-shimmer {
-    0%, 68% {
+    0%,
+    68% {
       transform: translateX(-140%) skewX(-14deg);
       opacity: 0;
     }
@@ -257,11 +303,33 @@
   }
   .casino-page-bg {
     background:
-      radial-gradient(1200px 700px at 50% -12%, rgba(250, 204, 21, 0.14), transparent 52%),
-      radial-gradient(900px 700px at 8% 18%, rgba(220, 38, 38, 0.18), transparent 54%),
-      radial-gradient(1200px 900px at 92% 0%, rgba(120, 13, 25, 0.28), transparent 48%),
-      radial-gradient(900px 620px at 50% 35%, rgba(180, 83, 9, 0.08), transparent 60%),
-      linear-gradient(180deg, #09090b 0%, #13070b 28%, #0c0a10 62%, #07070a 100%);
+      radial-gradient(
+        1200px 700px at 50% -12%,
+        rgba(250, 204, 21, 0.14),
+        transparent 52%
+      ),
+      radial-gradient(
+        900px 700px at 8% 18%,
+        rgba(220, 38, 38, 0.18),
+        transparent 54%
+      ),
+      radial-gradient(
+        1200px 900px at 92% 0%,
+        rgba(120, 13, 25, 0.28),
+        transparent 48%
+      ),
+      radial-gradient(
+        900px 620px at 50% 35%,
+        rgba(180, 83, 9, 0.08),
+        transparent 60%
+      ),
+      linear-gradient(
+        180deg,
+        #09090b 0%,
+        #13070b 28%,
+        #0c0a10 62%,
+        #07070a 100%
+      );
   }
   .casino-responsive-bg {
     background-image: var(--casino-bg-mobile);
@@ -273,12 +341,27 @@
   }
   .casino-card {
     background:
-      linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)),
-      radial-gradient(120% 180% at 0% 0%, rgba(245, 158, 11, 0.10), transparent 42%),
-      radial-gradient(120% 140% at 100% 100%, rgba(225, 29, 72, 0.10), transparent 46%),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.06),
+        rgba(255, 255, 255, 0.015)
+      ),
+      radial-gradient(
+        120% 180% at 0% 0%,
+        rgba(245, 158, 11, 0.1),
+        transparent 42%
+      ),
+      radial-gradient(
+        120% 140% at 100% 100%,
+        rgba(225, 29, 72, 0.1),
+        transparent 46%
+      ),
       rgba(4, 4, 6, 0.78);
     backdrop-filter: blur(18px);
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(255,255,255,0.03);
+    box-shadow:
+      0 28px 80px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   }
   .skeleton-shimmer {
     @apply animate-pulse rounded-md bg-muted;

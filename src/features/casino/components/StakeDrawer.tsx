@@ -49,7 +49,7 @@ export function StakeDrawer({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 96, opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 520 }}
-              className="fixed inset-x-0 bottom-3 z-50 mx-auto w-full max-w-xl px-4"
+              className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-xl px-4"
             >
               <div className="flex justify-center">
                 <button
@@ -131,7 +131,7 @@ export function StakeDrawer({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 48, opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 520 }}
-              className="fixed inset-x-0 bottom-0 z-50 mx-auto w-fit"
+              className="fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-50 mx-auto w-fit"
             >
               <button
                 type="button"
@@ -158,13 +158,13 @@ export function StakeDrawer({
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
-              className="fixed bottom-0 left-0 right-0 z-50"
+              className="fixed inset-x-0 bottom-0 z-50"
             >
               <button
                 type="button"
                 aria-label="Otwórz kupon ruletki"
                 onClick={() => setIsMobileOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-t-3xl border-t border-white/10 bg-black/90 py-4 text-white/70 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                className="flex w-full items-center justify-center gap-2 rounded-t-3xl border-t border-white/10 bg-black/90 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 text-white/70 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
               >
                 <ChevronUp className="h-5 w-5" />
                 <span className="text-sm font-semibold uppercase tracking-wider">
@@ -187,7 +187,7 @@ export function StakeDrawer({
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               data-testid="mobile-stake-drawer"
-              className="fixed bottom-0 left-0 right-0 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[calc(var(--app-viewport-height,100dvh)-4rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
             >
               {/* Drag handle */}
               <div className="mb-4 flex justify-center">

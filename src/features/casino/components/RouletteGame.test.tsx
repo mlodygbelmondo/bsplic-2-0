@@ -25,7 +25,8 @@ vi.mock('@/features/social/api/social', () => ({
 
 vi.mock('@/features/casino/lib/preferences', () => ({
   getStoredRouletteBetType: () => getStoredRouletteBetTypeMock(),
-  storeRouletteBetType: (...args: unknown[]) => storeRouletteBetTypeMock(...args),
+  storeRouletteBetType: (...args: unknown[]) =>
+    storeRouletteBetTypeMock(...args),
 }));
 
 vi.mock('sonner', () => ({
@@ -93,7 +94,9 @@ describe('RouletteGame', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Postaw' }));
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Wybierz poprawną wartość zakładu');
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'Wybierz poprawną wartość zakładu',
+      );
     });
   });
 
@@ -208,11 +211,7 @@ describe('RouletteGame', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Schowaj stawkę' }));
@@ -226,7 +225,9 @@ describe('RouletteGame', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Pokaż stawkę/ }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Postaw' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Postaw' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -249,16 +250,10 @@ describe('RouletteGame', () => {
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(
-      screen.getByRole('button', { name: 'Postaw' }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Postaw' })).toBeDisabled();
   });
 
   it('does not render a separate lower status bar container', () => {
@@ -274,11 +269,7 @@ describe('RouletteGame', () => {
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.queryByText('Do spinu')).not.toBeInTheDocument();
@@ -320,15 +311,13 @@ describe('RouletteGame', () => {
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.queryByText('Twoje zakłady')).not.toBeInTheDocument();
-    expect(screen.queryByText('Brak aktywnych zakładów')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Brak aktywnych zakładów'),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps recent spins and round participants in the desktop left rail above recent wins', () => {
@@ -362,11 +351,7 @@ describe('RouletteGame', () => {
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     const leftRail = screen.getByTestId('roulette-left-rail');
@@ -375,39 +360,43 @@ describe('RouletteGame', () => {
     expect(leftRail).toHaveTextContent('Gracze w rundzie');
     expect(leftRail).toHaveTextContent('Ostatnie spiny');
     expect(leftRail).toHaveTextContent('Ostatnie wygrane');
-    expect(leftRailText.indexOf('Gracze w rundzie')).toBeLessThan(leftRailText.indexOf('Ostatnie wygrane'));
-    expect(leftRailText.indexOf('Ostatnie spiny')).toBeLessThan(leftRailText.indexOf('Ostatnie wygrane'));
+    expect(leftRailText.indexOf('Gracze w rundzie')).toBeLessThan(
+      leftRailText.indexOf('Ostatnie wygrane'),
+    );
+    expect(leftRailText.indexOf('Ostatnie spiny')).toBeLessThan(
+      leftRailText.indexOf('Ostatnie wygrane'),
+    );
   });
 
   it('uses the desktop width with left, center, and right table zones', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByTestId('roulette-table-layout')).toHaveClass('xl:grid-cols-[360px_minmax(520px,1fr)_360px]');
-    expect(screen.getByTestId('roulette-left-rail')).toHaveTextContent('Ostatnie wygrane');
+    expect(screen.getByTestId('roulette-table-layout')).toHaveClass(
+      'xl:grid-cols-[360px_minmax(520px,1fr)_360px]',
+    );
+    expect(screen.getByTestId('roulette-left-rail')).toHaveTextContent(
+      'Ostatnie wygrane',
+    );
     expect(screen.getByTestId('roulette-center-stage')).toBeInTheDocument();
-    expect(screen.getByTestId('roulette-right-rail')).toHaveTextContent('Typ zakładu');
+    expect(screen.getByTestId('roulette-right-rail')).toHaveTextContent(
+      'Typ zakładu',
+    );
   });
 
   it('defaults bet type to Numer on first load', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getAllByRole('button', { name: /Numer/i })[0]).toHaveClass('border-amber-500/50');
+    expect(screen.getAllByRole('button', { name: /Numer/i })[0]).toHaveClass(
+      'border-amber-500/50',
+    );
     expect(screen.getByText('Wartość')).toBeInTheDocument();
   });
 
@@ -416,14 +405,12 @@ describe('RouletteGame', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getAllByRole('button', { name: /Kolor/i })[0]).toHaveClass('border-amber-500/50');
+    expect(screen.getAllByRole('button', { name: /Kolor/i })[0]).toHaveClass(
+      'border-amber-500/50',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Parzystość/i }));
 
@@ -435,32 +422,33 @@ describe('RouletteGame', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.queryByTestId('roulette-bet-panel')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Otwórz kupon ruletki/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Otwórz kupon ruletki/i }),
+    );
 
     const drawer = screen.getByTestId('mobile-stake-drawer');
     expect(drawer).toHaveTextContent('Typ zakładu');
     expect(drawer).toHaveTextContent('Wybierz stawkę');
-    expect(drawer).toHaveClass('max-h-[calc(100dvh-4rem)]', 'overflow-y-auto', 'overscroll-contain');
-    expect(screen.getByTestId('roulette-bet-value-grid')).toHaveClass('grid-cols-5', 'sm:grid-cols-6');
+    expect(drawer).toHaveClass(
+      'max-h-[calc(var(--app-viewport-height,100dvh)-4rem)]',
+      'overflow-y-auto',
+      'overscroll-contain',
+    );
+    expect(screen.getByTestId('roulette-bet-value-grid')).toHaveClass(
+      'grid-cols-5',
+      'sm:grid-cols-6',
+    );
   });
 
   it('supports halving and doubling the stake from the floating bar', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByRole('spinbutton'), {
@@ -494,19 +482,13 @@ describe('RouletteGame', () => {
           avatar_url: null,
           total_stake: 20,
           bet_count: 1,
-          bets: [
-            { bet_type: 'color' as const, bet_value: 'black', stake: 20 },
-          ],
+          bets: [{ bet_type: 'color' as const, bet_value: 'black', stake: 20 }],
         },
       ],
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.getByText('Gracze w rundzie')).toBeInTheDocument();
@@ -563,15 +545,13 @@ describe('RouletteGame', () => {
     });
 
     render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
-    expect(toastSuccessMock).not.toHaveBeenCalledWith('Trafiony spin: +40.00 zł');
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      'Trafiony spin: +40.00 zł',
+    );
   });
 
   it('notifies about a freshly settled user win after the table has advanced to the next round', async () => {
@@ -595,11 +575,7 @@ describe('RouletteGame', () => {
     });
 
     const { rerender } = render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
@@ -657,11 +633,7 @@ describe('RouletteGame', () => {
     });
 
     rerender(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
@@ -699,15 +671,13 @@ describe('RouletteGame', () => {
     });
 
     const { rerender } = render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Zamknij powiadomienie o wygranej/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Zamknij powiadomienie o wygranej/i }),
+    );
     expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
 
     useRouletteTableMock.mockReturnValue({
@@ -738,11 +708,7 @@ describe('RouletteGame', () => {
     });
 
     rerender(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.getByText('Wygrałeś 60.00 zł!')).toBeInTheDocument();
@@ -818,7 +784,9 @@ describe('RouletteGame', () => {
         winningColor: 'red',
       });
     });
-    expect(toastSuccessMock).toHaveBeenCalledWith('Wygrana udostępniona na Socialu!');
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'Wygrana udostępniona na Socialu!',
+    );
   });
 
   it('does not show the same logical win again after sharing it', async () => {
@@ -865,11 +833,7 @@ describe('RouletteGame', () => {
     });
 
     const { rerender } = render(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
@@ -900,11 +864,7 @@ describe('RouletteGame', () => {
     });
 
     rerender(
-      <RouletteGame
-        userId="user-1"
-        balance={100}
-        refreshProfile={vi.fn()}
-      />,
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
     expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
