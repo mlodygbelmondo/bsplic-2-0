@@ -10,6 +10,7 @@ import {
   useBlackjack,
   calculateHandValue,
 } from "@/features/casino/hooks/useBlackjack";
+import { cn } from "@/lib/utils";
 
 import { PlayingCard } from "./PlayingCard";
 
@@ -20,6 +21,9 @@ export function BlackjackGame() {
 
   const {
     playerHand,
+    playerHands,
+    activeHandIndex,
+    activeHand,
     dealerHand,
     status,
     stake,
@@ -28,8 +32,10 @@ export function BlackjackGame() {
     startGame,
     hit,
     stand,
+    split,
     doubleDown,
     resetGame,
+    canSplit,
     canDoubleDown,
   } = useBlackjack({
     userId: user?.id ?? "",
@@ -60,7 +66,23 @@ export function BlackjackGame() {
   const isBetValid =
     Number.isFinite(parsedBet) && parsedBet > 0 && parsedBet <= balance;
 
-  const playerValue = calculateHandValue(playerHand);
+  const handsToRender =
+    playerHands.length > 0
+      ? playerHands
+      : playerHand.length > 0
+        ? [
+            {
+              id: "hand-1",
+              cards: playerHand,
+              stake,
+              payout: 0,
+              status: status === "playing" ? "playing" : status,
+              doubleDownUsed: false,
+              isSplitAces: false,
+            },
+          ]
+        : [];
+  const activeStake = activeHand?.stake ?? stake;
   const dealerValue =
     status === "playing"
       ? calculateHandValue(dealerHand.slice(0, 1))
@@ -196,14 +218,24 @@ export function BlackjackGame() {
               >
                 Czekaj (Stand)
               </Button>
+              {canSplit && (
+                <Button
+                  onClick={split}
+                  variant="outline"
+                  disabled={isResolving || activeStake > balance}
+                  className="h-12 rounded-2xl border-emerald-500/50 bg-emerald-500/20 px-5 text-base text-emerald-200 hover:bg-emerald-500/30 disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                >
+                  Split
+                </Button>
+              )}
               {canDoubleDown && (
                 <Button
                   onClick={doubleDown}
                   variant="outline"
-                  disabled={isResolving || stake > balance}
+                  disabled={isResolving || activeStake > balance}
                   className="h-12 rounded-2xl border-blue-500/50 bg-blue-500/20 px-5 text-base text-blue-300 hover:bg-blue-500/30 disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
                 >
-                  x2
+                  Double Down
                 </Button>
               )}
             </motion.div>
@@ -212,34 +244,75 @@ export function BlackjackGame() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-        {playerHand.length > 0 && (
+        {handsToRender.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex min-h-0 flex-col items-center gap-2"
+            className="flex min-h-0 w-full flex-col items-center gap-2"
           >
-            <div
-              data-testid="player-hand"
-              className="relative z-10 flex max-w-full overflow-x-auto px-2 pb-2 -space-x-10 sm:-space-x-12"
-            >
-              {playerHand.map((card, i) => (
-                <PlayingCard key={`player-${i}`} card={card} />
-              ))}
+            <div className="flex w-full max-w-full gap-3 overflow-x-auto px-2 pb-2">
+              {handsToRender.map((hand, handIndex) => {
+                const value = calculateHandValue(hand.cards);
+                const isActive =
+                  status === "playing" && handIndex === activeHandIndex;
+
+                return (
+                  <div
+                    key={hand.id}
+                    className={cn(
+                      "flex min-w-[210px] flex-col items-center gap-2 rounded-2xl border bg-black/35 p-3 backdrop-blur-md",
+                      isActive
+                        ? "border-amber-300/60 shadow-[0_0_26px_rgba(251,191,36,0.2)]"
+                        : "border-white/10",
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
+                      <span>Ręka {handIndex + 1}</span>
+                      {isActive && (
+                        <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] text-amber-100">
+                          Aktywna
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      data-testid={
+                        handIndex === activeHandIndex
+                          ? "player-hand"
+                          : undefined
+                      }
+                      className="relative z-10 flex max-w-full overflow-x-auto px-2 pb-2 -space-x-10 sm:-space-x-12"
+                    >
+                      {hand.cards.map((card, i) => (
+                        <PlayingCard
+                          key={`player-${hand.id}-${i}`}
+                          card={card}
+                        />
+                      ))}
+                    </div>
+                    <span
+                      className={cn(
+                        "rounded-full border border-white/10 px-4 py-1.5 text-base font-bold backdrop-blur-md",
+                        value > 21
+                          ? "bg-red-500/80 text-white"
+                          : value === 21
+                            ? "bg-green-500/80 text-white"
+                            : "bg-black/50 text-white/90",
+                      )}
+                    >
+                      Ty: {value}
+                    </span>
+                    <span className="text-sm text-white/40">
+                      Stawka: {hand.stake.toFixed(2)} zł
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            <span
-              className={`px-4 py-1.5 rounded-full text-base font-bold backdrop-blur-md border border-white/10 ${
-                playerValue > 21
-                  ? "bg-red-500/80 text-white"
-                  : playerValue === 21
-                    ? "bg-green-500/80 text-white"
-                    : "bg-black/50 text-white/90"
-              }`}
-            >
-              Ty: {playerValue}
-            </span>
-            <span className="text-white/40 text-sm mt-1">
-              Stawka: {stake.toFixed(2)} zł
-            </span>
+            {handsToRender.length === 1 && (
+              <span className="text-white/40 text-sm mt-1">
+                Łączna stawka: {stake.toFixed(2)} zł
+              </span>
+            )}
           </motion.div>
         )}
       </div>

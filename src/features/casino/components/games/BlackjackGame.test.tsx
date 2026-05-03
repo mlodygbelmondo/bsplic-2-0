@@ -37,6 +37,8 @@ describe('BlackjackGame', () => {
 
   const baseBlackjackState = {
     playerHand: [],
+    playerHands: [],
+    activeHandIndex: 0,
     dealerHand: [],
     status: 'betting' as const,
     stake: 0,
@@ -45,8 +47,10 @@ describe('BlackjackGame', () => {
     startGame: vi.fn(),
     hit: vi.fn(),
     stand: vi.fn(),
+    split: vi.fn(),
     doubleDown: vi.fn(),
     resetGame: vi.fn(),
+    canSplit: false,
     canDoubleDown: false,
   };
 
@@ -59,6 +63,21 @@ describe('BlackjackGame', () => {
         { suit: 'spades', rank: '9', value: 9 },
         { suit: 'clubs', rank: '2', value: 2 },
       ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { suit: 'hearts', rank: '10', value: 10 },
+            { suit: 'spades', rank: '9', value: 9 },
+            { suit: 'clubs', rank: '2', value: 2 },
+          ],
+          stake: 10,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
       dealerHand: [
         { suit: 'diamonds', rank: '8', value: 8 },
         { suit: 'clubs', rank: 'K', value: 10 },
@@ -69,9 +88,109 @@ describe('BlackjackGame', () => {
     const { container } = render(<BlackjackGame />);
 
     expect(container.firstChild).toHaveClass('flex-1', 'min-h-0');
-    expect(screen.getByRole('button', { name: /Dobierz/i }).parentElement).toHaveClass('flex-wrap');
-    expect(container.querySelector('[data-testid="player-hand"]')).toHaveClass('max-w-full', 'overflow-x-auto');
-    expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass('max-w-full', 'overflow-x-auto');
+    expect(
+      screen.getByRole('button', { name: /Dobierz/i }).parentElement,
+    ).toHaveClass('flex-wrap');
+    expect(container.querySelector('[data-testid="player-hand"]')).toHaveClass(
+      'max-w-full',
+      'overflow-x-auto',
+    );
+    expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
+      'max-w-full',
+      'overflow-x-auto',
+    );
+  });
+
+  it('shows split and a double down action for eligible active hands', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      stake: 20,
+      playerHand: [
+        { suit: 'hearts', rank: '10', value: 10 },
+        { suit: 'spades', rank: 'K', value: 10 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { suit: 'hearts', rank: '10', value: 10 },
+            { suit: 'spades', rank: 'K', value: 10 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [
+        { suit: 'diamonds', rank: '8', value: 8 },
+        { suit: 'clubs', rank: 'K', value: 10 },
+      ],
+      canSplit: true,
+      canDoubleDown: true,
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByRole('button', { name: /Split/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Double Down/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'x2' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders split hands with an active hand marker and per-hand stakes', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      stake: 40,
+      activeHandIndex: 1,
+      playerHand: [
+        { suit: 'clubs', rank: '8', value: 8 },
+        { suit: 'diamonds', rank: '7', value: 7 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { suit: 'hearts', rank: '8', value: 8 },
+            { suit: 'spades', rank: '10', value: 10 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'stand',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+        {
+          id: 'hand-2',
+          cards: [
+            { suit: 'clubs', rank: '8', value: 8 },
+            { suit: 'diamonds', rank: '7', value: 7 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [
+        { suit: 'diamonds', rank: '8', value: 8 },
+        { suit: 'clubs', rank: 'K', value: 10 },
+      ],
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('Ręka 1')).toBeInTheDocument();
+    expect(screen.getByText('Ręka 2')).toBeInTheDocument();
+    expect(screen.getByText('Aktywna')).toBeInTheDocument();
+    expect(screen.getAllByText('Stawka: 20.00 zł')).toHaveLength(2);
   });
 
   it('shows a flashy win notification when blackjack resolves as won', async () => {
@@ -92,7 +211,9 @@ describe('BlackjackGame', () => {
     render(<BlackjackGame />);
 
     expect(screen.getByText('Wygrana!')).toBeInTheDocument();
-    expect(screen.getByText('Blackjack wypłaca nagrodę na saldo.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Blackjack wypłaca nagrodę na saldo.'),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Blackjack: wygrana!');
     });

@@ -2,12 +2,47 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
-  rank: '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+  rank:
+    | '2'
+    | '3'
+    | '4'
+    | '5'
+    | '6'
+    | '7'
+    | '8'
+    | '9'
+    | '10'
+    | 'J'
+    | 'Q'
+    | 'K'
+    | 'A';
   value: number;
 }
 
 // 'betting' is a client-only state used before a game is started.
-export type BlackjackGameStatus = 'betting' | 'playing' | 'won' | 'lost' | 'push';
+export type BlackjackGameStatus =
+  | 'betting'
+  | 'playing'
+  | 'won'
+  | 'lost'
+  | 'push';
+export type BlackjackHandStatus =
+  | 'playing'
+  | 'stand'
+  | 'busted'
+  | 'won'
+  | 'lost'
+  | 'push';
+
+export interface BlackjackHandState {
+  id: string;
+  cards: Card[];
+  stake: number;
+  payout: number;
+  status: BlackjackHandStatus;
+  doubleDownUsed: boolean;
+  isSplitAces: boolean;
+}
 
 // Mirrors the public.blackjack_game_state composite type from the
 // server-authoritative migration. The server hides the dealer's hole card
@@ -18,6 +53,8 @@ export interface BlackjackGameState {
   initialStake: number;
   status: 'playing' | 'won' | 'lost' | 'push';
   playerHand: Card[];
+  playerHands: BlackjackHandState[];
+  activeHandIndex: number;
   dealerHand: Card[];
   payout: number;
   doubleDownUsed: boolean;
@@ -39,24 +76,79 @@ interface RawBlackjackGameState {
   initial_stake: number | string;
   status: 'playing' | 'won' | 'lost' | 'push';
   player_hand: Card[] | null;
+  player_hands?: RawBlackjackHandState[] | null;
+  active_hand_index?: number | string | null;
   dealer_hand: Card[] | null;
   payout: number | string;
   double_down_used: boolean;
 }
 
+interface RawBlackjackHandState {
+  id?: string | number;
+  cards?: Card[] | null;
+  stake?: number | string | null;
+  payout?: number | string | null;
+  status?: BlackjackHandStatus | null;
+  doubleDownUsed?: boolean | null;
+  double_down_used?: boolean | null;
+  isSplitAces?: boolean | null;
+  is_split_aces?: boolean | null;
+}
+
+function normalizeHand(
+  raw: RawBlackjackHandState,
+  index: number,
+): BlackjackHandState {
+  return {
+    id: String(raw.id ?? `hand-${index + 1}`),
+    cards: Array.isArray(raw.cards) ? raw.cards : [],
+    stake: Number(raw.stake ?? 0),
+    payout: Number(raw.payout ?? 0),
+    status: raw.status ?? 'playing',
+    doubleDownUsed: Boolean(raw.doubleDownUsed ?? raw.double_down_used),
+    isSplitAces: Boolean(raw.isSplitAces ?? raw.is_split_aces),
+  };
+}
+
 function normalizeState(raw: unknown): BlackjackGameState {
-  const row = (Array.isArray(raw) ? raw[0] : raw) as RawBlackjackGameState | null;
+  const row = (
+    Array.isArray(raw) ? raw[0] : raw
+  ) as RawBlackjackGameState | null;
 
   if (!row || !row.id) {
     throw new Error('Brak danych gry');
   }
+
+  const playerHands = Array.isArray(row.player_hands)
+    ? row.player_hands.map(normalizeHand)
+    : [
+        {
+          id: 'hand-1',
+          cards: Array.isArray(row.player_hand) ? row.player_hand : [],
+          stake: Number(row.stake),
+          payout: Number(row.payout ?? 0),
+          status: row.status === 'playing' ? 'playing' : row.status,
+          doubleDownUsed: Boolean(row.double_down_used),
+          isSplitAces: false,
+        },
+      ];
+
+  const activeHandIndex = Math.max(
+    0,
+    Math.min(
+      Number(row.active_hand_index ?? 0),
+      Math.max(playerHands.length - 1, 0),
+    ),
+  );
 
   return {
     id: row.id,
     stake: Number(row.stake),
     initialStake: Number(row.initial_stake),
     status: row.status,
-    playerHand: Array.isArray(row.player_hand) ? row.player_hand : [],
+    playerHand: playerHands[activeHandIndex]?.cards ?? [],
+    playerHands,
+    activeHandIndex,
     dealerHand: Array.isArray(row.dealer_hand) ? row.dealer_hand : [],
     payout: Number(row.payout ?? 0),
     doubleDownUsed: Boolean(row.double_down_used),
@@ -122,6 +214,22 @@ export async function blackjackDoubleDown({
 
   if (error) {
     throw new Error(error.message || 'Nie udało się podwoić stawki');
+  }
+
+  return normalizeState(data);
+}
+
+export async function blackjackSplit({
+  gameId,
+  userId,
+}: BlackjackActionParams): Promise<BlackjackGameState> {
+  const { data, error } = await supabase.rpc('blackjack_split', {
+    p_game_id: gameId,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się rozdzielić kart');
   }
 
   return normalizeState(data);
