@@ -174,10 +174,14 @@ describe('BlackjackGame', () => {
       ],
     });
 
-    render(<BlackjackGame />);
+    const { container } = render(<BlackjackGame />);
 
     expect(screen.queryByText('Ręka 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Aktywna')).not.toBeInTheDocument();
+    expect(
+      container.querySelector('[data-testid="player-hand"]')?.parentElement
+        ?.parentElement,
+    ).toHaveClass('justify-center');
   });
 
   it('renders split hands with an active hand marker and per-hand stakes', () => {

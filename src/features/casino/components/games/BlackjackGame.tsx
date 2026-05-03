@@ -277,7 +277,14 @@ export function BlackjackGame() {
             animate={{ opacity: 1 }}
             className="flex min-h-0 w-full flex-col items-center gap-2"
           >
-            <div className="mx-auto flex w-full max-w-full justify-start gap-3 overflow-x-auto px-2 pb-2 xl:justify-center">
+            <div
+              className={cn(
+                "mx-auto flex w-full max-w-full gap-3 overflow-x-auto px-2 pb-2",
+                hasSplitHands
+                  ? "justify-start xl:justify-center"
+                  : "justify-center",
+              )}
+            >
               {handsToRender.map((hand, handIndex) => {
                 const value = calculateHandValue(hand.cards);
                 const isActive =
