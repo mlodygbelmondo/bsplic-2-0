@@ -28,6 +28,7 @@ export function BlackjackGame() {
     dealerHiddenCount,
     status,
     stake,
+    gameId,
     tableInfo,
     isLoading,
     isDealing,
@@ -122,6 +123,34 @@ export function BlackjackGame() {
       : status === "lost"
         ? "Porażka"
         : "Remis";
+  const dealerSlotKeyPrefix = gameId ?? "pending";
+  const dealerSlots = [
+    ...dealerHand.map((card, index) => ({
+      card,
+      hidden: false,
+      index,
+      key: `dealer-slot-${dealerSlotKeyPrefix}-${index}`,
+      testId: undefined,
+    })),
+    ...(status === "playing"
+      ? Array.from({ length: dealerHiddenCount }).map((_, hiddenIndex) => {
+          const index = dealerHand.length + hiddenIndex;
+
+          return {
+            card: {
+              id: `dealer-hidden-${hiddenIndex}`,
+              suit: "spades" as const,
+              rank: "A" as const,
+              value: 11,
+            },
+            hidden: true,
+            index,
+            key: `dealer-slot-${dealerSlotKeyPrefix}-${index}`,
+            testId: "dealer-hidden-card",
+          };
+        })
+      : []),
+  ];
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col justify-between gap-2 px-1 pb-2 sm:gap-3 sm:px-0">
@@ -153,32 +182,18 @@ export function BlackjackGame() {
             </span>
             <div
               data-testid="dealer-hand"
-              className="flex max-w-full overflow-x-auto px-2 pb-2 -space-x-10 sm:-space-x-12"
+              className="isolate flex max-w-full justify-center overflow-x-auto px-2 pb-2 -space-x-4 sm:-space-x-5"
             >
-              {dealerHand.map((card, i) => (
+              {dealerSlots.map(({ card, hidden, index, key, testId }) => (
                 <PlayingCard
-                  key={card.id ?? `dealer-${i}`}
+                  key={key}
                   card={card}
+                  hidden={hidden}
                   dealTarget="dealer"
-                  index={i}
+                  index={index}
+                  testId={testId}
                 />
               ))}
-              {status === "playing" &&
-                Array.from({ length: dealerHiddenCount }).map((_, i) => (
-                  <PlayingCard
-                    key={`dealer-hidden-${i}`}
-                    card={{
-                      id: `dealer-hidden-${i}`,
-                      suit: "spades",
-                      rank: "A",
-                      value: 11,
-                    }}
-                    hidden
-                    dealTarget="dealer"
-                    index={dealerHand.length + i}
-                    testId="dealer-hidden-card"
-                  />
-                ))}
             </div>
           </motion.div>
         )}

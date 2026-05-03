@@ -457,4 +457,59 @@ describe('BlackjackGame', () => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Blackjack: wygrana!');
     });
   });
+
+  it('keeps the dealer hole-card slot stable when the dealer reveals and draws', () => {
+    const playingState = {
+      ...baseBlackjackState,
+      gameId: 'game-1',
+      status: 'playing' as const,
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+        { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+            { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+          ],
+          stake: 10,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [{ id: 'd-1', suit: 'diamonds', rank: '3', value: 3 }],
+      dealerHiddenCount: 1,
+    };
+
+    useBlackjackMock.mockReturnValue(playingState);
+    const { rerender, container } = render(<BlackjackGame />);
+    const hiddenSlot = screen.getByTestId('dealer-hidden-card');
+
+    expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
+      'isolate',
+      '-space-x-4',
+    );
+
+    useBlackjackMock.mockReturnValue({
+      ...playingState,
+      status: 'won',
+      dealerHand: [
+        { id: 'd-1', suit: 'diamonds', rank: '3', value: 3 },
+        { id: 'd-2', suit: 'clubs', rank: '10', value: 10 },
+        { id: 'd-3', suit: 'hearts', rank: '5', value: 5 },
+      ],
+      dealerHiddenCount: 0,
+    });
+
+    rerender(<BlackjackGame />);
+
+    expect(hiddenSlot).toHaveAttribute('data-card-id', 'd-2');
+    expect(hiddenSlot).toHaveTextContent('10');
+    expect(hiddenSlot.isConnected).toBe(true);
+    expect(container.querySelector('[data-card-id="d-3"]')).toBeInTheDocument();
+  });
 });
