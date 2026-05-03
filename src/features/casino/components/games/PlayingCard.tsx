@@ -58,14 +58,14 @@ export const PlayingCard = memo(function PlayingCard({
         transition={transition}
         className={cn(
           cardFrameClass,
-          'overflow-hidden bg-slate-950',
-          'bg-[linear-gradient(135deg,rgba(255,255,255,0.08)_0_12%,transparent_12%_50%,rgba(255,255,255,0.05)_50%_62%,transparent_62%_100%)] bg-[length:18px_18px]',
-          'ring-1 ring-white/5',
+          'overflow-hidden border-white/20 bg-slate-900',
+          'bg-[linear-gradient(135deg,rgba(255,255,255,0.14)_0_12%,transparent_12%_50%,rgba(255,255,255,0.08)_50%_62%,transparent_62%_100%)] bg-[length:18px_18px]',
+          'ring-1 ring-white/10',
         )}
         style={{ zIndex: 0 }}
       >
         <div className="flex h-full w-full items-center justify-center p-2">
-          <div className="h-full w-full rounded-lg border border-white/10 bg-black/10 shadow-inner" />
+          <div className="h-full w-full rounded-lg border border-white/15 bg-white/5 shadow-inner" />
         </div>
       </motion.div>
     );

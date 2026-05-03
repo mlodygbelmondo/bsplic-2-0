@@ -145,7 +145,12 @@ describe('BlackjackGame', () => {
 
     const { container } = render(<BlackjackGame />);
 
-    expect(container.firstChild).toHaveClass('flex-1', 'min-h-0');
+    expect(container.firstChild).toHaveClass(
+      'grid',
+      'flex-1',
+      'min-h-0',
+      'grid-rows-[minmax(12rem,1fr)_minmax(7rem,auto)_minmax(13rem,1fr)]',
+    );
     expect(
       screen.getByRole('button', { name: 'Hit' }).parentElement,
     ).toHaveClass('flex-wrap');
@@ -195,6 +200,40 @@ describe('BlackjackGame', () => {
     expect(screen.getByText('Dobieranie karty...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hit' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Stand' })).toBeDisabled();
+  });
+
+  it('reserves the playing action message slot to prevent layout jumps', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+        { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+            { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+          ],
+          stake: 10,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [{ id: 'd-1', suit: 'diamonds', rank: '8', value: 8 }],
+      dealerHiddenCount: 1,
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByTestId('blackjack-action-message-slot')).toHaveClass(
+      'min-h-6',
+      'invisible',
+    );
   });
 
   it('keeps card animation timing short enough for mobile actions', () => {
@@ -496,7 +535,7 @@ describe('BlackjackGame', () => {
       '-space-x-7',
       '[&::-webkit-scrollbar]:hidden',
     );
-    expect(hiddenSlot).toHaveClass('h-28', 'w-20', 'bg-slate-950');
+    expect(hiddenSlot).toHaveClass('h-28', 'w-20', 'bg-slate-900');
     expect(hiddenSlot).not.toHaveClass('border-2', 'bg-indigo-900');
     expect(Number(hiddenSlot.getAttribute('data-card-delay'))).toBeGreaterThan(
       Number(dealerOpenCard?.getAttribute('data-card-delay')),

@@ -153,8 +153,8 @@ export function BlackjackGame() {
   ];
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col justify-between gap-2 px-1 pb-2 sm:gap-3 sm:px-0">
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
+    <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-rows-[minmax(12rem,1fr)_minmax(7rem,auto)_minmax(13rem,1fr)] gap-2 px-1 pb-2 sm:grid-rows-[minmax(13rem,1fr)_minmax(7.5rem,auto)_minmax(14rem,1fr)] sm:gap-3 sm:px-0">
+      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden">
         {tableInfo && (
           <div
             data-testid="blackjack-shoe-info"
@@ -175,7 +175,7 @@ export function BlackjackGame() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex min-h-0 w-full max-w-full flex-col items-center gap-2"
+            className="flex min-h-[10.25rem] w-full max-w-full flex-col items-center justify-center gap-2 sm:min-h-[11.75rem] 2xl:min-h-[14.75rem]"
           >
             <span className="bg-black/50 text-white/80 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md border border-white/10">
               Krupier: {dealerValue}
@@ -199,7 +199,7 @@ export function BlackjackGame() {
         )}
       </div>
 
-      <div className="flex min-h-[96px] shrink-0 flex-col items-center justify-center sm:min-h-[108px]">
+      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center">
         <AnimatePresence mode="wait">
           {status === "betting" && (
             <motion.div
@@ -299,11 +299,15 @@ export function BlackjackGame() {
               animate={{ opacity: 1, y: 0 }}
               className="flex w-full max-w-sm flex-col items-center gap-2 sm:max-w-none sm:gap-3"
             >
-              {actionMessage && (
-                <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-white/75 backdrop-blur-md">
-                  {actionMessage}
-                </span>
-              )}
+              <span
+                data-testid="blackjack-action-message-slot"
+                className={cn(
+                  "min-h-6 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-white/75 backdrop-blur-md",
+                  !actionMessage && "invisible",
+                )}
+              >
+                {actionMessage ?? "Status akcji"}
+              </span>
               <div className="flex w-full flex-wrap justify-center gap-2 sm:gap-3">
                 <Button
                   onClick={hit}
@@ -346,7 +350,7 @@ export function BlackjackGame() {
         </AnimatePresence>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden">
         {handsToRender.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
