@@ -42,8 +42,19 @@ describe('BlackjackGame', () => {
     dealerHand: [],
     status: 'betting' as const,
     stake: 0,
+    gameId: null,
+    tableInfo: {
+      deckCount: 2,
+      cardsRemaining: 104,
+      shoeNumber: 1,
+      handsPlayed: 0,
+      needsShuffle: false,
+    },
+    dealerHiddenCount: 0,
+    isLoading: false,
     isDealing: false,
     isResolving: false,
+    actionMessage: null,
     startGame: vi.fn(),
     hit: vi.fn(),
     stand: vi.fn(),
@@ -53,6 +64,55 @@ describe('BlackjackGame', () => {
     canSplit: false,
     canDoubleDown: false,
   };
+
+  it('shows a loading state while restoring the blackjack table', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      isLoading: true,
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('Wczytywanie stołu...')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Graj' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows persistent shoe metadata without an automatic running count', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      tableInfo: {
+        deckCount: 2,
+        cardsRemaining: 78,
+        shoeNumber: 4,
+        handsPlayed: 11,
+        needsShuffle: false,
+      },
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('2 talie')).toBeInTheDocument();
+    expect(screen.getByText('Pozostało 78/104 kart')).toBeInTheDocument();
+    expect(screen.getByText('Shoe #4')).toBeInTheDocument();
+    expect(screen.queryByText(/count/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a dealing message while the initial hand is being created', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      isDealing: true,
+      actionMessage: 'Rozdawanie kart...',
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('Rozdawanie kart...')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Rozdawanie...' }),
+    ).toBeDisabled();
+  });
 
   it('uses mobile-safe wrapping classes for blackjack actions and card rows', () => {
     useBlackjackMock.mockReturnValue({
@@ -67,9 +127,9 @@ describe('BlackjackGame', () => {
         {
           id: 'hand-1',
           cards: [
-            { suit: 'hearts', rank: '10', value: 10 },
-            { suit: 'spades', rank: '9', value: 9 },
-            { suit: 'clubs', rank: '2', value: 2 },
+            { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+            { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+            { id: 'p-3', suit: 'clubs', rank: '2', value: 2 },
           ],
           stake: 10,
           payout: 0,
@@ -78,10 +138,8 @@ describe('BlackjackGame', () => {
           isSplitAces: false,
         },
       ],
-      dealerHand: [
-        { suit: 'diamonds', rank: '8', value: 8 },
-        { suit: 'clubs', rank: 'K', value: 10 },
-      ],
+      dealerHand: [{ id: 'd-1', suit: 'diamonds', rank: '8', value: 8 }],
+      dealerHiddenCount: 1,
       canDoubleDown: true,
     });
 
@@ -99,6 +157,76 @@ describe('BlackjackGame', () => {
       'max-w-full',
       'overflow-x-auto',
     );
+    expect(screen.getByTestId('dealer-hidden-card')).toBeInTheDocument();
+    expect(container.querySelector('[data-card-id="p-1"]')).toBeInTheDocument();
+  });
+
+  it('shows a resolving message and keeps actions disabled during a server action', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      isResolving: true,
+      actionMessage: 'Dobieranie karty...',
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+        { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+            { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+          ],
+          stake: 10,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [{ id: 'd-1', suit: 'diamonds', rank: '8', value: 8 }],
+      dealerHiddenCount: 1,
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('Dobieranie karty...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Stand' })).toBeDisabled();
+  });
+
+  it('keeps card animation timing short enough for mobile actions', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+        { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+            { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+          ],
+          stake: 10,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [{ id: 'd-1', suit: 'diamonds', rank: '8', value: 8 }],
+      dealerHiddenCount: 1,
+    });
+
+    const { container } = render(<BlackjackGame />);
+
+    expect(
+      container.querySelector('[data-card-animation="quick"]'),
+    ).toBeInTheDocument();
   });
 
   it('shows split and a double down action for eligible active hands', () => {

@@ -25,10 +25,14 @@ export function BlackjackGame() {
     activeHandIndex,
     activeHand,
     dealerHand,
+    dealerHiddenCount,
     status,
     stake,
+    tableInfo,
+    isLoading,
     isDealing,
     isResolving,
+    actionMessage,
     startGame,
     hit,
     stand,
@@ -61,6 +65,20 @@ export function BlackjackGame() {
 
   if (!user || !profile) return null;
 
+  if (isLoading) {
+    return (
+      <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col items-center justify-center px-1 pb-2 sm:px-0">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-white/10 bg-black/35 px-5 py-4 text-sm font-semibold text-white/80 shadow-[0_0_30px_rgba(255,255,255,0.08)] backdrop-blur-md"
+        >
+          Wczytywanie stołu...
+        </motion.div>
+      </div>
+    );
+  }
+
   const parsedBet = Number(betInput);
   const balance = Number(profile.balance);
   const isBetValid =
@@ -84,10 +102,8 @@ export function BlackjackGame() {
         : [];
   const hasSplitHands = handsToRender.length > 1;
   const activeStake = activeHand?.stake ?? stake;
-  const dealerValue =
-    status === "playing"
-      ? calculateHandValue(dealerHand.slice(0, 1))
-      : calculateHandValue(dealerHand);
+  const dealerValue = calculateHandValue(dealerHand);
+  const shoeTotalCards = (tableInfo?.deckCount ?? 2) * 52;
   const isSettled = ["won", "lost", "push"].includes(status);
   const showSplitResult = hasSplitHands && isSettled;
   const splitWins = handsToRender.filter(
@@ -109,7 +125,23 @@ export function BlackjackGame() {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col justify-between gap-2 px-1 pb-2 sm:gap-3 sm:px-0">
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
+        {tableInfo && (
+          <div
+            data-testid="blackjack-shoe-info"
+            className="flex max-w-full flex-wrap items-center justify-center gap-2 px-2 text-xs font-semibold text-white/70"
+          >
+            <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-md">
+              {tableInfo.deckCount} talie
+            </span>
+            <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-md">
+              Pozostało {tableInfo.cardsRemaining}/{shoeTotalCards} kart
+            </span>
+            <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-md">
+              Shoe #{tableInfo.shoeNumber}
+            </span>
+          </div>
+        )}
         {dealerHand.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -125,11 +157,28 @@ export function BlackjackGame() {
             >
               {dealerHand.map((card, i) => (
                 <PlayingCard
-                  key={`dealer-${i}`}
+                  key={card.id ?? `dealer-${i}`}
                   card={card}
-                  hidden={status === "playing" && i === 1}
+                  dealTarget="dealer"
+                  index={i}
                 />
               ))}
+              {status === "playing" &&
+                Array.from({ length: dealerHiddenCount }).map((_, i) => (
+                  <PlayingCard
+                    key={`dealer-hidden-${i}`}
+                    card={{
+                      id: `dealer-hidden-${i}`,
+                      suit: "spades",
+                      rank: "A",
+                      value: 11,
+                    }}
+                    hidden
+                    dealTarget="dealer"
+                    index={dealerHand.length + i}
+                    testId="dealer-hidden-card"
+                  />
+                ))}
             </div>
           </motion.div>
         )}
@@ -165,9 +214,14 @@ export function BlackjackGame() {
                   disabled={isDealing || !isBetValid}
                   className="h-12 rounded-xl bg-amber-500 px-8 min-[380px]:w-32 font-bold text-black hover:bg-amber-600"
                 >
-                  Graj
+                  {isDealing ? "Rozdawanie..." : "Graj"}
                 </Button>
               </div>
+              {actionMessage && (
+                <p className="rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold text-white/70">
+                  {actionMessage}
+                </p>
+              )}
               <p className="text-sm text-white/50">
                 Saldo: {balance.toFixed(2)} zł
               </p>
@@ -228,43 +282,50 @@ export function BlackjackGame() {
               key="playing-actions"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex w-full max-w-sm flex-wrap justify-center gap-2 sm:max-w-none sm:gap-3"
+              className="flex w-full max-w-sm flex-col items-center gap-2 sm:max-w-none sm:gap-3"
             >
-              <Button
-                onClick={hit}
-                disabled={isResolving}
-                variant="secondary"
-                className="h-12 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 text-base text-white hover:bg-white/20 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
-              >
-                Hit
-              </Button>
-              <Button
-                onClick={stand}
-                disabled={isResolving}
-                className="h-12 flex-1 rounded-2xl bg-amber-500 px-4 text-base font-bold text-black hover:bg-amber-600 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
-              >
-                Stand
-              </Button>
-              {canSplit && (
-                <Button
-                  onClick={split}
-                  variant="outline"
-                  disabled={isResolving || activeStake > balance}
-                  className="h-12 rounded-2xl border-emerald-500/50 bg-emerald-500/20 px-5 text-base text-emerald-100 hover:bg-emerald-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
-                >
-                  Split
-                </Button>
+              {actionMessage && (
+                <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-white/75 backdrop-blur-md">
+                  {actionMessage}
+                </span>
               )}
-              {canDoubleDown && (
+              <div className="flex w-full flex-wrap justify-center gap-2 sm:gap-3">
                 <Button
-                  onClick={doubleDown}
-                  variant="outline"
-                  disabled={isResolving || activeStake > balance}
-                  className="h-12 rounded-2xl border-blue-500/50 bg-blue-500/20 px-5 text-base text-blue-100 hover:bg-blue-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                  onClick={hit}
+                  disabled={isResolving}
+                  variant="secondary"
+                  className="h-12 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 text-base text-white hover:bg-white/20 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
                 >
-                  Double Down
+                  Hit
                 </Button>
-              )}
+                <Button
+                  onClick={stand}
+                  disabled={isResolving}
+                  className="h-12 flex-1 rounded-2xl bg-amber-500 px-4 text-base font-bold text-black hover:bg-amber-600 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
+                >
+                  Stand
+                </Button>
+                {canSplit && (
+                  <Button
+                    onClick={split}
+                    variant="outline"
+                    disabled={isResolving || activeStake > balance}
+                    className="h-12 rounded-2xl border-emerald-500/50 bg-emerald-500/20 px-5 text-base text-emerald-100 hover:bg-emerald-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                  >
+                    Split
+                  </Button>
+                )}
+                {canDoubleDown && (
+                  <Button
+                    onClick={doubleDown}
+                    variant="outline"
+                    disabled={isResolving || activeStake > balance}
+                    className="h-12 rounded-2xl border-blue-500/50 bg-blue-500/20 px-5 text-base text-blue-100 hover:bg-blue-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                  >
+                    Double Down
+                  </Button>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -323,8 +384,10 @@ export function BlackjackGame() {
                     >
                       {hand.cards.map((card, i) => (
                         <PlayingCard
-                          key={`player-${hand.id}-${i}`}
+                          key={card.id ?? `player-${hand.id}-${i}`}
                           card={card}
+                          dealTarget="player"
+                          index={i}
                         />
                       ))}
                     </div>

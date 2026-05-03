@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Card {
+  id?: string;
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
   rank:
     | '2'
@@ -17,6 +18,14 @@ export interface Card {
     | 'K'
     | 'A';
   value: number;
+}
+
+export interface BlackjackTableInfo {
+  deckCount: number;
+  cardsRemaining: number;
+  shoeNumber: number;
+  handsPlayed: number;
+  needsShuffle: boolean;
 }
 
 // 'betting' is a client-only state used before a game is started.
@@ -58,6 +67,11 @@ export interface BlackjackGameState {
   dealerHand: Card[];
   payout: number;
   doubleDownUsed: boolean;
+  deckCount: number;
+  cardsRemaining: number;
+  shoeNumber: number;
+  dealerHiddenCount: number;
+  createdAt: string;
 }
 
 export interface PlaceBlackjackBetParams {
@@ -81,6 +95,19 @@ interface RawBlackjackGameState {
   dealer_hand: Card[] | null;
   payout: number | string;
   double_down_used: boolean;
+  deck_count?: number | string | null;
+  cards_remaining?: number | string | null;
+  shoe_number?: number | string | null;
+  dealer_hidden_count?: number | string | null;
+  created_at?: string | null;
+}
+
+interface RawBlackjackTableInfo {
+  deck_count: number | string;
+  cards_remaining: number | string;
+  shoe_number: number | string;
+  hands_played: number | string;
+  needs_shuffle: boolean;
 }
 
 interface RawBlackjackHandState {
@@ -152,7 +179,68 @@ function normalizeState(raw: unknown): BlackjackGameState {
     dealerHand: Array.isArray(row.dealer_hand) ? row.dealer_hand : [],
     payout: Number(row.payout ?? 0),
     doubleDownUsed: Boolean(row.double_down_used),
+    deckCount: Number(row.deck_count ?? 2),
+    cardsRemaining: Number(row.cards_remaining ?? 0),
+    shoeNumber: Number(row.shoe_number ?? 1),
+    dealerHiddenCount: Number(row.dealer_hidden_count ?? 0),
+    createdAt: row.created_at ?? '',
   };
+}
+
+function normalizeTableInfo(raw: RawBlackjackTableInfo): BlackjackTableInfo {
+  return {
+    deckCount: Number(raw.deck_count),
+    cardsRemaining: Number(raw.cards_remaining),
+    shoeNumber: Number(raw.shoe_number),
+    handsPlayed: Number(raw.hands_played),
+    needsShuffle: Boolean(raw.needs_shuffle),
+  };
+}
+
+export async function getBlackjackTableInfo({
+  userId,
+}: {
+  userId: string;
+}): Promise<BlackjackTableInfo> {
+  const { data, error } = await supabase.rpc('get_blackjack_table_info', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się pobrać stołu blackjacka');
+  }
+
+  const row = (
+    Array.isArray(data) ? data[0] : data
+  ) as RawBlackjackTableInfo | null;
+
+  if (!row) {
+    throw new Error('Brak danych stołu blackjacka');
+  }
+
+  return normalizeTableInfo(row);
+}
+
+export async function getCurrentBlackjackGame({
+  userId,
+}: {
+  userId: string;
+}): Promise<BlackjackGameState | null> {
+  const { data, error } = await supabase.rpc('get_current_blackjack_game', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się wznowić gry blackjacka');
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row) {
+    return null;
+  }
+
+  return normalizeState(row);
 }
 
 export async function placeBlackjackBet({

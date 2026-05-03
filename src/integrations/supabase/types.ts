@@ -238,14 +238,17 @@ export type Database = {
           deck: Json
           dealer_hand: Json
           double_down_used: boolean
+          hand_number: number | null
           id: string
           initial_stake: number
           payout: number
           player_hand: Json
           player_hands: Json
           settled_at: string | null
+          shoe_number: number | null
           stake: number
           status: string
+          table_id: string | null
           user_id: string
         }
         Insert: {
@@ -254,14 +257,17 @@ export type Database = {
           deck?: Json
           dealer_hand?: Json
           double_down_used?: boolean
+          hand_number?: number | null
           id?: string
           initial_stake: number
           payout?: number
           player_hand?: Json
           player_hands?: Json
           settled_at?: string | null
+          shoe_number?: number | null
           stake: number
           status: string
+          table_id?: string | null
           user_id: string
         }
         Update: {
@@ -270,21 +276,75 @@ export type Database = {
           deck?: Json
           dealer_hand?: Json
           double_down_used?: boolean
+          hand_number?: number | null
           id?: string
           initial_stake?: number
           payout?: number
           player_hand?: Json
           player_hands?: Json
           settled_at?: string | null
+          shoe_number?: number | null
           stake?: number
           status?: string
+          table_id?: string | null
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "casino_blackjack_games_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "casino_blackjack_tables"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "casino_blackjack_games_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casino_blackjack_tables: {
+        Row: {
+          created_at: string
+          deck_count: number
+          hands_played: number
+          id: string
+          last_shuffled_at: string | null
+          shoe: Json
+          shoe_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deck_count?: number
+          hands_played?: number
+          id?: string
+          last_shuffled_at?: string | null
+          shoe?: Json
+          shoe_number?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deck_count?: number
+          hands_played?: number
+          id?: string
+          last_shuffled_at?: string | null
+          shoe?: Json
+          shoe_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casino_blackjack_tables_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -775,6 +835,11 @@ export type Database = {
           dealer_hand: Json
           payout: number
           double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
         }[]
       }
       blackjack_hit: {
@@ -790,6 +855,11 @@ export type Database = {
           dealer_hand: Json
           payout: number
           double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
         }[]
       }
       blackjack_stand: {
@@ -805,6 +875,11 @@ export type Database = {
           dealer_hand: Json
           payout: number
           double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
         }[]
       }
       blackjack_double_down: {
@@ -820,6 +895,11 @@ export type Database = {
           dealer_hand: Json
           payout: number
           double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
         }[]
       }
       blackjack_split: {
@@ -835,6 +915,41 @@ export type Database = {
           dealer_hand: Json
           payout: number
           double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
+        }[]
+      }
+      get_blackjack_table_info: {
+        Args: { p_user_id: string }
+        Returns: {
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          hands_played: number
+          needs_shuffle: boolean
+        }[]
+      }
+      get_current_blackjack_game: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          player_hands: Json
+          active_hand_index: number
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
         }[]
       }
     }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -6,6 +6,9 @@ import {
   type BlackjackHandState,
   type BlackjackGameStatus,
   type BlackjackGameState,
+  type BlackjackTableInfo,
+  getBlackjackTableInfo,
+  getCurrentBlackjackGame,
   placeBlackjackBet,
   blackjackHit,
   blackjackStand,
@@ -47,13 +50,30 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   const [playerHands, setPlayerHands] = useState<BlackjackHandState[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
   const [dealerHand, setDealerHand] = useState<Card[]>([]);
+  const [dealerHiddenCount, setDealerHiddenCount] = useState(0);
   const [status, setStatus] = useState<BlackjackGameStatus>('betting');
   const [stake, setStake] = useState(0);
   const [gameId, setGameId] = useState<string | null>(null);
+  const [tableInfo, setTableInfo] = useState<BlackjackTableInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDealing, setIsDealing] = useState(false);
   // Guards against rapid double-clicks calling action RPCs concurrently.
   const [isResolving, setIsResolving] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [doubleDownUsed, setDoubleDownUsed] = useState(false);
+
+  const applyTableInfoFromState = useCallback(
+    (next: BlackjackGameState, previousInfo?: BlackjackTableInfo | null) => {
+      setTableInfo((currentInfo) => ({
+        deckCount: next.deckCount,
+        cardsRemaining: next.cardsRemaining,
+        shoeNumber: next.shoeNumber,
+        handsPlayed: previousInfo?.handsPlayed ?? currentInfo?.handsPlayed ?? 0,
+        needsShuffle: next.cardsRemaining < 26,
+      }));
+    },
+    [],
+  );
 
   const applyState = useCallback((next: BlackjackGameState) => {
     setGameId(next.id);
@@ -62,17 +82,64 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setPlayerHands(next.playerHands);
     setActiveHandIndex(next.activeHandIndex);
     setDealerHand(next.dealerHand);
+    setDealerHiddenCount(next.dealerHiddenCount);
     setStatus(next.status);
     setDoubleDownUsed(next.doubleDownUsed);
   }, []);
+
+  const loadSnapshot = useCallback(async () => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const [nextTableInfo, currentGame] = await Promise.all([
+        getBlackjackTableInfo({ userId }),
+        getCurrentBlackjackGame({ userId }),
+      ]);
+
+      setTableInfo(nextTableInfo);
+
+      if (currentGame) {
+        applyState(currentGame);
+        applyTableInfoFromState(currentGame, nextTableInfo);
+      } else {
+        setPlayerHand([]);
+        setPlayerHands([]);
+        setActiveHandIndex(0);
+        setDealerHand([]);
+        setDealerHiddenCount(0);
+        setStatus('betting');
+        setStake(0);
+        setGameId(null);
+        setDoubleDownUsed(false);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Nie udało się wczytać stołu blackjacka',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, applyState, applyTableInfoFromState]);
+
+  useEffect(() => {
+    void loadSnapshot();
+  }, [loadSnapshot]);
 
   const startGame = useCallback(
     async (betAmount: number) => {
       if (isDealing || isResolving) return;
       setIsDealing(true);
+      setActionMessage('Rozdawanie kart...');
       try {
         const next = await placeBlackjackBet({ userId, stake: betAmount });
         applyState(next);
+        applyTableInfoFromState(next);
         await refreshProfile();
       } catch (err) {
         toast.error(
@@ -80,17 +147,27 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
         );
       } finally {
         setIsDealing(false);
+        setActionMessage(null);
       }
     },
-    [userId, refreshProfile, applyState, isDealing, isResolving],
+    [
+      userId,
+      refreshProfile,
+      applyState,
+      applyTableInfoFromState,
+      isDealing,
+      isResolving,
+    ],
   );
 
   const hit = useCallback(async () => {
     if (status !== 'playing' || !gameId || isResolving) return;
     setIsResolving(true);
+    setActionMessage('Dobieranie karty...');
     try {
       const next = await blackjackHit({ gameId, userId });
       applyState(next);
+      applyTableInfoFromState(next);
       if (next.status !== 'playing') {
         await refreshProfile();
       }
@@ -100,15 +177,26 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       );
     } finally {
       setIsResolving(false);
+      setActionMessage(null);
     }
-  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    applyState,
+    applyTableInfoFromState,
+    refreshProfile,
+  ]);
 
   const stand = useCallback(async () => {
     if (status !== 'playing' || !gameId || isResolving) return;
     setIsResolving(true);
+    setActionMessage('Krupier dobiera...');
     try {
       const next = await blackjackStand({ gameId, userId });
       applyState(next);
+      applyTableInfoFromState(next);
       await refreshProfile();
     } catch (err) {
       toast.error(
@@ -116,15 +204,26 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       );
     } finally {
       setIsResolving(false);
+      setActionMessage(null);
     }
-  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    applyState,
+    applyTableInfoFromState,
+    refreshProfile,
+  ]);
 
   const split = useCallback(async () => {
     if (status !== 'playing' || !gameId || isResolving) return;
     setIsResolving(true);
+    setActionMessage('Rozdzielanie ręki...');
     try {
       const next = await blackjackSplit({ gameId, userId });
       applyState(next);
+      applyTableInfoFromState(next);
       await refreshProfile();
     } catch (err) {
       toast.error(
@@ -132,8 +231,17 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       );
     } finally {
       setIsResolving(false);
+      setActionMessage(null);
     }
-  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    applyState,
+    applyTableInfoFromState,
+    refreshProfile,
+  ]);
 
   const doubleDown = useCallback(async () => {
     const currentHand = playerHands[activeHandIndex] ?? null;
@@ -146,9 +254,11 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       return;
     if (playerHand.length !== 2) return;
     setIsResolving(true);
+    setActionMessage('Double Down...');
     try {
       const next = await blackjackDoubleDown({ gameId, userId });
       applyState(next);
+      applyTableInfoFromState(next);
       await refreshProfile();
     } catch (err) {
       toast.error(
@@ -156,6 +266,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       );
     } finally {
       setIsResolving(false);
+      setActionMessage(null);
     }
   }, [
     status,
@@ -166,6 +277,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     activeHandIndex,
     playerHand.length,
     applyState,
+    applyTableInfoFromState,
     refreshProfile,
   ]);
 
@@ -174,6 +286,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setPlayerHands([]);
     setActiveHandIndex(0);
     setDealerHand([]);
+    setDealerHiddenCount(0);
     setStatus('betting');
     setStake(0);
     setGameId(null);
@@ -202,10 +315,15 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     activeHandIndex,
     activeHand,
     dealerHand,
+    dealerHiddenCount,
     status,
     stake,
+    gameId,
+    tableInfo,
+    isLoading,
     isDealing,
     isResolving,
+    actionMessage,
     startGame,
     hit,
     stand,
