@@ -89,11 +89,11 @@ describe('BlackjackGame', () => {
 
     expect(container.firstChild).toHaveClass('flex-1', 'min-h-0');
     expect(
-      screen.getByRole('button', { name: /Dobierz/i }).parentElement,
+      screen.getByRole('button', { name: 'Hit' }).parentElement,
     ).toHaveClass('flex-wrap');
     expect(container.querySelector('[data-testid="player-hand"]')).toHaveClass(
       'max-w-full',
-      'overflow-x-auto',
+      'overflow-visible',
     );
     expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
       'max-w-full',
@@ -135,12 +135,47 @@ describe('BlackjackGame', () => {
     render(<BlackjackGame />);
 
     expect(screen.getByRole('button', { name: /Split/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Double Down/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Double Down/i })).toHaveClass(
+      'hover:text-white',
+    );
     expect(
       screen.queryByRole('button', { name: 'x2' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the single-hand view free of split hand labels', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'playing',
+      stake: 20,
+      playerHand: [
+        { suit: 'hearts', rank: 'K', value: 10 },
+        { suit: 'spades', rank: 'Q', value: 10 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { suit: 'hearts', rank: 'K', value: 10 },
+            { suit: 'spades', rank: 'Q', value: 10 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [
+        { suit: 'diamonds', rank: '8', value: 8 },
+        { suit: 'clubs', rank: 'K', value: 10 },
+      ],
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.queryByText('Hand 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('renders split hands with an active hand marker and per-hand stakes', () => {
@@ -187,9 +222,9 @@ describe('BlackjackGame', () => {
 
     render(<BlackjackGame />);
 
-    expect(screen.getByText('Ręka 1')).toBeInTheDocument();
-    expect(screen.getByText('Ręka 2')).toBeInTheDocument();
-    expect(screen.getByText('Aktywna')).toBeInTheDocument();
+    expect(screen.getByText('Hand 1')).toBeInTheDocument();
+    expect(screen.getByText('Hand 2')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getAllByText('Stawka: 20.00 zł')).toHaveLength(2);
   });
 

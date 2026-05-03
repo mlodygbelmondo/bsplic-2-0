@@ -82,6 +82,7 @@ export function BlackjackGame() {
             },
           ]
         : [];
+  const hasSplitHands = handsToRender.length > 1;
   const activeStake = activeHand?.stake ?? stake;
   const dealerValue =
     status === "playing"
@@ -209,14 +210,14 @@ export function BlackjackGame() {
                 variant="secondary"
                 className="h-12 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 text-base text-white hover:bg-white/20 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
               >
-                Dobierz (Hit)
+                Hit
               </Button>
               <Button
                 onClick={stand}
                 disabled={isResolving}
                 className="h-12 flex-1 rounded-2xl bg-amber-500 px-4 text-base font-bold text-black hover:bg-amber-600 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
               >
-                Czekaj (Stand)
+                Stand
               </Button>
               {canSplit && (
                 <Button
@@ -233,7 +234,7 @@ export function BlackjackGame() {
                   onClick={doubleDown}
                   variant="outline"
                   disabled={isResolving || activeStake > balance}
-                  className="h-12 rounded-2xl border-blue-500/50 bg-blue-500/20 px-5 text-base text-blue-300 hover:bg-blue-500/30 disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                  className="h-12 rounded-2xl border-blue-500/50 bg-blue-500/20 px-5 text-base text-blue-100 hover:bg-blue-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
                 >
                   Double Down
                 </Button>
@@ -250,7 +251,7 @@ export function BlackjackGame() {
             animate={{ opacity: 1 }}
             className="flex min-h-0 w-full flex-col items-center gap-2"
           >
-            <div className="flex w-full max-w-full gap-3 overflow-x-auto px-2 pb-2">
+            <div className="flex w-full max-w-full justify-center gap-3 overflow-x-auto px-2 pb-2">
               {handsToRender.map((hand, handIndex) => {
                 const value = calculateHandValue(hand.cards);
                 const isActive =
@@ -260,27 +261,32 @@ export function BlackjackGame() {
                   <div
                     key={hand.id}
                     className={cn(
-                      "flex min-w-[210px] flex-col items-center gap-2 rounded-2xl border bg-black/35 p-3 backdrop-blur-md",
-                      isActive
-                        ? "border-amber-300/60 shadow-[0_0_26px_rgba(251,191,36,0.2)]"
-                        : "border-white/10",
+                      "flex flex-col items-center gap-2",
+                      hasSplitHands &&
+                        "min-w-[210px] rounded-2xl border bg-black/35 p-3 backdrop-blur-md",
+                      hasSplitHands &&
+                        (isActive
+                          ? "border-amber-300/60 shadow-[0_0_26px_rgba(251,191,36,0.2)]"
+                          : "border-white/10"),
                     )}
                   >
-                    <div className="flex w-full items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                      <span>Ręka {handIndex + 1}</span>
-                      {isActive && (
-                        <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] text-amber-100">
-                          Aktywna
-                        </span>
-                      )}
-                    </div>
+                    {hasSplitHands && (
+                      <div className="flex w-full items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
+                        <span>Hand {handIndex + 1}</span>
+                        {isActive && (
+                          <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] text-amber-100">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div
                       data-testid={
                         handIndex === activeHandIndex
                           ? "player-hand"
                           : undefined
                       }
-                      className="relative z-10 flex max-w-full overflow-x-auto px-2 pb-2 -space-x-10 sm:-space-x-12"
+                      className="relative z-10 flex max-w-full justify-center overflow-visible px-2 pb-2 -space-x-10 sm:-space-x-12"
                     >
                       {hand.cards.map((card, i) => (
                         <PlayingCard
