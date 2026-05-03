@@ -182,7 +182,7 @@ export function BlackjackGame() {
             </span>
             <div
               data-testid="dealer-hand"
-              className="isolate flex max-w-full justify-center overflow-x-auto px-2 pb-2 -space-x-4 sm:-space-x-5"
+              className="isolate flex max-w-full justify-center overflow-visible px-2 pb-2 -space-x-4 sm:-space-x-5"
             >
               {dealerSlots.map(({ card, hidden, index, key, testId }) => (
                 <PlayingCard

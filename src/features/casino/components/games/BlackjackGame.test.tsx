@@ -155,7 +155,7 @@ describe('BlackjackGame', () => {
     );
     expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
       'max-w-full',
-      'overflow-x-auto',
+      'overflow-visible',
     );
     expect(screen.getByTestId('dealer-hidden-card')).toBeInTheDocument();
     expect(container.querySelector('[data-card-id="p-1"]')).toBeInTheDocument();
