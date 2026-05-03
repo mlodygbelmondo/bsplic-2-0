@@ -241,6 +241,9 @@ export type Database = {
           hand_number: number | null
           id: string
           initial_stake: number
+          insurance_payout: number
+          insurance_stake: number
+          insurance_status: string
           payout: number
           player_hand: Json
           player_hands: Json
@@ -260,6 +263,9 @@ export type Database = {
           hand_number?: number | null
           id?: string
           initial_stake: number
+          insurance_payout?: number
+          insurance_stake?: number
+          insurance_status?: string
           payout?: number
           player_hand?: Json
           player_hands?: Json
@@ -279,6 +285,9 @@ export type Database = {
           hand_number?: number | null
           id?: string
           initial_stake?: number
+          insurance_payout?: number
+          insurance_stake?: number
+          insurance_status?: string
           payout?: number
           player_hand?: Json
           player_hands?: Json
@@ -840,6 +849,9 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
       blackjack_hit: {
@@ -860,6 +872,9 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
       blackjack_stand: {
@@ -880,6 +895,9 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
       blackjack_double_down: {
@@ -900,6 +918,9 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
       blackjack_split: {
@@ -920,6 +941,55 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
+        }[]
+      }
+      blackjack_take_insurance: {
+        Args: { p_game_id: string; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          player_hands: Json
+          active_hand_index: number
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
+        }[]
+      }
+      blackjack_decline_insurance: {
+        Args: { p_game_id: string; p_user_id: string }
+        Returns: {
+          id: string
+          stake: number
+          initial_stake: number
+          status: string
+          player_hand: Json
+          player_hands: Json
+          active_hand_index: number
+          dealer_hand: Json
+          payout: number
+          double_down_used: boolean
+          deck_count: number
+          cards_remaining: number
+          shoe_number: number
+          dealer_hidden_count: number
+          created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
       get_blackjack_table_info: {
@@ -950,6 +1020,9 @@ export type Database = {
           shoe_number: number
           dealer_hidden_count: number
           created_at: string
+          insurance_status: string
+          insurance_stake: number
+          insurance_payout: number
         }[]
       }
     }

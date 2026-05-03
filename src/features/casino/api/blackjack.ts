@@ -31,10 +31,17 @@ export interface BlackjackTableInfo {
 // 'betting' is a client-only state used before a game is started.
 export type BlackjackGameStatus =
   | 'betting'
+  | 'insurance'
   | 'playing'
   | 'won'
   | 'lost'
   | 'push';
+export type BlackjackInsuranceStatus =
+  | 'unavailable'
+  | 'offered'
+  | 'declined'
+  | 'lost'
+  | 'won';
 export type BlackjackHandStatus =
   | 'playing'
   | 'stand'
@@ -60,7 +67,7 @@ export interface BlackjackGameState {
   id: string;
   stake: number;
   initialStake: number;
-  status: 'playing' | 'won' | 'lost' | 'push';
+  status: 'insurance' | 'playing' | 'won' | 'lost' | 'push';
   playerHand: Card[];
   playerHands: BlackjackHandState[];
   activeHandIndex: number;
@@ -72,6 +79,9 @@ export interface BlackjackGameState {
   shoeNumber: number;
   dealerHiddenCount: number;
   createdAt: string;
+  insuranceStatus: BlackjackInsuranceStatus;
+  insuranceStake: number;
+  insurancePayout: number;
 }
 
 export interface PlaceBlackjackBetParams {
@@ -88,7 +98,7 @@ interface RawBlackjackGameState {
   id: string;
   stake: number | string;
   initial_stake: number | string;
-  status: 'playing' | 'won' | 'lost' | 'push';
+  status: 'insurance' | 'playing' | 'won' | 'lost' | 'push';
   player_hand: Card[] | null;
   player_hands?: RawBlackjackHandState[] | null;
   active_hand_index?: number | string | null;
@@ -100,6 +110,9 @@ interface RawBlackjackGameState {
   shoe_number?: number | string | null;
   dealer_hidden_count?: number | string | null;
   created_at?: string | null;
+  insurance_status?: BlackjackInsuranceStatus | null;
+  insurance_stake?: number | string | null;
+  insurance_payout?: number | string | null;
 }
 
 interface RawBlackjackTableInfo {
@@ -154,7 +167,10 @@ function normalizeState(raw: unknown): BlackjackGameState {
           cards: Array.isArray(row.player_hand) ? row.player_hand : [],
           stake: Number(row.stake),
           payout: Number(row.payout ?? 0),
-          status: row.status === 'playing' ? 'playing' : row.status,
+          status:
+            row.status === 'playing' || row.status === 'insurance'
+              ? 'playing'
+              : row.status,
           doubleDownUsed: Boolean(row.double_down_used),
           isSplitAces: false,
         },
@@ -167,6 +183,12 @@ function normalizeState(raw: unknown): BlackjackGameState {
       Math.max(playerHands.length - 1, 0),
     ),
   );
+  const rawInsuranceStake = Number(row.insurance_stake ?? 0);
+  const insuranceStatus = row.insurance_status ?? 'unavailable';
+  const insuranceStake =
+    insuranceStatus === 'offered' && rawInsuranceStake === 0
+      ? Math.round((Number(row.initial_stake) / 2) * 100) / 100
+      : rawInsuranceStake;
 
   return {
     id: row.id,
@@ -184,6 +206,9 @@ function normalizeState(raw: unknown): BlackjackGameState {
     shoeNumber: Number(row.shoe_number ?? 1),
     dealerHiddenCount: Number(row.dealer_hidden_count ?? 0),
     createdAt: row.created_at ?? '',
+    insuranceStatus,
+    insuranceStake,
+    insurancePayout: Number(row.insurance_payout ?? 0),
   };
 }
 
@@ -318,6 +343,38 @@ export async function blackjackSplit({
 
   if (error) {
     throw new Error(error.message || 'Nie udało się rozdzielić kart');
+  }
+
+  return normalizeState(data);
+}
+
+export async function blackjackTakeInsurance({
+  gameId,
+  userId,
+}: BlackjackActionParams): Promise<BlackjackGameState> {
+  const { data, error } = await supabase.rpc('blackjack_take_insurance', {
+    p_game_id: gameId,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się postawić insurance');
+  }
+
+  return normalizeState(data);
+}
+
+export async function blackjackDeclineInsurance({
+  gameId,
+  userId,
+}: BlackjackActionParams): Promise<BlackjackGameState> {
+  const { data, error } = await supabase.rpc('blackjack_decline_insurance', {
+    p_game_id: gameId,
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się odrzucić insurance');
   }
 
   return normalizeState(data);

@@ -60,9 +60,15 @@ describe('BlackjackGame', () => {
     stand: vi.fn(),
     split: vi.fn(),
     doubleDown: vi.fn(),
+    takeInsurance: vi.fn(),
+    declineInsurance: vi.fn(),
     resetGame: vi.fn(),
     canSplit: false,
     canDoubleDown: false,
+    canTakeInsurance: false,
+    insuranceStatus: 'unavailable',
+    insuranceStake: 0,
+    insurancePayout: 0,
   };
 
   it('shows a loading state while restoring the blackjack table', () => {
@@ -311,6 +317,51 @@ describe('BlackjackGame', () => {
     expect(
       screen.queryByRole('button', { name: 'x2' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows only insurance choices when the dealer offers insurance', () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: 'insurance',
+      stake: 20,
+      insuranceStatus: 'offered',
+      insuranceStake: 10,
+      canTakeInsurance: true,
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+        { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+            { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      dealerHand: [{ id: 'd-1', suit: 'spades', rank: 'A', value: 11 }],
+      dealerHiddenCount: 1,
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByText('Insurance?')).toBeInTheDocument();
+    expect(screen.getByText('Stawka insurance: 10.00 zł')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Insurance' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'No Insurance' })).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: 'Hit' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Stand' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('dealer-hidden-card')).toBeInTheDocument();
   });
 
   it('keeps the single-hand view free of split hand labels', () => {

@@ -14,6 +14,9 @@ import {
   blackjackStand,
   blackjackDoubleDown,
   blackjackSplit,
+  blackjackTakeInsurance,
+  blackjackDeclineInsurance,
+  type BlackjackInsuranceStatus,
 } from '@/features/casino/api/blackjack';
 
 export interface UseBlackjackArgs {
@@ -61,6 +64,10 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   const [isResolving, setIsResolving] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [doubleDownUsed, setDoubleDownUsed] = useState(false);
+  const [insuranceStatus, setInsuranceStatus] =
+    useState<BlackjackInsuranceStatus>('unavailable');
+  const [insuranceStake, setInsuranceStake] = useState(0);
+  const [insurancePayout, setInsurancePayout] = useState(0);
 
   const applyTableInfoFromState = useCallback(
     (next: BlackjackGameState, previousInfo?: BlackjackTableInfo | null) => {
@@ -85,6 +92,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setDealerHiddenCount(next.dealerHiddenCount);
     setStatus(next.status);
     setDoubleDownUsed(next.doubleDownUsed);
+    setInsuranceStatus(next.insuranceStatus);
+    setInsuranceStake(next.insuranceStake);
+    setInsurancePayout(next.insurancePayout);
   }, []);
 
   const loadSnapshot = useCallback(async () => {
@@ -115,6 +125,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
         setStake(0);
         setGameId(null);
         setDoubleDownUsed(false);
+        setInsuranceStatus('unavailable');
+        setInsuranceStake(0);
+        setInsurancePayout(0);
       }
     } catch (err) {
       toast.error(
@@ -281,6 +294,62 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     refreshProfile,
   ]);
 
+  const takeInsurance = useCallback(async () => {
+    if (status !== 'insurance' || !gameId || isResolving) return;
+    setIsResolving(true);
+    setActionMessage('Sprawdzanie blackjacka...');
+    try {
+      const next = await blackjackTakeInsurance({ gameId, userId });
+      applyState(next);
+      applyTableInfoFromState(next);
+      await refreshProfile();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się postawić insurance',
+      );
+    } finally {
+      setIsResolving(false);
+      setActionMessage(null);
+    }
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    applyState,
+    applyTableInfoFromState,
+    refreshProfile,
+  ]);
+
+  const declineInsurance = useCallback(async () => {
+    if (status !== 'insurance' || !gameId || isResolving) return;
+    setIsResolving(true);
+    setActionMessage('Sprawdzanie blackjacka...');
+    try {
+      const next = await blackjackDeclineInsurance({ gameId, userId });
+      applyState(next);
+      applyTableInfoFromState(next);
+      if (next.status !== 'playing') {
+        await refreshProfile();
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się odrzucić insurance',
+      );
+    } finally {
+      setIsResolving(false);
+      setActionMessage(null);
+    }
+  }, [
+    status,
+    gameId,
+    userId,
+    isResolving,
+    applyState,
+    applyTableInfoFromState,
+    refreshProfile,
+  ]);
+
   const resetGame = useCallback(() => {
     setPlayerHand([]);
     setPlayerHands([]);
@@ -291,6 +360,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setStake(0);
     setGameId(null);
     setDoubleDownUsed(false);
+    setInsuranceStatus('unavailable');
+    setInsuranceStake(0);
+    setInsurancePayout(0);
   }, []);
 
   const activeHand = playerHands[activeHandIndex] ?? null;
@@ -308,6 +380,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     activeCards.length === 2 &&
     !activeHand?.doubleDownUsed,
   );
+  const canTakeInsurance = Boolean(
+    status === 'insurance' && insuranceStatus === 'offered' && !isResolving,
+  );
 
   return {
     playerHand,
@@ -324,13 +399,19 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     isDealing,
     isResolving,
     actionMessage,
+    insuranceStatus,
+    insuranceStake,
+    insurancePayout,
     startGame,
     hit,
     stand,
     split,
     doubleDown,
+    takeInsurance,
+    declineInsurance,
     resetGame,
     canSplit,
     canDoubleDown,
+    canTakeInsurance,
   };
 }

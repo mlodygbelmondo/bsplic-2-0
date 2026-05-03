@@ -34,14 +34,19 @@ export function BlackjackGame() {
     isDealing,
     isResolving,
     actionMessage,
+    insuranceStake,
+    insurancePayout,
     startGame,
     hit,
     stand,
     split,
     doubleDown,
+    takeInsurance,
+    declineInsurance,
     resetGame,
     canSplit,
     canDoubleDown,
+    canTakeInsurance,
   } = useBlackjack({
     userId: user?.id ?? "",
     refreshProfile,
@@ -84,6 +89,10 @@ export function BlackjackGame() {
   const balance = Number(profile.balance);
   const isBetValid =
     Number.isFinite(parsedBet) && parsedBet > 0 && parsedBet <= balance;
+  const fallbackHandStatus =
+    status === "won" || status === "lost" || status === "push"
+      ? status
+      : "playing";
 
   const handsToRender =
     playerHands.length > 0
@@ -95,7 +104,7 @@ export function BlackjackGame() {
               cards: playerHand,
               stake,
               payout: 0,
-              status: status === "playing" ? "playing" : status,
+              status: fallbackHandStatus,
               doubleDownUsed: false,
               isSplitAces: false,
             },
@@ -105,6 +114,7 @@ export function BlackjackGame() {
   const activeStake = activeHand?.stake ?? stake;
   const dealerValue = calculateHandValue(dealerHand);
   const shoeTotalCards = (tableInfo?.deckCount ?? 2) * 52;
+  const isDecisionState = status === "playing" || status === "insurance";
   const isSettled = ["won", "lost", "push"].includes(status);
   const showSplitResult = hasSplitHands && isSettled;
   const splitWins = handsToRender.filter(
@@ -132,7 +142,7 @@ export function BlackjackGame() {
       key: `dealer-slot-${dealerSlotKeyPrefix}-${index}`,
       testId: undefined,
     })),
-    ...(status === "playing"
+    ...(isDecisionState
       ? Array.from({ length: dealerHiddenCount }).map((_, hiddenIndex) => {
           const index = dealerHand.length + hiddenIndex;
 
@@ -273,6 +283,15 @@ export function BlackjackGame() {
                   {splitPushes}
                 </motion.p>
               )}
+              {insurancePayout > 0 && (
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-full border border-sky-300/25 bg-sky-400/10 px-4 py-2 text-sm font-semibold text-sky-50 shadow-[0_0_28px_rgba(56,189,248,0.12)]"
+                >
+                  Insurance wypłaciło {insurancePayout.toFixed(2)} zł.
+                </motion.p>
+              )}
               {status === "won" && !showSplitResult && (
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
@@ -289,6 +308,45 @@ export function BlackjackGame() {
               >
                 Graj ponownie
               </Button>
+            </motion.div>
+          )}
+
+          {status === "insurance" && (
+            <motion.div
+              key="insurance-actions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex w-full max-w-sm flex-col items-center gap-2 rounded-2xl border border-sky-300/20 bg-black/35 px-4 py-3 text-center backdrop-blur-md sm:max-w-md"
+            >
+              <span className="text-lg font-black text-white">Insurance?</span>
+              <span className="text-sm font-semibold text-white/65">
+                Stawka insurance: {insuranceStake.toFixed(2)} zł
+              </span>
+              {actionMessage && (
+                <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-white/75 backdrop-blur-md">
+                  {actionMessage}
+                </span>
+              )}
+              <div className="flex w-full flex-wrap justify-center gap-2 sm:gap-3">
+                <Button
+                  onClick={takeInsurance}
+                  disabled={
+                    !canTakeInsurance || isResolving || insuranceStake > balance
+                  }
+                  variant="outline"
+                  className="h-12 flex-1 rounded-2xl border-sky-400/50 bg-sky-500/20 px-4 text-base font-bold text-sky-50 hover:bg-sky-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:flex-none sm:px-7"
+                >
+                  Insurance
+                </Button>
+                <Button
+                  onClick={declineInsurance}
+                  disabled={isResolving}
+                  variant="secondary"
+                  className="h-12 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 text-base text-white hover:bg-white/20 disabled:opacity-50 sm:flex-none sm:px-7"
+                >
+                  No Insurance
+                </Button>
+              </div>
             </motion.div>
           )}
 
@@ -368,7 +426,7 @@ export function BlackjackGame() {
               {handsToRender.map((hand, handIndex) => {
                 const value = calculateHandValue(hand.cards);
                 const isActive =
-                  status === "playing" && handIndex === activeHandIndex;
+                  isDecisionState && handIndex === activeHandIndex;
 
                 return (
                   <div

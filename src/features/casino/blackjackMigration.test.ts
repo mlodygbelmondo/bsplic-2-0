@@ -15,6 +15,10 @@ const stateVolatilityFixMigrationPath = resolve(
   process.cwd(),
   'supabase/migrations/20260503012000_fix_blackjack_state_volatility.sql',
 );
+const insuranceMigrationPath = resolve(
+  process.cwd(),
+  'supabase/migrations/20260503013000_blackjack_insurance.sql',
+);
 
 describe('blackjack persistent table migration', () => {
   it.each([
@@ -48,6 +52,30 @@ describe('blackjack persistent table migration', () => {
     );
     expect(migration).not.toMatch(
       /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\._blackjack_state[\s\S]*?LANGUAGE\s+plpgsql[\s\S]*?STABLE/i,
+    );
+  });
+
+  it('adds insurance as a server-authoritative blackjack decision state', () => {
+    const migration = readFileSync(insuranceMigrationPath, 'utf8');
+
+    expect(migration).toMatch(
+      /ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+insurance_status/i,
+    );
+    expect(migration).toMatch(/ADD\s+ATTRIBUTE\s+insurance_status\s+TEXT/i);
+    expect(migration).toMatch(
+      /status\s+IN\s+\('playing',\s*'insurance',\s*'won',\s*'lost',\s*'push'\)/i,
+    );
+    expect(migration).toMatch(
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.blackjack_take_insurance/i,
+    );
+    expect(migration).toMatch(
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.blackjack_decline_insurance/i,
+    );
+    expect(migration).toMatch(
+      /WHERE\s+user_id\s+=\s+p_user_id[\s\S]*status\s+IN\s+\('playing',\s*'insurance'\)/i,
+    );
+    expect(migration).toMatch(
+      /RETURN\s+public\._blackjack_state\(v_game,\s+TRUE\)/i,
     );
   });
 });

@@ -13,6 +13,8 @@ const blackjackHitMock = vi.fn();
 const blackjackStandMock = vi.fn();
 const blackjackDoubleDownMock = vi.fn();
 const blackjackSplitMock = vi.fn();
+const blackjackTakeInsuranceMock = vi.fn();
+const blackjackDeclineInsuranceMock = vi.fn();
 
 vi.mock('@/features/casino/api/blackjack', async (importOriginal) => {
   const actual =
@@ -30,6 +32,10 @@ vi.mock('@/features/casino/api/blackjack', async (importOriginal) => {
     blackjackDoubleDown: (...args: unknown[]) =>
       blackjackDoubleDownMock(...args),
     blackjackSplit: (...args: unknown[]) => blackjackSplitMock(...args),
+    blackjackTakeInsurance: (...args: unknown[]) =>
+      blackjackTakeInsuranceMock(...args),
+    blackjackDeclineInsurance: (...args: unknown[]) =>
+      blackjackDeclineInsuranceMock(...args),
   };
 });
 
@@ -260,5 +266,104 @@ describe('useBlackjack resume flow', () => {
     });
 
     expect(result.current.actionMessage).toBeNull();
+  });
+
+  it('pauses actions for an insurance offer and resolves the choice through the server', async () => {
+    getCurrentBlackjackGameMock.mockResolvedValue({
+      id: 'game-insurance',
+      stake: 20,
+      initialStake: 20,
+      status: 'insurance',
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+        { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+            { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      activeHandIndex: 0,
+      dealerHand: [{ id: 'd-1', suit: 'spades', rank: 'A', value: 11 }],
+      payout: 0,
+      doubleDownUsed: false,
+      deckCount: 2,
+      cardsRemaining: 100,
+      shoeNumber: 3,
+      dealerHiddenCount: 1,
+      createdAt: '2026-05-03T12:10:00.000Z',
+      insuranceStatus: 'offered',
+      insuranceStake: 10,
+      insurancePayout: 0,
+    });
+    blackjackTakeInsuranceMock.mockResolvedValue({
+      id: 'game-insurance',
+      stake: 30,
+      initialStake: 20,
+      status: 'playing',
+      playerHand: [
+        { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+        { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+      ],
+      playerHands: [
+        {
+          id: 'hand-1',
+          cards: [
+            { id: 'p-1', suit: 'hearts', rank: '9', value: 9 },
+            { id: 'p-2', suit: 'clubs', rank: '7', value: 7 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: 'playing',
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      activeHandIndex: 0,
+      dealerHand: [{ id: 'd-1', suit: 'spades', rank: 'A', value: 11 }],
+      payout: 0,
+      doubleDownUsed: false,
+      deckCount: 2,
+      cardsRemaining: 100,
+      shoeNumber: 3,
+      dealerHiddenCount: 1,
+      createdAt: '2026-05-03T12:10:00.000Z',
+      insuranceStatus: 'lost',
+      insuranceStake: 10,
+      insurancePayout: 0,
+    });
+    const refreshProfile = vi.fn();
+    const { result } = renderHook(() =>
+      useBlackjack({ userId: 'user-1', refreshProfile }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.status).toBe('insurance');
+    expect(result.current.canTakeInsurance).toBe(true);
+    expect(result.current.canDoubleDown).toBe(false);
+    expect(result.current.canSplit).toBe(false);
+
+    await act(async () => {
+      await result.current.takeInsurance();
+    });
+
+    expect(blackjackTakeInsuranceMock).toHaveBeenCalledWith({
+      gameId: 'game-insurance',
+      userId: 'user-1',
+    });
+    expect(result.current.status).toBe('playing');
+    expect(refreshProfile).toHaveBeenCalled();
   });
 });
