@@ -1,49 +1,52 @@
-import { memo } from 'react';
-import { motion } from 'framer-motion';
+import { memo } from "react";
+import { motion } from "framer-motion";
 
-import { cn } from '@/lib/utils';
-import type { Card } from '@/features/casino/api/blackjack';
+import { cn } from "@/lib/utils";
+import type { Card } from "@/features/casino/api/blackjack";
 
 interface PlayingCardProps {
   card: Card;
   hidden?: boolean;
-  dealTarget?: 'dealer' | 'player';
+  dealTarget?: "dealer" | "player";
   index?: number;
   testId?: string;
 }
 
 const suitSymbols = {
-  hearts: '♥',
-  diamonds: '♦',
-  clubs: '♣',
-  spades: '♠',
+  hearts: "♥",
+  diamonds: "♦",
+  clubs: "♣",
+  spades: "♠",
 };
 
 const suitColors = {
-  hearts: 'text-red-500',
-  diamonds: 'text-red-500',
-  clubs: 'text-zinc-800',
-  spades: 'text-zinc-800',
+  hearts: "text-red-500",
+  diamonds: "text-red-500",
+  clubs: "text-zinc-800",
+  spades: "text-zinc-800",
 };
+
+const cardReverseSrc = "/casino/blackjack-card-reverse.png?v=20260503";
 
 export const PlayingCard = memo(function PlayingCard({
   card,
   hidden = false,
-  dealTarget = 'player',
+  dealTarget = "player",
   index = 0,
   testId,
 }: PlayingCardProps) {
-  const isDealerHiddenCard = hidden && dealTarget === 'dealer';
+  const isDealerHiddenCard = hidden && dealTarget === "dealer";
   const initialOffset =
-    dealTarget === 'dealer' ? { x: 28, y: 14 } : { x: 34, y: -18 };
+    dealTarget === "dealer" ? { x: 28, y: 14 } : { x: 34, y: -18 };
   const transition = {
-    type: 'tween' as const,
+    type: "tween" as const,
     duration: 0.18,
-    ease: 'easeOut' as const,
+    ease: "easeOut" as const,
     delay: isDealerHiddenCard ? 0.12 : Math.min(index * 0.025, 0.075),
   };
-  const cardFrameClass =
-    'relative flex h-28 w-20 flex-shrink-0 flex-col justify-between rounded-xl border border-white/10 shadow-xl sm:h-32 sm:w-24 2xl:h-40 2xl:w-28';
+  const cardSizeClass =
+    "relative flex h-28 w-20 flex-shrink-0 flex-col justify-between rounded-xl sm:h-32 sm:w-24 2xl:h-40 2xl:w-28";
+  const cardFrameClass = cn(cardSizeClass, "border border-white/10");
 
   if (hidden) {
     return (
@@ -56,17 +59,15 @@ export const PlayingCard = memo(function PlayingCard({
         initial={{ opacity: 0, scale: 0.82, ...initialOffset }}
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
         transition={transition}
-        className={cn(
-          cardFrameClass,
-          'overflow-hidden border-white/20 bg-slate-900',
-          'bg-[linear-gradient(135deg,rgba(255,255,255,0.14)_0_12%,transparent_12%_50%,rgba(255,255,255,0.08)_50%_62%,transparent_62%_100%)] bg-[length:18px_18px]',
-          'ring-1 ring-white/10',
-        )}
+        className={cn(cardSizeClass, "overflow-hidden bg-transparent p-0")}
         style={{ zIndex: 0 }}
       >
-        <div className="flex h-full w-full items-center justify-center p-2">
-          <div className="h-full w-full rounded-lg border border-white/15 bg-white/5 shadow-inner" />
-        </div>
+        <img
+          src={cardReverseSrc}
+          alt="Rewers karty"
+          className="block h-full w-full rounded-xl object-fill"
+          draggable={false}
+        />
       </motion.div>
     );
   }
@@ -83,11 +84,11 @@ export const PlayingCard = memo(function PlayingCard({
       initial={{ opacity: 0, scale: 0.82, ...initialOffset }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       transition={transition}
-      className={cn(cardFrameClass, 'bg-white p-2 2xl:p-3')}
+      className={cn(cardFrameClass, "bg-white p-2 2xl:p-3")}
       style={{ zIndex: hidden ? 0 : index + 1 }}
     >
       {/* Top left */}
-      <div className={cn('flex flex-col items-center', colorClass)}>
+      <div className={cn("flex flex-col items-center", colorClass)}>
         <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
           {card.rank}
         </span>
@@ -97,7 +98,7 @@ export const PlayingCard = memo(function PlayingCard({
       {/* Center large suit */}
       <div
         className={cn(
-          'absolute inset-0 flex items-center justify-center opacity-20 text-5xl sm:text-6xl 2xl:text-7xl',
+          "absolute inset-0 flex items-center justify-center opacity-20 text-5xl sm:text-6xl 2xl:text-7xl",
           colorClass,
         )}
       >
@@ -105,7 +106,7 @@ export const PlayingCard = memo(function PlayingCard({
       </div>
 
       {/* Bottom right */}
-      <div className={cn('flex flex-col items-center rotate-180', colorClass)}>
+      <div className={cn("flex flex-col items-center rotate-180", colorClass)}>
         <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
           {card.rank}
         </span>
