@@ -88,9 +88,27 @@ export function BlackjackGame() {
     status === "playing"
       ? calculateHandValue(dealerHand.slice(0, 1))
       : calculateHandValue(dealerHand);
+  const isSettled = ["won", "lost", "push"].includes(status);
+  const showSplitResult = hasSplitHands && isSettled;
+  const splitWins = handsToRender.filter(
+    (hand) => hand.status === "won",
+  ).length;
+  const splitLosses = handsToRender.filter(
+    (hand) => hand.status === "lost",
+  ).length;
+  const splitPushes = handsToRender.filter(
+    (hand) => hand.status === "push",
+  ).length;
+  const resultTitle = showSplitResult
+    ? "Wynik splitu"
+    : status === "won"
+      ? "Wygrana!"
+      : status === "lost"
+        ? "Porażka"
+        : "Remis";
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col justify-between gap-2 px-1 pb-2 sm:gap-3 sm:px-0">
+    <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col justify-between gap-2 px-1 pb-2 sm:gap-3 sm:px-0">
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
         {dealerHand.length > 0 && (
           <motion.div
@@ -165,20 +183,28 @@ export function BlackjackGame() {
             >
               <h2
                 className={`text-3xl sm:text-4xl font-black uppercase tracking-wider ${
-                  status === "won"
-                    ? "text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]"
-                    : status === "lost"
-                      ? "text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]"
-                      : "text-gray-300 drop-shadow-[0_0_15px_rgba(209,213,219,0.5)]"
+                  showSplitResult
+                    ? "text-amber-200 drop-shadow-[0_0_15px_rgba(251,191,36,0.28)]"
+                    : status === "won"
+                      ? "text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.5)]"
+                      : status === "lost"
+                        ? "text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]"
+                        : "text-gray-300 drop-shadow-[0_0_15px_rgba(209,213,219,0.5)]"
                 }`}
               >
-                {status === "won"
-                  ? "Wygrana!"
-                  : status === "lost"
-                    ? "Porażka"
-                    : "Remis"}
+                {resultTitle}
               </h2>
-              {status === "won" && (
+              {showSplitResult && (
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-full border border-amber-300/25 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-50 shadow-[0_0_28px_rgba(251,191,36,0.12)]"
+                >
+                  Wygrane: {splitWins} • Przegrane: {splitLosses} • Remisy:{" "}
+                  {splitPushes}
+                </motion.p>
+              )}
+              {status === "won" && !showSplitResult && (
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -190,7 +216,7 @@ export function BlackjackGame() {
               <Button
                 onClick={resetGame}
                 variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl px-8"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white focus-visible:text-white rounded-xl px-8"
               >
                 Graj ponownie
               </Button>
@@ -224,7 +250,7 @@ export function BlackjackGame() {
                   onClick={split}
                   variant="outline"
                   disabled={isResolving || activeStake > balance}
-                  className="h-12 rounded-2xl border-emerald-500/50 bg-emerald-500/20 px-5 text-base text-emerald-200 hover:bg-emerald-500/30 disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
+                  className="h-12 rounded-2xl border-emerald-500/50 bg-emerald-500/20 px-5 text-base text-emerald-100 hover:bg-emerald-500/30 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
                 >
                   Split
                 </Button>
@@ -251,7 +277,7 @@ export function BlackjackGame() {
             animate={{ opacity: 1 }}
             className="flex min-h-0 w-full flex-col items-center gap-2"
           >
-            <div className="flex w-full max-w-full justify-center gap-3 overflow-x-auto px-2 pb-2">
+            <div className="mx-auto flex w-full max-w-full justify-start gap-3 overflow-x-auto px-2 pb-2 xl:justify-center">
               {handsToRender.map((hand, handIndex) => {
                 const value = calculateHandValue(hand.cards);
                 const isActive =
@@ -263,7 +289,7 @@ export function BlackjackGame() {
                     className={cn(
                       "flex flex-col items-center gap-2",
                       hasSplitHands &&
-                        "min-w-[210px] rounded-2xl border bg-black/35 p-3 backdrop-blur-md",
+                        "w-[17rem] max-w-[calc(100vw-2rem)] shrink-0 rounded-2xl border bg-black/35 p-3 backdrop-blur-md lg:w-[18rem]",
                       hasSplitHands &&
                         (isActive
                           ? "border-amber-300/60 shadow-[0_0_26px_rgba(251,191,36,0.2)]"
@@ -272,10 +298,10 @@ export function BlackjackGame() {
                   >
                     {hasSplitHands && (
                       <div className="flex w-full items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                        <span>Hand {handIndex + 1}</span>
+                        <span>Ręka {handIndex + 1}</span>
                         {isActive && (
                           <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] text-amber-100">
-                            Active
+                            Aktywna
                           </span>
                         )}
                       </div>

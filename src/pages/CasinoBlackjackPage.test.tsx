@@ -15,7 +15,27 @@ describe('CasinoBlackjackPage', () => {
       '--casino-bg-desktop': "url('/casino/blackjack-background.webp')",
       '--casino-bg-mobile': "url('/casino/blackjack-mobile-background.webp')",
     });
-    expect(screen.getByTestId('casino-blackjack-shell')).toHaveClass('h-full', 'overflow-hidden');
-    expect(container.querySelector('[data-testid="casino-blackjack-shell"]')).toBeTruthy();
+    expect(screen.getByTestId('casino-blackjack-shell')).toHaveClass(
+      'h-full',
+      'overflow-hidden',
+    );
+    expect(
+      container.querySelector('[data-testid="casino-blackjack-shell"]'),
+    ).toBeTruthy();
+  });
+
+  it('uses concise non-beta blackjack header copy', () => {
+    render(<CasinoBlackjackPage />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Blackjack' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Beta/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Krupier dobiera do 16 i czeka na 17. Blackjack płaci 3:2.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Split działa/)).not.toBeInTheDocument();
   });
 });

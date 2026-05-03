@@ -330,13 +330,16 @@ BEGIN
   v_player_blackjack := public._blackjack_hand_value(v_player) = 21;
   v_dealer_blackjack := public._blackjack_hand_value(v_dealer) = 21;
 
-  IF v_player_blackjack THEN
-    IF v_dealer_blackjack THEN
+  IF v_player_blackjack OR v_dealer_blackjack THEN
+    IF v_player_blackjack AND v_dealer_blackjack THEN
       v_status := 'push';
       v_payout := ROUND(p_stake, 2);
-    ELSE
+    ELSIF v_player_blackjack THEN
       v_status := 'won';
       v_payout := ROUND(p_stake * 2.5, 2);
+    ELSE
+      v_status := 'lost';
+      v_payout := 0;
     END IF;
 
     IF v_payout > 0 THEN

@@ -36,14 +36,11 @@ export default function CasinoBlackjackPage() {
                 Kasyno premium
               </p>
               <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl lg:text-4xl">
-                Blackjack - Beta
+                Blackjack
               </h1>
             </div>
             <div className="max-w-xl text-xs leading-relaxed text-white/70 sm:text-sm">
-              Krupier musi dobierać do 16 i czekać na 17. Blackjack płaci 3:2.
-              Split działa dla kart o tej samej wartości, maksymalnie do 4 rąk.
-              Split asów dostaje po jednej karcie, a double down działa również
-              po splicie.
+              Krupier dobiera do 16 i czeka na 17. Blackjack płaci 3:2.
             </div>
           </div>
         </motion.div>
