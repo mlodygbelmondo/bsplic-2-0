@@ -3,12 +3,14 @@ import { toast } from 'sonner';
 
 import {
   type Card,
+  type BlackjackHandState,
   type BlackjackGameStatus,
   type BlackjackGameState,
   placeBlackjackBet,
   blackjackHit,
   blackjackStand,
   blackjackDoubleDown,
+  blackjackSplit,
 } from '@/features/casino/api/blackjack';
 
 export interface UseBlackjackArgs {
@@ -42,6 +44,8 @@ export function calculateHandValue(hand: Card[]): number {
 
 export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
+  const [playerHands, setPlayerHands] = useState<BlackjackHandState[]>([]);
+  const [activeHandIndex, setActiveHandIndex] = useState(0);
   const [dealerHand, setDealerHand] = useState<Card[]>([]);
   const [status, setStatus] = useState<BlackjackGameStatus>('betting');
   const [stake, setStake] = useState(0);
@@ -55,6 +59,8 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setGameId(next.id);
     setStake(next.stake);
     setPlayerHand(next.playerHand);
+    setPlayerHands(next.playerHands);
+    setActiveHandIndex(next.activeHandIndex);
     setDealerHand(next.dealerHand);
     setStatus(next.status);
     setDoubleDownUsed(next.doubleDownUsed);
@@ -69,12 +75,14 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
         applyState(next);
         await refreshProfile();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Nie udało się rozpocząć gry');
+        toast.error(
+          err instanceof Error ? err.message : 'Nie udało się rozpocząć gry',
+        );
       } finally {
         setIsDealing(false);
       }
     },
-    [userId, refreshProfile, applyState, isDealing, isResolving]
+    [userId, refreshProfile, applyState, isDealing, isResolving],
   );
 
   const hit = useCallback(async () => {
@@ -87,7 +95,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
         await refreshProfile();
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Nie udało się dobrać karty');
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się dobrać karty',
+      );
     } finally {
       setIsResolving(false);
     }
@@ -101,14 +111,39 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       applyState(next);
       await refreshProfile();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Nie udało się zakończyć gry');
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się zakończyć gry',
+      );
+    } finally {
+      setIsResolving(false);
+    }
+  }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
+
+  const split = useCallback(async () => {
+    if (status !== 'playing' || !gameId || isResolving) return;
+    setIsResolving(true);
+    try {
+      const next = await blackjackSplit({ gameId, userId });
+      applyState(next);
+      await refreshProfile();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się rozdzielić kart',
+      );
     } finally {
       setIsResolving(false);
     }
   }, [status, gameId, userId, isResolving, applyState, refreshProfile]);
 
   const doubleDown = useCallback(async () => {
-    if (status !== 'playing' || !gameId || isResolving || doubleDownUsed) return;
+    const currentHand = playerHands[activeHandIndex] ?? null;
+    if (
+      status !== 'playing' ||
+      !gameId ||
+      isResolving ||
+      currentHand?.doubleDownUsed
+    )
+      return;
     if (playerHand.length !== 2) return;
     setIsResolving(true);
     try {
@@ -116,7 +151,9 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       applyState(next);
       await refreshProfile();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Nie udało się podwoić stawki');
+      toast.error(
+        err instanceof Error ? err.message : 'Nie udało się podwoić stawki',
+      );
     } finally {
       setIsResolving(false);
     }
@@ -125,7 +162,8 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     gameId,
     userId,
     isResolving,
-    doubleDownUsed,
+    playerHands,
+    activeHandIndex,
     playerHand.length,
     applyState,
     refreshProfile,
@@ -133,6 +171,8 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
 
   const resetGame = useCallback(() => {
     setPlayerHand([]);
+    setPlayerHands([]);
+    setActiveHandIndex(0);
     setDealerHand([]);
     setStatus('betting');
     setStake(0);
@@ -140,8 +180,27 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     setDoubleDownUsed(false);
   }, []);
 
+  const activeHand = playerHands[activeHandIndex] ?? null;
+  const activeCards = activeHand?.cards ?? playerHand;
+  const canActOnActiveHand =
+    status === 'playing' && activeHand?.status === 'playing' && !isResolving;
+  const canSplit = Boolean(
+    canActOnActiveHand &&
+    activeCards.length === 2 &&
+    playerHands.length < 4 &&
+    activeCards[0]?.value === activeCards[1]?.value,
+  );
+  const canDoubleDown = Boolean(
+    canActOnActiveHand &&
+    activeCards.length === 2 &&
+    !activeHand?.doubleDownUsed,
+  );
+
   return {
     playerHand,
+    playerHands,
+    activeHandIndex,
+    activeHand,
     dealerHand,
     status,
     stake,
@@ -150,9 +209,10 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     startGame,
     hit,
     stand,
+    split,
     doubleDown,
     resetGame,
-    canDoubleDown:
-      status === 'playing' && playerHand.length === 2 && !doubleDownUsed && !isResolving,
+    canSplit,
+    canDoubleDown,
   };
 }
