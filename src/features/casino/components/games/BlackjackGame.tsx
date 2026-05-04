@@ -292,15 +292,6 @@ export function BlackjackGame() {
                   Insurance wypłaciło {insurancePayout.toFixed(2)} zł.
                 </motion.p>
               )}
-              {status === "won" && !showSplitResult && (
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-[0_0_28px_rgba(34,197,94,0.16)]"
-                >
-                  Blackjack wypłaca nagrodę na saldo.
-                </motion.p>
-              )}
               <Button
                 onClick={resetGame}
                 variant="outline"

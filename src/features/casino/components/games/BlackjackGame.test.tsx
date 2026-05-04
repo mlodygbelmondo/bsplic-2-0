@@ -523,7 +523,7 @@ describe("BlackjackGame", () => {
     );
   });
 
-  it("shows a flashy win notification when blackjack resolves as won", async () => {
+  it("shows only the win title when blackjack resolves as won", async () => {
     useBlackjackMock.mockReturnValue({
       ...baseBlackjackState,
       status: "won",
@@ -542,8 +542,8 @@ describe("BlackjackGame", () => {
 
     expect(screen.getByText("Wygrana!")).toBeInTheDocument();
     expect(
-      screen.getByText("Blackjack wypłaca nagrodę na saldo."),
-    ).toBeInTheDocument();
+      screen.queryByText("Blackjack wypłaca nagrodę na saldo."),
+    ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith("Blackjack: wygrana!");
     });
