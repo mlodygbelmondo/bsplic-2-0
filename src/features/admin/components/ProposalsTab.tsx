@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ interface ProposalEditor {
   betType: EditableBetType;
   options: BetOption[];
   endsAt: string;
+  isBsplicboost: boolean;
 }
 
 export default function ProposalsTab() {
@@ -96,6 +98,7 @@ export default function ProposalsTab() {
       betType: proposal.bet_type,
       options: lockedOptions,
       endsAt: proposal.ends_at ? toInputDateTime(proposal.ends_at) : toInputDateTime(getTomorrowAt2359()),
+      isBsplicboost: false,
     });
     setEditorOpen(true);
   };
@@ -122,6 +125,7 @@ export default function ProposalsTab() {
         bet_type: editing.betType,
         options: cleanedOptions as Json,
         ends_at: endsAtDate.toISOString(),
+        is_bsplicboost: editing.isBsplicboost,
       }]);
       if (insertError) throw insertError;
 
@@ -318,6 +322,19 @@ export default function ProposalsTab() {
                   aria-label="Data zakończenia propozycji"
                   value={editing.endsAt}
                   onChange={(e) => setEditing((p) => p ? { ...p, endsAt: e.target.value } : p)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-border p-4 bg-background hover:bg-muted/50 transition-colors">
+                <div className="space-y-0.5">
+                  <Label htmlFor="proposal-edit-boost" className="text-sm font-medium cursor-pointer text-primary">BSPLICBOOST</Label>
+                  <p className="text-xs text-muted-foreground">Wyróżnij zaakceptowany zakład jako boost</p>
+                </div>
+                <Switch
+                  id="proposal-edit-boost"
+                  checked={editing.isBsplicboost}
+                  onCheckedChange={(checked) => setEditing((p) => p ? { ...p, isBsplicboost: checked } : p)}
+                  aria-label="Włącz BSPLICBOOST dla propozycji"
                 />
               </div>
 
