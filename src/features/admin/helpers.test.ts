@@ -7,6 +7,8 @@ import {
   normalizeOptions,
   normalizeCouponStatus,
   getErrorMessage,
+  lockEditableOptionsByType,
+  toEditableOptions,
 } from './helpers';
 
 describe('parseWinningOptions', () => {
@@ -102,6 +104,26 @@ describe('normalizeOptions', () => {
     expect(result).toEqual([
       { name: 'Opcja 1', odds: 1 },
       { name: 'OK', odds: 1 },
+    ]);
+  });
+});
+
+describe('editable options', () => {
+  it('stores odds as strings while editing', () => {
+    expect(toEditableOptions([{ name: 'Legia', odds: 2.1 }])).toEqual([
+      { name: 'Legia', odds: '2.1' },
+    ]);
+  });
+
+  it('preserves an empty odds input while locking options by type', () => {
+    const result = lockEditableOptionsByType('12', [
+      { name: '1', odds: '' },
+      { name: '2', odds: '1.8' },
+    ]);
+
+    expect(result).toEqual([
+      { name: '1', odds: '' },
+      { name: '2', odds: '1.8' },
     ]);
   });
 });

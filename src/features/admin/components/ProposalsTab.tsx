@@ -18,8 +18,10 @@ import {
   getTomorrowAt2359,
   normalizeType,
   normalizeOptions,
-  lockOptionsByType,
+  lockEditableOptionsByType,
+  toEditableOptions,
 } from '../helpers';
+import type { EditableBetOption } from '../helpers';
 
 interface ProposalRow {
   id: string;
@@ -37,7 +39,7 @@ interface ProposalEditor {
   title: string;
   categoryId: string;
   betType: EditableBetType;
-  options: BetOption[];
+  options: EditableBetOption[];
   endsAt: string;
   isBsplicboost: boolean;
 }
@@ -90,7 +92,7 @@ export default function ProposalsTab() {
   useEffect(() => { fetchProposals(); }, []);
 
   const openEditor = (proposal: ProposalRow) => {
-    const lockedOptions = lockOptionsByType(proposal.bet_type, proposal.options);
+    const lockedOptions = lockEditableOptionsByType(proposal.bet_type, toEditableOptions(proposal.options));
     setEditing({
       id: proposal.id,
       title: proposal.title,
@@ -108,10 +110,15 @@ export default function ProposalsTab() {
 
     const cleanedOptions = editing.options
       .filter((o) => o.name.trim())
-      .map((o) => ({ name: o.name.trim(), odds: Number(o.odds) > 0 ? Number(o.odds) : 1 }));
+      .map((o) => ({ name: o.name.trim(), oddsRaw: o.odds.trim() }));
 
     const minOptions = editing.betType === 'single' ? 1 : 2;
     if (cleanedOptions.length < minOptions) { toast.error('Za mało opcji'); return; }
+    const invalidOddsIndex = cleanedOptions.findIndex((option) => {
+      const odds = Number(option.oddsRaw);
+      return !option.oddsRaw || !Number.isFinite(odds) || odds <= 0;
+    });
+    if (invalidOddsIndex !== -1) { toast.error(`Podaj poprawny kurs dla opcji ${invalidOddsIndex + 1}`); return; }
     if (!editing.title.trim()) { toast.error('Tytuł jest wymagany'); return; }
 
     const endsAtDate = new Date(editing.endsAt);
@@ -123,7 +130,10 @@ export default function ProposalsTab() {
         title: editing.title.trim(),
         category_id: editing.categoryId || null,
         bet_type: editing.betType,
-        options: cleanedOptions as Json,
+        options: cleanedOptions.map((option) => ({
+          name: option.name,
+          odds: Number(option.oddsRaw),
+        })) as Json,
         ends_at: endsAtDate.toISOString(),
         is_bsplicboost: editing.isBsplicboost,
       }]);
@@ -131,7 +141,16 @@ export default function ProposalsTab() {
 
       const { error: proposalUpdateError } = await supabase
         .from('bet_proposals')
-        .update({ status: 'accepted', title: editing.title.trim(), category_id: editing.categoryId || null, bet_type: editing.betType, options: cleanedOptions as Json })
+        .update({
+          status: 'accepted',
+          title: editing.title.trim(),
+          category_id: editing.categoryId || null,
+          bet_type: editing.betType,
+          options: cleanedOptions.map((option) => ({
+            name: option.name,
+            odds: Number(option.oddsRaw),
+          })) as Json,
+        })
         .eq('id', editing.id);
       if (proposalUpdateError) throw proposalUpdateError;
 
@@ -299,7 +318,7 @@ export default function ProposalsTab() {
                   <Label htmlFor="proposal-edit-type">Typ</Label>
                   <Select
                     value={editing.betType}
-                    onValueChange={(v: EditableBetType) => setEditing((p) => p ? { ...p, betType: v, options: lockOptionsByType(v, p.options) } : p)}
+                    onValueChange={(v: EditableBetType) => setEditing((p) => p ? { ...p, betType: v, options: lockEditableOptionsByType(v, p.options) } : p)}
                   >
                     <SelectTrigger id="proposal-edit-type" aria-label="Typ zakładu propozycji">
                       <SelectValue />
@@ -354,7 +373,7 @@ export default function ProposalsTab() {
                       min="1"
                       value={option.odds}
                       aria-label={`Kurs opcji ${index + 1}`}
-                      onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].odds = Number(e.target.value); return { ...p, options: o }; })}
+                      onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].odds = e.target.value; return { ...p, options: o }; })}
                       className="w-20"
                     />
                     {!hasFixedOptionCount && editing.options.length > 2 && (
@@ -374,7 +393,7 @@ export default function ProposalsTab() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: 2 }] } : p)}
+                    onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: '2' }] } : p)}
                   >
                     <Plus className="h-3 w-3 mr-1 text-slate-900" aria-hidden="true" /> Dodaj opcję
                   </Button>

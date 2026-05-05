@@ -39,11 +39,13 @@ import {
   toInputDateTime,
   normalizeType,
   normalizeOptions,
-  lockOptionsByType,
+  lockEditableOptionsByType,
   normalizeCouponStatus,
   encodeWinningOptions,
   parseWinningOptions,
+  toEditableOptions,
 } from '../helpers';
+import type { EditableBetOption } from '../helpers';
 import {
   addCreditForUser,
   calculateCreditDeltaAmount,
@@ -61,7 +63,7 @@ interface BetEditor {
   title: string;
   categoryId: string;
   betType: EditableBetType;
-  options: BetOption[];
+  options: EditableBetOption[];
   endsAt: string;
   isLive: boolean;
   isBsplicboost: boolean;
@@ -148,7 +150,7 @@ export default function ManageBetsTab() {
   // --- Editor ---
   const openEditor = (bet: Bet) => {
     const betType = normalizeType(bet.bet_type);
-    const options = lockOptionsByType(betType, normalizeOptions(bet.options));
+    const options = lockEditableOptionsByType(betType, toEditableOptions(normalizeOptions(bet.options)));
     setEditing({
       id: bet.id,
       title: bet.title,
@@ -169,9 +171,15 @@ export default function ManageBetsTab() {
 
     const cleanedOptions = editing.options.map((option) => ({
       name: option.name.trim(),
-      odds: Number(option.odds) > 0 ? Number(option.odds) : 1,
+      oddsRaw: option.odds.trim(),
     }));
     if (cleanedOptions.some((option) => !option.name)) { toast.error('Uzupełnij etykiety wszystkich opcji'); return; }
+
+    const invalidOddsIndex = cleanedOptions.findIndex((option) => {
+      const odds = Number(option.oddsRaw);
+      return !option.oddsRaw || !Number.isFinite(odds) || odds <= 0;
+    });
+    if (invalidOddsIndex !== -1) { toast.error(`Podaj poprawny kurs dla opcji ${invalidOddsIndex + 1}`); return; }
 
     const minOptions = editing.betType === 'single' ? 1 : 2;
     if (cleanedOptions.length < minOptions) { toast.error('Zakład musi mieć minimum ' + minOptions + ' opcj' + (minOptions === 1 ? 'ę' : 'e')); return; }
@@ -187,7 +195,10 @@ export default function ManageBetsTab() {
           title: editing.title.trim(),
           category_id: editing.categoryId || null,
           bet_type: editing.betType,
-          options: cleanedOptions as Json,
+          options: cleanedOptions.map((option) => ({
+            name: option.name,
+            odds: Number(option.oddsRaw),
+          })) as Json,
           ends_at: endsAtDate.toISOString(),
           is_live: editing.isLive,
           is_bsplicboost: editing.isBsplicboost,
@@ -669,7 +680,7 @@ export default function ManageBetsTab() {
                   <Label>Typ</Label>
                   <Select
                     value={editing.betType}
-                    onValueChange={(v: EditableBetType) => setEditing((p) => p ? { ...p, betType: v, options: lockOptionsByType(v, p.options) } : p)}
+                    onValueChange={(v: EditableBetType) => setEditing((p) => p ? { ...p, betType: v, options: lockEditableOptionsByType(v, p.options) } : p)}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -707,7 +718,7 @@ export default function ManageBetsTab() {
                 {editing.options.map((option, index) => (
                   <div key={`${editing.id}-${index}`} className="flex gap-2 items-center">
                     <Input value={option.name} onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].name = e.target.value; return { ...p, options: o }; })} className="flex-1" />
-                    <Input type="number" step="0.01" min="1" value={option.odds} onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].odds = Number(e.target.value); return { ...p, options: o }; })} className="w-20" />
+                    <Input type="number" step="0.01" min="1" value={option.odds} onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].odds = e.target.value; return { ...p, options: o }; })} className="w-20" />
                     {!hasFixedOptionCount && editing.options.length > 2 && (
                       <button type="button" onClick={() => setEditing((p) => p ? { ...p, options: p.options.filter((_, i) => i !== index) } : p)} className="text-muted-foreground hover:text-destructive">
                         <X className="h-4 w-4" />
@@ -716,7 +727,7 @@ export default function ManageBetsTab() {
                   </div>
                 ))}
                 {!hasFixedOptionCount && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: 2 }] } : p)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: '2' }] } : p)}>
                     <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
                   </Button>
                 )}

@@ -1,6 +1,11 @@
 import { BetOption } from '@/types/database';
 import type { EditableBetType } from './constants';
 
+export interface EditableBetOption {
+  name: string;
+  odds: string;
+}
+
 export const getErrorMessage = (error: unknown, fallback: string): string => {
   if (
     typeof error === 'object' &&
@@ -61,6 +66,36 @@ export const lockOptionsByType = (type: EditableBetType, current: BetOption[]): 
   return [
     { name: '', odds: 2 },
     { name: '', odds: 2 },
+  ];
+};
+
+export const toEditableOptions = (options: BetOption[]): EditableBetOption[] =>
+  options.map((option) => ({
+    name: option.name,
+    odds: String(option.odds),
+  }));
+
+export const lockEditableOptionsByType = (type: EditableBetType, current: EditableBetOption[]): EditableBetOption[] => {
+  if (type === 'single') {
+    return [{ name: current[0]?.name || '1', odds: current[0]?.odds ?? '2' }];
+  }
+  if (type === '12') {
+    return [
+      { name: current[0]?.name || '1', odds: current[0]?.odds ?? '2' },
+      { name: current[1]?.name || '2', odds: current[1]?.odds ?? '2' },
+    ];
+  }
+  if (type === '1x2') {
+    return [
+      { name: current[0]?.name || '1', odds: current[0]?.odds ?? '2' },
+      { name: current[1]?.name || 'X', odds: current[1]?.odds ?? '3' },
+      { name: current[2]?.name || '2', odds: current[2]?.odds ?? '2' },
+    ];
+  }
+  if (current.length >= 2) return current;
+  return [
+    { name: '', odds: '2' },
+    { name: '', odds: '2' },
   ];
 };
 
