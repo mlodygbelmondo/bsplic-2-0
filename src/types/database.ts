@@ -269,20 +269,20 @@ export interface PublicProfile {
   total_profit: number;
 }
 
-export const BADGE_DEFINITIONS: Record<string, { emoji: string; name: string; description: string }> = {
-  debiutant: { emoji: '🎰', name: 'Debiutant', description: 'Pierwszy postawiony zakład' },
-  trafiony: { emoji: '🎯', name: 'Trafiony zakład', description: 'Pierwszy wygrany zakład' },
-  kuponista: { emoji: '📋', name: 'Kuponista', description: 'Pierwszy kupon AKO' },
-  goraca_passa: { emoji: '🔥', name: 'Gorąca passa', description: '3 wygrane z rzędu' },
-  nie_do_zatrzymania: { emoji: '⚡', name: 'Nie do zatrzymania', description: '5 wygranych z rzędu' },
-  mistrz_serii: { emoji: '👑', name: 'Mistrz serii', description: '10 wygranych z rzędu' },
-  pierwszy_tysiac: { emoji: '💰', name: 'Pierwszy tysiąc', description: 'Łączne wygrane powyżej 1000 zł' },
-  wieloryb: { emoji: '🐋', name: 'Wieloryb', description: 'Pojedynczy zakład na 500 zł lub więcej' },
-  ryzykant: { emoji: '🎲', name: 'Ryzykant', description: 'Kupon AKO z 5+ wydarzeniami' },
-  analityk: { emoji: '🧠', name: 'Analityk', description: 'Win rate powyżej 60% (min. 20 zakładów)' },
-  staly_bywalec: { emoji: '📅', name: 'Stały bywalec', description: 'Seria 7 dni' },
-  legenda: { emoji: '🏆', name: 'Legenda', description: 'Seria 30 dni' },
-  pomyslodawca: { emoji: '💡', name: 'Pomysłodawca', description: 'Pierwsza zaakceptowana propozycja' },
-  wszechstronny: { emoji: '🌍', name: 'Wszechstronny', description: 'Zakłady w 4+ kategoriach' },
-  multi_fan: { emoji: '🎪', name: 'Multi-fan', description: '10 kuponów AKO' },
+export const BADGE_DEFINITIONS: Record<string, { imageSrc: string; name: string; description: string }> = {
+  debiutant: { imageSrc: '/badges/debiutant.png', name: 'Debiutant', description: 'Pierwszy postawiony zakład' },
+  trafiony: { imageSrc: '/badges/trafiony.png', name: 'Trafiony zakład', description: 'Pierwszy wygrany zakład' },
+  kuponista: { imageSrc: '/badges/kuponista.png', name: 'Kuponista', description: 'Pierwszy kupon AKO' },
+  goraca_passa: { imageSrc: '/badges/goraca_passa.png', name: 'Gorąca passa', description: '3 wygrane z rzędu' },
+  nie_do_zatrzymania: { imageSrc: '/badges/nie_do_zatrzymania.png', name: 'Nie do zatrzymania', description: '5 wygranych z rzędu' },
+  mistrz_serii: { imageSrc: '/badges/mistrz_serii.png', name: 'Mistrz serii', description: '10 wygranych z rzędu' },
+  pierwszy_tysiac: { imageSrc: '/badges/pierwszy_tysiac.png', name: 'Pierwszy tysiąc', description: 'Łączne wygrane powyżej 1000 zł' },
+  wieloryb: { imageSrc: '/badges/wieloryb.png', name: 'Wieloryb', description: 'Pojedynczy zakład na 500 zł lub więcej' },
+  ryzykant: { imageSrc: '/badges/ryzykant.png', name: 'Ryzykant', description: 'Kupon AKO z 5+ wydarzeniami' },
+  analityk: { imageSrc: '/badges/analityk.png', name: 'Analityk', description: 'Win rate powyżej 60% (min. 20 zakładów)' },
+  staly_bywalec: { imageSrc: '/badges/staly_bywalec.png', name: 'Stały bywalec', description: 'Seria 7 dni' },
+  legenda: { imageSrc: '/badges/legenda.png', name: 'Legenda', description: 'Seria 30 dni' },
+  pomyslodawca: { imageSrc: '/badges/pomyslodawca.png', name: 'Pomysłodawca', description: 'Pierwsza zaakceptowana propozycja' },
+  wszechstronny: { imageSrc: '/badges/wszechstronny.png', name: 'Wszechstronny', description: 'Zakłady w 4+ kategoriach' },
+  multi_fan: { imageSrc: '/badges/multi_fan.png', name: 'Multi-fan', description: '10 kuponów AKO' },
 };

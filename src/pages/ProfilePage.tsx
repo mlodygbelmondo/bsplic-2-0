@@ -14,6 +14,14 @@ import { PlayerCardHero } from '@/features/player-card/components/PlayerCardHero
 import { derivePlayerCardDisplayModel } from '@/features/player-card/displayModel';
 import { compressImageFile } from '@/features/social/images';
 
+function formatBadgeDate(value: string) {
+  return new Intl.DateTimeFormat('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
@@ -579,28 +587,53 @@ export default function ProfilePage() {
 
         {/* Badges — only on own profile */}
         {isOwnProfile && (
-          <div className="bg-card rounded-xl p-4 card-shadow">
+          <section aria-label="Odznaki" className="bg-card rounded-xl p-4 card-shadow">
             <h2 className="font-bold mb-3">Odznaki</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {Object.entries(BADGE_DEFINITIONS).map(([key, definition]) => {
                 const unlockedBadge = badges.find((badge) => badge.badge_key === key);
                 return (
-                  <div
+                  <li
                     key={key}
-                    className={cn('text-center p-2 rounded-lg card-shadow transition-all', unlockedBadge ? 'bg-muted' : 'opacity-40')}
-                    title={
-                      unlockedBadge
-                        ? `Odblokowano: ${new Date(unlockedBadge.unlocked_at).toLocaleDateString('pl-PL')}`
-                        : definition.description
-                    }
+                    aria-label={definition.name}
+                    className={cn(
+                      'rounded-xl border p-3 card-shadow transition-all',
+                      unlockedBadge ? 'border-primary/20 bg-muted' : 'border-border bg-background/60'
+                    )}
                   >
-                    <span className="text-2xl">{definition.emoji}</span>
-                    <p className="text-xs font-medium mt-1">{definition.name}</p>
-                  </div>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={cn(
+                          'flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border',
+                          unlockedBadge ? 'border-primary/20 bg-background' : 'border-border bg-muted/40'
+                        )}
+                      >
+                        <img
+                          src={definition.imageSrc}
+                          alt={`Odznaka ${definition.name}`}
+                          className={cn('h-14 w-14 object-contain', !unlockedBadge && 'grayscale opacity-60')}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight">{definition.name}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{definition.description}</p>
+                        <p
+                          className={cn(
+                            'mt-2 text-xs font-medium',
+                            unlockedBadge ? 'text-primary' : 'text-muted-foreground'
+                          )}
+                        >
+                          {unlockedBadge
+                            ? `Odblokowano: ${formatBadgeDate(unlockedBadge.unlocked_at)}`
+                            : 'Nieodblokowana'}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
       </div>
       </div>

@@ -193,6 +193,52 @@ describe('ProfilePage username route', () => {
     expect(screen.queryByText('Najdłuższa seria: 5 dni')).not.toBeInTheDocument();
   });
 
+  it('explains badge requirements without hover and exposes unlocked status accessibly', async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'badges') {
+        return {
+          select: () => ({
+            eq: async () => ({
+              data: [{
+                user_id: 'current-user-id',
+                badge_key: 'debiutant',
+                unlocked_at: '2026-05-01T00:00:00.000Z',
+              }],
+            }),
+          }),
+        };
+      }
+
+      return {
+        select: () => ({
+          order: async () => ({ data: [] }),
+        }),
+      };
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/current-user-id']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const badgesSection = await screen.findByRole('region', { name: 'Odznaki' });
+    const debutantBadge = within(badgesSection).getByRole('listitem', { name: /Debiutant/i });
+
+    expect(within(debutantBadge).getByText('Pierwszy postawiony zakład')).toBeInTheDocument();
+    expect(within(debutantBadge).getByText('Odblokowano: 01.05.2026')).toBeInTheDocument();
+    expect(within(debutantBadge).getByRole('img', { name: 'Odznaka Debiutant' })).toHaveAttribute(
+      'src',
+      '/badges/debiutant.png',
+    );
+
+    const lockedBadge = within(badgesSection).getByRole('listitem', { name: /Trafiony zakład/i });
+    expect(within(lockedBadge).getByText('Pierwszy wygrany zakład')).toBeInTheDocument();
+    expect(within(lockedBadge).getByText('Nieodblokowana')).toBeInTheDocument();
+  });
+
   it('renders the player card hero on public profiles from public sportsbook stats', async () => {
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
