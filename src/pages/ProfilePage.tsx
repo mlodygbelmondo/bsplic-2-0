@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
+import { PlayerCardHero } from '@/features/player-card/components/PlayerCardHero';
+import { derivePlayerCardDisplayModel } from '@/features/player-card/displayModel';
 import { compressImageFile } from '@/features/social/images';
 
 export default function ProfilePage() {
@@ -198,13 +200,13 @@ export default function ProfilePage() {
       ? new Date(publicProfile.created_at).toLocaleDateString('pl-PL')
       : '';
   const displayStreak = isOwnProfile ? profile!.current_streak : publicProfile?.current_streak ?? 0;
-  const displayLongestStreak = isOwnProfile ? profile!.longest_streak : publicProfile?.longest_streak ?? 0;
-
-  const totalBets = rankingStats?.totalBets ?? 0;
-  const wins = rankingStats?.wins ?? 0;
-  const losses = rankingStats?.losses ?? 0;
-  const winRate = rankingStats ? rankingStats.winRate.toFixed(1) : '0';
-  const totalProfit = rankingStats?.totalProfit ?? 0;
+  const playerCardModel = derivePlayerCardDisplayModel({
+    totalBets: rankingStats?.totalBets ?? 0,
+    wins: rankingStats?.wins ?? 0,
+    winRate: rankingStats?.winRate ?? 0,
+    totalProfit: rankingStats?.totalProfit ?? 0,
+    currentStreak: displayStreak,
+  });
 
   const couponsWithDerivedStatus = coupons.map((coupon) => ({
     ...coupon,
@@ -287,9 +289,7 @@ export default function ProfilePage() {
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-4 space-y-4">
             <Skeleton className="h-28 w-full rounded-xl" />
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
-            </div>
+            <Skeleton className="h-56 w-full rounded-2xl" />
           </div>
         </div>
       </div>
@@ -347,30 +347,11 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: 'Zakłady', value: totalBets },
-            { label: 'Wygrane', value: wins },
-            { label: 'Przegrane', value: losses },
-            { label: 'Win rate', value: `${winRate}%` },
-            { label: 'Profit', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)} zł` },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-card rounded-lg p-3 card-shadow text-center">
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-bold">{stat.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Streak */}
-        <div className="bg-card rounded-xl p-4 card-shadow flex items-center gap-3">
-          <span className="text-3xl">🔥</span>
-          <div>
-            <p className="font-bold">{displayStreak} dni z rzędu</p>
-            <p className="text-xs text-muted-foreground">Najdłuższa seria: {displayLongestStreak} dni</p>
-          </div>
-        </div>
+        <PlayerCardHero
+          model={playerCardModel}
+          profileName={displayName}
+          profileUrl={window.location.href}
+        />
 
         {/* History */}
         <div className="bg-card rounded-xl p-4 card-shadow">
