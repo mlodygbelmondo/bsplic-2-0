@@ -404,13 +404,28 @@ describe('ProfilePage username route', () => {
       }],
     }));
 
+    const casinoHistory = Array.from({ length: 41 }, (_, index) => ({
+      id: `casino-${index + 1}`,
+      game_type: 'Ruletka',
+      bet_label: `Bet ${index + 1}`,
+      stake: 20,
+      payout: 40,
+      status: 'won',
+      round_label: `#${index + 1}`,
+      created_at: '2026-01-02T00:00:00.000Z',
+    }));
+
     rpcMock.mockImplementation((fn: string, args?: { p_limit?: number; p_offset?: number }) => {
       if (fn === 'get_user_coupon_history') {
         const offset = args?.p_offset ?? 0;
         const limit = args?.p_limit ?? couponHistory.length;
         return Promise.resolve({ data: couponHistory.slice(offset, offset + limit) });
       }
-      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_casino_history') {
+        const offset = args?.p_offset ?? 0;
+        const limit = args?.p_limit ?? casinoHistory.length;
+        return Promise.resolve({ data: casinoHistory.slice(offset, offset + limit) });
+      }
       if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: null });
     });
@@ -440,8 +455,8 @@ describe('ProfilePage username route', () => {
       p_limit: 31,
       p_offset: 10,
     });
-    expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Pokaż mniej' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Pokaż więcej' })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
     expect(await screen.findByText('Zakład 70')).toBeInTheDocument();

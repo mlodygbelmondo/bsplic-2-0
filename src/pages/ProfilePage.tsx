@@ -629,7 +629,9 @@ export default function ProfilePage() {
           </>
           )}
 
-          {historyType === 'casino' && (loadingCasinoHistory ? (
+          {historyType === 'casino' && (
+          <>
+          {loadingCasinoHistory ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, index) => (
                 <Skeleton key={index} className="h-14 w-full rounded-lg" />
@@ -680,7 +682,7 @@ export default function ProfilePage() {
                 ))
               )}
             </div>
-          ))}
+          )}
 
           {!loadingCasinoHistory && casinoHistory.length > 0 && (casinoHistoryExpanded || casinoHistory.length > HISTORY_PREVIEW_SIZE || hasMoreCasinoHistory) && (
             <div className="mt-3 flex gap-2">
@@ -703,6 +705,8 @@ export default function ProfilePage() {
                 </button>
               )}
             </div>
+          )}
+          </>
           )}
         </div>
 
