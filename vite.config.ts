@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        globIgnores: ["badges/**/*"],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,

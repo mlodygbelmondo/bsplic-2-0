@@ -285,7 +285,7 @@ describe('ProfilePage username route', () => {
 
   it('shares the current profile URL with the native browser share flow when available', async () => {
     const shareMock = vi.fn().mockResolvedValue(undefined);
-    window.history.pushState({}, '', '/profile/tester');
+    window.history.pushState({}, '', '/profile/tester?utm_source=test#secret-fragment');
     Object.defineProperty(navigator, 'share', {
       configurable: true,
       value: shareMock,
@@ -304,7 +304,7 @@ describe('ProfilePage username route', () => {
 
     await waitFor(() => {
       expect(shareMock).toHaveBeenCalledWith(expect.objectContaining({
-        url: window.location.href,
+        url: `${window.location.origin}/profile/tester`,
       }));
       expect(toastSuccessMock).toHaveBeenCalledWith('Profil udostępniony');
     });
@@ -312,7 +312,7 @@ describe('ProfilePage username route', () => {
 
   it('copies the current profile URL when native browser sharing is unavailable', async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    window.history.pushState({}, '', '/profile/tester');
+    window.history.pushState({}, '', '/profile/tester?utm_source=test#secret-fragment');
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -332,9 +332,34 @@ describe('ProfilePage username route', () => {
     fireEvent.click(within(hero).getByRole('button', { name: 'Udostępnij profil' }));
 
     await waitFor(() => {
-      expect(writeTextMock).toHaveBeenCalledWith(window.location.href);
+      expect(writeTextMock).toHaveBeenCalledWith(`${window.location.origin}/profile/tester`);
       expect(toastSuccessMock).toHaveBeenCalledWith('Link do profilu skopiowany');
     });
+  });
+
+  it('does not show an error when the user closes the native share dialog', async () => {
+    const shareMock = vi.fn().mockRejectedValue(new DOMException('Share cancelled', 'AbortError'));
+    window.history.pushState({}, '', '/profile/tester');
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: shareMock,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/tester']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const hero = await screen.findByRole('region', { name: 'Karta gracza' });
+    fireEvent.click(within(hero).getByRole('button', { name: 'Udostępnij profil' }));
+
+    await waitFor(() => {
+      expect(shareMock).toHaveBeenCalledTimes(1);
+    });
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('shows an error when native browser sharing fails', async () => {
@@ -472,6 +497,13 @@ describe('ProfilePage username route', () => {
       expect(screen.queryByText('Zakład 11')).not.toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+
+    const sportsbookHistoryRequestCount = rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_coupon_history').length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+
+    expect(await screen.findByText('Zakład 75')).toBeInTheDocument();
+    expect(rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_coupon_history')).toHaveLength(sportsbookHistoryRequestCount);
   });
 
   it('keeps casino history batching independent from sportsbook history', async () => {
@@ -520,6 +552,16 @@ describe('ProfilePage username route', () => {
     });
     expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż mniej' }));
+    expect(screen.queryByText('Bet 11')).not.toBeInTheDocument();
+
+    const casinoHistoryRequestCount = rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_casino_history').length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+
+    expect(await screen.findByText('Bet 40')).toBeInTheDocument();
+    expect(rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_casino_history')).toHaveLength(casinoHistoryRequestCount);
   });
 
   it('switches profile history between sportsbook coupons and casino bets', async () => {
@@ -539,5 +581,40 @@ describe('ProfilePage username route', () => {
     expect(await screen.findByText('Ruletka')).toBeInTheDocument();
     expect(screen.getByText('Kolor: czerwone')).toBeInTheDocument();
     expect(screen.getByText('+40.00 zł')).toBeInTheDocument();
+  });
+
+  it('shows explicit errors when the initial history requests fail', async () => {
+    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    try {
+      rpcMock.mockImplementation((fn: string) => {
+        if (fn === 'get_user_coupon_history') {
+          return Promise.resolve({ data: null, error: new Error('coupon history failed') });
+        }
+        if (fn === 'get_user_casino_history') {
+          return Promise.resolve({ data: null, error: new Error('casino history failed') });
+        }
+        if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+        return Promise.resolve({ data: null });
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/profile/current-user-id']}>
+          <Routes>
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Nie udało się załadować historii zakładów')).toBeInTheDocument();
+      expect(screen.queryByText('Brak zakładów')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Kasyno' }));
+
+      expect(await screen.findByText('Nie udało się załadować historii kasyna')).toBeInTheDocument();
+      expect(screen.queryByText('Brak betów z kasyna')).not.toBeInTheDocument();
+    } finally {
+      consoleErrorMock.mockRestore();
+    }
   });
 });

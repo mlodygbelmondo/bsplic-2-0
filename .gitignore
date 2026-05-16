@@ -36,3 +36,4 @@ dist-ssr
 .ai*
 docs/design-references/
 docs/roulette-inspiration/
+tmp/imagegen/

@@ -27,6 +27,10 @@ function formatBadgeDate(value: string) {
   }).format(new Date(value));
 }
 
+function getShareableProfileUrl() {
+  return new URL(window.location.pathname, window.location.origin).toString();
+}
+
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
@@ -110,6 +114,8 @@ export default function ProfilePage() {
   const [casinoHistoryExpanded, setCasinoHistoryExpanded] = useState(false);
   const [hasMoreCoupons, setHasMoreCoupons] = useState(false);
   const [hasMoreCasinoHistory, setHasMoreCasinoHistory] = useState(false);
+  const [sportsbookHistoryError, setSportsbookHistoryError] = useState<string | null>(null);
+  const [casinoHistoryError, setCasinoHistoryError] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
   const [avatarUploadLoading, setAvatarUploadLoading] = useState(false);
@@ -151,6 +157,15 @@ export default function ProfilePage() {
     setSportsbookHistoryExpanded(false);
   };
 
+  const showMoreSportsbookHistory = () => {
+    if (!sportsbookHistoryExpanded && coupons.length > HISTORY_PREVIEW_SIZE) {
+      setSportsbookHistoryExpanded(true);
+      return;
+    }
+
+    void loadMoreSportsbookHistory();
+  };
+
   const loadMoreCasinoHistory = async () => {
     if (!targetUserId) return;
     setLoadingCasinoHistory(true);
@@ -182,36 +197,83 @@ export default function ProfilePage() {
     setCasinoHistoryExpanded(false);
   };
 
+  const showMoreCasinoHistory = () => {
+    if (!casinoHistoryExpanded && casinoHistory.length > HISTORY_PREVIEW_SIZE) {
+      setCasinoHistoryExpanded(true);
+      return;
+    }
+
+    void loadMoreCasinoHistory();
+  };
+
   useEffect(() => {
     if (!targetUserId) return;
+    let cancelled = false;
+
     setLoadingCoupons(true);
     setLoadingCasinoHistory(true);
-
+    setCoupons([]);
+    setCasinoHistory([]);
     setSportsbookHistoryExpanded(false);
     setCasinoHistoryExpanded(false);
+    setSportsbookHistoryError(null);
+    setCasinoHistoryError(null);
 
     // Fetch history previews via RPC
-    supabase
-      .rpc('get_user_coupon_history', { p_user_id: targetUserId, p_limit: HISTORY_PREVIEW_FETCH_LIMIT, p_offset: 0 })
-      .then(({ data }) => {
+    const loadSportsbookHistoryPreview = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_user_coupon_history', {
+          p_user_id: targetUserId,
+          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
+          p_offset: 0,
+        });
+        if (error) throw error;
         const entries = (data as unknown as CouponHistoryEntry[] | null) ?? [];
+        if (cancelled) return;
         setCoupons(entries.slice(0, HISTORY_PREVIEW_SIZE));
         setHasMoreCoupons(entries.length > HISTORY_PREVIEW_SIZE);
-        setLoadingCoupons(false);
-      });
+      } catch (error) {
+        console.error('Failed to load sportsbook history', error);
+        if (cancelled) return;
+        setHasMoreCoupons(false);
+        setSportsbookHistoryError('Nie udało się załadować historii zakładów');
+      } finally {
+        if (!cancelled) {
+          setLoadingCoupons(false);
+        }
+      }
+    };
 
-    supabase
-      .rpc('get_user_casino_history', { p_user_id: targetUserId, p_limit: HISTORY_PREVIEW_FETCH_LIMIT, p_offset: 0 })
-      .then(({ data }) => {
+    const loadCasinoHistoryPreview = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_user_casino_history', {
+          p_user_id: targetUserId,
+          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
+          p_offset: 0,
+        });
+        if (error) throw error;
         const entries = ((data as unknown as CasinoHistoryEntry[] | null) ?? []).map((entry) => ({
           ...entry,
           stake: Number(entry.stake),
           payout: Number(entry.payout),
         }));
+        if (cancelled) return;
         setCasinoHistory(entries.slice(0, HISTORY_PREVIEW_SIZE));
         setHasMoreCasinoHistory(entries.length > HISTORY_PREVIEW_SIZE);
-        setLoadingCasinoHistory(false);
-      });
+      } catch (error) {
+        console.error('Failed to load casino history', error);
+        if (cancelled) return;
+        setHasMoreCasinoHistory(false);
+        setCasinoHistoryError('Nie udało się załadować historii kasyna');
+      } finally {
+        if (!cancelled) {
+          setLoadingCasinoHistory(false);
+        }
+      }
+    };
+
+    void loadSportsbookHistoryPreview();
+    void loadCasinoHistoryPreview();
 
     // Fetch badges
     if (isOwnProfile) {
@@ -267,6 +329,10 @@ export default function ProfilePage() {
           setLoadingProfile(false);
         });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [targetUserId, isOwnProfile]);
 
   // Own profile requires auth
@@ -287,6 +353,7 @@ export default function ProfilePage() {
     totalProfit: rankingStats?.totalProfit ?? 0,
     currentStreak: displayStreak,
   });
+  const shareableProfileUrl = getShareableProfileUrl();
 
   const visibleCoupons = sportsbookHistoryExpanded ? coupons : coupons.slice(0, HISTORY_PREVIEW_SIZE);
   const visibleCasinoHistory = casinoHistoryExpanded ? casinoHistory : casinoHistory.slice(0, HISTORY_PREVIEW_SIZE);
@@ -433,7 +500,7 @@ export default function ProfilePage() {
         <PlayerCardHero
           model={playerCardModel}
           profileName={displayName}
-          profileUrl={window.location.href}
+          profileUrl={shareableProfileUrl}
         />
 
         {/* History */}
@@ -489,7 +556,9 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.length === 0 ? (
+              {sportsbookHistoryError ? (
+                <p className="text-sm text-destructive text-center py-4">{sportsbookHistoryError}</p>
+              ) : filtered.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Brak zakładów</p>
               ) : (
                 filtered.map((coupon) => {
@@ -604,7 +673,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {!loadingCoupons && coupons.length > 0 && (sportsbookHistoryExpanded || coupons.length > HISTORY_PREVIEW_SIZE || hasMoreCoupons) && (
+          {!loadingCoupons && !sportsbookHistoryError && coupons.length > 0 && (sportsbookHistoryExpanded || coupons.length > HISTORY_PREVIEW_SIZE || hasMoreCoupons) && (
             <div className="mt-3 flex gap-2">
               {sportsbookHistoryExpanded && (
                 <button
@@ -618,7 +687,7 @@ export default function ProfilePage() {
               {(!sportsbookHistoryExpanded || hasMoreCoupons) && (
                 <button
                   type="button"
-                  onClick={loadMoreSportsbookHistory}
+                  onClick={showMoreSportsbookHistory}
                   className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
                 >
                   Pokaż więcej
@@ -639,7 +708,9 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {casinoHistory.length === 0 ? (
+              {casinoHistoryError ? (
+                <p className="text-sm text-destructive text-center py-4">{casinoHistoryError}</p>
+              ) : casinoHistory.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Brak betów z kasyna</p>
               ) : (
                 visibleCasinoHistory.map((entry) => (
@@ -684,7 +755,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {!loadingCasinoHistory && casinoHistory.length > 0 && (casinoHistoryExpanded || casinoHistory.length > HISTORY_PREVIEW_SIZE || hasMoreCasinoHistory) && (
+          {!loadingCasinoHistory && !casinoHistoryError && casinoHistory.length > 0 && (casinoHistoryExpanded || casinoHistory.length > HISTORY_PREVIEW_SIZE || hasMoreCasinoHistory) && (
             <div className="mt-3 flex gap-2">
               {casinoHistoryExpanded && (
                 <button
@@ -698,7 +769,7 @@ export default function ProfilePage() {
               {(!casinoHistoryExpanded || hasMoreCasinoHistory) && (
                 <button
                   type="button"
-                  onClick={loadMoreCasinoHistory}
+                  onClick={showMoreCasinoHistory}
                   className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
                 >
                   Pokaż więcej
@@ -736,6 +807,8 @@ export default function ProfilePage() {
                         <img
                           src={definition.imageSrc}
                           alt={`Odznaka ${definition.name}`}
+                          loading="lazy"
+                          decoding="async"
                           className={cn('h-14 w-14 object-contain', !unlockedBadge && 'grayscale opacity-60')}
                         />
                       </div>

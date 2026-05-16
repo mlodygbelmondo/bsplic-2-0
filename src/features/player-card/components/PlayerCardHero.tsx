@@ -13,6 +13,13 @@ function formatProfit(profit: number) {
   return `${profit >= 0 ? '+' : ''}${profit.toFixed(2)} zł`;
 }
 
+function isShareCancellation(error: unknown) {
+  return typeof error === 'object'
+    && error !== null
+    && 'name' in error
+    && error.name === 'AbortError';
+}
+
 export function PlayerCardHero({ model, profileName, profileUrl }: PlayerCardHeroProps) {
   const primaryMetrics = [
     {
@@ -41,7 +48,8 @@ export function PlayerCardHero({ model, profileName, profileUrl }: PlayerCardHer
           url: profileUrl,
         });
         toast.success('Profil udostępniony');
-      } catch {
+      } catch (error) {
+        if (isShareCancellation(error)) return;
         toast.error('Nie udało się udostępnić profilu');
       }
       return;
