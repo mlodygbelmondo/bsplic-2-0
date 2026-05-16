@@ -110,6 +110,8 @@ export default function ProfilePage() {
   const [historyType, setHistoryType] = useState<'sportsbook' | 'casino'>('sportsbook');
   const [loadingCoupons, setLoadingCoupons] = useState(true);
   const [loadingCasinoHistory, setLoadingCasinoHistory] = useState(true);
+  const [loadingMoreCoupons, setLoadingMoreCoupons] = useState(false);
+  const [loadingMoreCasinoHistory, setLoadingMoreCasinoHistory] = useState(false);
   const [sportsbookHistoryExpanded, setSportsbookHistoryExpanded] = useState(false);
   const [casinoHistoryExpanded, setCasinoHistoryExpanded] = useState(false);
   const [hasMoreCoupons, setHasMoreCoupons] = useState(false);
@@ -132,7 +134,7 @@ export default function ProfilePage() {
 
   const loadMoreSportsbookHistory = async () => {
     if (!targetUserId) return;
-    setLoadingCoupons(true);
+    setLoadingMoreCoupons(true);
 
     try {
       const { data, error } = await supabase.rpc('get_user_coupon_history', {
@@ -149,7 +151,7 @@ export default function ProfilePage() {
       console.error('Failed to load more sportsbook history', error);
       toast.error('Nie udało się załadować kolejnych zakładów');
     } finally {
-      setLoadingCoupons(false);
+      setLoadingMoreCoupons(false);
     }
   };
 
@@ -168,7 +170,7 @@ export default function ProfilePage() {
 
   const loadMoreCasinoHistory = async () => {
     if (!targetUserId) return;
-    setLoadingCasinoHistory(true);
+    setLoadingMoreCasinoHistory(true);
 
     try {
       const { data, error } = await supabase.rpc('get_user_casino_history', {
@@ -189,7 +191,7 @@ export default function ProfilePage() {
       console.error('Failed to load more casino history', error);
       toast.error('Nie udało się załadować kolejnych wpisów kasyna');
     } finally {
-      setLoadingCasinoHistory(false);
+      setLoadingMoreCasinoHistory(false);
     }
   };
 
@@ -688,9 +690,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={showMoreSportsbookHistory}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                  disabled={loadingMoreCoupons}
+                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
                 >
-                  Pokaż więcej
+                  {loadingMoreCoupons ? 'Ładowanie...' : 'Pokaż więcej'}
                 </button>
               )}
             </div>
@@ -770,9 +773,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={showMoreCasinoHistory}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                  disabled={loadingMoreCasinoHistory}
+                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
                 >
-                  Pokaż więcej
+                  {loadingMoreCasinoHistory ? 'Ładowanie...' : 'Pokaż więcej'}
                 </button>
               )}
             </div>

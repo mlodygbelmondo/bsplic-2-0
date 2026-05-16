@@ -506,6 +506,60 @@ describe('ProfilePage username route', () => {
     expect(rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_coupon_history')).toHaveLength(sportsbookHistoryRequestCount);
   });
 
+  it('keeps rendered sportsbook history visible while loading more entries', async () => {
+    let resolveLoadMore: ((value: { data: unknown[] }) => void) | undefined;
+    const initialCoupons = Array.from({ length: 11 }, (_, index) => ({
+      id: `coupon-${index + 1}`,
+      status: 'won',
+      stake: 10,
+      payout: 20,
+      total_odds: 2,
+      legs: [{
+        id: `leg-${index + 1}`,
+        bet_title: `Zakład ${index + 1}`,
+        selected_option: 'Opcja',
+        odds_at_time: 2,
+        result: 'won',
+        leg_payout: 20,
+      }],
+    }));
+
+    rpcMock.mockImplementation((fn: string, args?: { p_offset?: number }) => {
+      if (fn === 'get_user_coupon_history' && (args?.p_offset ?? 0) === 0) {
+        return Promise.resolve({ data: initialCoupons });
+      }
+      if (fn === 'get_user_coupon_history') {
+        return new Promise((resolve) => {
+          resolveLoadMore = resolve;
+        });
+      }
+      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: null });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/current-user-id']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Zakład 1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+
+    expect(screen.getByText('Zakład 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ładowanie...' })).toBeDisabled();
+
+    resolveLoadMore?.({ data: [] });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Ładowanie...' })).not.toBeInTheDocument();
+    });
+  });
+
   it('keeps casino history batching independent from sportsbook history', async () => {
     const casinoEntries = Array.from({ length: 41 }, (_, index) => ({
       id: `casino-${index + 1}`,
