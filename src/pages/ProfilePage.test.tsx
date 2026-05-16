@@ -387,6 +387,126 @@ describe('ProfilePage username route', () => {
     });
   });
 
+  it('loads sportsbook history in 30-item batches and can collapse back to the first 10 items', async () => {
+    const couponHistory = Array.from({ length: 75 }, (_, index) => ({
+      id: `coupon-${index + 1}`,
+      status: 'won',
+      stake: 10,
+      payout: 20,
+      total_odds: 2,
+      legs: [{
+        id: `leg-${index + 1}`,
+        bet_title: `Zakład ${index + 1}`,
+        selected_option: 'Opcja',
+        odds_at_time: 2,
+        result: 'won',
+        leg_payout: 20,
+      }],
+    }));
+
+    rpcMock.mockImplementation((fn: string, args?: { p_limit?: number; p_offset?: number }) => {
+      if (fn === 'get_user_coupon_history') {
+        const offset = args?.p_offset ?? 0;
+        const limit = args?.p_limit ?? couponHistory.length;
+        return Promise.resolve({ data: couponHistory.slice(offset, offset + limit) });
+      }
+      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: null });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/current-user-id']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Zakład 1')).toBeInTheDocument();
+    expect(screen.getByText('Zakład 10')).toBeInTheDocument();
+    expect(screen.queryByText('Zakład 11')).not.toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledWith('get_user_coupon_history', {
+      p_user_id: 'current-user-id',
+      p_limit: 11,
+      p_offset: 0,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+
+    expect(await screen.findByText('Zakład 40')).toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledWith('get_user_coupon_history', {
+      p_user_id: 'current-user-id',
+      p_limit: 31,
+      p_offset: 10,
+    });
+    expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    expect(await screen.findByText('Zakład 70')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    expect(await screen.findByText('Zakład 75')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pokaż więcej' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż mniej' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Zakład 11')).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+  });
+
+  it('keeps casino history batching independent from sportsbook history', async () => {
+    const casinoEntries = Array.from({ length: 41 }, (_, index) => ({
+      id: `casino-${index + 1}`,
+      game_type: 'Ruletka',
+      bet_label: `Bet ${index + 1}`,
+      stake: 20,
+      payout: 40,
+      status: 'won',
+      round_label: `#${index + 1}`,
+      created_at: '2026-01-02T00:00:00.000Z',
+    }));
+
+    rpcMock.mockImplementation((fn: string, args?: { p_limit?: number; p_offset?: number }) => {
+      if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_casino_history') {
+        const offset = args?.p_offset ?? 0;
+        const limit = args?.p_limit ?? casinoEntries.length;
+        return Promise.resolve({ data: casinoEntries.slice(offset, offset + limit) });
+      }
+      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: null });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/current-user-id']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Kasyno' }));
+
+    expect(await screen.findByText('Bet 1')).toBeInTheDocument();
+    expect(screen.queryByText('Bet 11')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+
+    expect(await screen.findByText('Bet 40')).toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledWith('get_user_casino_history', {
+      p_user_id: 'current-user-id',
+      p_limit: 31,
+      p_offset: 10,
+    });
+    expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pokaż więcej' })).toBeInTheDocument();
+  });
+
   it('switches profile history between sportsbook coupons and casino bets', async () => {
     render(
       <MemoryRouter initialEntries={['/profile/current-user-id']}>
