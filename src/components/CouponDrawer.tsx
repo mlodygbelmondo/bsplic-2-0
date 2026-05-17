@@ -259,26 +259,20 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
 
   return (
     <>
-      {!open && (
+      {!open && hasItems && (
         <button
           onClick={() => setOpen(true)}
           className={cn(
-            'lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[80] rounded-full h-16 w-16 shadow-2xl flex items-center justify-center transition-colors',
-            hasItems
-              ? 'gradient-primary text-primary-foreground'
-              : 'bg-card text-foreground border border-border',
+            'lg:hidden fixed bottom-[calc(var(--app-bottom-nav-space)+0.75rem)] right-4 z-[80] rounded-full min-h-12 px-4 shadow-2xl flex items-center justify-center gap-2 transition-colors gradient-primary text-primary-foreground border border-white/15',
           )}
           style={{ WebkitTapHighlightColor: 'transparent' }}
           aria-label="Otwórz kupon"
         >
-          <div className="relative">
-            <Ticket className="h-6 w-6" />
-            {hasItems && (
-              <span className="absolute -top-2 -right-2 bg-card text-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow">
-                {items.length}
-              </span>
-            )}
-          </div>
+          <Ticket className="h-5 w-5" />
+          <span className="text-sm font-black">Kupon</span>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-card px-1.5 text-[10px] font-black text-foreground shadow">
+            {items.length}
+          </span>
         </button>
       )}
 
@@ -293,7 +287,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
           />
           <aside
             className={cn(
-              'lg:hidden fixed inset-x-2 bottom-2 z-[81] bg-card border border-border rounded-2xl card-shadow h-[min(78vh,680px)] max-h-[78vh] overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out coupon-drawer-enter',
+              'lg:hidden fixed inset-x-2 bottom-[calc(var(--app-bottom-nav-space)+0.5rem)] z-[81] bg-card border border-border rounded-2xl card-shadow h-[min(72vh,620px)] max-h-[72vh] overflow-hidden transition-transform duration-200 ease-out coupon-drawer-enter',
               isClosing
                 ? 'translate-y-4 opacity-95'
                 : 'translate-y-0 opacity-100',

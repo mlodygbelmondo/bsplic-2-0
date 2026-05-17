@@ -212,7 +212,7 @@ export default function DashboardTab() {
           return (
             <div key={card.label} className="bg-card rounded-xl p-4 card-shadow">
               <div className="flex items-center gap-2 mb-1.5">
-                <Icon className="h-4 w-4 text-gray-950 shrink-0" aria-hidden="true" />
+                <Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                 <p className="text-xs text-muted-foreground font-medium truncate">
                   {card.label}
                 </p>
@@ -228,7 +228,7 @@ export default function DashboardTab() {
       {/* Recent Activity */}
       <div className="bg-card rounded-xl card-shadow">
         <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-          <Clock className="h-4 w-4 text-gray-950 shrink-0" aria-hidden="true" />
+          <Clock className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
           <h3 className="text-sm font-semibold">Ostatnia aktywność</h3>
         </div>
 

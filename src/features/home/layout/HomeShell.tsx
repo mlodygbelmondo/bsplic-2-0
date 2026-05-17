@@ -24,7 +24,7 @@ export function HomeShell({
 }: HomeShellProps) {
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
-      <div className="h-full max-w-[1600px] mx-auto px-3 py-3 flex flex-col gap-3">
+      <div className="app-mobile-content-pad h-full max-w-[1600px] mx-auto px-3 py-3 flex flex-col gap-3">
         <HomePromoBanner />
 
         <div className="flex-1 min-h-0 flex">

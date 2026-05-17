@@ -6,26 +6,26 @@
 
 @layer base {
   :root {
-    --background: 220 14% 96%;
-    --foreground: 220 15% 15%;
+    --background: 235 32% 5%;
+    --foreground: 0 0% 96%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
+    --card: 229 26% 12%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
+    --popover: 229 26% 12%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 355 100% 44%;
+    --primary: 355 100% 43%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 15% 15%;
+    --secondary: 228 24% 16%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 8% 50%;
+    --muted: 228 22% 17%;
+    --muted-foreground: 224 10% 66%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 15% 15%;
+    --accent: 228 24% 18%;
+    --accent-foreground: 0 0% 96%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -36,12 +36,12 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
+    --border: 226 18% 22%;
+    --input: 226 18% 22%;
     --ring: 355 100% 44%;
     --radius: 0.5rem;
 
-    --navbar: 355 100% 44%;
+    --navbar: 355 100% 43%;
     --navbar-foreground: 0 0% 100%;
 
     --odds-bg: 46 98% 52%;
@@ -51,26 +51,35 @@
     --odds-selected: 220 14% 8%;
     --odds-selected-fg: 0 0% 100%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 15% 15%;
+    --sidebar-background: 229 26% 12%;
+    --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: 355 100% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 15% 15%;
-    --sidebar-border: 220 13% 90%;
+    --sidebar-accent: 228 24% 18%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 226 18% 22%;
     --sidebar-ring: 355 100% 44%;
 
-    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.18), 0 14px 34px rgba(0, 0, 0, 0.28);
     --shadow-card-hover:
-      0 4px 12px rgba(0, 0, 0, 0.1), 0 12px 32px rgba(0, 0, 0, 0.14);
+      0 4px 14px rgba(0, 0, 0, 0.24), 0 18px 42px rgba(0, 0, 0, 0.34);
 
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --app-viewport-height: 100dvh;
+    --app-topbar-height: 4.5rem;
+    --app-bottom-nav-height: 4.75rem;
+    --app-bottom-nav-space: calc(var(--app-bottom-nav-height) + var(--safe-area-bottom));
   }
 }
 
 @layer base {
+  @media (min-width: 1024px) {
+    :root {
+      --app-topbar-height: 3.25rem;
+    }
+  }
+
   * {
     @apply border-border;
   }
@@ -100,6 +109,19 @@
   .gradient-navbar {
     background: linear-gradient(90deg, hsl(355 100% 44%), hsl(355 90% 38%));
   }
+  .app-topbar {
+    height: calc(var(--app-topbar-height) + var(--safe-area-top));
+    padding-top: var(--safe-area-top);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0 9%, transparent 9% 18%),
+      linear-gradient(90deg, hsl(355 100% 43%), hsl(354 100% 36%));
+    background-size:
+      92px 92px,
+      auto;
+    background-position:
+      right -20px top -36px,
+      0 0;
+  }
   .safe-sticky-top {
     top: 0;
   }
@@ -110,7 +132,17 @@
     padding-bottom: var(--safe-area-bottom);
   }
   .navbar-offset {
-    height: calc(2.75rem + var(--safe-area-top));
+    height: calc(var(--app-topbar-height) + var(--safe-area-top));
+    flex-shrink: 0;
+  }
+  .app-mobile-bottom-nav > div {
+    min-height: calc(var(--app-bottom-nav-height) + var(--safe-area-bottom));
+    padding-bottom: max(0.5rem, var(--safe-area-bottom));
+  }
+  @media (max-width: 1023px) {
+    .app-mobile-content-pad {
+      padding-bottom: var(--app-bottom-nav-space);
+    }
   }
   .min-safe-screen {
     min-height: 100vh;

@@ -251,7 +251,7 @@ export default function CategoriesTab() {
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEditModal(cat)} aria-label={`Edytuj ${cat.name}`}>
-                <Pencil className="h-3 w-3 text-gray-950" />
+                <Pencil className="h-3 w-3" />
               </Button>
               <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => deleteCategory(cat.id)} aria-label={`Usuń ${cat.name}`}>
                 <Trash2 className="h-3 w-3" />
@@ -288,7 +288,7 @@ export default function CategoriesTab() {
                 <td className="w-[220px] px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEditModal(cat)} aria-label={`Edytuj ${cat.name}`}>
-                      <Pencil className="h-3 w-3 mr-1 text-gray-950" /> Edytuj
+                      <Pencil className="h-3 w-3 mr-1" /> Edytuj
                     </Button>
                     <Button size="sm" variant="destructive" onClick={() => deleteCategory(cat.id)} aria-label={`Usuń ${cat.name}`}>
                       <Trash2 className="h-3 w-3 mr-1" /> Usuń

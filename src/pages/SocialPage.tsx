@@ -493,7 +493,7 @@ export default function SocialPage() {
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="app-mobile-content-pad flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4">Social</h1>
 

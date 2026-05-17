@@ -10,7 +10,6 @@ import {
   ListChecks,
   Lightbulb,
   Tag,
-  BadgePlus,
 } from 'lucide-react';
 
 import DashboardTab from './DashboardTab';
@@ -75,7 +74,7 @@ export default function AdminLayout() {
   if (!isAdmin) return <Navigate to="/" />;
 
   return (
-    <div className="h-safe-screen overflow-hidden bg-muted/30 flex flex-col">
+    <div className="h-safe-screen overflow-hidden bg-background flex flex-col">
       <Navbar />
 
       {/* Desktop sidebar + content */}
@@ -112,9 +111,9 @@ export default function AdminLayout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="flex-1 min-h-0 min-w-0 overflow-hidden md:pb-0">
           <div className="h-full overflow-y-auto overscroll-contain">
-            <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
+            <div className="app-mobile-content-pad mx-auto w-full max-w-none p-4 sm:p-6 md:p-8 md:pb-8">
               {/* Mobile page header */}
               <div className="md:hidden mb-6 flex items-center justify-between">
                 <h1 className="text-2xl font-bold tracking-tight">
@@ -139,60 +138,31 @@ export default function AdminLayout() {
         </main>
       </div>
 
-      {/* Mobile bottom tab bar - Pill style */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
-        <div className="bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] flex items-center justify-around px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto relative overflow-visible">
+      {/* Mobile admin tab bar */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50" aria-label="Nawigacja admina">
+        <div className="grid grid-cols-5 border-t border-white/10 bg-[#10131e]/96 px-2 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {TABS.map(({ key, shortLabel, icon: Icon }) => {
-            const isCenter = key === 'create';
             const isActive = tab === key;
-
-            if (isCenter) {
-              return (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  className="relative -top-4 flex flex-col items-center justify-center shrink-0 w-16"
-                >
-                  <div
-                    className={cn(
-                      'flex items-center justify-center h-[58px] w-[58px] rounded-full text-white shadow-lg transition-transform active:scale-95 border-4 border-background',
-                      isActive
-                        ? 'gradient-primary'
-                        : 'bg-primary hover:brightness-110',
-                    )}
-                  >
-                    <Icon className="h-6 w-6" strokeWidth={2.5} />
-                  </div>
-                </button>
-              );
-            }
 
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 py-1 px-2 w-[64px] transition-colors',
+                  'flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-black transition-colors',
                   isActive
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'text-[#ffd83f]'
+                    : 'text-white/56 hover:text-white',
                 )}
               >
                 <Icon
                   className={cn(
                     'h-5 w-5',
-                    isActive ? 'text-primary' : 'text-muted-foreground',
+                    isActive && 'drop-shadow-[0_0_10px_rgba(255,216,63,0.5)]',
                   )}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  strokeWidth={isActive ? 2.8 : 2.2}
                 />
-                <span
-                  className={cn(
-                    'text-[11px] font-medium leading-none',
-                    isActive && 'font-bold',
-                  )}
-                >
-                  {shortLabel}
-                </span>
+                <span className="leading-none">{shortLabel}</span>
               </button>
             );
           })}

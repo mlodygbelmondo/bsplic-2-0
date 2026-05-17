@@ -91,9 +91,9 @@ describe("Navbar", () => {
     expect(screen.getByText("BSPLIC 2.0")).toBeInTheDocument();
     // Desktop links
     expect(screen.getByText("Zakłady")).toBeInTheDocument();
-    expect(screen.getByText("Kasyno")).toBeInTheDocument();
-    expect(screen.getByText("Social")).toBeInTheDocument();
-    expect(screen.getByText("Rankingi")).toBeInTheDocument();
+    expect(screen.getAllByText("Kasyno").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Social").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rankingi").length).toBeGreaterThan(0);
   });
 
   it("shows admin link when user is admin", () => {
@@ -130,7 +130,7 @@ describe("Navbar", () => {
     const walletButton = screen.getByTitle("Doładuj portfel");
     fireEvent.click(walletButton);
 
-    expect(screen.getByText("💰 Doładuj portfel")).toBeInTheDocument();
+    expect(screen.getByText("Doładuj portfel")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /doładuj 100 zł/i }),
     ).toBeInTheDocument();
@@ -208,7 +208,7 @@ describe("Navbar", () => {
       "Już doładowano dzisiaj. Wróć jutro!",
     );
     // Dialog should NOT open
-    expect(screen.queryByText("💰 Doładuj portfel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Doładuj portfel")).not.toBeInTheDocument();
   });
 
   it("sets wallet button title to deny message when cannot topup", () => {

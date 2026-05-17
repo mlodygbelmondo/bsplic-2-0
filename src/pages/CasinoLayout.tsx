@@ -23,7 +23,7 @@ export default function CasinoLayout() {
   return (
     <div className="h-safe-screen w-full max-w-full flex flex-col overflow-hidden casino-page-bg">
       <Navbar />
-      <main className="min-w-0 flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+      <main className="app-mobile-content-pad min-w-0 flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
         <Outlet context={{ user, profile }} />
       </main>
     </div>
