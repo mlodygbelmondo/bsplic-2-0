@@ -32,7 +32,7 @@ function getShareableProfileUrl() {
 }
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, loading: authLoading } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
   const normalizedUserRef = userRef ? decodeURIComponent(userRef) : undefined;
 
@@ -338,7 +338,7 @@ export default function ProfilePage() {
   }, [targetUserId, isOwnProfile]);
 
   // Own profile requires auth
-  if (resolvingTarget) return null;
+  if (resolvingTarget || authLoading) return null;
   if (isOwnProfile && (!user || !profile)) return <Navigate to="/" />;
 
   const displayName = isOwnProfile ? profile!.username : publicProfile?.username ?? '...';

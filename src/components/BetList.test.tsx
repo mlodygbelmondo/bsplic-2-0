@@ -33,6 +33,8 @@ describe('BetList tabs', () => {
       'Kończące się',
     ]);
 
+    expect(screen.getByText('Brak dostępnych zdarzeń')).toBeInTheDocument();
+
     expect(useBetsMock).toHaveBeenCalledWith(null, 'newest');
 
     fireEvent.click(screen.getByRole('button', { name: 'Popularne' }));

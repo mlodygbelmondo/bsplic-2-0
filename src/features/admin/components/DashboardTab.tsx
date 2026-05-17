@@ -210,10 +210,10 @@ export default function DashboardTab() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="bg-card rounded-xl p-4 card-shadow">
-              <div className="flex items-center gap-2 mb-1.5">
+            <div key={card.label} className="bg-card rounded-lg p-4 card-shadow">
+              <div className="mb-1.5 flex items-start gap-2">
                 <Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
-                <p className="text-xs text-muted-foreground font-medium truncate">
+                <p className="min-w-0 text-xs font-medium leading-tight text-muted-foreground">
                   {card.label}
                 </p>
               </div>

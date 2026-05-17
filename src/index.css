@@ -50,6 +50,11 @@
     --odds-fg-alt: 30 8% 11%;
     --odds-selected: 220 14% 8%;
     --odds-selected-fg: 0 0% 100%;
+    --sport-surface: 229 28% 10%;
+    --sport-surface-elevated: 228 26% 14%;
+    --sport-border-strong: 224 18% 26%;
+    --sport-odds: 43 100% 58%;
+    --sport-odds-foreground: 25 12% 8%;
 
     --sidebar-background: 229 26% 12%;
     --sidebar-foreground: 0 0% 96%;
@@ -138,6 +143,101 @@
   .app-mobile-bottom-nav > div {
     min-height: calc(var(--app-bottom-nav-height) + var(--safe-area-bottom));
     padding-bottom: max(0.5rem, var(--safe-area-bottom));
+  }
+  .sportsbook-home-bg {
+    background:
+      linear-gradient(180deg, rgba(220, 0, 32, 0.12) 0%, rgba(220, 0, 32, 0) 22rem),
+      repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.025) 0,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 18px
+      ),
+      hsl(var(--background));
+  }
+  .sportsbook-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+      hsl(var(--sport-surface));
+    box-shadow:
+      0 18px 42px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .sportsbook-hero-card {
+    background:
+      repeating-linear-gradient(
+        128deg,
+        rgba(255, 255, 255, 0.08) 0,
+        rgba(255, 255, 255, 0.08) 1px,
+        transparent 1px,
+        transparent 28px
+      ),
+      linear-gradient(135deg, hsl(355 100% 43%) 0%, hsl(354 100% 34%) 54%, hsl(229 30% 9%) 100%);
+  }
+  .sportsbook-hero-card::after {
+    content: '';
+    position: absolute;
+    inset: auto -18% -44% 44%;
+    height: 100%;
+    transform: skewX(-18deg);
+    background: rgba(0, 0, 0, 0.16);
+    pointer-events: none;
+  }
+  .sportsbook-event-card {
+    position: relative;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+      linear-gradient(90deg, rgba(220, 0, 32, 0.12), rgba(220, 0, 32, 0) 28%),
+      hsl(var(--sport-surface-elevated));
+    box-shadow: var(--shadow-card);
+  }
+  .sportsbook-event-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--sport-odds)));
+    opacity: 0.86;
+  }
+  .sportsbook-event-card-boost::after {
+    content: '';
+    position: absolute;
+    inset: -32% 0;
+    background: linear-gradient(
+      110deg,
+      transparent 38%,
+      rgba(255, 239, 184, 0.18) 50%,
+      transparent 62%
+    );
+    transform: translateX(-142%) skewX(-14deg);
+    animation: sportsbook-boost-shimmer 5.8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .sportsbook-event-skeleton {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+      hsl(var(--sport-surface-elevated));
+    box-shadow: var(--shadow-card);
+  }
+  @keyframes sportsbook-boost-shimmer {
+    0%,
+    70% {
+      transform: translateX(-142%) skewX(-14deg);
+      opacity: 0;
+    }
+    77% {
+      opacity: 1;
+    }
+    90% {
+      transform: translateX(144%) skewX(-14deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(144%) skewX(-14deg);
+      opacity: 0;
+    }
   }
   @media (max-width: 1023px) {
     .app-mobile-content-pad {
@@ -381,6 +481,10 @@
       opacity: 0;
     }
     .player-card-hero::after {
+      animation: none;
+      opacity: 0;
+    }
+    .sportsbook-event-card-boost::after {
       animation: none;
       opacity: 0;
     }

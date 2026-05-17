@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { CouponProvider } from '@/contexts/CouponContext';
 import { Bet } from '@/types/database';
@@ -95,5 +95,23 @@ describe('BetCard', () => {
     );
 
     expect(screen.queryByText('W trakcie')).not.toBeInTheDocument();
+  });
+
+  it('marks the selected odds option in the coupon', () => {
+    const bet = createBet({});
+
+    render(
+      <CouponProvider>
+        <BetCard bet={bet} />
+      </CouponProvider>,
+    );
+
+    const legiaButton = screen.getByRole('button', { name: /Legia\s+2\.10/i });
+
+    expect(legiaButton).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(legiaButton);
+
+    expect(legiaButton).toHaveAttribute('aria-pressed', 'true');
   });
 });

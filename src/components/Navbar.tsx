@@ -315,7 +315,7 @@ export function Navbar() {
           className="app-mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 lg:hidden"
           aria-label="Nawigacja główna"
         >
-          <div className="mx-auto grid max-w-xl grid-cols-5 border-t border-white/10 bg-[#10131e]/96 px-2 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+          <div className="mx-auto grid max-w-xl grid-cols-5 border-t border-white/10 bg-[#10131e] px-2 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.4)] backdrop-blur-xl">
             {userBottomTabs.map(({ to, label, icon: Icon }) => {
               const isActive = isActivePath(to);
               return (

@@ -140,7 +140,7 @@ export default function AdminLayout() {
 
       {/* Mobile admin tab bar */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50" aria-label="Nawigacja admina">
-        <div className="grid grid-cols-5 border-t border-white/10 bg-[#10131e]/96 px-2 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-5 border-t border-white/10 bg-[#10131e] px-2 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {TABS.map(({ key, shortLabel, icon: Icon }) => {
             const isActive = tab === key;
 

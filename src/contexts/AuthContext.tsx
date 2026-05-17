@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
@@ -24,51 +24,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const profileRequestIdRef = useRef(0);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
-    if (data) setProfile(data as Profile);
 
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
-    setIsAdmin(roles?.some((r: { role: string }) => r.role === 'admin') ?? false);
-  };
+
+    return {
+      profile: data ? (data as Profile) : null,
+      isAdmin: roles?.some((r: { role: string }) => r.role === 'admin') ?? false,
+    };
+  }, []);
+
+  const clearProfileState = useCallback(() => {
+    profileRequestIdRef.current += 1;
+    setProfile(null);
+    setIsAdmin(false);
+    setProfileLoading(false);
+  }, []);
+
+  const loadProfile = useCallback(async (userId: string, blocking = true) => {
+    const requestId = profileRequestIdRef.current + 1;
+    profileRequestIdRef.current = requestId;
+
+    if (blocking) {
+      setProfileLoading(true);
+    }
+
+    try {
+      const nextProfileState = await fetchProfile(userId);
+
+      if (profileRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setProfile(nextProfileState.profile);
+      setIsAdmin(nextProfileState.isAdmin);
+    } catch {
+      if (profileRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setProfile(null);
+      setIsAdmin(false);
+    } finally {
+      if (profileRequestIdRef.current === requestId) {
+        setProfileLoading(false);
+      }
+    }
+  }, [fetchProfile]);
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await loadProfile(user.id, false);
   };
+
+  const loading = authLoading || profileLoading;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
+          void loadProfile(session.user.id);
         } else {
-          setProfile(null);
-          setIsAdmin(false);
+          clearProfileState();
         }
-        setLoading(false);
+        setAuthLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
+      if (session?.user) {
+        void loadProfile(session.user.id);
+      } else {
+        clearProfileState();
+      }
+      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [clearProfileState, loadProfile]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -90,8 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setProfile(null);
-    setIsAdmin(false);
+    clearProfileState();
   };
 
   const resetPassword = async (email: string) => {
