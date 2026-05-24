@@ -4,7 +4,12 @@ import App from './App.tsx';
 import './index.css';
 
 const syncAppViewportHeight = () => {
-  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  if (CSS.supports('height', '100svh')) {
+    document.documentElement.style.removeProperty('--app-viewport-height');
+    return;
+  }
+
+  const viewportHeight = window.innerHeight;
 
   document.documentElement.style.setProperty(
     '--app-viewport-height',
@@ -14,10 +19,10 @@ const syncAppViewportHeight = () => {
 
 syncAppViewportHeight();
 
-window.addEventListener('resize', syncAppViewportHeight);
-window.addEventListener('orientationchange', syncAppViewportHeight);
-window.visualViewport?.addEventListener('resize', syncAppViewportHeight);
-window.visualViewport?.addEventListener('scroll', syncAppViewportHeight);
+if (!CSS.supports('height', '100svh')) {
+  window.addEventListener('resize', syncAppViewportHeight);
+  window.addEventListener('orientationchange', syncAppViewportHeight);
+}
 
 registerSW({
   immediate: true,

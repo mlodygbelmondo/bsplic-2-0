@@ -11,6 +11,7 @@ import RankingsPage from "./pages/RankingsPage";
 import SocialPage from "./pages/SocialPage";
 import AdminPage from "./pages/AdminPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import BetclicHomePrototypes from "./features/home/prototypes/BetclicHomePrototypes";
 
 import CasinoLayout from "./pages/CasinoLayout";
 import CasinoHub from "./pages/CasinoHub";
@@ -45,6 +46,10 @@ const App = () => (
               </Route>
 
               <Route path="/admin" element={<AdminPage />} />
+              <Route
+                path="/betclic-home-prototypes"
+                element={<BetclicHomePrototypes />}
+              />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
