@@ -7,7 +7,7 @@ branch: codex/betclic-home-prototypes
 
 ## Context
 
-The work is a prototype-only redesign route for the first/home page, inspired by the Betclic mobile app reference screenshots in `betclic-reference/`. It is not integrated into the real `/` home page yet.
+The work is a prototype-only redesign route for the first/home page, inspired by the Betclic mobile app reference screenshots committed in `betclic-reference/`. It is not integrated into the real `/` home page yet.
 
 Current route:
 
@@ -28,6 +28,7 @@ Useful params:
 - `src/index.css`
 - `src/main.tsx`
 - `eslint.config.js`
+- `betclic-reference/` contains the committed visual reference screenshots.
 - `.ai/docs/redesign/betclic-home-prototypes.md` contains the local design notes but is ignored by git.
 
 ## Implemented
