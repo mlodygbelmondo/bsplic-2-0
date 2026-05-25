@@ -11,6 +11,8 @@ import RankingsPage from "./pages/RankingsPage";
 import SocialPage from "./pages/SocialPage";
 import AdminPage from "./pages/AdminPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import RedesignPlayground from "./features/redesign/RedesignPlayground";
+import ConceptsPlayground from "./features/concepts/ConceptsPlayground";
 
 import CasinoLayout from "./pages/CasinoLayout";
 import CasinoHub from "./pages/CasinoHub";
@@ -45,6 +47,8 @@ const App = () => (
               </Route>
 
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/redesign" element={<RedesignPlayground />} />
+              <Route path="/concepts" element={<ConceptsPlayground />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
