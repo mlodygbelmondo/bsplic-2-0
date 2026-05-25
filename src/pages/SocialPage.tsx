@@ -1,11 +1,21 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { SocialFeedItem, SocialComment, ReactionEmoji, CouponLeg, FeedItemType } from '@/types/database';
+import {
+  SocialFeedItem,
+  SocialComment,
+  ReactionEmoji,
+  CouponLeg,
+  FeedItemType,
+} from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
-import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
+import {
+  deriveCouponStatus,
+  getDisplayedCouponOdds,
+  getDisplayedCouponWin,
+} from '@/features/coupons/display';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
@@ -14,7 +24,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PostComposer } from '@/features/social/components/PostComposer';
 import { ReactionBar } from '@/features/social/components/ReactionBar';
 import { CommentThread } from '@/features/social/components/CommentThread';
-import { buildSocialContent, parseSocialContent } from '@/features/social/content';
+import {
+  buildSocialContent,
+  parseSocialContent,
+} from '@/features/social/content';
+import { respondAsEniu } from '@/features/social/api/eniuBot';
+import { mentionsEniu } from '@/features/social/eniuBot';
 import { uploadSocialImage } from '@/features/social/images';
 import { SocialContentBlock } from '@/features/social/components/SocialContentBlock';
 import { ReactorsDialog } from '@/features/social/components/ReactorsDialog';
@@ -37,14 +52,24 @@ import type { FlatComment } from '@/features/social/thread';
 const SOCIAL_FEED_PAGE_SIZE = 50;
 const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
 const EMPTY_COMMENTS: SocialComment[] = [];
-const REACTION_TYPES: ReactionType[] = ['like', 'heart', 'laugh', 'wow', 'sad', 'angry', 'fire'];
+const REACTION_TYPES: ReactionType[] = [
+  'like',
+  'heart',
+  'laugh',
+  'wow',
+  'sad',
+  'angry',
+  'fire',
+];
 
 function updateReactionCounts(
   reactions: Partial<Record<ReactionEmoji, number>> | null,
   previousReaction: ReactionEmoji | null,
   nextReaction: ReactionEmoji | null,
 ): Partial<Record<ReactionEmoji, number>> | null {
-  const counts: Partial<Record<ReactionEmoji, number>> = { ...(reactions ?? {}) };
+  const counts: Partial<Record<ReactionEmoji, number>> = {
+    ...(reactions ?? {}),
+  };
 
   if (previousReaction) {
     counts[previousReaction] = Math.max((counts[previousReaction] ?? 0) - 1, 0);
@@ -87,21 +112,33 @@ function formatTimeAgo(dateStr: string) {
 
 export default function SocialPage() {
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
-  const [feedFilter, setFeedFilter] = useState<'all' | 'coupon' | 'post' | 'casino'>('all');
+  const [feedFilter, setFeedFilter] = useState<
+    'all' | 'coupon' | 'post' | 'casino'
+  >('all');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
+  const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(
+    new Set(),
+  );
   const [copyingCoupons, setCopyingCoupons] = useState<Set<string>>(new Set());
-  const [commentsMap, setCommentsMap] = useState<Record<string, SocialComment[]>>({});
-  const [commentsLoadedMap, setCommentsLoadedMap] = useState<Record<string, boolean>>({});
-  const [commentsLoadingMap, setCommentsLoadingMap] = useState<Record<string, boolean>>({});
+  const [commentsMap, setCommentsMap] = useState<
+    Record<string, SocialComment[]>
+  >({});
+  const [commentsLoadedMap, setCommentsLoadedMap] = useState<
+    Record<string, boolean>
+  >({});
+  const [commentsLoadingMap, setCommentsLoadingMap] = useState<
+    Record<string, boolean>
+  >({});
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
-  const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(null);
+  const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(
+    null,
+  );
   const [reactorsOpen, setReactorsOpen] = useState(false);
   const [reactorsEmoji, setReactorsEmoji] = useState<ReactionType | null>(null);
   const [reactorsTarget, setReactorsTarget] = useState<{
@@ -114,10 +151,15 @@ export default function SocialPage() {
   const targetItemTypeParam = searchParams.get('itemType');
   const targetItemIdParam = searchParams.get('itemId');
   const targetItemType =
-    targetItemTypeParam === 'post' || targetItemTypeParam === 'coupon' || targetItemTypeParam === 'casino'
+    targetItemTypeParam === 'post' ||
+    targetItemTypeParam === 'coupon' ||
+    targetItemTypeParam === 'casino'
       ? targetItemTypeParam
       : null;
-  const targetItemId = targetItemIdParam && targetItemIdParam.length > 0 ? targetItemIdParam : null;
+  const targetItemId =
+    targetItemIdParam && targetItemIdParam.length > 0
+      ? targetItemIdParam
+      : null;
 
   const filteredFeedItems = useMemo(() => {
     if (feedFilter === 'all') return feedItems;
@@ -146,7 +188,11 @@ export default function SocialPage() {
 
     setLoadingMore(true);
     try {
-      const data = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, offset, user?.id);
+      const data = await fetchSocialFeed(
+        SOCIAL_FEED_PAGE_SIZE,
+        offset,
+        user?.id,
+      );
       setFeedItems((prev) => [...prev, ...data]);
       setOffset((prev) => prev + data.length);
       setHasMore(data.length === SOCIAL_FEED_PAGE_SIZE);
@@ -168,12 +214,17 @@ export default function SocialPage() {
       setFeedFilter('all');
 
       try {
-        const item = await fetchSocialFeedItem(targetItemType, targetItemId, user?.id);
+        const item = await fetchSocialFeedItem(
+          targetItemType,
+          targetItemId,
+          user?.id,
+        );
         if (!item || cancelled) return;
 
         setFeedItems((prev) => {
           const exists = prev.some(
-            (feedItem) => feedItem.id === item.id && feedItem.item_type === item.item_type,
+            (feedItem) =>
+              feedItem.id === item.id && feedItem.item_type === item.item_type,
           );
           if (exists) return prev;
           return [item, ...prev];
@@ -195,13 +246,17 @@ export default function SocialPage() {
   useEffect(() => {
     if (!highlightedItemKey) return;
 
-    const element = document.getElementById(`social-item-${highlightedItemKey}`);
+    const element = document.getElementById(
+      `social-item-${highlightedItemKey}`,
+    );
     if (!element) return;
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const timeout = window.setTimeout(() => {
-      setHighlightedItemKey((current) => (current === highlightedItemKey ? null : current));
+      setHighlightedItemKey((current) =>
+        current === highlightedItemKey ? null : current,
+      );
     }, 3000);
 
     return () => {
@@ -279,10 +334,15 @@ export default function SocialPage() {
 
     try {
       const bets = await fetchBetsByIds(betIds);
-      const { items, skippedCount } = buildCouponItemsFromSocial({ legs, bets });
+      const { items, skippedCount } = buildCouponItemsFromSocial({
+        legs,
+        bets,
+      });
 
       if (items.length === 0) {
-        toast.error('Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone');
+        toast.error(
+          'Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone',
+        );
         return;
       }
 
@@ -300,7 +360,9 @@ export default function SocialPage() {
       navigate('/');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Nie udało się skopiować kuponu';
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się skopiować kuponu';
       toast.error(message);
     } finally {
       setCouponCopying(item.id, false);
@@ -317,8 +379,13 @@ export default function SocialPage() {
     }
 
     const payload = buildSocialContent(content, imagePath);
-    await createPost(user.id, payload);
+    const postId = await createPost(user.id, payload);
     await loadFeed();
+    if (mentionsEniu(content)) {
+      void respondAsEniu('post', postId)
+        .then(() => loadComments(postId, 'post'))
+        .catch(() => undefined);
+    }
     toast.success('Post opublikowany');
   };
 
@@ -370,7 +437,7 @@ export default function SocialPage() {
       }
 
       const payload = buildSocialContent(content, imagePath);
-      await addComment({
+      const commentId = await addComment({
         userId: user.id,
         content: payload,
         postId: itemType === 'post' ? itemId : undefined,
@@ -378,6 +445,12 @@ export default function SocialPage() {
         casinoShareId: itemType === 'casino' ? itemId : undefined,
         parentId,
       });
+
+      if (mentionsEniu(content)) {
+        void respondAsEniu('comment', commentId)
+          .then(() => loadComments(itemId, itemType))
+          .catch(() => undefined);
+      }
 
       setFeedItems((prev) =>
         prev.map((item) =>
@@ -398,11 +471,7 @@ export default function SocialPage() {
   // ── Reactions ──────────────────────────────────────────────
 
   const handleToggleReaction = useCallback(
-    async (
-      itemId: string,
-      itemType: FeedItemType,
-      emoji: ReactionType,
-    ) => {
+    async (itemId: string, itemType: FeedItemType, emoji: ReactionType) => {
       if (!user) return;
       const nextReaction = await toggleReaction({
         userId: user.id,
@@ -417,7 +486,11 @@ export default function SocialPage() {
           if (item.id !== itemId || item.item_type !== itemType) return item;
           return {
             ...item,
-            reactions: updateReactionCounts(item.reactions, item.my_reaction, nextReaction as ReactionEmoji | null),
+            reactions: updateReactionCounts(
+              item.reactions,
+              item.my_reaction,
+              nextReaction as ReactionEmoji | null,
+            ),
             my_reaction: nextReaction as ReactionEmoji | null,
           };
         }),
@@ -464,7 +537,8 @@ export default function SocialPage() {
   );
 
   const handleOpenItemReactors = useCallback((item: SocialFeedItem) => {
-    const firstReactionType = REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
+    const firstReactionType =
+      REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
 
     setReactorsTarget(
       item.item_type === 'post'
@@ -477,16 +551,23 @@ export default function SocialPage() {
     setReactorsOpen(true);
   }, []);
 
-  const handleOpenCommentReactors = useCallback((commentId: string) => {
-    const comment = Object.values(commentsMap)
-      .flat()
-      .find((entry) => entry.id === commentId);
-    const firstReactionType = REACTION_TYPES.find((type) => ((comment?.reactions as ReactionCounts | null)?.[type] ?? 0) > 0) ?? null;
+  const handleOpenCommentReactors = useCallback(
+    (commentId: string) => {
+      const comment = Object.values(commentsMap)
+        .flat()
+        .find((entry) => entry.id === commentId);
+      const firstReactionType =
+        REACTION_TYPES.find(
+          (type) =>
+            ((comment?.reactions as ReactionCounts | null)?.[type] ?? 0) > 0,
+        ) ?? null;
 
-    setReactorsTarget({ commentId });
-    setReactorsEmoji(firstReactionType);
-    setReactorsOpen(true);
-  }, [commentsMap]);
+      setReactorsTarget({ commentId });
+      setReactorsEmoji(firstReactionType);
+      setReactorsOpen(true);
+    },
+    [commentsMap],
+  );
 
   // ── Render ─────────────────────────────────────────────────
 
@@ -497,61 +578,64 @@ export default function SocialPage() {
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4">Social</h1>
 
-        <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-          <button
-            type="button"
-            className={cn(
-              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-              feedFilter === 'all'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-            )}
-            onClick={() => setFeedFilter('all')}
-          >
-            Wszystko
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-              feedFilter === 'coupon'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-            )}
-            onClick={() => setFeedFilter('coupon')}
-          >
-            Kupony
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-              feedFilter === 'post'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-            )}
-            onClick={() => setFeedFilter('post')}
-          >
-            Posty
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
-              feedFilter === 'casino'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-            )}
-            onClick={() => setFeedFilter('casino')}
-          >
-            Kasyno
-          </button>
-        </div>
+          <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                feedFilter === 'all'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+              onClick={() => setFeedFilter('all')}
+            >
+              Wszystko
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                feedFilter === 'coupon'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+              onClick={() => setFeedFilter('coupon')}
+            >
+              Kupony
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                feedFilter === 'post'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+              onClick={() => setFeedFilter('post')}
+            >
+              Posty
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                feedFilter === 'casino'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+              )}
+              onClick={() => setFeedFilter('casino')}
+            >
+              Kasyno
+            </button>
+          </div>
 
           {/* Post composer for logged-in users */}
           {user && (
             <div className="mb-4">
-              <PostComposer onSubmit={handleCreatePost} currentUserId={user.id} />
+              <PostComposer
+                onSubmit={handleCreatePost}
+                currentUserId={user.id}
+              />
             </div>
           )}
 
@@ -566,7 +650,9 @@ export default function SocialPage() {
               {filteredFeedItems.length === 0 && !hasMore ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p className="text-lg font-medium">Brak aktywności</p>
-                  <p className="text-sm mt-1">Nikt jeszcze nic nie opublikował.</p>
+                  <p className="text-sm mt-1">
+                    Nikt jeszcze nic nie opublikował.
+                  </p>
                 </div>
               ) : (
                 filteredFeedItems.map((item) => (
@@ -589,7 +675,9 @@ export default function SocialPage() {
                     formatTimeAgo={formatTimeAgo}
                     formatEventsCount={formatEventsCount}
                     currentUserId={user?.id}
-                    highlighted={highlightedItemKey === `${item.item_type}-${item.id}`}
+                    highlighted={
+                      highlightedItemKey === `${item.item_type}-${item.id}`
+                    }
                     onOpenItemReactors={handleOpenItemReactors}
                     onOpenCommentReactors={handleOpenCommentReactors}
                   />
@@ -603,7 +691,11 @@ export default function SocialPage() {
               )}
 
               {hasMore && (
-                <div id="social-feed-sentinel" className="h-1" aria-hidden="true" />
+                <div
+                  id="social-feed-sentinel"
+                  className="h-1"
+                  aria-hidden="true"
+                />
               )}
 
               {loadingMore && (
@@ -638,8 +730,15 @@ interface FeedCardProps {
   isLoggedIn: boolean;
   onToggleCoupon: (id: string) => void;
   onCopyCoupon: (item: SocialFeedItem) => void;
-  onToggleReaction: (itemId: string, itemType: FeedItemType, emoji: ReactionType) => void | Promise<void>;
-  onFirstExpandComments: (itemId: string, itemType: FeedItemType) => void | Promise<void>;
+  onToggleReaction: (
+    itemId: string,
+    itemType: FeedItemType,
+    emoji: ReactionType,
+  ) => void | Promise<void>;
+  onFirstExpandComments: (
+    itemId: string,
+    itemType: FeedItemType,
+  ) => void | Promise<void>;
   onAddComment: (
     itemId: string,
     itemType: FeedItemType,
@@ -769,7 +868,10 @@ const FeedCard = memo(function FeedCard({
       {/* Content */}
       {item.item_type === 'post' && (
         <div className="px-4 py-2">
-          <SocialContentBlock content={item.content} imageAlt="Zdjęcie w poście" />
+          <SocialContentBlock
+            content={item.content}
+            imageAlt="Zdjęcie w poście"
+          />
         </div>
       )}
       {item.item_type === 'coupon' && (
@@ -781,9 +883,7 @@ const FeedCard = memo(function FeedCard({
           formatEventsCount={formatEventsCount}
         />
       )}
-      {item.item_type === 'casino' && (
-        <CasinoContent item={item} />
-      )}
+      {item.item_type === 'casino' && <CasinoContent item={item} />}
 
       {/* Reactions + Comments */}
       <div className="px-4 pb-3 space-y-2">
@@ -804,9 +904,16 @@ const FeedCard = memo(function FeedCard({
             if (commentsLoaded || commentsLoading) return;
             void onFirstExpandComments(item.id, item.item_type);
           }}
-          onAddComment={(content, parentId, imageBlob) => onAddComment(item.id, item.item_type, content, parentId, imageBlob)}
+          onAddComment={(content, parentId, imageBlob) =>
+            onAddComment(item.id, item.item_type, content, parentId, imageBlob)
+          }
           onToggleReaction={(commentId, emoji) => {
-            void onToggleCommentReaction(commentId, emoji, item.id, item.item_type);
+            void onToggleCommentReaction(
+              commentId,
+              emoji,
+              item.id,
+              item.item_type,
+            );
           }}
           onOpenCommentReactors={onOpenCommentReactors}
           disabled={!isLoggedIn}
@@ -849,7 +956,10 @@ function CasinoContent({ item }: CasinoContentProps) {
           </div>
           <p className="mt-1 font-medium truncate">
             {getRouletteBetTypeLabel(item.casino_bet_type ?? 'straight')}:{' '}
-            {formatRouletteBetValue(item.casino_bet_type ?? 'straight', item.casino_bet_value ?? '')}
+            {formatRouletteBetValue(
+              item.casino_bet_type ?? 'straight',
+              item.casino_bet_value ?? '',
+            )}
           </p>
           <p className="text-xs text-muted-foreground">
             {hasWinningNumber
@@ -911,7 +1021,9 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
     stake: Number(item.stake),
     displayedOdds,
     couponPayout: Number(item.payout),
-    legs: (item.legs ?? []).map((leg) => ({ legPayout: Number(leg.leg_payout ?? 0) })),
+    legs: (item.legs ?? []).map((leg) => ({
+      legPayout: Number(leg.leg_payout ?? 0),
+    })),
   });
 
   return (
@@ -942,7 +1054,8 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                 {item.legs?.[0]?.bet_title || 'Zakład'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {item.legs?.[0]?.selected_option} • kurs {displayedOdds.toFixed(2)}
+                {item.legs?.[0]?.selected_option} • kurs{' '}
+                {displayedOdds.toFixed(2)}
               </p>
             </>
           )}
@@ -958,7 +1071,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                   ? 'text-destructive'
                   : derivedStatus === 'refund'
                     ? 'text-primary'
-                  : 'text-muted-foreground',
+                    : 'text-muted-foreground',
             )}
           >
             {derivedStatus === 'won'
@@ -967,7 +1080,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                 ? 'Przegrana'
                 : derivedStatus === 'refund'
                   ? `Zwrot ${displayedWin.toFixed(2)} zł`
-                : 'W toku'}
+                  : 'W toku'}
           </p>
         </div>
       </button>
@@ -976,11 +1089,17 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       {ako && expanded && (
         <div className="border-t border-border px-4 pb-3 pt-2 space-y-1.5">
           {item.legs!.map((leg) => (
-            <div key={leg.id} className="flex items-center justify-between text-xs">
+            <div
+              key={leg.id}
+              className="flex items-center justify-between text-xs"
+            >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{leg.bet_title || 'Zakład'}</p>
+                <p className="truncate font-medium">
+                  {leg.bet_title || 'Zakład'}
+                </p>
                 <p className="text-muted-foreground">
-                  {leg.selected_option} • kurs {Number(leg.odds_at_time).toFixed(2)}
+                  {leg.selected_option} • kurs{' '}
+                  {Number(leg.odds_at_time).toFixed(2)}
                 </p>
               </div>
               <span
@@ -992,7 +1111,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                       ? 'bg-destructive/10 text-destructive'
                       : leg.result === 'refund'
                         ? 'bg-primary/10 text-primary'
-                      : 'bg-muted-foreground/10 text-muted-foreground',
+                        : 'bg-muted-foreground/10 text-muted-foreground',
                 )}
               >
                 {leg.result === 'won'
@@ -1001,7 +1120,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
                     ? 'Przegrana'
                     : leg.result === 'refund'
                       ? 'Zwrot'
-                    : 'W toku'}
+                      : 'W toku'}
               </span>
             </div>
           ))}

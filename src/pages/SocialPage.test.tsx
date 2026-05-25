@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +19,7 @@ const createPostMock = vi.fn<() => Promise<string>>();
 const fetchCommentsMock = vi.fn();
 const addCommentMock = vi.fn();
 const toggleReactionMock = vi.fn();
+const respondAsEniuMock = vi.fn();
 const fetchReactorsMock = vi.fn();
 const fetchBetsByIdsMock = vi.fn();
 const addItemsMock = vi.fn();
@@ -28,7 +35,11 @@ vi.mock('@/components/Navbar', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user-1', email: 'test@test.com' },
-    profile: { id: 'user-1', username: 'Tester', avatar_url: 'https://cdn.example/tester.jpg' },
+    profile: {
+      id: 'user-1',
+      username: 'Tester',
+      avatar_url: 'https://cdn.example/tester.jpg',
+    },
     isAdmin: false,
     refreshProfile: vi.fn(),
   }),
@@ -36,15 +47,30 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 vi.mock('@/features/social/api/social', () => ({
   fetchSocialFeed: (...args: unknown[]) => fetchSocialFeedMock(...(args as [])),
-  fetchSocialFeedItem: (...args: unknown[]) => fetchSocialFeedItemMock(...(args as [])),
+  fetchSocialFeedItem: (...args: unknown[]) =>
+    fetchSocialFeedItemMock(...(args as [])),
   createPost: (...args: unknown[]) => createPostMock(...(args as [])),
   fetchComments: (...args: unknown[]) => fetchCommentsMock(...args),
   addComment: (...args: unknown[]) => addCommentMock(...args),
   toggleReaction: (...args: unknown[]) => toggleReactionMock(...args),
 }));
 
+vi.mock('@/features/social/api/eniuBot', () => ({
+  respondAsEniu: (...args: unknown[]) => respondAsEniuMock(...args),
+}));
+
 vi.mock('@/features/social/api/reactions', () => ({
   fetchReactors: (...args: unknown[]) => fetchReactorsMock(...args),
+}));
+
+vi.mock('@/features/social/api/mentions', () => ({
+  searchMentionUsers: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/features/social/images', () => ({
+  compressImageFile: vi.fn(),
+  getSocialImageUrl: (path: string) => `https://cdn.example/${path}`,
+  uploadSocialImage: vi.fn(),
 }));
 
 vi.mock('@/features/home/api/bets', () => ({
@@ -66,7 +92,10 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => navigateMock,
@@ -75,7 +104,9 @@ vi.mock('react-router-dom', async () => {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function makeCouponFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedItem {
+function makeCouponFeedItem(
+  overrides: Partial<SocialFeedItem> = {},
+): SocialFeedItem {
   return {
     id: 'coupon-1',
     item_type: 'coupon',
@@ -105,7 +136,9 @@ function makeCouponFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeed
   };
 }
 
-function makePostFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedItem {
+function makePostFeedItem(
+  overrides: Partial<SocialFeedItem> = {},
+): SocialFeedItem {
   return {
     id: 'post-1',
     item_type: 'post',
@@ -126,7 +159,9 @@ function makePostFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedIt
   };
 }
 
-function makeCasinoFeedItem(overrides: Partial<SocialFeedItem> = {}): SocialFeedItem {
+function makeCasinoFeedItem(
+  overrides: Partial<SocialFeedItem> = {},
+): SocialFeedItem {
   return {
     id: 'casino-1',
     item_type: 'casino',
@@ -193,6 +228,7 @@ describe('SocialPage', () => {
     createPostMock.mockResolvedValue('new-post-id');
     addCommentMock.mockResolvedValue('new-comment-id');
     toggleReactionMock.mockResolvedValue('like');
+    respondAsEniuMock.mockResolvedValue({ ok: true });
     fetchReactorsMock.mockResolvedValue([]);
 
     fetchBetsByIdsMock.mockResolvedValue([
@@ -233,10 +269,14 @@ describe('SocialPage', () => {
   it('displays a post feed item', async () => {
     fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
     renderSocialPage();
-    expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Cześć, to mój pierwszy post!'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Poster')).toBeInTheDocument();
     // No copy-coupon button for posts
-    expect(screen.queryByRole('button', { name: /skopiuj kupon/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /skopiuj kupon/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('displays both posts and coupons in mixed feed', async () => {
@@ -247,7 +287,9 @@ describe('SocialPage', () => {
     renderSocialPage();
     expect(await screen.findByText('Typster')).toBeInTheDocument();
     expect(screen.getByText('Poster')).toBeInTheDocument();
-    expect(screen.getByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+    expect(
+      screen.getByText('Cześć, to mój pierwszy post!'),
+    ).toBeInTheDocument();
   });
 
   it('loads target feed item from notification link params when item is not in current page', async () => {
@@ -263,13 +305,21 @@ describe('SocialPage', () => {
     renderSocialPageWithRoute('/social?itemType=post&itemId=post-notif');
 
     expect(await screen.findByText('Wpis z powiadomienia')).toBeInTheDocument();
-    expect(fetchSocialFeedItemMock).toHaveBeenCalledWith('post', 'post-notif', 'user-1');
+    expect(fetchSocialFeedItemMock).toHaveBeenCalledWith(
+      'post',
+      'post-notif',
+      'user-1',
+    );
   });
 
   it('filters feed to show only coupons', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
-      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+      makePostFeedItem({
+        id: 'post-1',
+        username: 'Poster',
+        content: 'Treść posta',
+      }),
     ]);
 
     renderSocialPage();
@@ -286,7 +336,11 @@ describe('SocialPage', () => {
   it('filters feed to show only posts', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
-      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+      makePostFeedItem({
+        id: 'post-1',
+        username: 'Poster',
+        content: 'Treść posta',
+      }),
     ]);
 
     renderSocialPage();
@@ -297,13 +351,19 @@ describe('SocialPage', () => {
 
     expect(screen.getByText('Treść posta')).toBeInTheDocument();
     expect(screen.queryByText('Kuponiarz')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /skopiuj kupon/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /skopiuj kupon/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('returns to mixed feed when selecting all filter', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makeCouponFeedItem({ id: 'coupon-1', username: 'Kuponiarz' }),
-      makePostFeedItem({ id: 'post-1', username: 'Poster', content: 'Treść posta' }),
+      makePostFeedItem({
+        id: 'post-1',
+        username: 'Poster',
+        content: 'Treść posta',
+      }),
     ]);
 
     renderSocialPage();
@@ -328,7 +388,9 @@ describe('SocialPage', () => {
 
     renderSocialPage();
 
-    const openReactorsButton = await screen.findByRole('button', { name: 'Wyświetl reakcje' });
+    const openReactorsButton = await screen.findByRole('button', {
+      name: 'Wyświetl reakcje',
+    });
     fireEvent.click(openReactorsButton);
 
     await waitFor(() => {
@@ -354,13 +416,21 @@ describe('SocialPage', () => {
   });
 
   it('renders casino win shares with the real username and coupon-like layout', async () => {
-    fetchSocialFeedMock.mockResolvedValue([makeCasinoFeedItem({ username: 'Tester', avatar_url: 'https://cdn.example/tester.jpg' })]);
+    fetchSocialFeedMock.mockResolvedValue([
+      makeCasinoFeedItem({
+        username: 'Tester',
+        avatar_url: 'https://cdn.example/tester.jpg',
+      }),
+    ]);
 
     renderSocialPage();
 
     expect(await screen.findByText('Tester')).toBeInTheDocument();
     expect(screen.queryByText('Ty')).not.toBeInTheDocument();
-    expect(screen.getByAltText('Avatar Tester')).toHaveAttribute('src', 'https://cdn.example/tester.jpg');
+    expect(screen.getByAltText('Avatar Tester')).toHaveAttribute(
+      'src',
+      'https://cdn.example/tester.jpg',
+    );
     expect(screen.getByText('Ruletka')).toBeInTheDocument();
     expect(screen.getByText('Kolor: Czerwone')).toBeInTheDocument();
     expect(screen.getByText('+40.00 zł')).toBeInTheDocument();
@@ -380,7 +450,9 @@ describe('SocialPage', () => {
     renderSocialPage();
 
     expect(await screen.findByText('Numer: 0')).toBeInTheDocument();
-    expect(screen.getByText('Wynik niedostępny • Stawka 20.00 zł')).toBeInTheDocument();
+    expect(
+      screen.getByText('Wynik niedostępny • Stawka 20.00 zł'),
+    ).toBeInTheDocument();
     expect(screen.queryByText('?')).not.toBeInTheDocument();
   });
 
@@ -411,7 +483,10 @@ describe('SocialPage', () => {
     const disconnectMock = vi.fn();
 
     class MockIntersectionObserver {
-      constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      constructor(
+        cb: IntersectionObserverCallback,
+        options?: IntersectionObserverInit,
+      ) {
         observerCallback = cb;
         observerOptions = options;
       }
@@ -446,11 +521,19 @@ describe('SocialPage', () => {
       expect(observerOptions?.rootMargin).toBe('1200px 0px');
 
       await act(async () => {
-        observerCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+        observerCallback?.(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
       });
 
       await waitFor(() => {
-        expect(fetchSocialFeedMock).toHaveBeenNthCalledWith(2, 50, 50, 'user-1');
+        expect(fetchSocialFeedMock).toHaveBeenNthCalledWith(
+          2,
+          50,
+          50,
+          'user-1',
+        );
       });
 
       expect(await screen.findByText('Post treść 50')).toBeInTheDocument();
@@ -470,7 +553,64 @@ describe('SocialPage', () => {
   it('renders PostComposer for logged-in user', async () => {
     renderSocialPage();
     // PostComposer should have a textarea with placeholder
-    expect(await screen.findByPlaceholderText('Co nowego?')).toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText('Co nowego?'),
+    ).toBeInTheDocument();
+  });
+
+  it('triggers Eniu after publishing a post that mentions him', async () => {
+    renderSocialPage();
+
+    fireEvent.change(await screen.findByPlaceholderText('Co nowego?'), {
+      target: { value: '@Eniu powiedz coś o kuponach' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Opublikuj post' }));
+
+    await waitFor(() => {
+      expect(createPostMock).toHaveBeenCalledWith(
+        'user-1',
+        '@Eniu powiedz coś o kuponach',
+      );
+      expect(respondAsEniuMock).toHaveBeenCalledWith('post', 'new-post-id');
+    });
+  });
+
+  it('does not trigger Eniu after publishing a post without a mention', async () => {
+    renderSocialPage();
+
+    fireEvent.change(await screen.findByPlaceholderText('Co nowego?'), {
+      target: { value: 'Bez wołania bota' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Opublikuj post' }));
+
+    await waitFor(() => {
+      expect(createPostMock).toHaveBeenCalled();
+    });
+    expect(respondAsEniuMock).not.toHaveBeenCalled();
+  });
+
+  it('triggers Eniu silently after adding a comment that mentions him', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({ id: 'post-eniu' }),
+    ]);
+    renderSocialPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Pokaż komentarze (0)' }),
+    );
+    fireEvent.change(screen.getByLabelText('Napisz komentarz...'), {
+      target: { value: '@eniu dawaj opinię' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Wyślij komentarz' }));
+
+    await waitFor(() => {
+      expect(addCommentMock).toHaveBeenCalled();
+      expect(respondAsEniuMock).toHaveBeenCalledWith(
+        'comment',
+        'new-comment-id',
+      );
+    });
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   // ── Coupon copy ──────────────────────────────────────────
@@ -479,7 +619,9 @@ describe('SocialPage', () => {
     it('copies coupon and redirects user to home page', async () => {
       renderSocialPage();
 
-      const copyButton = await screen.findByRole('button', { name: /skopiuj kupon/i });
+      const copyButton = await screen.findByRole('button', {
+        name: /skopiuj kupon/i,
+      });
       fireEvent.click(copyButton);
 
       await waitFor(() => {
@@ -556,7 +698,9 @@ describe('SocialPage', () => {
 
       renderSocialPage();
 
-      const copyButton = await screen.findByRole('button', { name: /skopiuj kupon/i });
+      const copyButton = await screen.findByRole('button', {
+        name: /skopiuj kupon/i,
+      });
       fireEvent.click(copyButton);
 
       await waitFor(() => {
@@ -581,7 +725,9 @@ describe('SocialPage', () => {
       ]);
 
       renderSocialPage();
-      const copyButton = await screen.findByRole('button', { name: /skopiuj kupon/i });
+      const copyButton = await screen.findByRole('button', {
+        name: /skopiuj kupon/i,
+      });
       fireEvent.click(copyButton);
 
       await waitFor(() => {
