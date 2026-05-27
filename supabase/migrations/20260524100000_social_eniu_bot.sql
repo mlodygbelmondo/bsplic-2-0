@@ -32,7 +32,7 @@ DECLARE
   v_token_hash TEXT;
   v_record private.agent_api_tokens%ROWTYPE;
 BEGIN
-  v_token_hash := encode(digest(p_token, 'sha256'), 'hex');
+  v_token_hash := encode(extensions.digest(p_token, 'sha256'), 'hex');
 
   SELECT *
     INTO v_record
@@ -415,6 +415,7 @@ DECLARE
   v_post_id UUID;
   v_coupon_id UUID;
   v_casino_share_id UUID;
+  v_previous_auth_sub TEXT;
 BEGIN
   v_agent_data := private.require_agent_scope(p_token, 'create:social');
   v_agent_user_id := (v_agent_data ->> 'agent_user_id')::UUID;
@@ -458,8 +459,10 @@ BEGIN
     END IF;
   END IF;
 
-  INSERT INTO public.social_comments (user_id, content, post_id, coupon_id, casino_share_id, parent_id)
-  VALUES (
+  v_previous_auth_sub := current_setting('request.jwt.claim.sub', true);
+  PERFORM set_config('request.jwt.claim.sub', v_agent_user_id::TEXT, true);
+
+  SELECT public.add_social_comment(
     v_agent_user_id,
     v_content,
     v_post_id,
@@ -467,7 +470,9 @@ BEGIN
     v_casino_share_id,
     CASE WHEN v_source_type = 'comment' THEN p_source_id ELSE NULL END
   )
-  RETURNING id INTO v_comment_id;
+  INTO v_comment_id;
+
+  PERFORM set_config('request.jwt.claim.sub', COALESCE(v_previous_auth_sub, ''), true);
 
   UPDATE private.social_bot_runs
   SET status = 'success',

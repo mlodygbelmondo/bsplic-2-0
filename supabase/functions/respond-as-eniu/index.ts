@@ -83,7 +83,7 @@ Deno.serve(async (request) => {
 
     if (contextError) throw contextError;
 
-    const responseText = await generateEniuText({
+    const completion = await generateEniuText({
       task: 'reply',
       context: context as SocialBotContext,
     });
@@ -94,7 +94,8 @@ Deno.serve(async (request) => {
         p_token: token,
         p_source_type: payload.sourceType,
         p_source_id: payload.sourceId,
-        p_content: responseText,
+        p_content: completion.text,
+        p_provider_diagnostic: completion.providerDiagnostic,
       },
     );
 
@@ -102,11 +103,24 @@ Deno.serve(async (request) => {
 
     return jsonResponse({
       ok: true,
-      text: responseText,
+      text: completion.text,
+      providerDiagnostic: completion.providerDiagnostic,
       result,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    const providerDiagnostic =
+      error &&
+      typeof error === 'object' &&
+      'providerDiagnostic' in error &&
+      typeof error.providerDiagnostic === 'object'
+        ? error.providerDiagnostic
+        : null;
+    console.error('respond-as-eniu failed', {
+      sourceType: payload.sourceType,
+      sourceId: payload.sourceId,
+      error: message,
+    });
     try {
       const serviceClient = getServiceClient();
       const token = getAgentToken();
@@ -115,6 +129,7 @@ Deno.serve(async (request) => {
         p_source_type: payload.sourceType,
         p_source_id: payload.sourceId,
         p_error: message,
+        p_provider_diagnostic: providerDiagnostic,
       });
     } catch {
       // Logging must not make the user-facing fallback noisier.

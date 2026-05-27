@@ -28,6 +28,28 @@ function runStatusLabel(status: EniuBotRun['status']) {
   return 'W toku';
 }
 
+function diagnosticText(value: unknown, key: string) {
+  return value && typeof value === 'object' && key in value
+    ? String((value as Record<string, unknown>)[key] ?? '')
+    : '';
+}
+
+function diagnosticBoolean(value: unknown, key: string) {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)[key] === true
+    : false;
+}
+
+function diagnosticMaxTokens(value: unknown) {
+  const raw =
+    value && typeof value === 'object'
+      ? (value as Record<string, unknown>).maxTokens
+      : null;
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? `${Math.round(raw / 1000)}k`
+    : '';
+}
+
 export default function EniuBotTab() {
   const [command, setCommand] = useState('');
   const [preview, setPreview] = useState(false);
@@ -193,6 +215,37 @@ export default function EniuBotTab() {
                   </span>
                 </div>
                 <p className="text-sm font-medium">{run.sourceType}</p>
+                {run.providerDiagnostic && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-muted-foreground">
+                    {diagnosticText(run.providerDiagnostic, 'model') && (
+                      <span>{diagnosticText(run.providerDiagnostic, 'model')}</span>
+                    )}
+                    {diagnosticBoolean(run.providerDiagnostic, 'stream') && (
+                      <span>stream</span>
+                    )}
+                    {diagnosticMaxTokens(run.providerDiagnostic) && (
+                      <span>{diagnosticMaxTokens(run.providerDiagnostic)}</span>
+                    )}
+                    <span>
+                      reasoning:{' '}
+                      {diagnosticBoolean(
+                        run.providerDiagnostic,
+                        'reasoningPresent',
+                      )
+                        ? 'tak'
+                        : 'nie'}
+                    </span>
+                    <span>
+                      content:{' '}
+                      {diagnosticBoolean(
+                        run.providerDiagnostic,
+                        'contentPresent',
+                      )
+                        ? 'tak'
+                        : 'nie'}
+                    </span>
+                  </div>
+                )}
                 {run.error && (
                   <p className="mt-1 text-xs text-destructive">{run.error}</p>
                 )}

@@ -46,7 +46,7 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const text = await generateEniuText({
+    const completion = await generateEniuText({
       task: 'admin-post',
       adminCommand: command,
     });
@@ -55,7 +55,8 @@ Deno.serve(async (request) => {
       return jsonResponse({
         ok: true,
         preview: true,
-        text,
+        text: completion.text,
+        providerDiagnostic: completion.providerDiagnostic,
       });
     }
 
@@ -64,7 +65,8 @@ Deno.serve(async (request) => {
       'agent_create_social_post',
       {
         p_token: getAgentToken(),
-        p_content: text,
+        p_content: completion.text,
+        p_provider_diagnostic: completion.providerDiagnostic,
       },
     );
 
@@ -73,7 +75,8 @@ Deno.serve(async (request) => {
     return jsonResponse({
       ok: true,
       preview: false,
-      text,
+      text: completion.text,
+      providerDiagnostic: completion.providerDiagnostic,
       result,
     });
   } catch (error) {

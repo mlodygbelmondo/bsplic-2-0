@@ -10,6 +10,7 @@ export interface EniuBotRun {
   responseCommentId: string | null;
   responsePostId: string | null;
   error: string | null;
+  providerDiagnostic: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,6 +19,7 @@ interface EniuCommandResult {
   ok: boolean;
   preview: boolean;
   text: string;
+  providerDiagnostic?: Record<string, unknown>;
   result?: unknown;
   error?: string;
 }
@@ -38,6 +40,7 @@ export async function respondAsEniu(
   return data as {
     ok: boolean;
     text?: string;
+    providerDiagnostic?: Record<string, unknown>;
     result?: unknown;
     error?: string;
   };

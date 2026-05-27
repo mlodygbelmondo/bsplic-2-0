@@ -32,6 +32,14 @@ describe('EniuBotTab', () => {
         responseCommentId: 'comment-1',
         responsePostId: null,
         error: null,
+        providerDiagnostic: {
+          model: 'kimi-k2.6',
+          stream: true,
+          maxTokens: 16000,
+          reasoningPresent: false,
+          contentPresent: true,
+          contentChars: 34,
+        },
         createdAt: '2030-01-01T10:00:00.000Z',
         updatedAt: '2030-01-01T10:00:00.000Z',
       },
@@ -79,5 +87,15 @@ describe('EniuBotTab', () => {
       expect(commandEniuMock).toHaveBeenCalledWith('Zrób podgląd', true);
       expect(screen.getByText('Preview posta Eniu')).toBeInTheDocument();
     });
+  });
+
+  it('shows sanitized provider diagnostics in run logs', async () => {
+    render(<EniuBotTab />);
+
+    expect(await screen.findByText('kimi-k2.6')).toBeInTheDocument();
+    expect(screen.getByText('stream')).toBeInTheDocument();
+    expect(screen.getByText('16k')).toBeInTheDocument();
+    expect(screen.getByText('reasoning: nie')).toBeInTheDocument();
+    expect(screen.getByText('content: tak')).toBeInTheDocument();
   });
 });

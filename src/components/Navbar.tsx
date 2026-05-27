@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, ShieldCheck, Plus, Wallet, Menu } from "lucide-react";
@@ -30,6 +30,15 @@ export function Navbar() {
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDesktopNav, setIsDesktopNav] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktopNav(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const isActivePath = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -146,7 +155,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2.5">
-            <NotificationsBell userId={user?.id} />
+            {isDesktopNav && <NotificationsBell userId={user?.id} />}
             {profile && (
               <button
                 onClick={() =>
@@ -192,10 +201,12 @@ export function Navbar() {
           </div>
 
           <div className="lg:hidden flex items-center gap-2">
-            <NotificationsBell
-              userId={user?.id}
-              className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
-            />
+            {!isDesktopNav && (
+              <NotificationsBell
+                userId={user?.id}
+                className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
+              />
+            )}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button

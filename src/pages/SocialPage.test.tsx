@@ -27,6 +27,41 @@ const setPreferredCouponTypeMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const navigateMock = vi.fn();
+const realtimeHandlers: Array<{
+  table: string;
+  callback: (payload: {
+    eventType: string;
+    new: Record<string, unknown>;
+    old: Record<string, unknown>;
+  }) => void;
+}> = [];
+const removeChannelMock = vi.fn();
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    channel: vi.fn(() => {
+      const channel = {
+        on: vi.fn(
+          (
+            _event: string,
+            config: { table: string },
+            callback: (payload: {
+              eventType: string;
+              new: Record<string, unknown>;
+              old: Record<string, unknown>;
+            }) => void,
+          ) => {
+            realtimeHandlers.push({ table: config.table, callback });
+            return channel;
+          },
+        ),
+        subscribe: vi.fn(() => channel),
+      };
+      return channel;
+    }),
+    removeChannel: (...args: unknown[]) => removeChannelMock(...args),
+  },
+}));
 
 vi.mock('@/components/Navbar', () => ({
   Navbar: () => <div>Navbar</div>,
@@ -222,6 +257,7 @@ function makePostPage(size: number, start = 0): SocialFeedItem[] {
 describe('SocialPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    realtimeHandlers.length = 0;
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
     fetchSocialFeedItemMock.mockResolvedValue(null);
     fetchCommentsMock.mockResolvedValue([]);
@@ -310,6 +346,98 @@ describe('SocialPage', () => {
       'post-notif',
       'user-1',
     );
+  });
+
+  it('refreshes the changed feed item when a realtime social post event arrives', async () => {
+    fetchSocialFeedMock.mockResolvedValueOnce([
+      makePostFeedItem({
+        id: 'post-live',
+        content: 'Stara treść',
+      }),
+    ]);
+    fetchSocialFeedItemMock.mockResolvedValueOnce(
+      makePostFeedItem({
+        id: 'post-live',
+        content: 'Nowa treść z realtime',
+      }),
+    );
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Stara treść')).toBeInTheDocument();
+
+    const postHandler = realtimeHandlers.find(
+      (handler) => handler.table === 'social_realtime_events',
+    );
+    expect(postHandler).toBeDefined();
+
+    await act(async () => {
+      postHandler?.callback({
+        eventType: 'INSERT',
+        new: {
+          target_type: 'post',
+          target_id: 'post-live',
+          source_table: 'social_posts',
+          operation: 'UPDATE',
+        },
+        old: {},
+      });
+    });
+
+    await waitFor(() => {
+      expect(fetchSocialFeedItemMock).toHaveBeenCalledWith(
+        'post',
+        'post-live',
+        'user-1',
+      );
+    });
+    expect(await screen.findByText('Nowa treść z realtime')).toBeInTheDocument();
+  });
+
+  it('refreshes loaded coupon feed items from realtime coupon events', async () => {
+    fetchSocialFeedMock.mockResolvedValueOnce([
+      makeCouponFeedItem({
+        id: 'coupon-live',
+        status: 'pending',
+        payout: 0,
+      }),
+    ]);
+    fetchSocialFeedItemMock.mockResolvedValueOnce(
+      makeCouponFeedItem({
+        id: 'coupon-live',
+        status: 'won',
+        payout: 21,
+      }),
+    );
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Typster')).toBeInTheDocument();
+
+    const socialEventHandler = realtimeHandlers.find(
+      (handler) => handler.table === 'social_realtime_events',
+    );
+
+    await act(async () => {
+      socialEventHandler?.callback({
+        eventType: 'INSERT',
+        new: {
+          target_type: 'coupon',
+          target_id: 'coupon-live',
+          source_table: 'coupons',
+          operation: 'UPDATE',
+        },
+        old: {},
+      });
+    });
+
+    await waitFor(() => {
+      expect(fetchSocialFeedItemMock).toHaveBeenCalledWith(
+        'coupon',
+        'coupon-live',
+        'user-1',
+      );
+    });
   });
 
   it('filters feed to show only coupons', async () => {
@@ -573,6 +701,35 @@ describe('SocialPage', () => {
       );
       expect(respondAsEniuMock).toHaveBeenCalledWith('post', 'new-post-id');
     });
+  });
+
+  it('logs but does not toast when Eniu fails after publishing a mentioned post', async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    respondAsEniuMock.mockResolvedValueOnce({
+      ok: false,
+      error: 'Eniu did not respond',
+    });
+
+    try {
+      renderSocialPage();
+
+      fireEvent.change(await screen.findByPlaceholderText('Co nowego?'), {
+        target: { value: '@Eniu powiedz coś o kuponach' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Opublikuj post' }));
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Eniu failed to respond',
+          'Eniu did not respond',
+        );
+      });
+      expect(toastErrorMock).not.toHaveBeenCalled();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('does not trigger Eniu after publishing a post without a mention', async () => {

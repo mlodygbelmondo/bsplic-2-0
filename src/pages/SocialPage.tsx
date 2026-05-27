@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import {
   SocialFeedItem,
@@ -20,6 +20,7 @@ import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostComposer } from '@/features/social/components/PostComposer';
 import { ReactionBar } from '@/features/social/components/ReactionBar';
@@ -61,6 +62,19 @@ const REACTION_TYPES: ReactionType[] = [
   'angry',
   'fire',
 ];
+
+interface RealtimeRow {
+  target_type?: unknown;
+  target_id?: unknown;
+  source_table?: unknown;
+  operation?: unknown;
+}
+
+interface SocialRealtimePayload {
+  eventType: string;
+  new: RealtimeRow;
+  old: RealtimeRow;
+}
 
 function updateReactionCounts(
   reactions: Partial<Record<ReactionEmoji, number>> | null,
@@ -110,6 +124,59 @@ function formatTimeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('pl-PL');
 }
 
+function getStringValue(row: RealtimeRow, key: keyof RealtimeRow) {
+  const value = row[key];
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function getChangedRow(payload: SocialRealtimePayload) {
+  return payload.eventType === 'DELETE' ? payload.old : payload.new;
+}
+
+function getFeedTargetFromRealtimeEvent(row: RealtimeRow):
+  | {
+      itemType: FeedItemType;
+      itemId: string;
+      sourceTable: string;
+      operation: string;
+    }
+  | null {
+  const targetType = getStringValue(row, 'target_type');
+  const targetId = getStringValue(row, 'target_id');
+  const sourceTable = getStringValue(row, 'source_table');
+  const operation = getStringValue(row, 'operation');
+
+  if (
+    !targetId ||
+    !sourceTable ||
+    !operation ||
+    (targetType !== 'post' && targetType !== 'coupon' && targetType !== 'casino')
+  ) {
+    return null;
+  }
+
+  return { itemType: targetType, itemId: targetId, sourceTable, operation };
+}
+
+function mergeFeedItem(
+  items: SocialFeedItem[],
+  nextItem: SocialFeedItem,
+  allowInsert: boolean,
+): SocialFeedItem[] {
+  const existingIndex = items.findIndex(
+    (item) =>
+      item.id === nextItem.id && item.item_type === nextItem.item_type,
+  );
+
+  if (existingIndex === -1) {
+    return allowInsert ? [nextItem, ...items] : items;
+  }
+
+  return items.map((item, index) =>
+    index === existingIndex ? nextItem : item,
+  );
+}
+
 export default function SocialPage() {
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
   const [feedFilter, setFeedFilter] = useState<
@@ -147,6 +214,16 @@ export default function SocialPage() {
     casinoShareId?: string;
     commentId?: string;
   } | null>(null);
+  const commentsLoadedMapRef = useRef(commentsLoadedMap);
+  const feedItemsRef = useRef(feedItems);
+
+  useEffect(() => {
+    commentsLoadedMapRef.current = commentsLoadedMap;
+  }, [commentsLoadedMap]);
+
+  useEffect(() => {
+    feedItemsRef.current = feedItems;
+  }, [feedItems]);
 
   const targetItemTypeParam = searchParams.get('itemType');
   const targetItemIdParam = searchParams.get('itemId');
@@ -200,6 +277,29 @@ export default function SocialPage() {
       setLoadingMore(false);
     }
   }, [hasMore, loading, loadingMore, offset, user?.id]);
+
+  const refreshFeedItem = useCallback(
+    async (
+      itemType: FeedItemType,
+      itemId: string,
+      options: { allowInsert?: boolean } = {},
+    ) => {
+      const item = await fetchSocialFeedItem(itemType, itemId, user?.id);
+      if (!item) {
+        setFeedItems((prev) =>
+          prev.filter(
+            (feedItem) =>
+              feedItem.id !== itemId || feedItem.item_type !== itemType,
+          ),
+        );
+        return;
+      }
+      setFeedItems((prev) =>
+        mergeFeedItem(prev, item, options.allowInsert === true),
+      );
+    },
+    [user?.id],
+  );
 
   useEffect(() => {
     void loadFeed();
@@ -383,8 +483,20 @@ export default function SocialPage() {
     await loadFeed();
     if (mentionsEniu(content)) {
       void respondAsEniu('post', postId)
-        .then(() => loadComments(postId, 'post'))
-        .catch(() => undefined);
+        .then((result) => {
+          if (!result.ok) {
+            console.error(
+              'Eniu failed to respond',
+              result.error || 'Eniu nie odpowiedział',
+            );
+          }
+          return loadComments(postId, 'post');
+        })
+        .catch((error) => {
+          const message =
+            error instanceof Error ? error.message : 'Eniu nie odpowiedział';
+          console.error('Eniu failed to respond', message);
+        });
     }
     toast.success('Post opublikowany');
   };
@@ -422,6 +534,55 @@ export default function SocialPage() {
     [user?.id],
   );
 
+  useEffect(() => {
+    const refreshSocialTarget = (payload: SocialRealtimePayload) => {
+      const row = getChangedRow(payload);
+      const target = getFeedTargetFromRealtimeEvent(row);
+      if (!target) return;
+
+      const isLoaded = feedItemsRef.current.some(
+        (item) =>
+          item.id === target.itemId && item.item_type === target.itemType,
+      );
+      const isFeedItemInsert =
+        target.operation === 'INSERT' &&
+        (target.sourceTable === 'social_posts' ||
+          target.sourceTable === 'casino_social_shares' ||
+          target.sourceTable === 'coupons');
+
+      if (isLoaded || isFeedItemInsert) {
+        void refreshFeedItem(target.itemType, target.itemId, {
+          allowInsert: isFeedItemInsert,
+        });
+      }
+
+      if (
+        (target.sourceTable === 'social_comments' ||
+          target.sourceTable === 'social_reactions') &&
+        commentsLoadedMapRef.current[target.itemId]
+      ) {
+        void loadComments(target.itemId, target.itemType);
+      }
+    };
+
+    const channel = supabase
+      .channel('social-feed-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'social_realtime_events',
+        },
+        (payload) => refreshSocialTarget(payload as SocialRealtimePayload),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadComments, refreshFeedItem]);
+
   const handleAddComment = useCallback(
     async (
       itemId: string,
@@ -448,8 +609,20 @@ export default function SocialPage() {
 
       if (mentionsEniu(content)) {
         void respondAsEniu('comment', commentId)
-          .then(() => loadComments(itemId, itemType))
-          .catch(() => undefined);
+          .then((result) => {
+            if (!result.ok) {
+              console.error(
+                'Eniu failed to respond',
+                result.error || 'Eniu nie odpowiedział',
+              );
+            }
+            return loadComments(itemId, itemType);
+          })
+          .catch((error) => {
+            const message =
+              error instanceof Error ? error.message : 'Eniu nie odpowiedział';
+            console.error('Eniu failed to respond', message);
+          });
       }
 
       setFeedItems((prev) =>
