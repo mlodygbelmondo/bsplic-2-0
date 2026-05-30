@@ -39,13 +39,13 @@ describe('Eniu Edge Function configuration', () => {
     expect(source).toContain('thinking');
   });
 
-  it('asks the OpenRouter-compatible API to exclude reasoning output', () => {
+  it('keeps the OpenCodeGo request body provider-compatible', () => {
     const source = readFileSync(openCodeGoRequestPath, 'utf8');
 
-    expect(source).toContain('include_reasoning: false');
-    expect(source).toContain('reasoning: {');
-    expect(source).toContain('enabled: true');
-    expect(source).toContain('exclude: true');
-    expect(source).toContain('thinking:');
+    expect(source).toContain('stream: true');
+    expect(source).toContain('max_tokens: input.maxTokens');
+    expect(source).not.toContain('include_reasoning');
+    expect(source).not.toContain('reasoning:');
+    expect(source).not.toContain('thinking:');
   });
 });

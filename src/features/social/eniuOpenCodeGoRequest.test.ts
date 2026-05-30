@@ -8,42 +8,30 @@ describe('buildOpenCodeGoRequestBody', () => {
     { role: 'user', content: '@Eniu dawaj typ' },
   ];
 
-  it('keeps reasoning enabled while excluding reasoning text from the response', () => {
+  it('builds a provider-compatible streaming chat completion body', () => {
     expect(
       buildOpenCodeGoRequestBody({
         model: 'kimi-k2.6',
         messages,
         maxTokens: 16000,
       }),
-    ).toMatchObject({
+    ).toEqual({
       model: 'kimi-k2.6',
       messages,
       stream: true,
       max_tokens: 16000,
-      include_reasoning: false,
-      reasoning: {
-        enabled: true,
-        exclude: true,
-      },
-      thinking: {
-        type: 'enabled',
-      },
     });
   });
 
-  it('does not add Kimi thinking controls to non-Kimi models', () => {
+  it('does not send provider-specific reasoning controls rejected by OpenCodeGo', () => {
     const body = buildOpenCodeGoRequestBody({
-      model: 'openai/gpt-5-mini',
+      model: 'kimi-k2.6',
       messages,
       maxTokens: 16000,
     });
 
-    expect(body).toMatchObject({
-      reasoning: {
-        enabled: true,
-        exclude: true,
-      },
-    });
+    expect(body).not.toHaveProperty('include_reasoning');
+    expect(body).not.toHaveProperty('reasoning');
     expect(body).not.toHaveProperty('thinking');
   });
 });
