@@ -185,15 +185,15 @@ describe('extractOpenCodeGoText', () => {
     expect(shouldRetryOpenCodeGoResult(result)).toBe(false);
   });
 
-  it('reads nested provider response fields', () => {
+  it('ignores unsupported arbitrary nested provider fields', () => {
     expect(
       extractOpenCodeGoText({
         result: { response: { message: 'Daj kupon, to go rozbroimy.' } },
       }),
-    ).toBe('Daj kupon, to go rozbroimy.');
+    ).toBeNull();
   });
 
-  it('reads provider-specific value and reply fields', () => {
+  it('ignores unsupported provider-specific value and reply fields', () => {
     expect(
       extractOpenCodeGoText({
         payload: {
@@ -202,7 +202,19 @@ describe('extractOpenCodeGoText', () => {
           },
         },
       }),
-    ).toBe('Jestem, bukmacherka nie śpi.');
+    ).toBeNull();
+  });
+
+  it('fails closed for human text in arbitrary nested fields', () => {
+    expect(
+      extractOpenCodeGoText({
+        providerEnvelope: {
+          moderation: {
+            note: 'This incidental provider note must not become a reply.',
+          },
+        },
+      }),
+    ).toBeNull();
   });
 
   it('describes response shape without including text values', () => {

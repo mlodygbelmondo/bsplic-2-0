@@ -21,6 +21,17 @@ function getFunctionBody(migration: string, functionName: string) {
   return match?.[0] ?? '';
 }
 
+function getLatestFunctionBody(functionName: string) {
+  const functionBodies = readdirSync(migrationsDir)
+    .filter((file) => file.endsWith('.sql'))
+    .sort()
+    .map((file) => readFileSync(resolve(migrationsDir, file), 'utf8'))
+    .map((migration) => getFunctionBody(migration, functionName))
+    .filter(Boolean);
+
+  return functionBodies.at(-1) ?? '';
+}
+
 describe('Eniu bot migration', () => {
   it('routes bot replies through the shared social comment RPC side effects', () => {
     const migration = readFileSync(eniuBotMigrationPath, 'utf8');
@@ -51,5 +62,17 @@ describe('Eniu bot migration', () => {
     expect(migration).toContain(
       'DROP FUNCTION IF EXISTS public.agent_create_social_post(TEXT, TEXT)',
     );
+  });
+
+  it('claims social bot replies through an atomic conflict-aware insert path', () => {
+    const functionBody = getLatestFunctionBody('agent_claim_social_bot_reply');
+    const insertIndex = functionBody.search(/INSERT\s+INTO\s+private\.social_bot_runs/i);
+    const preInsertBody = functionBody.slice(0, Math.max(insertIndex, 0));
+
+    expect(functionBody).toBeTruthy();
+    expect(insertIndex).toBeGreaterThan(-1);
+    expect(functionBody).toMatch(/ON\s+CONFLICT\s*\(\s*source_type\s*,\s*source_id\s*\)/i);
+    expect(functionBody).toMatch(/WHERE\s+source_type\s+IN\s*\(\s*'post'\s*,\s*'comment'\s*\)/i);
+    expect(preInsertBody).not.toMatch(/FROM\s+private\.social_bot_runs/i);
   });
 });

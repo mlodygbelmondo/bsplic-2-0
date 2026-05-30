@@ -10,6 +10,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SocialPage from './SocialPage';
 import type { SocialFeedItem } from '@/types/database';
+import {
+  makeCasinoFeedItem,
+  makeCouponFeedItem,
+  makePostFeedItem,
+  makePostPage,
+} from '@/features/social/test-utils/socialFeedFactories';
 
 // ── Mocks ────────────────────────────────────────────────────
 
@@ -139,91 +145,6 @@ vi.mock('react-router-dom', async () => {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function makeCouponFeedItem(
-  overrides: Partial<SocialFeedItem> = {},
-): SocialFeedItem {
-  return {
-    id: 'coupon-1',
-    item_type: 'coupon',
-    user_id: 'user-2',
-    username: 'Typster',
-    avatar_url: null,
-    content: null,
-    total_odds: 2.1,
-    stake: 10,
-    payout: 0,
-    status: 'pending',
-    created_at: '2030-01-01T10:00:00.000Z',
-    legs: [
-      {
-        id: 'leg-1',
-        bet_id: 'bet-1',
-        selected_option: 'Dom',
-        odds_at_time: 2.0,
-        result: 'pending',
-        bet_title: 'Mecz dnia',
-      },
-    ],
-    reactions: null,
-    comment_count: 0,
-    my_reaction: null,
-    ...overrides,
-  };
-}
-
-function makePostFeedItem(
-  overrides: Partial<SocialFeedItem> = {},
-): SocialFeedItem {
-  return {
-    id: 'post-1',
-    item_type: 'post',
-    user_id: 'user-3',
-    username: 'Poster',
-    avatar_url: null,
-    content: 'Cześć, to mój pierwszy post!',
-    total_odds: null,
-    stake: null,
-    payout: null,
-    status: null,
-    legs: null,
-    created_at: '2030-01-01T11:00:00.000Z',
-    reactions: null,
-    comment_count: 0,
-    my_reaction: null,
-    ...overrides,
-  };
-}
-
-function makeCasinoFeedItem(
-  overrides: Partial<SocialFeedItem> = {},
-): SocialFeedItem {
-  return {
-    id: 'casino-1',
-    item_type: 'casino',
-    user_id: 'user-1',
-    username: 'Ty',
-    avatar_url: null,
-    content: 'Wygrana w ruletce: 40.00 zł. Numer 7.',
-    total_odds: null,
-    stake: 20,
-    payout: 40,
-    status: 'won',
-    legs: null,
-    created_at: '2030-01-01T12:00:00.000Z',
-    reactions: null,
-    comment_count: 0,
-    my_reaction: null,
-    casino_bet_type: 'color',
-    casino_bet_value: 'red',
-    casino_stake: 20,
-    casino_payout: 40,
-    casino_round_number: 123,
-    casino_winning_number: 7,
-    casino_winning_color: 'red',
-    ...overrides,
-  };
-}
-
 function renderSocialPage() {
   return render(
     <MemoryRouter>
@@ -238,18 +159,6 @@ function renderSocialPageWithRoute(route: string) {
       <SocialPage />
     </MemoryRouter>,
   );
-}
-
-function makePostPage(size: number, start = 0): SocialFeedItem[] {
-  return Array.from({ length: size }, (_, index) => {
-    const n = start + index;
-    return makePostFeedItem({
-      id: `post-${n}`,
-      username: `Poster ${n}`,
-      content: `Post treść ${n}`,
-      created_at: `2030-01-01T11:${String(n % 60).padStart(2, '0')}:00.000Z`,
-    });
-  });
 }
 
 // ── Tests ────────────────────────────────────────────────────
@@ -346,6 +255,45 @@ describe('SocialPage', () => {
       'post-notif',
       'user-1',
     );
+  });
+
+  it('keeps target feed item visible when the first feed page resolves after notification preload', async () => {
+    let resolveFeed: (items: SocialFeedItem[]) => void = () => undefined;
+    const feedPromise = new Promise<SocialFeedItem[]>((resolve) => {
+      resolveFeed = resolve;
+    });
+    fetchSocialFeedMock.mockReturnValueOnce(feedPromise);
+    fetchSocialFeedItemMock.mockResolvedValueOnce(
+      makePostFeedItem({
+        id: 'post-race',
+        content: 'Wpis z opóźnionego powiadomienia',
+        username: 'RaceUser',
+      }),
+    );
+
+    renderSocialPageWithRoute('/social?itemType=post&itemId=post-race');
+
+    await waitFor(() => {
+      expect(fetchSocialFeedItemMock).toHaveBeenCalledWith(
+        'post',
+        'post-race',
+        'user-1',
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      resolveFeed([]);
+      await feedPromise;
+    });
+
+    expect(
+      await screen.findByText('Wpis z opóźnionego powiadomienia'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Brak aktywności')).not.toBeInTheDocument();
   });
 
   it('refreshes the changed feed item when a realtime social post event arrives', async () => {

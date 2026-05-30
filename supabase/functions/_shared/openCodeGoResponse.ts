@@ -19,24 +19,16 @@ export interface OpenCodeGoResult {
   diagnostic: OpenCodeGoDiagnostic;
 }
 
-const SKIPPED_TEXT_KEYS = new Set([
-  "id",
-  "model",
-  "object",
-  "provider",
-  "role",
-  "type",
-  "finish_reason",
-  "native_finish_reason",
-  "status",
-  "created",
-  "created_at",
-  "error",
-  "detail",
-]);
-
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function firstString(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function firstNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function partType(value: JsonRecord) {
@@ -52,182 +44,85 @@ function isReasoningPart(value: JsonRecord) {
   );
 }
 
-function firstString(value: unknown) {
-  return typeof value === "string" ? value : null;
-}
-
-function firstNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function isHumanText(value: string) {
-  const trimmed = value.trim();
-  return (
-    trimmed.length >= 12 &&
-    /\s/.test(trimmed) &&
-    !/^[a-z0-9_.:/-]+$/i.test(trimmed)
-  );
-}
-
-function textFromContent(value: unknown): string[] {
-  if (typeof value === "string") {
-    return [value];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => textFromContent(item));
-  }
-
-  if (!isRecord(value) || isReasoningPart(value)) {
-    return [];
-  }
-
+function isTextPart(value: JsonRecord) {
   const type = partType(value);
-  const text = value.text;
-  if (
-    typeof text === "string" &&
-    (!type || type === "text" || type === "output_text")
-  ) {
-    return [text];
-  }
-
-  return [
-    ...textFromContent(value.message),
-    ...textFromContent(value.content),
-    ...textFromContent(value.delta),
-    ...textFromContent(value.output),
-    ...textFromContent(value.output_text),
-    ...textFromContent(value.response),
-    ...textFromContent(value.completion),
-    ...textFromContent(value.answer),
-    ...textFromContent(value.reply),
-    ...textFromContent(value.value),
-    ...textFromContent(value.result),
-    ...textFromContent(value.data),
-  ];
+  return type === "text" || type === "output_text";
 }
 
-function keysOf(value: unknown) {
-  return isRecord(value) ? Object.keys(value).slice(0, 12).join(",") : "";
-}
-
-function textFromUnknownFields(value: unknown, key = "", depth = 0): string[] {
-  if (depth > 6) return [];
-
-  if (typeof value === "string") {
-    const normalizedKey = key.toLowerCase();
-    return !SKIPPED_TEXT_KEYS.has(normalizedKey) && isHumanText(value)
-      ? [value]
-      : [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => textFromUnknownFields(item, key, depth + 1));
-  }
-
-  if (!isRecord(value) || isReasoningPart(value)) {
+function textFromContentPart(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(textFromContentPart);
+  if (!isRecord(value) || isReasoningPart(value) || !isTextPart(value)) {
     return [];
   }
 
-  return Object.entries(value).flatMap(([entryKey, entryValue]) => {
-    const normalizedKey = entryKey.toLowerCase();
-    if (
-      SKIPPED_TEXT_KEYS.has(normalizedKey) ||
-      normalizedKey.includes("reasoning") ||
-      normalizedKey.includes("thinking") ||
-      normalizedKey.includes("analysis")
-    ) {
-      return [];
+  return typeof value.text === "string" ? [value.text] : [];
+}
+
+function textFromResponsesOutput(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isRecord(item) || isReasoningPart(item)) return [];
+
+    if (partType(item) === "output_text") {
+      return typeof item.text === "string" ? [item.text] : [];
     }
 
-    return textFromUnknownFields(entryValue, entryKey, depth + 1);
+    if (partType(item) === "message") {
+      return textFromContentPart(item.content);
+    }
+
+    return [];
   });
-}
-
-export function extractOpenCodeGoText(data: unknown) {
-  if (!isRecord(data)) return null;
-
-  const choices = Array.isArray(data.choices) ? data.choices : [];
-  const firstChoice = choices[0];
-  const firstChoiceRecord = isRecord(firstChoice) ? firstChoice : null;
-  const message = firstChoiceRecord?.message;
-  const messageRecord = isRecord(message) ? message : null;
-  const delta = firstChoiceRecord?.delta;
-  const deltaRecord = isRecord(delta) ? delta : null;
-  const candidates = [
-    messageRecord?.content,
-    messageRecord?.text,
-    messageRecord?.output_text,
-    messageRecord?.response,
-    deltaRecord?.content,
-    deltaRecord?.text,
-    deltaRecord?.response,
-    firstChoiceRecord?.content,
-    firstChoiceRecord?.message,
-    firstChoiceRecord?.text,
-    firstChoiceRecord?.output_text,
-    firstChoiceRecord?.output,
-    data.output_text,
-    data.response,
-    data.completion,
-    data.answer,
-    data.message,
-    data.text,
-    data.reply,
-    data.content,
-    data.output,
-    data.result,
-    data.data,
-  ];
-
-  for (const candidate of candidates) {
-    const text = textFromContent(candidate).join("").trim();
-    if (text) return text;
-  }
-
-  const fallbackText = textFromUnknownFields(data).join("").trim();
-  if (fallbackText) return fallbackText;
-
-  return null;
-}
-
-function extractOpenCodeGoTextPreservingWhitespace(data: unknown) {
-  if (!isRecord(data)) return null;
-
-  const choices = Array.isArray(data.choices) ? data.choices : [];
-  const firstChoice = choices[0];
-  const firstChoiceRecord = isRecord(firstChoice) ? firstChoice : null;
-  const message = firstChoiceRecord?.message;
-  const messageRecord = isRecord(message) ? message : null;
-  const delta = firstChoiceRecord?.delta;
-  const deltaRecord = isRecord(delta) ? delta : null;
-  const candidates = [
-    messageRecord?.content,
-    deltaRecord?.content,
-    firstChoiceRecord?.content,
-    firstChoiceRecord?.text,
-    data.output_text,
-    data.response,
-    data.completion,
-    data.answer,
-    data.text,
-    data.reply,
-    data.content,
-    data.output,
-  ];
-
-  for (const candidate of candidates) {
-    const text = textFromContent(candidate).join("");
-    if (text) return text;
-  }
-
-  return null;
 }
 
 function getChoice(data: unknown) {
   if (!isRecord(data)) return null;
   const choices = Array.isArray(data.choices) ? data.choices : [];
   return isRecord(choices[0]) ? choices[0] : null;
+}
+
+function getChoiceMessage(choice: JsonRecord | null) {
+  return isRecord(choice?.message) ? choice.message : null;
+}
+
+function getChoiceDelta(choice: JsonRecord | null) {
+  return isRecord(choice?.delta) ? choice.delta : null;
+}
+
+function supportedTextCandidates(data: JsonRecord) {
+  const choice = getChoice(data);
+  const message = getChoiceMessage(choice);
+  const delta = getChoiceDelta(choice);
+
+  return [
+    textFromContentPart(message?.content),
+    textFromContentPart(delta?.content),
+    typeof choice?.text === "string" ? [choice.text] : [],
+    typeof data.output_text === "string" ? [data.output_text] : [],
+    textFromResponsesOutput(data.output),
+  ];
+}
+
+function firstSupportedText(data: unknown, preserveWhitespace = false) {
+  if (!isRecord(data)) return null;
+
+  for (const candidate of supportedTextCandidates(data)) {
+    const text = candidate.join("");
+    const normalized = preserveWhitespace ? text : text.trim();
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+export function extractOpenCodeGoText(data: unknown) {
+  return firstSupportedText(data);
+}
+
+function extractOpenCodeGoTextPreservingWhitespace(data: unknown) {
+  return firstSupportedText(data, true);
 }
 
 function reasoningDetailCount(value: unknown): number {
@@ -290,7 +185,8 @@ function extractReasoningTokens(data: unknown) {
 
 function diagnosticFromData(data: unknown, text: string | null): OpenCodeGoDiagnostic {
   const choice = getChoice(data);
-  const message = isRecord(choice?.message) ? choice.message : null;
+  const message = getChoiceMessage(choice);
+  const delta = getChoiceDelta(choice);
   const reasoningParts = collectReasoning(data);
   const reasoningTextLength = reasoningParts.join("").length;
 
@@ -304,7 +200,7 @@ function diagnosticFromData(data: unknown, text: string | null): OpenCodeGoDiagn
     reasoningPresent:
       reasoningTextLength > 0 ||
       Boolean(message?.reasoning_details) ||
-      Boolean((isRecord(choice?.delta) ? choice.delta : null)?.reasoning_content),
+      Boolean(delta?.reasoning_content),
     reasoningChars: reasoningTextLength,
     reasoningTokens: extractReasoningTokens(data),
     reasoningDetailCount: reasoningDetailCount(message?.reasoning_details),
@@ -421,31 +317,33 @@ export function shouldRetryOpenCodeGoResult(result: OpenCodeGoResult) {
   );
 }
 
+function keysOf(value: unknown) {
+  return isRecord(value) ? Object.keys(value).slice(0, 12).join(",") : "";
+}
+
 export function describeOpenCodeGoShape(data: unknown) {
   if (!isRecord(data)) {
     return `root:${Array.isArray(data) ? "array" : typeof data}`;
   }
 
   const choices = Array.isArray(data.choices) ? data.choices : [];
-  const firstChoice = choices[0];
-  const firstChoiceRecord = isRecord(firstChoice) ? firstChoice : null;
-  const message = firstChoiceRecord?.message;
-  const messageRecord = isRecord(message) ? message : null;
-  const content = messageRecord?.content;
+  const choice = getChoice(data);
+  const message = getChoiceMessage(choice);
+  const content = message?.content;
   const contentType = Array.isArray(content)
     ? `array[${content.length}]`
     : content === null
       ? "null"
       : typeof content;
   const contentItem = Array.isArray(content) && isRecord(content[0])
-    ? ` content0{${keysOf(content[0])}} type:${firstString(content[0].type) ?? ""}`
+    ? ` content0{${keysOf(content[0])}}`
     : "";
 
   return [
     `root{${keysOf(data)}}`,
     `choices[${choices.length}]`,
-    firstChoiceRecord ? `choice{${keysOf(firstChoiceRecord)}}` : "choice:none",
-    messageRecord ? `message{${keysOf(messageRecord)}}` : "message:none",
+    choice ? `choice{${keysOf(choice)}}` : "choice:none",
+    message ? `message{${keysOf(message)}}` : "message:none",
     `content:${contentType}${contentItem}`,
   ].join(" ").slice(0, 400);
 }
