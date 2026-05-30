@@ -48,4 +48,16 @@ describe('Eniu Edge Function configuration', () => {
     expect(source).not.toContain('reasoning:');
     expect(source).not.toContain('thinking:');
   });
+
+  it('keeps reply generation on a small output budget and retries transient provider failures', () => {
+    const source = readFileSync(eniuSharedPath, 'utf8');
+
+    expect(source).toContain('const ENIU_REPLY_MAX_TOKENS = 1200');
+    expect(source).toContain('const ENIU_REPLY_RETRY_MAX_TOKENS = 2400');
+    expect(source).toContain('isTransientOpenCodeGoStatus');
+    expect(source).toContain('await runAttempt(ENIU_REPLY_MAX_TOKENS)');
+    expect(source).toContain('await runAttempt(ENIU_REPLY_RETRY_MAX_TOKENS)');
+    expect(source).not.toContain('runAttempt(16000)');
+    expect(source).not.toContain('runAttempt(32000)');
+  });
 });

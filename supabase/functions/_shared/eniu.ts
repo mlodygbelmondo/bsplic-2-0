@@ -17,6 +17,9 @@ export const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const ENIU_REPLY_MAX_TOKENS = 1200;
+const ENIU_REPLY_RETRY_MAX_TOKENS = 2400;
+
 export interface SocialBotContext {
   source: unknown;
   target: unknown;
@@ -137,6 +140,25 @@ function mergeAttemptDiagnostics(
   };
 }
 
+function isTransientOpenCodeGoStatus(status: number) {
+  return (
+    status === 408 ||
+    status === 409 ||
+    status === 425 ||
+    status === 429 ||
+    status >= 500
+  );
+}
+
+function isTransientOpenCodeGoError(error: unknown) {
+  return (
+    error instanceof Error &&
+    "status" in error &&
+    typeof error.status === "number" &&
+    isTransientOpenCodeGoStatus(error.status)
+  );
+}
+
 function buildMessages(input: CompletionInput) {
   const system = `
 ${ENIU_PERSONA_PROMPT}
@@ -212,9 +234,27 @@ export async function generateEniuText(input: CompletionInput) {
 
     if (!response.ok) {
       const detail = await response.text();
-      throw new Error(
+      attempts.push({
+        model,
+        maxTokens,
+        stream: true,
+        httpStatus: response.status,
+        errorSnippet: detail.slice(0, 200),
+        contentPresent: false,
+        contentChars: 0,
+        reasoningPresent: false,
+        reasoningChars: 0,
+        responseShape: `http_error:${response.status}`,
+      });
+      const error = new Error(
         `OpenCodeGo request failed: ${response.status} ${detail.slice(0, 200)}`,
-      );
+      ) as Error & {
+        status?: number;
+        providerDiagnostic?: Record<string, unknown>;
+      };
+      error.status = response.status;
+      error.providerDiagnostic = mergeAttemptDiagnostics(attempts);
+      throw error;
     }
 
     const result = extractOpenCodeGoResultFromText(await response.text());
@@ -223,16 +263,22 @@ export async function generateEniuText(input: CompletionInput) {
       model,
       maxTokens,
       stream: true,
-      reasoningEnabled: true,
-      reasoningExcluded: true,
+      reasoningControlsSent: false,
     };
     attempts.push(diagnostic);
     return result;
   }
 
-  let result = await runAttempt(16000);
+  let result;
+  try {
+    result = await runAttempt(ENIU_REPLY_MAX_TOKENS);
+  } catch (error) {
+    if (!isTransientOpenCodeGoError(error)) throw error;
+    result = await runAttempt(ENIU_REPLY_RETRY_MAX_TOKENS);
+  }
+
   if (shouldRetryOpenCodeGoResult(result)) {
-    result = await runAttempt(32000);
+    result = await runAttempt(ENIU_REPLY_RETRY_MAX_TOKENS);
   }
 
   if (!isOpenCodeGoResultComplete(result)) {
