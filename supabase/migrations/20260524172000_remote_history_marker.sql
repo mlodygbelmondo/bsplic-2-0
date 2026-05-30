@@ -1,0 +1,6 @@
+-- Remote history marker.
+--
+-- This migration version exists in the linked Supabase project's migration
+-- history, but the SQL file was missing from the local repository. Keep this
+-- file so `supabase db push` can reconcile local migrations with remote
+-- history without marking an already-applied remote migration as reverted.
