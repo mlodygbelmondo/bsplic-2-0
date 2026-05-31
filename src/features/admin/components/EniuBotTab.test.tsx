@@ -5,12 +5,14 @@ import EniuBotTab from './EniuBotTab';
 
 const commandEniuMock = vi.fn();
 const fetchEniuBotRunsMock = vi.fn();
+const retryEniuResponseMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
 vi.mock('@/features/social/api/eniuBot', () => ({
   commandEniu: (...args: unknown[]) => commandEniuMock(...args),
   fetchEniuBotRuns: (...args: unknown[]) => fetchEniuBotRunsMock(...args),
+  retryEniuResponse: (...args: unknown[]) => retryEniuResponseMock(...args),
 }));
 
 vi.mock('sonner', () => ({
@@ -48,6 +50,10 @@ describe('EniuBotTab', () => {
       ok: true,
       preview: false,
       text: 'Eniu wrzucił post',
+    });
+    retryEniuResponseMock.mockResolvedValue({
+      ok: true,
+      text: 'Eniu odpowiedział po ponowieniu',
     });
   });
 
@@ -97,5 +103,36 @@ describe('EniuBotTab', () => {
     expect(screen.getByText('16k')).toBeInTheDocument();
     expect(screen.getByText('reasoning: nie')).toBeInTheDocument();
     expect(screen.getByText('content: tak')).toBeInTheDocument();
+  });
+
+  it('allows admins to retry a failed comment response from run logs', async () => {
+    fetchEniuBotRunsMock.mockResolvedValueOnce([
+      {
+        id: 'run-error',
+        sourceType: 'comment',
+        sourceId: 'comment-1',
+        status: 'error',
+        responseCommentId: null,
+        responsePostId: null,
+        error: 'OpenCodeGo response did not include text content',
+        providerDiagnostic: null,
+        createdAt: '2030-01-01T10:00:00.000Z',
+        updatedAt: '2030-01-01T10:00:00.000Z',
+      },
+    ]);
+
+    render(<EniuBotTab />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Ponów odpowiedź Eniu' }),
+    );
+
+    await waitFor(() => {
+      expect(retryEniuResponseMock).toHaveBeenCalledWith(
+        'comment',
+        'comment-1',
+      );
+      expect(toastSuccessMock).toHaveBeenCalledWith('Eniu odpowiedział');
+    });
   });
 });

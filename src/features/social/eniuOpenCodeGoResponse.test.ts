@@ -59,6 +59,25 @@ describe('extractOpenCodeGoText', () => {
     ).toBe('Jestem, tylko kursy mi mrugają.');
   });
 
+  it('reads streamed OpenCodeGo raw_output content when delta content is omitted', () => {
+    const result = extractOpenCodeGoResultFromText(
+      [
+        'data: {"id":"chatcmpl-raw","object":"chat.completion.chunk","created":1780243200,"model":"kimi-k2.6","choices":[{"index":0,"delta":{},"finish_reason":"stop","raw_output":"Widziałem, kurs żyje, ale ja bym tu grał spokojnie."}],"usage":{"completion_tokens":14}}',
+        '',
+        'data: [DONE]',
+      ].join('\n'),
+    );
+
+    expect(result.text).toBe(
+      'Widziałem, kurs żyje, ale ja bym tu grał spokojnie.',
+    );
+    expect(result.diagnostic).toMatchObject({
+      contentPresent: true,
+      contentChars: 51,
+      finishReason: 'stop',
+    });
+  });
+
   it('reads SSE final content while ignoring returned reasoning deltas', () => {
     const result = extractOpenCodeGoResultFromText(
       [

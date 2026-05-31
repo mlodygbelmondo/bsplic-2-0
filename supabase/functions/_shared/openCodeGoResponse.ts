@@ -77,6 +77,24 @@ function textFromResponsesOutput(value: unknown): string[] {
   });
 }
 
+function textFromRawOutput(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap(textFromRawOutput);
+  if (!isRecord(value) || isReasoningPart(value)) return [];
+
+  const message = isRecord(value.message) ? value.message : null;
+  const delta = isRecord(value.delta) ? value.delta : null;
+
+  return [
+    ...textFromContentPart(value),
+    ...textFromContentPart(value.content),
+    ...textFromContentPart(message?.content),
+    ...textFromContentPart(delta?.content),
+    ...supportedTextCandidates(value, false).flat(),
+    ...(typeof value.text === "string" ? [value.text] : []),
+  ];
+}
+
 function getChoice(data: unknown) {
   if (!isRecord(data)) return null;
   const choices = Array.isArray(data.choices) ? data.choices : [];
@@ -91,18 +109,24 @@ function getChoiceDelta(choice: JsonRecord | null) {
   return isRecord(choice?.delta) ? choice.delta : null;
 }
 
-function supportedTextCandidates(data: JsonRecord) {
+function supportedTextCandidates(data: JsonRecord, includeRawOutput = true) {
   const choice = getChoice(data);
   const message = getChoiceMessage(choice);
   const delta = getChoiceDelta(choice);
 
-  return [
+  const candidates = [
     textFromContentPart(message?.content),
     textFromContentPart(delta?.content),
     typeof choice?.text === "string" ? [choice.text] : [],
     typeof data.output_text === "string" ? [data.output_text] : [],
     textFromResponsesOutput(data.output),
   ];
+
+  if (includeRawOutput) {
+    candidates.push(textFromRawOutput(choice?.raw_output));
+  }
+
+  return candidates;
 }
 
 function firstSupportedText(data: unknown, preserveWhitespace = false) {

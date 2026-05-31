@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bot, Loader2, RefreshCw, Send } from 'lucide-react';
+import { Bot, Loader2, RefreshCw, RotateCcw, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   commandEniu,
   fetchEniuBotRuns,
+  retryEniuResponse,
   type EniuBotRun,
+  type EniuSourceType,
 } from '@/features/social/api/eniuBot';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +52,10 @@ function diagnosticMaxTokens(value: unknown) {
     : '';
 }
 
+function isRetryableSourceType(value: string): value is EniuSourceType {
+  return value === 'post' || value === 'comment';
+}
+
 export default function EniuBotTab() {
   const [command, setCommand] = useState('');
   const [preview, setPreview] = useState(false);
@@ -57,6 +63,7 @@ export default function EniuBotTab() {
   const [runs, setRuns] = useState<EniuBotRun[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
 
   const loadRuns = async () => {
     setLoadingRuns(true);
@@ -105,6 +112,31 @@ export default function EniuBotTab() {
       toast.error(message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const retryRun = async (run: EniuBotRun) => {
+    if (!isRetryableSourceType(run.sourceType) || retryingRunId) return;
+
+    setRetryingRunId(run.id);
+    try {
+      const result = await retryEniuResponse(run.sourceType, run.sourceId);
+      if (!result.ok) {
+        throw new Error(result.error || 'Eniu nie odpowiedział');
+      }
+
+      toast.success(
+        result.text ? 'Eniu odpowiedział' : 'Ponowienie sprawdzone',
+      );
+      await loadRuns();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się ponowić odpowiedzi Eniu';
+      toast.error(message);
+    } finally {
+      setRetryingRunId(null);
     }
   };
 
@@ -218,7 +250,9 @@ export default function EniuBotTab() {
                 {run.providerDiagnostic && (
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-muted-foreground">
                     {diagnosticText(run.providerDiagnostic, 'model') && (
-                      <span>{diagnosticText(run.providerDiagnostic, 'model')}</span>
+                      <span>
+                        {diagnosticText(run.providerDiagnostic, 'model')}
+                      </span>
                     )}
                     {diagnosticBoolean(run.providerDiagnostic, 'stream') && (
                       <span>stream</span>
@@ -249,6 +283,25 @@ export default function EniuBotTab() {
                 {run.error && (
                   <p className="mt-1 text-xs text-destructive">{run.error}</p>
                 )}
+                {run.status === 'error' &&
+                  isRetryableSourceType(run.sourceType) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      aria-label="Ponów odpowiedź Eniu"
+                      onClick={() => retryRun(run)}
+                      disabled={retryingRunId !== null}
+                    >
+                      {retryingRunId === run.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                      )}
+                      Ponów
+                    </Button>
+                  )}
               </article>
             ))}
           </div>

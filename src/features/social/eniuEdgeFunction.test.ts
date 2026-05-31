@@ -11,14 +11,16 @@ const openCodeGoRequestPath = resolve(
   process.cwd(),
   'supabase/functions/_shared/openCodeGoRequest.ts',
 );
+const respondAsEniuPath = resolve(
+  process.cwd(),
+  'supabase/functions/respond-as-eniu/index.ts',
+);
 
 describe('Eniu Edge Function configuration', () => {
   it('defaults to the raw OpenCode Go Kimi K2.6 model id', () => {
     const source = readFileSync(eniuSharedPath, 'utf8');
 
-    expect(source).toContain(
-      'Deno.env.get("OPENCODEGO_MODEL") ?? "kimi-k2.6"',
-    );
+    expect(source).toContain('Deno.env.get("OPENCODEGO_MODEL") ?? "kimi-k2.6"');
   });
 
   it('guards against posting model analysis or prompt leakage', () => {
@@ -59,5 +61,15 @@ describe('Eniu Edge Function configuration', () => {
     expect(source).toContain('await runAttempt(ENIU_REPLY_RETRY_MAX_TOKENS)');
     expect(source).not.toContain('runAttempt(16000)');
     expect(source).not.toContain('runAttempt(32000)');
+  });
+
+  it('requires admin access before retrying a response for another user source', () => {
+    const source = readFileSync(respondAsEniuPath, 'utf8');
+
+    expect(source).toContain('retry?: boolean');
+    expect(source).toContain('assertAdmin');
+    expect(source).toContain('payload.retry === true');
+    expect(source).toContain("select('user_id')");
+    expect(source).toContain('actorUserId');
   });
 });

@@ -15,6 +15,14 @@ export interface EniuBotRun {
   updatedAt: string;
 }
 
+interface EniuReplyResult {
+  ok: boolean;
+  text?: string | null;
+  providerDiagnostic?: Record<string, unknown>;
+  result?: unknown;
+  error?: string;
+}
+
 interface EniuCommandResult {
   ok: boolean;
   preview: boolean;
@@ -37,13 +45,19 @@ export async function respondAsEniu(
   });
 
   if (error) throw new Error(error.message);
-  return data as {
-    ok: boolean;
-    text?: string;
-    providerDiagnostic?: Record<string, unknown>;
-    result?: unknown;
-    error?: string;
-  };
+  return data as EniuReplyResult;
+}
+
+export async function retryEniuResponse(
+  sourceType: EniuSourceType,
+  sourceId: string,
+) {
+  const { data, error } = await supabase.functions.invoke('respond-as-eniu', {
+    body: { sourceType, sourceId, retry: true },
+  });
+
+  if (error) throw new Error(error.message);
+  return data as EniuReplyResult;
 }
 
 export async function commandEniu(command: string, preview: boolean) {

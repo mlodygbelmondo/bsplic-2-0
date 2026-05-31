@@ -1,4 +1,5 @@
 import {
+  assertAdmin,
   corsHeaders,
   generateEniuText,
   getAgentToken,
@@ -13,6 +14,7 @@ type SourceType = 'post' | 'comment';
 interface RespondRequest {
   sourceType: SourceType;
   sourceId: string;
+  retry?: boolean;
 }
 
 Deno.serve(async (request) => {
@@ -51,13 +53,37 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
+    let actorUserId = authData.user.id;
+    if (payload.retry === true) {
+      try {
+        await assertAdmin(request.headers.get('Authorization'));
+      } catch {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
+
+      const table =
+        payload.sourceType === 'post' ? 'social_posts' : 'social_comments';
+      const { data: source, error: sourceError } = await serviceClient
+        .from(table)
+        .select('user_id')
+        .eq('id', payload.sourceId)
+        .maybeSingle();
+
+      if (sourceError) throw sourceError;
+      if (!source?.user_id) {
+        throw new Error('Social bot source not found');
+      }
+
+      actorUserId = source.user_id;
+    }
+
     const { data: claim, error: claimError } = await serviceClient.rpc(
       'agent_claim_social_bot_reply',
       {
         p_token: token,
         p_source_type: payload.sourceType,
         p_source_id: payload.sourceId,
-        p_actor_user_id: authData.user.id,
+        p_actor_user_id: actorUserId,
       },
     );
 
