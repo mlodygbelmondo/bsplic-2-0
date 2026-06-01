@@ -37,6 +37,9 @@ export type Database = {
       }
       bet_proposals: {
         Row: {
+          agent_duplicate_key: string | null
+          agent_metadata: Json
+          proposal_source: string
           bet_type: string
           category_id: string | null
           created_at: string
@@ -48,6 +51,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_duplicate_key?: string | null
+          agent_metadata?: Json
+          proposal_source?: string
           bet_type: string
           category_id?: string | null
           created_at?: string
@@ -59,6 +65,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_duplicate_key?: string | null
+          agent_metadata?: Json
+          proposal_source?: string
           bet_type?: string
           category_id?: string | null
           created_at?: string
@@ -131,6 +140,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bonus_campaign_claims: {
+        Row: {
+          amount: number
+          balance_after: number
+          campaign_id: string
+          claimed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          campaign_id: string
+          claimed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          campaign_id?: string
+          claimed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_campaign_claims_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "bonus_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_campaign_claims_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bonus_campaigns: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       categories: {
         Row: {
@@ -618,6 +705,41 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
       }
+      admin_settle_bet: {
+        Args: {
+          p_bet_id: string
+          p_mode?: string
+          p_scope?: string
+          p_winning_options?: string[]
+        }
+        Returns: Json
+      }
+      agent_create_bet_proposals: {
+        Args: { p_proposals: Json; p_token: string }
+        Returns: Json
+      }
+      agent_get_bet_context: {
+        Args: {
+          p_history_limit?: number
+          p_recent_bet_limit?: number
+          p_token: string
+        }
+        Returns: Json
+      }
+      agent_get_pending_settlement_context: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
+      agent_settle_bet: {
+        Args: {
+          p_bet_id: string
+          p_mode?: string
+          p_scope?: string
+          p_token: string
+          p_winning_options?: string[]
+        }
+        Returns: Json
+      }
       award_badge: {
         Args: { p_badge_key: string; p_user_id: string }
         Returns: undefined
@@ -825,6 +947,26 @@ export type Database = {
           settled_at: string | null
           stake: number
           user_id: string
+        }[]
+      }
+      claim_bonus_campaign: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          amount: number
+          balance_after: number
+          campaign_id: string
+          claimed_at: string
+        }[]
+      }
+      get_available_bonus_campaigns: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          amount: number
+          description: string
+          expires_at: string
+          id: string
+          starts_at: string
+          title: string
         }[]
       }
       secure_daily_topup: {

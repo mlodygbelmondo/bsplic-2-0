@@ -11,6 +11,7 @@ import {
   Lightbulb,
   Tag,
   Bot,
+  BadgePlus,
 } from 'lucide-react';
 
 import DashboardTab from './DashboardTab';
@@ -19,6 +20,7 @@ import ManageBetsTab from './ManageBetsTab';
 import ProposalsTab from './ProposalsTab';
 import CategoriesTab from './CategoriesTab';
 import EniuBotTab from './EniuBotTab';
+import BonusCampaignsTab from './BonusCampaignsTab';
 
 interface TabConfig {
   key: AdminTab;
@@ -54,6 +56,7 @@ const TABS: TabConfig[] = [
   },
   { key: 'categories', label: 'Kategorie', shortLabel: 'Kategorie', icon: Tag },
   { key: 'eniu', label: 'Eniu', shortLabel: 'Eniu', icon: Bot },
+  { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonusy', icon: BadgePlus },
 ];
 
 export default function AdminLayout() {
@@ -137,6 +140,7 @@ export default function AdminLayout() {
               {tab === 'proposals' && <ProposalsTab />}
               {tab === 'categories' && <CategoriesTab />}
               {tab === 'eniu' && <EniuBotTab />}
+              {tab === 'bonuses' && <BonusCampaignsTab />}
             </div>
           </div>
         </main>

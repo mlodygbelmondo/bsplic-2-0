@@ -103,6 +103,8 @@ export interface BetOption {
   odds: number;
 }
 
+export type BetProposalSource = 'human' | 'agent';
+
 export interface Bet {
   id: string;
   title: string;
@@ -149,6 +151,9 @@ export interface BetProposal {
   title: string;
   category_id: string | null;
   bet_type: '1x2' | '12' | 'multi' | 'single';
+  proposal_source: BetProposalSource;
+  agent_metadata: unknown | null;
+  agent_duplicate_key: string | null;
   options: BetOption[];
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;

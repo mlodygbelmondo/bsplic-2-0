@@ -1,133 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { addCreditForUser, calculateCreditAmount, calculateLegOutcome, type CouponSettlementSnapshot } from '@/features/admin/settlement';
-import { computeRankingStats, type RankingCoupon, type RankingPlacedBet } from '@/features/rankings/stats';
+import {
+  computeRankingStats,
+  type RankingCoupon,
+  type RankingPlacedBet,
+} from '@/features/rankings/stats';
 
-interface SettleLegInput {
-  selectedOption: string;
-  winningOption: string;
-  stake: number;
-  oddsAtTime: number;
-  couponBefore: CouponSettlementSnapshot | null;
-  couponAfter: CouponSettlementSnapshot | null;
-}
-
-const settleLeg = ({
-  selectedOption,
-  winningOption,
-  stake,
-  oddsAtTime,
-  couponBefore,
-  couponAfter,
-}: SettleLegInput) => {
-  const leg = calculateLegOutcome({
-    selectedOption,
-    winningOption,
-    stake,
-    oddsAtTime,
-  });
-
-  const credit = calculateCreditAmount({
-    legWon: leg.won,
-    legPayout: leg.payout,
-    couponBefore,
-    couponAfter,
-  });
-
-  return { leg, credit };
-};
-
-describe('settlement + rankings integration', () => {
-  it('aggregates credits for all winning users on the same settled bet', () => {
-    const couponBefore: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 1,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponAfter: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 1,
-      status: 'won',
-      payout: 10,
-    };
-
-    const legA = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 10,
-      oddsAtTime: 2,
-      couponBefore,
-      couponAfter,
-    });
-
-    const legB = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 5,
-      oddsAtTime: 3,
-      couponBefore: {
-        ...couponBefore,
-        stake: 5,
-      },
-      couponAfter: {
-        ...couponAfter,
-        stake: 5,
-        payout: 5,
-      },
-    });
-
-    let creditsByUser: Record<string, number> = {};
-    creditsByUser = addCreditForUser({
-      creditsByUser,
-      userId: 'user-a',
-      amount: legA.credit,
-    });
-    creditsByUser = addCreditForUser({
-      creditsByUser,
-      userId: 'user-b',
-      amount: legB.credit,
-    });
-
-    expect(creditsByUser).toEqual({
-      'user-a': 20,
-      'user-b': 15,
-    });
-  });
-
-  it('credits single win immediately and keeps ranking stats consistent', () => {
-    const couponBefore: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 1,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponAfter: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 1,
-      status: 'won',
-      payout: 10,
-    };
-
-    const { leg, credit } = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 10,
-      oddsAtTime: 2.5,
-      couponBefore,
-      couponAfter,
-    });
-
-    expect(credit).toBe(25);
-
+describe('rankings over settled sportsbook data', () => {
+  it('counts a settled single win as one profitable unit', () => {
     const placedBets: RankingPlacedBet[] = [
       {
         couponId: 'single-1',
-        result: leg.result,
+        result: 'won',
         stake: 10,
-        payout: leg.payout,
+        payout: 25,
       },
     ];
 
@@ -140,9 +26,7 @@ describe('settlement + rankings integration', () => {
       },
     ];
 
-    const stats = computeRankingStats({ placedBets, coupons });
-
-    expect(stats).toEqual({
+    expect(computeRankingStats({ placedBets, coupons })).toEqual({
       totalBets: 1,
       wonBets: 1,
       lostBets: 0,
@@ -152,61 +36,19 @@ describe('settlement + rankings integration', () => {
     });
   });
 
-  it('credits AKO only on transition to won and counts AKO as one ranking unit', () => {
-    const couponInitial: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 3,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponPending: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 3,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponWon: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 3,
-      status: 'won',
-      payout: 30,
-    };
-
-    const firstLeg = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 10,
-      oddsAtTime: 1.5,
-      couponBefore: couponInitial,
-      couponAfter: couponPending,
-    });
-
-    const secondLeg = settleLeg({
-      selectedOption: '2',
-      winningOption: '2',
-      stake: 10,
-      oddsAtTime: 2,
-      couponBefore: couponPending,
-      couponAfter: couponWon,
-    });
-
-    expect(firstLeg.credit).toBe(0);
-    expect(secondLeg.credit).toBe(30);
-
+  it('counts a fully won AKO coupon as one ranking unit', () => {
     const placedBets: RankingPlacedBet[] = [
       {
         couponId: 'ako-1',
-        result: firstLeg.leg.result,
+        result: 'won',
         stake: 10,
-        payout: firstLeg.leg.payout,
+        payout: 15,
       },
       {
         couponId: 'ako-1',
-        result: secondLeg.leg.result,
+        result: 'won',
         stake: 10,
-        payout: secondLeg.leg.payout,
+        payout: 20,
       },
     ];
 
@@ -229,54 +71,19 @@ describe('settlement + rankings integration', () => {
     expect(stats.totalProfit).toBe(20);
   });
 
-  it('keeps credit at zero for AKO lost and ranking reports one lost unit', () => {
-    const couponPending: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 3,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponLost: CouponSettlementSnapshot = {
-      stake: 10,
-      totalOdds: 3,
-      status: 'lost',
-      payout: 0,
-    };
-
-    const firstLeg = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 10,
-      oddsAtTime: 1.5,
-      couponBefore: couponPending,
-      couponAfter: couponPending,
-    });
-
-    const secondLeg = settleLeg({
-      selectedOption: '2',
-      winningOption: '1',
-      stake: 10,
-      oddsAtTime: 2,
-      couponBefore: couponPending,
-      couponAfter: couponLost,
-    });
-
-    expect(firstLeg.credit).toBe(0);
-    expect(secondLeg.credit).toBe(0);
-
+  it('counts a lost AKO coupon as one lost unit regardless of winning legs', () => {
     const placedBets: RankingPlacedBet[] = [
       {
         couponId: 'ako-2',
-        result: firstLeg.leg.result,
+        result: 'won',
         stake: 10,
-        payout: firstLeg.leg.payout,
+        payout: 15,
       },
       {
         couponId: 'ako-2',
-        result: secondLeg.leg.result,
+        result: 'lost',
         stake: 10,
-        payout: secondLeg.leg.payout,
+        payout: 0,
       },
     ];
 
@@ -300,53 +107,18 @@ describe('settlement + rankings integration', () => {
   });
 
   it('prevents positive profit from a lost AKO with one very high winning leg', () => {
-    const couponPending: CouponSettlementSnapshot = {
-      stake: 12,
-      totalOdds: 6,
-      status: 'pending',
-      payout: 0,
-    };
-
-    const couponLost: CouponSettlementSnapshot = {
-      stake: 12,
-      totalOdds: 6,
-      status: 'lost',
-      payout: 0,
-    };
-
-    const firstLeg = settleLeg({
-      selectedOption: '1',
-      winningOption: '1',
-      stake: 12,
-      oddsAtTime: 2.9,
-      couponBefore: couponPending,
-      couponAfter: couponPending,
-    });
-
-    const secondLeg = settleLeg({
-      selectedOption: '2',
-      winningOption: '1',
-      stake: 12,
-      oddsAtTime: 2.1,
-      couponBefore: couponPending,
-      couponAfter: couponLost,
-    });
-
-    expect(firstLeg.credit).toBe(0);
-    expect(secondLeg.credit).toBe(0);
-
     const placedBets: RankingPlacedBet[] = [
       {
         couponId: 'ako-3',
-        result: firstLeg.leg.result,
+        result: 'won',
         stake: 12,
-        payout: firstLeg.leg.payout,
+        payout: 34.8,
       },
       {
         couponId: 'ako-3',
-        result: secondLeg.leg.result,
+        result: 'lost',
         stake: 12,
-        payout: secondLeg.leg.payout,
+        payout: 0,
       },
     ];
 

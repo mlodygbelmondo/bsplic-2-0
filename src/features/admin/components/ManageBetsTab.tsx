@@ -40,22 +40,13 @@ import {
   normalizeType,
   normalizeOptions,
   lockEditableOptionsByType,
-  normalizeCouponStatus,
-  encodeWinningOptions,
   parseWinningOptions,
   toEditableOptions,
 } from '../helpers';
 import type { EditableBetOption } from '../helpers';
-import {
-  addCreditForUser,
-  calculateCreditDeltaAmount,
-  calculateLegOutcome,
-  type CouponSettlementSnapshot,
-} from '../settlement';
+import { settleBetWithBackend, type CorrectionScope, type SettlementMode } from '../settlementApi';
 import { filterBets, type BetStatusFilter, type BetTypeFilter } from './manageBetsFilters';
 
-type SettlementMode = 'normal' | 'refund' | 'force_lost';
-type CorrectionScope = 'pending_only' | 'all';
 type ResolveStep = 'selection' | 'non_multi_warning';
 
 interface BetEditor {
@@ -245,121 +236,12 @@ export default function ManageBetsTab() {
     setResolvingBetId(bet.id);
     const isCorrection = Boolean(bet.winning_option);
     try {
-      const winningOptionForDb =
-        mode === 'refund'
-          ? BET_WINNING_OPTION_REFUND
-          : mode === 'force_lost'
-            ? BET_WINNING_OPTION_FORCED_LOSS
-            : encodeWinningOptions(winningOptionNames);
-
-      const { error: betUpdateError } = await supabase
-        .from('bets')
-        .update({ winning_option: winningOptionForDb, is_active: false })
-        .eq('id', bet.id);
-      if (betUpdateError) throw betUpdateError;
-
-      const { data: placedBets, error: placedBetsError } = await supabase
-        .from('placed_bets')
-        .select('*')
-        .eq('bet_id', bet.id);
-      if (placedBetsError) throw placedBetsError;
-
-      let creditsByUser: Record<string, number> = {};
-      const includeAlreadyResolved = scope === 'all';
-
-      // For multi-winner, a placed bet wins if its selected_option is in the winning set
-      const winningOptionForLeg = mode === 'normal' ? winningOptionNames : [];
-
-      if (placedBets) {
-        for (const pb of placedBets) {
-          if (!includeAlreadyResolved && pb.result !== 'pending') continue;
-
-          const previousLegResult = normalizeCouponStatus(pb.result);
-          const previousLegPayout = Number(pb.payout ?? 0);
-
-          let couponBefore: CouponSettlementSnapshot | null = null;
-          if (pb.coupon_id) {
-            const { data: coupon } = await supabase
-              .from('coupons')
-              .select('stake, total_odds, status, payout')
-              .eq('id', pb.coupon_id)
-              .single();
-            if (coupon) {
-              couponBefore = {
-                stake: Number(coupon.stake),
-                totalOdds: Number(coupon.total_odds),
-                status: normalizeCouponStatus(coupon.status),
-                payout: Number(coupon.payout ?? 0),
-              };
-            }
-          }
-
-          // Multi-winner: selectedOption matches if it's in the winners array
-          const effectiveWinningOption =
-            mode === 'normal' && winningOptionForLeg.includes(pb.selected_option)
-              ? pb.selected_option
-              : mode === 'normal'
-                ? '__no_match__'
-                : '';
-
-          const legOutcome = calculateLegOutcome({
-            selectedOption: pb.selected_option,
-            winningOption: effectiveWinningOption,
-            stake: Number(pb.stake),
-            oddsAtTime: Number(pb.odds_at_time),
-            mode,
-          });
-
-          const legUpdatePayload = { result: legOutcome.result, payout: legOutcome.payout };
-
-          const { error: legUpdateError } = await supabase
-            .from('placed_bets')
-            .update(legUpdatePayload)
-            .eq('id', pb.id);
-          if (legUpdateError) throw legUpdateError;
-
-          let couponAfter: CouponSettlementSnapshot | null = null;
-          if (pb.coupon_id) {
-            const { data: coupon } = await supabase
-              .from('coupons')
-              .select('stake, total_odds, status, payout')
-              .eq('id', pb.coupon_id)
-              .single();
-            if (coupon) {
-              couponAfter = {
-                stake: Number(coupon.stake),
-                totalOdds: Number(coupon.total_odds),
-                status: normalizeCouponStatus(coupon.status),
-                payout: Number(coupon.payout ?? 0),
-              };
-            }
-          }
-
-          const creditAmount = calculateCreditDeltaAmount({
-            previousLegResult,
-            previousLegPayout,
-            nextLegResult: legOutcome.result,
-            nextLegPayout: legOutcome.payout,
-            couponBefore,
-            couponAfter,
-          });
-
-          creditsByUser = addCreditForUser({
-            creditsByUser,
-            userId: pb.user_id,
-            amount: creditAmount,
-          });
-        }
-
-        for (const [userId, creditAmount] of Object.entries(creditsByUser)) {
-          if (creditAmount === 0) continue;
-          const { error: creditError } = await supabase.rpc('admin_credit_balance', {
-            p_user_id: userId,
-            p_amount: creditAmount,
-          });
-          if (creditError) throw creditError;
-        }
-      }
+      await settleBetWithBackend({
+        betId: bet.id,
+        winningOptionNames,
+        mode,
+        scope,
+      });
 
       if (mode === 'refund') {
         toast.success(isCorrection ? 'Korekta zapisana jako zwrot' : 'Zakład rozliczony jako zwrot');

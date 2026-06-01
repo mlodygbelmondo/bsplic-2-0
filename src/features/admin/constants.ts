@@ -4,7 +4,8 @@ export type AdminTab =
   | 'manage'
   | 'proposals'
   | 'categories'
-  | 'eniu';
+  | 'eniu'
+  | 'bonuses';
 
 export const BET_WINNING_OPTION_REFUND = '__refund__';
 export const BET_WINNING_OPTION_FORCED_LOSS = '__all_lost__';

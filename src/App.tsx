@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BonusCampaignSurface } from "@/features/bonus-campaigns/components/bonus-campaign-surface";
 import { CouponProvider } from "@/contexts/CouponContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
       <Sonner position="top-right" richColors />
       <BrowserRouter>
         <AuthProvider>
+          <BonusCampaignSurface />
           <CouponProvider>
             <Routes>
               <Route path="/" element={<Index />} />
