@@ -3,6 +3,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 import { Bet } from "@/types/database";
 import {
+  ACTIVE_BETS_PAGE_SIZE,
   fetchActiveBets,
   subscribeToBetsChanges,
 } from "@/features/home/api/bets";
@@ -121,10 +122,64 @@ export function applyBetsRealtimePayloads(
 export function useBets(selectedCategory: string | null, sort: SortMode) {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const pendingPayloadsRef = useRef<RealtimePostgresChangesPayload<BetRow>[]>(
     [],
   );
   const flushTimeoutRef = useRef<number | null>(null);
+  const betsRef = useRef<Bet[]>([]);
+  const criteriaRef = useRef({ selectedCategory, sort });
+
+  useEffect(() => {
+    betsRef.current = bets;
+  }, [bets]);
+
+  useEffect(() => {
+    criteriaRef.current = { selectedCategory, sort };
+  }, [selectedCategory, sort]);
+
+  const loadBetsPage = useCallback(
+    async ({
+      offset,
+      append,
+      minimumWindowSize = ACTIVE_BETS_PAGE_SIZE,
+      shouldApply = () => true,
+    }: {
+      offset: number;
+      append: boolean;
+      minimumWindowSize?: number;
+      shouldApply?: () => boolean;
+    }) => {
+      const criteria = criteriaRef.current;
+      const limit = Math.max(minimumWindowSize, ACTIVE_BETS_PAGE_SIZE) + 1;
+      const data = await fetchActiveBets(
+        criteria.selectedCategory,
+        criteria.sort,
+        limit,
+        offset,
+      );
+      const visiblePage = data.slice(0, limit - 1);
+
+      if (!shouldApply()) {
+        return;
+      }
+
+      setHasMore(data.length === limit);
+      setBets((previous) =>
+        append ? [...previous, ...visiblePage] : visiblePage,
+      );
+    },
+    [],
+  );
+
+  const refetchVisibleWindow = useCallback(async () => {
+    await loadBetsPage({
+      offset: 0,
+      append: false,
+      minimumWindowSize: betsRef.current.length || ACTIVE_BETS_PAGE_SIZE,
+    });
+  }, [loadBetsPage]);
 
   useEffect(() => {
     let mounted = true;
@@ -132,16 +187,27 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await fetchActiveBets(selectedCategory);
-        if (mounted) {
-          setBets(data);
-        }
+        await loadBetsPage({
+          offset: 0,
+          append: false,
+          shouldApply: () => mounted,
+        });
       } finally {
         if (mounted) {
           setLoading(false);
         }
       }
     };
+
+    void load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadBetsPage, selectedCategory, sort]);
+
+  useEffect(() => {
+    let mounted = true;
 
     const flushPayloadQueue = () => {
       flushTimeoutRef.current = null;
@@ -154,9 +220,9 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
       const queuedPayloads = pendingPayloadsRef.current;
       pendingPayloadsRef.current = [];
 
-      setBets((previous) =>
-        applyBetsRealtimePayloads(previous, queuedPayloads, selectedCategory),
-      );
+      if (queuedPayloads.length > 0) {
+        void refetchVisibleWindow();
+      }
     };
 
     const scheduleFlushPayloadQueue = () => {
@@ -169,8 +235,6 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
         REALTIME_BATCH_MS,
       );
     };
-
-    void load();
 
     const unsubscribe = subscribeToBetsChanges((payload) => {
       pendingPayloadsRef.current.push(payload);
@@ -186,7 +250,23 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
       }
       unsubscribe();
     };
-  }, [selectedCategory]);
+  }, [refetchVisibleWindow]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) {
+      return;
+    }
+
+    setLoadingMore(true);
+    try {
+      await loadBetsPage({
+        offset: betsRef.current.length,
+        append: true,
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadBetsPage, loadingMore]);
 
   const sortByMode = useCallback(
     (a: Bet, b: Bet) => {
@@ -209,6 +289,9 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
 
   return {
     loading,
+    loadingMore,
+    hasMore,
+    loadMore,
     liveBets,
     sortedBets,
   };

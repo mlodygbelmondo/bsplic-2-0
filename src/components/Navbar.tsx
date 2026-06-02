@@ -1,34 +1,24 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, ShieldCheck, Plus, Wallet, Menu } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { LogOut, ShieldCheck, Wallet, Menu } from "lucide-react";
 import { toast } from "sonner";
 import { canClaimTopup } from "@/features/social/polishDay";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { NotificationsBell } from "@/features/notifications/components/NotificationsBell";
+
+const NotificationsBell = lazy(() =>
+  import("@/features/notifications/components/NotificationsBell").then(
+    (module) => ({ default: module.NotificationsBell }),
+  ),
+);
+const NavbarMobileMenu = lazy(() => import("./NavbarMobileMenu"));
+const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
 
 export function Navbar() {
   const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const location = useLocation();
   const [topupOpen, setTopupOpen] = useState(false);
-  const [topupLoading, setTopupLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDesktopNav, setIsDesktopNav] = useState(false);
 
@@ -49,25 +39,13 @@ export function Navbar() {
 
   const canTopup = () => canClaimTopup(profile?.last_topup_at);
 
-  const handleTopup = async () => {
-    if (!user || !profile) return;
-    setTopupLoading(true);
-    try {
-      const { error } = await supabase.rpc("secure_daily_topup", {
-        p_user_id: user.id,
-      });
-      if (error) {
-        toast.error(error.message || "Błąd doładowania");
-        return;
-      }
-      await refreshProfile();
-      toast.success("💰 Doładowano 100 zł. Wróć jutro po więcej!");
-      setTopupOpen(false);
-    } catch {
-      toast.error("Błąd doładowania");
-    } finally {
-      setTopupLoading(false);
+  const openTopupDialog = () => {
+    if (!canTopup()) {
+      toast.error("Już doładowano dzisiaj. Wróć jutro!");
+      return;
     }
+
+    setTopupOpen(true);
   };
 
   const navLinks = [
@@ -155,14 +133,14 @@ export function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2.5">
-            {isDesktopNav && <NotificationsBell userId={user?.id} />}
+            {isDesktopNav && (
+              <Suspense fallback={null}>
+                <NotificationsBell userId={user?.id} />
+              </Suspense>
+            )}
             {profile && (
               <button
-                onClick={() =>
-                  canTopup()
-                    ? setTopupOpen(true)
-                    : toast.error("Już doładowano dzisiaj. Wróć jutro!")
-                }
+                onClick={openTopupDialog}
                 className="flex items-center gap-1 bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground px-2.5 py-1 rounded-full text-[12px] font-bold transition-colors"
                 title={
                   canTopup()
@@ -202,147 +180,52 @@ export function Navbar() {
 
           <div className="lg:hidden flex items-center gap-2">
             {!isDesktopNav && (
-              <NotificationsBell
-                userId={user?.id}
-                className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
-              />
+              <Suspense fallback={null}>
+                <NotificationsBell
+                  userId={user?.id}
+                  className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
+                />
+              </Suspense>
             )}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Otwórz menu"
-                  className="text-primary-foreground/90 flex items-center justify-center hover:text-primary-foreground transition-colors p-1"
-                >
-                  <Menu className="h-6 w-6" />
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="safe-area-top duration-100 safe-area-bottom w-[86vw] max-w-sm p-0 border-l border-border"
-              >
-                <div className="flex h-full flex-col">
-                  <div className="border-b border-border px-4 py-4">
-                    <SheetHeader className="text-left space-y-1">
-                      <SheetTitle className="text-base">Menu</SheetTitle>
-                    </SheetHeader>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
-                    <div className="space-y-1.5">
-                      {navLinks.map((link) => (
-                        <SheetClose asChild key={link.to}>
-                          <Link
-                            to={link.to}
-                            className={cn(
-                              "block rounded-md px-3 py-2.5 text-sm font-semibold transition-colors",
-                              isActivePath(link.to)
-                                ? "bg-primary/10 text-primary"
-                                : "text-foreground hover:bg-muted",
-                            )}
-                          >
-                            {link.label}
-                          </Link>
-                        </SheetClose>
-                      ))}
-                    </div>
-
-                    {profile && (
-                      <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Saldo</span>
-                          <span className="font-bold text-foreground">
-                            {Number(profile.balance).toFixed(2)} zł
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            if (!canTopup()) {
-                              toast.error(
-                                "Już doładowano dzisiaj. Wróć jutro!",
-                              );
-                              return;
-                            }
-                            setMobileMenuOpen(false);
-                            setTopupOpen(true);
-                          }}
-                          className="w-full flex items-center justify-center gap-1 bg-primary/10 hover:bg-primary/15 text-primary px-3 py-2 rounded-md text-[12px] font-bold transition-colors"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Doładuj 100 zł
-                        </button>
-
-                        <SheetClose asChild>
-                          <Link
-                            to="/profile"
-                            className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-background transition-colors"
-                          >
-                            <Avatar className="h-7 w-7 bg-primary/10">
-                              <AvatarImage
-                                src={profile.avatar_url ?? undefined}
-                                alt={`Avatar ${profile.username}`}
-                              />
-                              <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
-                                {profile.username.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium text-foreground">
-                              {profile.username}
-                            </span>
-                          </Link>
-                        </SheetClose>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-border p-4">
-                    <SheetClose asChild>
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          signOut();
-                        }}
-                        className="w-full flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Wyloguj się
-                      </button>
-                    </SheetClose>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <button
+              type="button"
+              aria-label="Otwórz menu"
+              className="text-primary-foreground/90 flex items-center justify-center hover:text-primary-foreground transition-colors p-1"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            {mobileMenuOpen && (
+              <Suspense fallback={null}>
+                <NavbarMobileMenu
+                  open={mobileMenuOpen}
+                  onOpenChange={setMobileMenuOpen}
+                  navLinks={navLinks}
+                  isActivePath={isActivePath}
+                  profile={profile}
+                  canTopup={canTopup}
+                  onOpenTopup={() => setTopupOpen(true)}
+                  signOut={signOut}
+                />
+              </Suspense>
+            )}
           </div>
         </div>
       </nav>
 
       <div className="navbar-offset" aria-hidden="true" />
 
-      {/* Topup confirmation modal */}
-      <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
-        <DialogContent className="w-[calc(100%-1.25rem)] max-w-sm rounded-xl p-5 sm:w-full sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-center">
-              💰 Doładuj portfel
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center space-y-4 py-2">
-            <p className="text-muted-foreground text-sm">
-              Doładuj swój portfel o{" "}
-              <span className="font-bold text-foreground">100 zł</span>. Możesz
-              to zrobić raz dziennie.
-            </p>
-            <Button
-              onClick={handleTopup}
-              disabled={topupLoading}
-              className="w-full gradient-primary text-primary-foreground font-bold h-11"
-            >
-              {topupLoading ? "Ładowanie..." : "Doładuj 100 zł"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {topupOpen && (
+        <Suspense fallback={null}>
+          <NavbarTopupDialog
+            open={topupOpen}
+            onOpenChange={setTopupOpen}
+            userId={user?.id}
+            profile={profile}
+            refreshProfile={refreshProfile}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

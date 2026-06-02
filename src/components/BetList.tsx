@@ -19,7 +19,8 @@ export function BetList({
   categoryMap,
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>("newest");
-  const { loading, liveBets, sortedBets } = useBets(selectedCategory, sort);
+  const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
+    useBets(selectedCategory, sort);
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
@@ -155,6 +156,16 @@ export function BetList({
                   }
                 />
               ))
+            )}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
+              >
+                {loadingMore ? "Ładowanie..." : "Pokaż więcej"}
+              </button>
             )}
           </div>
         </div>

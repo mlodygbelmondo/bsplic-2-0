@@ -1,23 +1,18 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
-import { Navbar } from '@/components/Navbar';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Badge, BADGE_DEFINITIONS, CasinoHistoryEntry, CouponHistoryEntry, PublicProfile } from '@/types/database';
-import { cn } from '@/lib/utils';
-import { Navigate, useParams } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { toast } from 'sonner';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { deriveCouponStatus, getDisplayedCouponOdds, getDisplayedCouponWin } from '@/features/coupons/display';
-import { PlayerCardHero } from '@/features/player-card/components/PlayerCardHero';
-import { derivePlayerCardDisplayModel } from '@/features/player-card/displayModel';
-import { compressImageFile } from '@/features/social/images';
-
-const HISTORY_PREVIEW_SIZE = 10;
-const HISTORY_PREVIEW_FETCH_LIMIT = HISTORY_PREVIEW_SIZE + 1;
-const HISTORY_BATCH_SIZE = 30;
-const HISTORY_BATCH_FETCH_LIMIT = HISTORY_BATCH_SIZE + 1;
+import { useEffect, useState, type ChangeEvent } from "react";
+import { Navbar } from "@/components/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge, PublicProfile } from "@/types/database";
+import { Navigate, useParams } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { PlayerCardHero } from "@/features/player-card/components/PlayerCardHero";
+import { derivePlayerCardDisplayModel } from "@/features/player-card/displayModel";
+import { compressImageFile } from "@/features/social/images";
+import { ProfileBadgesSection } from "@/features/profile/components/ProfileBadgesSection";
+import { ProfileHistoryPanel } from "@/features/profile/components/ProfileHistoryPanel";
+import { useProfileHistory } from "@/features/profile/hooks/useProfileHistory";
 
 interface UserStatsRow {
   total_bets: number;
@@ -37,14 +32,6 @@ function toRankingStats(stats: UserStatsRow) {
   };
 }
 
-function formatBadgeDate(value: string) {
-  return new Intl.DateTimeFormat('pl-PL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value));
-}
-
 function getShareableProfileUrl() {
   return new URL(window.location.pathname, window.location.origin).toString();
 }
@@ -54,8 +41,12 @@ export default function ProfilePage() {
   const { userId: userRef } = useParams<{ userId: string }>();
   const normalizedUserRef = userRef ? decodeURIComponent(userRef) : undefined;
 
-  const [resolvedTargetUserId, setResolvedTargetUserId] = useState<string | null>(null);
-  const [resolvingTarget, setResolvingTarget] = useState(Boolean(normalizedUserRef));
+  const [resolvedTargetUserId, setResolvedTargetUserId] = useState<
+    string | null
+  >(null);
+  const [resolvingTarget, setResolvingTarget] = useState(
+    Boolean(normalizedUserRef),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +68,10 @@ export default function ProfilePage() {
         return;
       }
 
-      const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalizedUserRef);
+      const looksLikeUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          normalizedUserRef,
+        );
       if (looksLikeUuid) {
         if (!cancelled) {
           setResolvedTargetUserId(normalizedUserRef);
@@ -91,9 +85,9 @@ export default function ProfilePage() {
       }
 
       const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('username', normalizedUserRef)
+        .from("profiles")
+        .select("id")
+        .ilike("username", normalizedUserRef)
         .limit(1)
         .maybeSingle();
 
@@ -111,12 +105,13 @@ export default function ProfilePage() {
   }, [normalizedUserRef, user?.id]);
 
   const targetUserId = resolvedTargetUserId;
-  const isOwnProfile = !normalizedUserRef || (targetUserId !== null && targetUserId === user?.id);
+  const isOwnProfile =
+    !normalizedUserRef || (targetUserId !== null && targetUserId === user?.id);
 
-  const [coupons, setCoupons] = useState<CouponHistoryEntry[]>([]);
-  const [casinoHistory, setCasinoHistory] = useState<CasinoHistoryEntry[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
-  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(
+    null,
+  );
   const [rankingStats, setRankingStats] = useState<{
     totalBets: number;
     wins: number;
@@ -124,184 +119,28 @@ export default function ProfilePage() {
     winRate: number;
     totalProfit: number;
   } | null>(null);
-  const [filter, setFilter] = useState<'all' | 'won' | 'lost' | 'pending' | 'refund'>('all');
-  const [historyType, setHistoryType] = useState<'sportsbook' | 'casino'>('sportsbook');
-  const [loadingCoupons, setLoadingCoupons] = useState(true);
-  const [loadingCasinoHistory, setLoadingCasinoHistory] = useState(true);
-  const [loadingMoreCoupons, setLoadingMoreCoupons] = useState(false);
-  const [loadingMoreCasinoHistory, setLoadingMoreCasinoHistory] = useState(false);
-  const [sportsbookHistoryExpanded, setSportsbookHistoryExpanded] = useState(false);
-  const [casinoHistoryExpanded, setCasinoHistoryExpanded] = useState(false);
-  const [hasMoreCoupons, setHasMoreCoupons] = useState(false);
-  const [hasMoreCasinoHistory, setHasMoreCasinoHistory] = useState(false);
-  const [sportsbookHistoryError, setSportsbookHistoryError] = useState<string | null>(null);
-  const [casinoHistoryError, setCasinoHistoryError] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(new Set());
   const [avatarUploadLoading, setAvatarUploadLoading] = useState(false);
-  const [avatarOverrideUrl, setAvatarOverrideUrl] = useState<string | null>(null);
-
-  const toggleCoupon = (couponId: string) => {
-    setExpandedCoupons((prev) => {
-      const next = new Set(prev);
-      if (next.has(couponId)) next.delete(couponId);
-      else next.add(couponId);
-      return next;
-    });
-  };
-
-  const loadMoreSportsbookHistory = async () => {
-    if (!targetUserId) return;
-    setLoadingMoreCoupons(true);
-
-    try {
-      const { data, error } = await supabase.rpc('get_user_coupon_history', {
-        p_user_id: targetUserId,
-        p_limit: HISTORY_BATCH_FETCH_LIMIT,
-        p_offset: coupons.length,
-      });
-      if (error) throw error;
-      const entries = (data as unknown as CouponHistoryEntry[] | null) ?? [];
-      setCoupons((prev) => [...prev, ...entries.slice(0, HISTORY_BATCH_SIZE)]);
-      setHasMoreCoupons(entries.length > HISTORY_BATCH_SIZE);
-      setSportsbookHistoryExpanded(true);
-    } catch (error) {
-      console.error('Failed to load more sportsbook history', error);
-      toast.error('Nie udało się załadować kolejnych zakładów');
-    } finally {
-      setLoadingMoreCoupons(false);
-    }
-  };
-
-  const collapseSportsbookHistory = () => {
-    setSportsbookHistoryExpanded(false);
-  };
-
-  const showMoreSportsbookHistory = () => {
-    if (!sportsbookHistoryExpanded && coupons.length > HISTORY_PREVIEW_SIZE) {
-      setSportsbookHistoryExpanded(true);
-      return;
-    }
-
-    void loadMoreSportsbookHistory();
-  };
-
-  const loadMoreCasinoHistory = async () => {
-    if (!targetUserId) return;
-    setLoadingMoreCasinoHistory(true);
-
-    try {
-      const { data, error } = await supabase.rpc('get_user_casino_history', {
-        p_user_id: targetUserId,
-        p_limit: HISTORY_BATCH_FETCH_LIMIT,
-        p_offset: casinoHistory.length,
-      });
-      if (error) throw error;
-      const entries = ((data as unknown as CasinoHistoryEntry[] | null) ?? []).map((entry) => ({
-        ...entry,
-        stake: Number(entry.stake),
-        payout: Number(entry.payout),
-      }));
-      setCasinoHistory((prev) => [...prev, ...entries.slice(0, HISTORY_BATCH_SIZE)]);
-      setHasMoreCasinoHistory(entries.length > HISTORY_BATCH_SIZE);
-      setCasinoHistoryExpanded(true);
-    } catch (error) {
-      console.error('Failed to load more casino history', error);
-      toast.error('Nie udało się załadować kolejnych wpisów kasyna');
-    } finally {
-      setLoadingMoreCasinoHistory(false);
-    }
-  };
-
-  const collapseCasinoHistory = () => {
-    setCasinoHistoryExpanded(false);
-  };
-
-  const showMoreCasinoHistory = () => {
-    if (!casinoHistoryExpanded && casinoHistory.length > HISTORY_PREVIEW_SIZE) {
-      setCasinoHistoryExpanded(true);
-      return;
-    }
-
-    void loadMoreCasinoHistory();
-  };
+  const [avatarOverrideUrl, setAvatarOverrideUrl] = useState<string | null>(
+    null,
+  );
+  const history = useProfileHistory(targetUserId);
 
   useEffect(() => {
     if (!targetUserId) return;
     let cancelled = false;
 
-    setLoadingCoupons(true);
-    setLoadingCasinoHistory(true);
-    setCoupons([]);
-    setCasinoHistory([]);
     setBadges([]);
-    setSportsbookHistoryExpanded(false);
-    setCasinoHistoryExpanded(false);
-    setSportsbookHistoryError(null);
-    setCasinoHistoryError(null);
-
-    // Fetch history previews via RPC
-    const loadSportsbookHistoryPreview = async () => {
-      try {
-        const { data, error } = await supabase.rpc('get_user_coupon_history', {
-          p_user_id: targetUserId,
-          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
-          p_offset: 0,
-        });
-        if (error) throw error;
-        const entries = (data as unknown as CouponHistoryEntry[] | null) ?? [];
-        if (cancelled) return;
-        setCoupons(entries.slice(0, HISTORY_PREVIEW_SIZE));
-        setHasMoreCoupons(entries.length > HISTORY_PREVIEW_SIZE);
-      } catch (error) {
-        console.error('Failed to load sportsbook history', error);
-        if (cancelled) return;
-        setHasMoreCoupons(false);
-        setSportsbookHistoryError('Nie udało się załadować historii zakładów');
-      } finally {
-        if (!cancelled) {
-          setLoadingCoupons(false);
-        }
-      }
-    };
-
-    const loadCasinoHistoryPreview = async () => {
-      try {
-        const { data, error } = await supabase.rpc('get_user_casino_history', {
-          p_user_id: targetUserId,
-          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
-          p_offset: 0,
-        });
-        if (error) throw error;
-        const entries = ((data as unknown as CasinoHistoryEntry[] | null) ?? []).map((entry) => ({
-          ...entry,
-          stake: Number(entry.stake),
-          payout: Number(entry.payout),
-        }));
-        if (cancelled) return;
-        setCasinoHistory(entries.slice(0, HISTORY_PREVIEW_SIZE));
-        setHasMoreCasinoHistory(entries.length > HISTORY_PREVIEW_SIZE);
-      } catch (error) {
-        console.error('Failed to load casino history', error);
-        if (cancelled) return;
-        setHasMoreCasinoHistory(false);
-        setCasinoHistoryError('Nie udało się załadować historii kasyna');
-      } finally {
-        if (!cancelled) {
-          setLoadingCasinoHistory(false);
-        }
-      }
-    };
-
-    void loadSportsbookHistoryPreview();
-    void loadCasinoHistoryPreview();
+    setPublicProfile(null);
+    setRankingStats(null);
+    setLoadingProfile(false);
 
     supabase
-      .rpc('get_public_badges', { p_user_id: targetUserId })
+      .rpc("get_public_badges", { p_user_id: targetUserId })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
-          console.error('Failed to load profile badges', error);
+          console.error("Failed to load profile badges", error);
           setBadges([]);
           return;
         }
@@ -311,7 +150,7 @@ export default function ProfilePage() {
     if (isOwnProfile) {
       // Fetch only this user's stats instead of recomputing the full leaderboard.
       supabase
-        .rpc('get_user_stats', { p_user_id: targetUserId })
+        .rpc("get_user_stats", { p_user_id: targetUserId })
         .then(({ data, error }) => {
           if (cancelled || error || !data?.[0]) return;
           setRankingStats(toRankingStats(data[0]));
@@ -320,8 +159,9 @@ export default function ProfilePage() {
       // Use get_public_profile RPC for other users
       setLoadingProfile(true);
       supabase
-        .rpc('get_public_profile', { p_user_id: targetUserId })
+        .rpc("get_public_profile", { p_user_id: targetUserId })
         .then(({ data }) => {
+          if (cancelled) return;
           if (data) {
             const pp = data as unknown as PublicProfile;
             setPublicProfile(pp);
@@ -346,13 +186,17 @@ export default function ProfilePage() {
   if (resolvingTarget) return null;
   if (isOwnProfile && (!user || !profile)) return <Navigate to="/" />;
 
-  const displayName = isOwnProfile ? profile!.username : publicProfile?.username ?? '...';
+  const displayName = isOwnProfile
+    ? profile!.username
+    : (publicProfile?.username ?? "...");
   const displayDate = isOwnProfile
-    ? new Date(profile!.created_at).toLocaleDateString('pl-PL')
+    ? new Date(profile!.created_at).toLocaleDateString("pl-PL")
     : publicProfile
-      ? new Date(publicProfile.created_at).toLocaleDateString('pl-PL')
-      : '';
-  const displayStreak = isOwnProfile ? profile!.current_streak : publicProfile?.current_streak ?? 0;
+      ? new Date(publicProfile.created_at).toLocaleDateString("pl-PL")
+      : "";
+  const displayStreak = isOwnProfile
+    ? profile!.current_streak
+    : (publicProfile?.current_streak ?? 0);
   const playerCardModel = derivePlayerCardDisplayModel({
     totalBets: rankingStats?.totalBets ?? 0,
     wins: rankingStats?.wins ?? 0,
@@ -361,21 +205,11 @@ export default function ProfilePage() {
     currentStreak: displayStreak,
   });
   const shareableProfileUrl = getShareableProfileUrl();
-
-  const visibleCoupons = sportsbookHistoryExpanded ? coupons : coupons.slice(0, HISTORY_PREVIEW_SIZE);
-  const visibleCasinoHistory = casinoHistoryExpanded ? casinoHistory : casinoHistory.slice(0, HISTORY_PREVIEW_SIZE);
-
-  const couponsWithDerivedStatus = visibleCoupons.map((coupon) => ({
-    ...coupon,
-    status: deriveCouponStatus({
-      status: coupon.status,
-      legs: (coupon.legs ?? []).map((leg) => ({ result: leg.result })),
-    }),
-  }));
-
-  const filtered = couponsWithDerivedStatus.filter((c) => filter === 'all' || c.status === filter);
-  const isAko = (c: CouponHistoryEntry) => c.legs !== null && c.legs.length > 1;
-  const displayAvatarUrl = avatarOverrideUrl ?? (isOwnProfile ? profile?.avatar_url ?? null : publicProfile?.avatar_url ?? null);
+  const displayAvatarUrl =
+    avatarOverrideUrl ??
+    (isOwnProfile
+      ? (profile?.avatar_url ?? null)
+      : (publicProfile?.avatar_url ?? null));
 
   const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!isOwnProfile || !user || !profile) return;
@@ -383,9 +217,9 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Wybierz plik obrazu');
-      event.target.value = '';
+    if (!file.type.startsWith("image/")) {
+      toast.error("Wybierz plik obrazu");
+      event.target.value = "";
       return;
     }
 
@@ -401,10 +235,10 @@ export default function ProfilePage() {
       const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
       const { error: uploadError } = await supabase.storage
-        .from('profile-avatars')
+        .from("profile-avatars")
         .upload(path, compressed.blob, {
-          contentType: 'image/jpeg',
-          cacheControl: '31536000',
+          contentType: "image/jpeg",
+          cacheControl: "31536000",
           upsert: false,
         });
 
@@ -413,15 +247,15 @@ export default function ProfilePage() {
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from('profile-avatars')
+        .from("profile-avatars")
         .getPublicUrl(path);
 
       const avatarUrl = publicUrlData.publicUrl;
 
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({ avatar_url: avatarUrl })
-        .eq('id', user.id);
+        .eq("id", user.id);
 
       if (profileError) {
         throw new Error(profileError.message);
@@ -429,13 +263,16 @@ export default function ProfilePage() {
 
       setAvatarOverrideUrl(avatarUrl);
       await refreshProfile();
-      toast.success('Zdjęcie profilowe zaktualizowane');
+      toast.success("Zdjęcie profilowe zaktualizowane");
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Nie udało się zaktualizować zdjęcia profilowego';
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Nie udało się zaktualizować zdjęcia profilowego";
       toast.error(message);
     } finally {
       setAvatarUploadLoading(false);
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -457,392 +294,73 @@ export default function ProfilePage() {
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
       <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        {/* Header card */}
-        <div className="bg-card rounded-xl p-6 card-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-14 w-14 border border-border">
-                <AvatarImage src={displayAvatarUrl ?? undefined} alt={`Avatar ${displayName}`} />
-                <AvatarFallback className="text-base font-bold">
-                  {displayName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-2xl font-bold">{displayName}</h1>
-                <p className="text-sm text-muted-foreground">
-                  Dołączył: {displayDate}
-                  {!isOwnProfile && <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">Profil publiczny</span>}
-                </p>
+        <div className="max-w-4xl mx-auto p-4 space-y-4">
+          {/* Header card */}
+          <div className="bg-card rounded-xl p-6 card-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-14 w-14 border border-border">
+                  <AvatarImage
+                    src={displayAvatarUrl ?? undefined}
+                    alt={`Avatar ${displayName}`}
+                  />
+                  <AvatarFallback className="text-base font-bold">
+                    {displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-2xl font-bold">{displayName}</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Dołączył: {displayDate}
+                    {!isOwnProfile && (
+                      <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded-full">
+                        Profil publiczny
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
+              {isOwnProfile && (
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Saldo</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {Number(profile!.balance).toFixed(2)} zł
+                  </p>
+                </div>
+              )}
             </div>
+
             {isOwnProfile && (
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Saldo</p>
-                <p className="text-2xl font-bold text-primary">{Number(profile!.balance).toFixed(2)} zł</p>
+              <div className="mt-3">
+                <label
+                  htmlFor="profile-avatar-input"
+                  className="inline-flex cursor-pointer items-center rounded-md bg-muted px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/80"
+                >
+                  {avatarUploadLoading
+                    ? "Przesyłanie..."
+                    : "Wybierz zdjęcie profilowe"}
+                </label>
+                <input
+                  id="profile-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={handleAvatarChange}
+                  disabled={avatarUploadLoading}
+                />
               </div>
             )}
           </div>
 
-          {isOwnProfile && (
-            <div className="mt-3">
-              <label
-                htmlFor="profile-avatar-input"
-                className="inline-flex cursor-pointer items-center rounded-md bg-muted px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/80"
-              >
-                {avatarUploadLoading ? 'Przesyłanie...' : 'Wybierz zdjęcie profilowe'}
-              </label>
-              <input
-                id="profile-avatar-input"
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleAvatarChange}
-                disabled={avatarUploadLoading}
-              />
-            </div>
-          )}
+          <PlayerCardHero
+            model={playerCardModel}
+            profileName={displayName}
+            profileUrl={shareableProfileUrl}
+          />
+          <ProfileHistoryPanel history={history} />
+
+          {targetUserId && <ProfileBadgesSection badges={badges} />}
         </div>
-
-        <PlayerCardHero
-          model={playerCardModel}
-          profileName={displayName}
-          profileUrl={shareableProfileUrl}
-        />
-
-        {/* History */}
-        <div className="bg-card rounded-xl p-4 card-shadow">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="font-bold">Historia</h2>
-            <div className="inline-flex w-max items-center rounded-lg border border-border bg-muted/40 p-1">
-              {([
-                ['sportsbook', 'Zakłady'],
-                ['casino', 'Kasyno'],
-              ] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setHistoryType(value)}
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-                    historyType === value
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-background hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {historyType === 'sportsbook' && (
-          <>
-            <div className="-mx-1 mb-3 px-1 overflow-x-auto scrollbar-hide touch-pan-x">
-            <div className="flex w-max min-w-full gap-2 pb-1 pr-1">
-              {(['all', 'won', 'lost', 'pending', 'refund'] as const).map((value) => (
-                <button
-                  key={value}
-                  onClick={() => setFilter(value)}
-                  className={cn(
-                    'shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all',
-                    filter === value ? 'gradient-primary text-primary-foreground shadow-sm' : 'bg-muted'
-                  )}
-                >
-                  {{ all: 'Wszystkie', won: 'Wygrane', lost: 'Przegrane', pending: 'W toku', refund: 'Zwroty' }[value]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {loadingCoupons ? (
-            <div className="space-y-2">
-              {[...Array(3)].map((_, index) => (
-                <Skeleton key={index} className="h-14 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sportsbookHistoryError ? (
-                <p className="text-sm text-destructive text-center py-4">{sportsbookHistoryError}</p>
-              ) : filtered.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Brak zakładów</p>
-              ) : (
-                filtered.map((coupon) => {
-                  const ako = isAko(coupon);
-                  const expanded = expandedCoupons.has(coupon.id);
-                  const displayedOdds = getDisplayedCouponOdds({
-                    totalOdds: Number(coupon.total_odds),
-                    legs: (coupon.legs ?? []).map((leg) => ({
-                      oddsAtTime: Number(leg.odds_at_time),
-                      result: leg.result,
-                    })),
-                  });
-                  const displayedWin = getDisplayedCouponWin({
-                    status: coupon.status,
-                    isAko: ako,
-                    stake: Number(coupon.stake),
-                    displayedOdds,
-                    couponPayout: Number(coupon.payout),
-                    legs: (coupon.legs ?? []).map((leg) => ({ legPayout: Number(leg.leg_payout ?? 0) })),
-                  });
-
-                  return (
-                    <div key={coupon.id} className="bg-muted rounded-lg card-shadow overflow-hidden">
-                      {/* Coupon header */}
-                      <button
-                        type="button"
-                        className="flex items-center justify-between p-3 w-full text-sm text-left"
-                        onClick={() => ako && toggleCoupon(coupon.id)}
-                      >
-                        <div className="min-w-0 flex-1">
-                          {ako ? (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary">
-                                AKO {coupon.legs!.length}
-                              </span>
-                              <span className="font-medium text-xs text-muted-foreground">
-                                kurs {displayedOdds.toFixed(2)}
-                              </span>
-                              {ako && (
-                                expanded
-                                  ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-                                  : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                              )}
-                            </div>
-                          ) : (
-                            <>
-                              <p className="font-medium truncate">{coupon.legs?.[0]?.bet_title || 'Zakład'}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {coupon.legs?.[0]?.selected_option} • kurs {displayedOdds.toFixed(2)}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                        <div className="text-right ml-3 shrink-0">
-                          <p className="font-bold">{Number(coupon.stake).toFixed(2)} zł</p>
-                          <p
-                            className={cn(
-                              'text-xs font-medium',
-                              coupon.status === 'won'
-                                ? 'text-success'
-                                : coupon.status === 'lost'
-                                  ? 'text-destructive'
-                                  : coupon.status === 'refund'
-                                    ? 'text-primary'
-                                  : 'text-muted-foreground'
-                            )}
-                          >
-                            {coupon.status === 'won'
-                              ? `+${displayedWin.toFixed(2)} zł`
-                              : coupon.status === 'lost'
-                                ? 'Przegrana'
-                                : coupon.status === 'refund'
-                                  ? `Zwrot ${displayedWin.toFixed(2)} zł`
-                                : 'W toku'}
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* AKO legs (expandable) */}
-                      {ako && expanded && (
-                        <div className="border-t border-border px-3 pb-3 pt-2 space-y-1.5">
-                          {coupon.legs!.map((leg) => (
-                            <div key={leg.id} className="flex items-center justify-between text-xs">
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium">{leg.bet_title || 'Zakład'}</p>
-                                <p className="text-muted-foreground">
-                                  {leg.selected_option} • kurs {Number(leg.odds_at_time).toFixed(2)}
-                                </p>
-                              </div>
-                              <span
-                                className={cn(
-                                  'ml-2 shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded',
-                                  leg.result === 'won'
-                                    ? 'bg-success/10 text-success'
-                                    : leg.result === 'lost'
-                                      ? 'bg-destructive/10 text-destructive'
-                                      : leg.result === 'refund'
-                                        ? 'bg-primary/10 text-primary'
-                                      : 'bg-muted-foreground/10 text-muted-foreground'
-                                )}
-                              >
-                                {leg.result === 'won' ? 'Wygrana' : leg.result === 'lost' ? 'Przegrana' : leg.result === 'refund' ? 'Zwrot' : 'W toku'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
-
-          {!loadingCoupons && !sportsbookHistoryError && coupons.length > 0 && (sportsbookHistoryExpanded || coupons.length > HISTORY_PREVIEW_SIZE || hasMoreCoupons) && (
-            <div className="mt-3 flex gap-2">
-              {sportsbookHistoryExpanded && (
-                <button
-                  type="button"
-                  onClick={collapseSportsbookHistory}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-                >
-                  Pokaż mniej
-                </button>
-              )}
-              {(!sportsbookHistoryExpanded || hasMoreCoupons) && (
-                <button
-                  type="button"
-                  onClick={showMoreSportsbookHistory}
-                  disabled={loadingMoreCoupons}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
-                >
-                  {loadingMoreCoupons ? 'Ładowanie...' : 'Pokaż więcej'}
-                </button>
-              )}
-            </div>
-          )}
-          </>
-          )}
-
-          {historyType === 'casino' && (
-          <>
-          {loadingCasinoHistory ? (
-            <div className="space-y-2">
-              {[...Array(3)].map((_, index) => (
-                <Skeleton key={index} className="h-14 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {casinoHistoryError ? (
-                <p className="text-sm text-destructive text-center py-4">{casinoHistoryError}</p>
-              ) : casinoHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Brak betów z kasyna</p>
-              ) : (
-                visibleCasinoHistory.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm card-shadow">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium truncate">{entry.game_type}</p>
-                        {entry.round_label && (
-                          <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                            {entry.round_label}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{entry.bet_label}</p>
-                    </div>
-                    <div className="ml-3 shrink-0 text-right">
-                      <p className="font-bold">{entry.stake.toFixed(2)} zł</p>
-                      <p
-                        className={cn(
-                          'text-xs font-medium',
-                          entry.status === 'won'
-                            ? 'text-success'
-                            : entry.status === 'lost'
-                              ? 'text-destructive'
-                              : entry.status === 'push'
-                                ? 'text-primary'
-                              : 'text-muted-foreground'
-                        )}
-                      >
-                        {entry.status === 'won'
-                          ? `+${entry.payout.toFixed(2)} zł`
-                          : entry.status === 'lost'
-                            ? 'Przegrana'
-                            : entry.status === 'push'
-                              ? `Zwrot ${entry.payout.toFixed(2)} zł`
-                            : 'W toku'}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {!loadingCasinoHistory && !casinoHistoryError && casinoHistory.length > 0 && (casinoHistoryExpanded || casinoHistory.length > HISTORY_PREVIEW_SIZE || hasMoreCasinoHistory) && (
-            <div className="mt-3 flex gap-2">
-              {casinoHistoryExpanded && (
-                <button
-                  type="button"
-                  onClick={collapseCasinoHistory}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-                >
-                  Pokaż mniej
-                </button>
-              )}
-              {(!casinoHistoryExpanded || hasMoreCasinoHistory) && (
-                <button
-                  type="button"
-                  onClick={showMoreCasinoHistory}
-                  disabled={loadingMoreCasinoHistory}
-                  className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
-                >
-                  {loadingMoreCasinoHistory ? 'Ładowanie...' : 'Pokaż więcej'}
-                </button>
-              )}
-            </div>
-          )}
-          </>
-          )}
-        </div>
-
-        {/* Badges */}
-        {targetUserId && (
-          <section aria-label="Odznaki" className="bg-card rounded-xl p-4 card-shadow">
-            <h2 className="font-bold mb-3">Odznaki</h2>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(BADGE_DEFINITIONS).map(([key, definition]) => {
-                const unlockedBadge = badges.find((badge) => badge.badge_key === key);
-                return (
-                  <li
-                    key={key}
-                    aria-label={definition.name}
-                    className={cn(
-                      'rounded-xl border p-3 card-shadow transition-all',
-                      unlockedBadge ? 'border-primary/20 bg-muted' : 'border-border bg-background/60'
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          'flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border',
-                          unlockedBadge ? 'border-primary/20 bg-background' : 'border-border bg-muted/40'
-                        )}
-                      >
-                        <img
-                          src={definition.imageSrc}
-                          alt={`Odznaka ${definition.name}`}
-                          loading="lazy"
-                          decoding="async"
-                          className={cn('h-14 w-14 object-contain', !unlockedBadge && 'grayscale opacity-60')}
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold leading-tight">{definition.name}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{definition.description}</p>
-                        <p
-                          className={cn(
-                            'mt-2 text-xs font-medium',
-                            unlockedBadge ? 'text-primary' : 'text-muted-foreground'
-                          )}
-                        >
-                          {unlockedBadge
-                            ? `Odblokowano: ${formatBadgeDate(unlockedBadge.unlocked_at)}`
-                            : 'Nieodblokowana'}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-      </div>
       </div>
     </div>
   );

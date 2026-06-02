@@ -26,7 +26,10 @@ interface ValidateRouletteBetInputArgs {
   balance: number;
 }
 
-const ROULETTE_BET_OPTIONS: Record<Exclude<RouletteBetType, 'straight'>, RouletteBetValueOption[]> = {
+const ROULETTE_BET_OPTIONS: Record<
+  Exclude<RouletteBetType, 'straight'>,
+  RouletteBetValueOption[]
+> = {
   color: [
     { value: 'red', label: 'Czerwone' },
     { value: 'black', label: 'Czarne' },
@@ -43,6 +46,9 @@ const ROULETTE_BET_OPTIONS: Record<Exclude<RouletteBetType, 'straight'>, Roulett
 
 export const ROULETTE_BETTING_WINDOW_MS = 15_000;
 export const ROULETTE_SPIN_REVEAL_MS = 6_000;
+export const ROULETTE_SYNC_FALLBACK_MS = 5_000;
+export const ROULETTE_SYNC_SETTLED_MS = 1_500;
+export const ROULETTE_SYNC_TARGET_BUFFER_MS = 250;
 
 export function getRouletteColor(number: number): RouletteColor {
   if (number === 0) return 'green';
@@ -88,9 +94,11 @@ export function formatRouletteBetValue(
     return betValue;
   }
 
-  return getRouletteBetValueOptions(betType).find(
-    (option) => option.value === betValue,
-  )?.label ?? betValue;
+  return (
+    getRouletteBetValueOptions(betType).find(
+      (option) => option.value === betValue,
+    )?.label ?? betValue
+  );
 }
 
 export function getRouletteColorLabel(color: RouletteColor): string {
@@ -127,6 +135,29 @@ export function getRouletteCountdownTargetMs(
   }
 
   return null;
+}
+
+export function getRouletteNextSyncDelayMs(
+  round: RouletteCountdownRound | null,
+  nowMs = Date.now(),
+): number {
+  if (!round) {
+    return ROULETTE_SYNC_FALLBACK_MS;
+  }
+
+  const targetMs = getRouletteCountdownTargetMs(round);
+  if (targetMs) {
+    return Math.max(
+      ROULETTE_SYNC_TARGET_BUFFER_MS,
+      targetMs - nowMs + ROULETTE_SYNC_TARGET_BUFFER_MS,
+    );
+  }
+
+  if (round.phase === 'settled') {
+    return ROULETTE_SYNC_SETTLED_MS;
+  }
+
+  return ROULETTE_SYNC_FALLBACK_MS;
 }
 
 export function formatRouletteCountdown(msRemaining: number): string {
@@ -186,7 +217,9 @@ function isValidRouletteBetValue(
     }
 
     const parsedNumber = Number(betValue);
-    return Number.isInteger(parsedNumber) && parsedNumber >= 0 && parsedNumber <= 36;
+    return (
+      Number.isInteger(parsedNumber) && parsedNumber >= 0 && parsedNumber <= 36
+    );
   }
 
   return getRouletteBetValueOptions(betType).some(

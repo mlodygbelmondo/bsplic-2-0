@@ -12,6 +12,7 @@ import {
 } from '@/features/casino/api/roulette';
 import {
   formatRouletteCountdown,
+  getRouletteNextSyncDelayMs,
   getRouletteCountdownTargetMs,
 } from '@/features/casino/lib/roulette';
 import type {
@@ -34,12 +35,19 @@ interface PlaceBetInput {
   stake: number;
 }
 
-export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArgs) {
-  const [currentRound, setCurrentRound] = useState<RouletteTableRound | null>(null);
+export function useRouletteTable({
+  userId,
+  refreshProfile,
+}: UseRouletteTableArgs) {
+  const [currentRound, setCurrentRound] = useState<RouletteTableRound | null>(
+    null,
+  );
   const [recentSpins, setRecentSpins] = useState<RouletteTableRound[]>([]);
   const [recentWins, setRecentWins] = useState<RouletteRecentWin[]>([]);
   const [activeBets, setActiveBets] = useState<RouletteBetRecord[]>([]);
-  const [roundParticipants, setRoundParticipants] = useState<RouletteRoundParticipant[]>([]);
+  const [roundParticipants, setRoundParticipants] = useState<
+    RouletteRoundParticipant[]
+  >([]);
   const [countdownMs, setCountdownMs] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -54,65 +62,71 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
     refreshProfileRef.current = refreshProfile;
   }, [refreshProfile]);
 
-  const syncSnapshot = useCallback((withSpinner = false) => {
-    if (syncSnapshotPromiseRef.current) {
-      return syncSnapshotPromiseRef.current;
-    }
+  const syncSnapshot = useCallback(
+    (withSpinner = false) => {
+      if (syncSnapshotPromiseRef.current) {
+        return syncSnapshotPromiseRef.current;
+      }
 
-    if (withSpinner) {
-      setIsRefreshing(true);
-    }
+      if (withSpinner) {
+        setIsRefreshing(true);
+      }
 
-    const snapshotPromise = (async () => {
-      await advanceRouletteRoundIfDue();
+      const snapshotPromise = (async () => {
+        await advanceRouletteRoundIfDue();
 
-      const [round, spins, wins] = await Promise.all([
-        getCurrentRouletteRound(),
-        getRecentRouletteSpins(),
-        getRecentRouletteWins(),
-      ]);
-
-      setCurrentRound(round);
-      setRecentSpins(spins);
-      setRecentWins(wins);
-
-      if (round) {
-        const [bets, participants] = await Promise.all([
-          getMyCurrentRouletteBets(round.id),
-          getRouletteRoundParticipants(round.id),
+        const [round, spins, wins] = await Promise.all([
+          getCurrentRouletteRound(),
+          getRecentRouletteSpins(),
+          getRecentRouletteWins(),
         ]);
-        setActiveBets(bets);
-        setRoundParticipants(participants);
-      } else {
-        setActiveBets([]);
-        setRoundParticipants([]);
-      }
 
-      const newestUserSettledWin = wins.find((win) => win.user_id === userId) ?? null;
-      if (
-        newestUserSettledWin?.round_id
-        && newestUserSettledWin.round_id !== lastSettledRoundIdRef.current
-      ) {
-        lastSettledRoundIdRef.current = newestUserSettledWin.round_id;
-        await refreshProfileRef.current();
-      }
+        setCurrentRound(round);
+        setRecentSpins(spins);
+        setRecentWins(wins);
 
-      setTableMessage(null);
-    })().catch((error) => {
-      setTableMessage(
-        error instanceof Error
-          ? error.message
-          : 'Nie udało się zsynchronizować stołu ruletki.',
-      );
-    }).finally(() => {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      syncSnapshotPromiseRef.current = null;
-    });
+        if (round) {
+          const [bets, participants] = await Promise.all([
+            getMyCurrentRouletteBets(round.id),
+            getRouletteRoundParticipants(round.id),
+          ]);
+          setActiveBets(bets);
+          setRoundParticipants(participants);
+        } else {
+          setActiveBets([]);
+          setRoundParticipants([]);
+        }
 
-    syncSnapshotPromiseRef.current = snapshotPromise;
-    return snapshotPromise;
-  }, [userId]);
+        const newestUserSettledWin =
+          wins.find((win) => win.user_id === userId) ?? null;
+        if (
+          newestUserSettledWin?.round_id &&
+          newestUserSettledWin.round_id !== lastSettledRoundIdRef.current
+        ) {
+          lastSettledRoundIdRef.current = newestUserSettledWin.round_id;
+          await refreshProfileRef.current();
+        }
+
+        setTableMessage(null);
+      })()
+        .catch((error) => {
+          setTableMessage(
+            error instanceof Error
+              ? error.message
+              : 'Nie udało się zsynchronizować stołu ruletki.',
+          );
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setIsRefreshing(false);
+          syncSnapshotPromiseRef.current = null;
+        });
+
+      syncSnapshotPromiseRef.current = snapshotPromise;
+      return snapshotPromise;
+    },
+    [userId],
+  );
 
   useEffect(() => {
     void syncSnapshot(true);
@@ -121,15 +135,20 @@ export function useRouletteTable({ userId, refreshProfile }: UseRouletteTableArg
       void syncSnapshot();
     });
 
-    const advanceInterval = window.setInterval(() => {
-      void syncSnapshot();
-    }, 3000);
-
     return () => {
       unsubscribe();
-      window.clearInterval(advanceInterval);
     };
   }, [syncSnapshot]);
+
+  useEffect(() => {
+    const nextSyncTimer = window.setTimeout(() => {
+      void syncSnapshot();
+    }, getRouletteNextSyncDelayMs(currentRound));
+
+    return () => {
+      window.clearTimeout(nextSyncTimer);
+    };
+  }, [currentRound, syncSnapshot]);
 
   useEffect(() => {
     const updateCountdown = () => {

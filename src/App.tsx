@@ -1,8 +1,8 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { LoginPage } from "@/components/LoginPage";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CouponProvider } from "@/contexts/CouponContext";
 import Index from "./pages/Index";
@@ -58,41 +58,60 @@ function AuthenticatedBonusCampaignSurface() {
   );
 }
 
+function AuthenticatedRoute({ children }: { children: ReactNode }) {
+  const { user, profile, loading } = useAuth();
+
+  if (loading || (user && !profile)) {
+    return <AppLoadingFallback />;
+  }
+
+  if (!user || !profile) {
+    return <LoginPage />;
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner position="top-right" richColors />
-      <BrowserRouter>
-        <AuthProvider>
-          <AuthenticatedBonusCampaignSurface />
-          <CouponProvider>
-            <Suspense fallback={<AppLoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/profile/:userId" element={<ProfilePage />} />
-                <Route path="/rankings" element={<RankingsPage />} />
-                <Route path="/social" element={<SocialPage />} />
+    <Sonner position="top-right" richColors />
+    <BrowserRouter>
+      <AuthProvider>
+        <AuthenticatedBonusCampaignSurface />
+        <CouponProvider>
+          <Suspense fallback={<AppLoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/:userId" element={<ProfilePage />} />
+              <Route path="/rankings" element={<RankingsPage />} />
+              <Route path="/social" element={<SocialPage />} />
 
-                <Route path="/casino" element={<CasinoLayout />}>
-                  <Route index element={<CasinoHub />} />
-                  <Route path="roulette" element={<CasinoRoulettePage />} />
-                  <Route
-                    path="roulette/dev"
-                    element={<CasinoRouletteDevPage />}
-                  />
-                  <Route path="blackjack" element={<CasinoBlackjackPage />} />
-                </Route>
+              <Route
+                path="/casino"
+                element={
+                  <AuthenticatedRoute>
+                    <CasinoLayout />
+                  </AuthenticatedRoute>
+                }
+              >
+                <Route index element={<CasinoHub />} />
+                <Route path="roulette" element={<CasinoRoulettePage />} />
+                <Route
+                  path="roulette/dev"
+                  element={<CasinoRouletteDevPage />}
+                />
+                <Route path="blackjack" element={<CasinoBlackjackPage />} />
+              </Route>
 
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </CouponProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </CouponProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

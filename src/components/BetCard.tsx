@@ -28,16 +28,36 @@ function formatBetDate(endsAt: string) {
 
 export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   const { items, addItem, removeItem } = useCoupon();
-  const selectedInCoupon = items.find(i => i.bet.id === bet.id);
-  const endTimestamp = useMemo(() => new Date(bet.ends_at).getTime(), [bet.ends_at]);
+  const selectedInCoupon = items.find((i) => i.bet.id === bet.id);
+  const endTimestamp = useMemo(
+    () => new Date(bet.ends_at).getTime(),
+    [bet.ends_at],
+  );
   const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
   const isInProgress = isExpired && bet.winning_option === null;
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
-  const options = (bet.options as unknown as BetOption[]) || [];
+  const options = useMemo(
+    () => (bet.options as unknown as BetOption[]) || [],
+    [bet.options],
+  );
   const isBsplicboost = Boolean(bet.is_bsplicboost);
-  const useTwoColumnMultiLayout = bet.bet_type === 'multi' && (options.length === 4 || options.length === 5);
-  const useThreeColumnMultiLayout = bet.bet_type === 'multi' && options.length >= 6;
-  const shouldCenterLastMultiOption = useTwoColumnMultiLayout && options.length % 2 === 1;
+  const useTwoColumnMultiLayout =
+    bet.bet_type === 'multi' && (options.length === 4 || options.length === 5);
+  const useThreeColumnMultiLayout =
+    bet.bet_type === 'multi' && options.length >= 6;
+  const shouldCenterLastMultiOption =
+    useTwoColumnMultiLayout && options.length % 2 === 1;
+  const probabilityDenominator = useMemo(
+    () =>
+      options.reduce((sum, option) => {
+        if (!Number.isFinite(option.odds) || option.odds <= 0) {
+          return sum;
+        }
+
+        return sum + 1 / option.odds;
+      }, 0),
+    [options],
+  );
 
   const handleSelect = (option: BetOption) => {
     if (isExpired || !bet.is_active) return;
@@ -49,16 +69,28 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   };
 
   return (
-    <div className={cn(
-      'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
-      isBsplicboost && 'bsplicboost-card border border-red-300/40',
-      bet.is_live && 'ring-1 ring-primary/30'
-    )}>
+    <div
+      className={cn(
+        'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        isBsplicboost && 'bsplicboost-card border border-red-300/40',
+        bet.is_live && 'ring-1 ring-primary/30',
+      )}
+    >
       {/* Top bar */}
-      <div className={cn('flex items-center justify-between px-3 py-1.5 border-b border-border', isBsplicboost ? 'bsplicboost-topbar' : 'bg-muted/50')}>
+      <div
+        className={cn(
+          'flex items-center justify-between px-3 py-1.5 border-b border-border',
+          isBsplicboost ? 'bsplicboost-topbar' : 'bg-muted/50',
+        )}
+      >
         <div className="flex items-center gap-1.5">
           {category && (
-            <span className={cn('text-[11px] font-medium flex items-center gap-1', isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground')}>
+            <span
+              className={cn(
+                'text-[11px] font-medium flex items-center gap-1',
+                isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground',
+              )}
+            >
               <span>{category.emoji}</span> {category.name}
             </span>
           )}
@@ -74,22 +106,36 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
         </div>
-        <div className={cn('flex items-center gap-2 text-[10px]', isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground')}>
-          <span className="flex items-center gap-0.5"><Users className="h-3 w-3" /> {bet.bet_count}</span>
+        <div
+          className={cn(
+            'flex items-center gap-2 text-[10px]',
+            isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground',
+          )}
+        >
+          <span className="flex items-center gap-0.5">
+            <Users className="h-3 w-3" /> {bet.bet_count}
+          </span>
         </div>
       </div>
 
       {/* Match content */}
       <div className="px-3 py-2.5">
         <div className="mb-3 text-center">
-          <p className="font-bold text-base sm:text-lg text-foreground leading-tight">{bet.title}</p>
+          <p className="font-bold text-base sm:text-lg text-foreground leading-tight">
+            {bet.title}
+          </p>
           {isInProgress && (
             <div className="mt-1 flex items-center justify-center gap-1 text-red-500 text-sm font-medium">
               <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
               W trakcie
             </div>
           )}
-          <p className="text-[12px] text-muted-foreground font-medium mt-1" title={bet.ends_at}>{endsAtLabel}</p>
+          <p
+            className="text-[12px] text-muted-foreground font-medium mt-1"
+            title={bet.ends_at}
+          >
+            {endsAtLabel}
+          </p>
         </div>
 
         {/* Odds buttons */}
@@ -102,16 +148,17 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                 ? 'grid-cols-3'
                 : options.length === 1
                   ? 'grid-cols-1'
-                : options.length === 3
-                  ? 'grid-cols-3'
-                  : options.length === 2
-                    ? 'grid-cols-2'
-                    : 'grid-cols-2 sm:grid-cols-3'
+                  : options.length === 3
+                    ? 'grid-cols-3'
+                    : options.length === 2
+                      ? 'grid-cols-2'
+                      : 'grid-cols-2 sm:grid-cols-3',
           )}
         >
           {options.map((opt, index) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
-            const isCenteredLastMultiOption = shouldCenterLastMultiOption && index === options.length - 1;
+            const isCenteredLastMultiOption =
+              shouldCenterLastMultiOption && index === options.length - 1;
             return (
               <button
                 key={opt.name}
@@ -119,17 +166,23 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                 disabled={isExpired || !bet.is_active}
                 className={cn(
                   'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
-                  isCenteredLastMultiOption && 'col-span-2 justify-self-center w-[48%]',
+                  isCenteredLastMultiOption &&
+                    'col-span-2 justify-self-center w-[48%]',
                   isSelected
                     ? 'odds-selected odds-chip-selected shadow-md'
                     : 'odds-yellow hover:brightness-105',
-                  (isExpired || !bet.is_active) && 'opacity-40 cursor-not-allowed'
+                  (isExpired || !bet.is_active) &&
+                    'opacity-40 cursor-not-allowed',
                 )}
               >
                 <span
                   className={cn(
-                  'text-[12px] mb-0.5 truncate w-full text-center transition-colors duration-200',
-                    isSelected ? 'text-[#f6bf2b]' : index % 2 === 0 ? 'text-zinc-900' : 'text-zinc-800'
+                    'text-[12px] mb-0.5 truncate w-full text-center transition-colors duration-200',
+                    isSelected
+                      ? 'text-[#f6bf2b]'
+                      : index % 2 === 0
+                        ? 'text-zinc-900'
+                        : 'text-zinc-800',
                   )}
                 >
                   {opt.name}
@@ -137,7 +190,11 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                 <span
                   className={cn(
                     'text-[15px] font-bold transition-colors duration-200',
-                    isSelected ? 'text-[#f6bf2b]' : index % 2 === 0 ? 'text-zinc-950' : 'text-zinc-900'
+                    isSelected
+                      ? 'text-[#f6bf2b]'
+                      : index % 2 === 0
+                        ? 'text-zinc-950'
+                        : 'text-zinc-900',
                   )}
                 >
                   {opt.odds.toFixed(2)}
@@ -150,9 +207,17 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
         {/* Probability bar */}
         <div className="flex mt-2 h-[3px] rounded-full overflow-hidden gap-0.5">
           {options.map((opt, i) => {
-            const totalOdds = options.reduce((sum, o) => sum + (1 / o.odds), 0);
-            const probability = (1 / opt.odds) / totalOdds;
-            const colors = ['bg-primary', 'bg-muted-foreground/30', 'bg-success'];
+            const probability =
+              probabilityDenominator > 0 &&
+              Number.isFinite(opt.odds) &&
+              opt.odds > 0
+                ? 1 / opt.odds / probabilityDenominator
+                : 0;
+            const colors = [
+              'bg-primary',
+              'bg-muted-foreground/30',
+              'bg-success',
+            ];
             return (
               <div
                 key={i}

@@ -44,11 +44,12 @@ vi.mock("@/features/social/polishDay", () => ({
 }));
 
 const notificationsBellMock = vi.fn(({ userId }: { userId?: string }) => (
-  <div data-testid="notifications-bell">notifications-{userId ?? 'none'}</div>
+  <div data-testid="notifications-bell">notifications-{userId ?? "none"}</div>
 ));
 
 vi.mock("@/features/notifications/components/NotificationsBell", () => ({
-  NotificationsBell: (props: { userId?: string; className?: string }) => notificationsBellMock(props),
+  NotificationsBell: (props: { userId?: string; className?: string }) =>
+    notificationsBellMock(props),
 }));
 
 // Import the mocked function so we can control its return value per test
@@ -86,7 +87,7 @@ describe("Navbar", () => {
 
   // ── Basic rendering ──────────────────────────────────────
 
-  it("renders app name and navigation links", () => {
+  it("renders app name and navigation links", async () => {
     renderNavbar();
     expect(screen.getByText("BSPLIC 2.0")).toBeInTheDocument();
     // Desktop links
@@ -94,6 +95,9 @@ describe("Navbar", () => {
     expect(screen.getByText("Kasyno")).toBeInTheDocument();
     expect(screen.getByText("Social")).toBeInTheDocument();
     expect(screen.getByText("Rankingi")).toBeInTheDocument();
+    expect(
+      (await screen.findAllByTestId("notifications-bell")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("shows admin link when user is admin", () => {
@@ -113,24 +117,28 @@ describe("Navbar", () => {
     expect(screen.getByText("500.00 zł")).toBeInTheDocument();
   });
 
-  it("renders notifications bell and passes current user id", () => {
+  it("renders notifications bell and passes current user id", async () => {
     renderNavbar();
-    expect(screen.getAllByTestId("notifications-bell").length).toBeGreaterThan(0);
-    expect(notificationsBellMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "user-1" }),
+    expect(
+      (await screen.findAllByTestId("notifications-bell")).length,
+    ).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(notificationsBellMock).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: "user-1" }),
+      ),
     );
   });
 
   // ── Topup — canClaimTopup is true ─────────────────────
 
-  it("opens topup dialog when canClaimTopup returns true", () => {
+  it("opens topup dialog when canClaimTopup returns true", async () => {
     canClaimTopupMock.mockReturnValue(true);
     renderNavbar();
 
     const walletButton = screen.getByTitle("Doładuj portfel");
     fireEvent.click(walletButton);
 
-    expect(screen.getByText("💰 Doładuj portfel")).toBeInTheDocument();
+    expect(await screen.findByText("💰 Doładuj portfel")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /doładuj 100 zł/i }),
     ).toBeInTheDocument();
@@ -157,7 +165,7 @@ describe("Navbar", () => {
     fireEvent.click(walletButton);
 
     // Click confirm
-    const confirmButton = screen.getByRole("button", {
+    const confirmButton = await screen.findByRole("button", {
       name: /doładuj 100 zł/i,
     });
     fireEvent.click(confirmButton);
@@ -182,7 +190,7 @@ describe("Navbar", () => {
     const walletButton = screen.getByTitle("Doładuj portfel");
     fireEvent.click(walletButton);
 
-    const confirmButton = screen.getByRole("button", {
+    const confirmButton = await screen.findByRole("button", {
       name: /doładuj 100 zł/i,
     });
     fireEvent.click(confirmButton);

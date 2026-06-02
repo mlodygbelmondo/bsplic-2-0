@@ -6,8 +6,12 @@ import {
   getRoulettePayoutMultiplier,
   getRouletteBetValueOptions,
   getRouletteCountdownTargetMs,
+  getRouletteNextSyncDelayMs,
   getRoulettePhaseLabel,
   ROULETTE_SPIN_REVEAL_MS,
+  ROULETTE_SYNC_FALLBACK_MS,
+  ROULETTE_SYNC_SETTLED_MS,
+  ROULETTE_SYNC_TARGET_BUFFER_MS,
   validateRouletteBetInput,
 } from './roulette';
 
@@ -158,7 +162,9 @@ describe('getRouletteCountdownTargetMs', () => {
         betting_closes_at: '2026-04-17T12:00:15.000Z',
         spin_started_at: '2026-04-17T12:00:15.000Z',
       }),
-    ).toBe(new Date('2026-04-17T12:00:15.000Z').getTime() + ROULETTE_SPIN_REVEAL_MS);
+    ).toBe(
+      new Date('2026-04-17T12:00:15.000Z').getTime() + ROULETTE_SPIN_REVEAL_MS,
+    );
   });
 
   it('returns null once round is settled', () => {
@@ -169,5 +175,47 @@ describe('getRouletteCountdownTargetMs', () => {
         spin_started_at: '2026-04-17T12:00:15.000Z',
       }),
     ).toBeNull();
+  });
+});
+
+describe('getRouletteNextSyncDelayMs', () => {
+  it('schedules waiting round sync just after betting closes', () => {
+    expect(
+      getRouletteNextSyncDelayMs(
+        {
+          phase: 'waiting',
+          betting_closes_at: '2026-04-17T12:00:15.000Z',
+          spin_started_at: null,
+        },
+        new Date('2026-04-17T12:00:10.000Z').getTime(),
+      ),
+    ).toBe(5_000 + ROULETTE_SYNC_TARGET_BUFFER_MS);
+  });
+
+  it('uses a short delay when the target is already due', () => {
+    expect(
+      getRouletteNextSyncDelayMs(
+        {
+          phase: 'spinning',
+          betting_closes_at: '2026-04-17T12:00:15.000Z',
+          spin_started_at: '2026-04-17T12:00:15.000Z',
+        },
+        new Date('2026-04-17T12:00:25.000Z').getTime(),
+      ),
+    ).toBe(ROULETTE_SYNC_TARGET_BUFFER_MS);
+  });
+
+  it('uses a settled-round delay after settlement', () => {
+    expect(
+      getRouletteNextSyncDelayMs({
+        phase: 'settled',
+        betting_closes_at: '2026-04-17T12:00:15.000Z',
+        spin_started_at: '2026-04-17T12:00:15.000Z',
+      }),
+    ).toBe(ROULETTE_SYNC_SETTLED_MS);
+  });
+
+  it('falls back when there is no current round', () => {
+    expect(getRouletteNextSyncDelayMs(null)).toBe(ROULETTE_SYNC_FALLBACK_MS);
   });
 });

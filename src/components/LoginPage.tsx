@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,9 +22,15 @@ export function LoginPage() {
         await signIn(email, password);
         toast.success("Zalogowano pomyślnie!");
       } else if (view === "register") {
-        const { requiresEmailConfirmation } = await signUp(email, password, username);
+        const { requiresEmailConfirmation } = await signUp(
+          email,
+          password,
+          username,
+        );
         if (requiresEmailConfirmation) {
-          toast.success("Konto utworzone! Sprawdź email, aby potwierdzić konto.");
+          toast.success(
+            "Konto utworzone! Sprawdź email, aby potwierdzić konto.",
+          );
         } else {
           toast.success("Konto utworzone i zalogowano automatycznie!");
         }
@@ -79,7 +84,9 @@ export function LoginPage() {
       <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
         {backgroundDecoration}
         <div className="relative z-10 mb-8">
-          <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
+          <h1 className="text-4xl font-black text-primary-foreground tracking-tight">
+            BSPLIC 2.0
+          </h1>
         </div>
         <div className="relative z-10 w-full max-w-sm">
           <div className="bg-card rounded-2xl shadow-2xl p-6 sm:p-8">
@@ -100,7 +107,9 @@ export function LoginPage() {
 
             <form onSubmit={handleForgotPassword} className="space-y-3">
               <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2">
-                <label className="block text-xs text-muted-foreground mb-0.5">E-mail</label>
+                <label className="block text-xs text-muted-foreground mb-0.5">
+                  E-mail
+                </label>
                 <input
                   type="email"
                   value={email}
@@ -111,13 +120,13 @@ export function LoginPage() {
                 />
               </div>
 
-              <Button
+              <button
                 type="submit"
                 disabled={loading}
                 className="w-full h-11 rounded-xl text-base font-bold gradient-primary text-primary-foreground shadow-lg hover:brightness-110 transition"
               >
                 {loading ? "Wysyłanie..." : "Wyślij link"}
-              </Button>
+              </button>
             </form>
           </div>
         </div>
@@ -132,7 +141,9 @@ export function LoginPage() {
       {backgroundDecoration}
 
       <div className="relative z-10 mb-8">
-        <h1 className="text-4xl font-black text-primary-foreground tracking-tight">BSPLIC 2.0</h1>
+        <h1 className="text-4xl font-black text-primary-foreground tracking-tight">
+          BSPLIC 2.0
+        </h1>
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
@@ -144,7 +155,9 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             {!isLogin && (
               <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2">
-                <label className="block text-xs text-muted-foreground mb-0.5">Nazwa użytkownika</label>
+                <label className="block text-xs text-muted-foreground mb-0.5">
+                  Nazwa użytkownika
+                </label>
                 <input
                   type="text"
                   value={username}
@@ -157,7 +170,9 @@ export function LoginPage() {
             )}
 
             <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2">
-              <label className="block text-xs text-muted-foreground mb-0.5">E-mail</label>
+              <label className="block text-xs text-muted-foreground mb-0.5">
+                E-mail
+              </label>
               <input
                 type="email"
                 value={email}
@@ -170,7 +185,9 @@ export function LoginPage() {
 
             <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2 flex items-center">
               <div className="flex-1">
-                <label className="block text-xs text-muted-foreground mb-0.5">Hasło</label>
+                <label className="block text-xs text-muted-foreground mb-0.5">
+                  Hasło
+                </label>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -186,17 +203,25 @@ export function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="text-muted-foreground ml-2"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={loading}
               className="w-full h-11 rounded-xl text-base font-bold gradient-primary text-primary-foreground shadow-lg hover:brightness-110 transition"
             >
-              {loading ? "Ładowanie..." : isLogin ? "Zaloguj się" : "Zarejestruj się"}
-            </Button>
+              {loading
+                ? "Ładowanie..."
+                : isLogin
+                  ? "Zaloguj się"
+                  : "Zarejestruj się"}
+            </button>
           </form>
 
           {isLogin && (
