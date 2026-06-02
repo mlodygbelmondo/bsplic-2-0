@@ -216,6 +216,7 @@ export default function ProfilePage() {
     setLoadingCasinoHistory(true);
     setCoupons([]);
     setCasinoHistory([]);
+    setBadges([]);
     setSportsbookHistoryExpanded(false);
     setCasinoHistoryExpanded(false);
     setSportsbookHistoryError(null);
@@ -277,16 +278,19 @@ export default function ProfilePage() {
     void loadSportsbookHistoryPreview();
     void loadCasinoHistoryPreview();
 
-    // Fetch badges
-    if (isOwnProfile) {
-      supabase
-        .from('badges')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .then(({ data }) => {
-          if (data) setBadges(data as Badge[]);
-        });
-    }
+    supabase
+      .from('badges')
+      .select('id,user_id,badge_key,unlocked_at')
+      .eq('user_id', targetUserId)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error('Failed to load profile badges', error);
+          setBadges([]);
+          return;
+        }
+        setBadges((data as Badge[] | null) ?? []);
+      });
 
     if (isOwnProfile) {
       // Use existing rankings RPC for own stats
@@ -785,8 +789,8 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Badges — only on own profile */}
-        {isOwnProfile && (
+        {/* Badges */}
+        {targetUserId && (
           <section aria-label="Odznaki" className="bg-card rounded-xl p-4 card-shadow">
             <h2 className="font-bold mb-3">Odznaki</h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

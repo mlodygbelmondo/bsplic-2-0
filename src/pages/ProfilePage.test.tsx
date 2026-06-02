@@ -239,6 +239,58 @@ describe('ProfilePage username route', () => {
     expect(within(lockedBadge).getByText('Nieodblokowana')).toBeInTheDocument();
   });
 
+  it('shows unlocked badges on public profiles', async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: () => ({
+            ilike: () => ({
+              limit: () => ({
+                maybeSingle: async () => ({
+                  data: { id: 'user-123' },
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+
+      if (table === 'badges') {
+        return {
+          select: () => ({
+            eq: async () => ({
+              data: [{
+                user_id: 'user-123',
+                badge_key: 'trafiony',
+                unlocked_at: '2026-05-02T00:00:00.000Z',
+              }],
+            }),
+          }),
+        };
+      }
+
+      return {
+        select: () => ({
+          order: async () => ({ data: [] }),
+        }),
+      };
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/tester']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const badgesSection = await screen.findByRole('region', { name: 'Odznaki' });
+    const unlockedBadge = within(badgesSection).getByRole('listitem', { name: /Trafiony zakład/i });
+
+    expect(fromMock).toHaveBeenCalledWith('badges');
+    expect(within(unlockedBadge).getByText('Odblokowano: 02.05.2026')).toBeInTheDocument();
+  });
+
   it('renders the player card hero on public profiles from public sportsbook stats', async () => {
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
