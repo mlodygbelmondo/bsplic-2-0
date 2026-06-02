@@ -72,14 +72,6 @@ describe('ProfilePage username route', () => {
         };
       }
 
-      if (table === 'badges') {
-        return {
-          select: () => ({
-            eq: async () => ({ data: [] }),
-          }),
-        };
-      }
-
       return {
         select: () => ({
           order: async () => ({ data: [] }),
@@ -124,6 +116,9 @@ describe('ProfilePage username route', () => {
         });
       }
       if (fn === 'get_user_rankings') {
+        return Promise.resolve({ data: [] });
+      }
+      if (fn === 'get_public_badges') {
         return Promise.resolve({ data: [] });
       }
       return Promise.resolve({ data: null });
@@ -194,26 +189,20 @@ describe('ProfilePage username route', () => {
   });
 
   it('explains badge requirements without hover and exposes unlocked status accessibly', async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'badges') {
-        return {
-          select: () => ({
-            eq: async () => ({
-              data: [{
-                user_id: 'current-user-id',
-                badge_key: 'debiutant',
-                unlocked_at: '2026-05-01T00:00:00.000Z',
-              }],
-            }),
-          }),
-        };
+    rpcMock.mockImplementation((fn: string) => {
+      if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      if (fn === 'get_public_badges') {
+        return Promise.resolve({
+          data: [{
+            user_id: 'current-user-id',
+            badge_key: 'debiutant',
+            unlocked_at: '2026-05-01T00:00:00.000Z',
+          }],
+        });
       }
-
-      return {
-        select: () => ({
-          order: async () => ({ data: [] }),
-        }),
-      };
+      return Promise.resolve({ data: null });
     });
 
     render(
@@ -227,6 +216,8 @@ describe('ProfilePage username route', () => {
     const badgesSection = await screen.findByRole('region', { name: 'Odznaki' });
     const debutantBadge = within(badgesSection).getByRole('listitem', { name: /Debiutant/i });
 
+    expect(rpcMock).toHaveBeenCalledWith('get_public_badges', { p_user_id: 'current-user-id' });
+    expect(fromMock).not.toHaveBeenCalledWith('badges');
     expect(within(debutantBadge).getByText('Pierwszy postawiony zakład')).toBeInTheDocument();
     expect(within(debutantBadge).getByText('Odblokowano: 01.05.2026')).toBeInTheDocument();
     expect(within(debutantBadge).getByRole('img', { name: 'Odznaka Debiutant' })).toHaveAttribute(
@@ -255,25 +246,41 @@ describe('ProfilePage username route', () => {
         };
       }
 
-      if (table === 'badges') {
-        return {
-          select: () => ({
-            eq: async () => ({
-              data: [{
-                user_id: 'user-123',
-                badge_key: 'trafiony',
-                unlocked_at: '2026-05-02T00:00:00.000Z',
-              }],
-            }),
-          }),
-        };
-      }
-
       return {
         select: () => ({
           order: async () => ({ data: [] }),
         }),
       };
+    });
+    rpcMock.mockImplementation((fn: string) => {
+      if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_public_profile') {
+        return Promise.resolve({
+          data: {
+            id: 'user-123',
+            username: 'tester',
+            current_streak: 0,
+            longest_streak: 0,
+            created_at: '2026-01-01T00:00:00.000Z',
+            total_bets: 0,
+            won_bets: 0,
+            lost_bets: 0,
+            win_rate: 0,
+            total_profit: 0,
+          },
+        });
+      }
+      if (fn === 'get_public_badges') {
+        return Promise.resolve({
+          data: [{
+            user_id: 'user-123',
+            badge_key: 'trafiony',
+            unlocked_at: '2026-05-02T00:00:00.000Z',
+          }],
+        });
+      }
+      return Promise.resolve({ data: null });
     });
 
     render(
@@ -287,8 +294,48 @@ describe('ProfilePage username route', () => {
     const badgesSection = await screen.findByRole('region', { name: 'Odznaki' });
     const unlockedBadge = within(badgesSection).getByRole('listitem', { name: /Trafiony zakład/i });
 
-    expect(fromMock).toHaveBeenCalledWith('badges');
+    expect(rpcMock).toHaveBeenCalledWith('get_public_badges', { p_user_id: 'user-123' });
+    expect(fromMock).not.toHaveBeenCalledWith('badges');
     expect(within(unlockedBadge).getByText('Odblokowano: 02.05.2026')).toBeInTheDocument();
+  });
+
+  it('keeps public badges hidden when the public badges RPC returns no public data', async () => {
+    rpcMock.mockImplementation((fn: string) => {
+      if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
+      if (fn === 'get_public_profile') {
+        return Promise.resolve({
+          data: {
+            id: 'user-123',
+            username: 'tester',
+            current_streak: 0,
+            longest_streak: 0,
+            created_at: '2026-01-01T00:00:00.000Z',
+            total_bets: 0,
+            won_bets: 0,
+            lost_bets: 0,
+            win_rate: 0,
+            total_profit: 0,
+          },
+        });
+      }
+      if (fn === 'get_public_badges') return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: null });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile/tester']}>
+        <Routes>
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const badgesSection = await screen.findByRole('region', { name: 'Odznaki' });
+    const unlockedBadge = within(badgesSection).getByRole('listitem', { name: /Trafiony zakład/i });
+
+    expect(rpcMock).toHaveBeenCalledWith('get_public_badges', { p_user_id: 'user-123' });
+    expect(within(unlockedBadge).getByText('Nieodblokowana')).toBeInTheDocument();
   });
 
   it('renders the player card hero on public profiles from public sportsbook stats', async () => {

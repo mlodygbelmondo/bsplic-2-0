@@ -749,6 +749,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_public_badges: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_social_coupon_feed: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json

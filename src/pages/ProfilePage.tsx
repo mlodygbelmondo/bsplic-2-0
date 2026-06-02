@@ -279,9 +279,7 @@ export default function ProfilePage() {
     void loadCasinoHistoryPreview();
 
     supabase
-      .from('badges')
-      .select('id,user_id,badge_key,unlocked_at')
-      .eq('user_id', targetUserId)
+      .rpc('get_public_badges', { p_user_id: targetUserId })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
@@ -289,7 +287,7 @@ export default function ProfilePage() {
           setBadges([]);
           return;
         }
-        setBadges((data as Badge[] | null) ?? []);
+        setBadges((data as unknown as Badge[] | null) ?? []);
       });
 
     if (isOwnProfile) {
