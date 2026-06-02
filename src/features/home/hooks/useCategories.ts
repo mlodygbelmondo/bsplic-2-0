@@ -1,38 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Category } from '@/types/database';
-import { fetchCategories, subscribeToCategoryChanges } from '@/features/home/api/categories';
+import { useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Category } from "@/types/database";
+import {
+  fetchCategories,
+  subscribeToCategoryChanges,
+} from "@/features/home/api/categories";
+
+const CATEGORIES_QUERY_KEY = ["home", "categories"] as const;
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: categories = [], isLoading: loading } = useQuery({
+    queryKey: CATEGORIES_QUERY_KEY,
+    queryFn: fetchCategories,
+  });
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      try {
-        const data = await fetchCategories();
-        if (mounted) {
-          setCategories(data);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-
     const unsubscribe = subscribeToCategoryChanges(() => {
-      void load();
+      void queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
     });
 
-    return () => {
-      mounted = false;
-      unsubscribe();
-    };
-  }, []);
+    return unsubscribe;
+  }, [queryClient]);
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};

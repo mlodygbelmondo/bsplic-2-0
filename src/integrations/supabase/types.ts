@@ -815,6 +815,16 @@ export type Database = {
           won_bets: number
         }[]
       }
+      get_user_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          lost_bets: number
+          total_bets: number
+          total_profit: number
+          win_rate: number
+          won_bets: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

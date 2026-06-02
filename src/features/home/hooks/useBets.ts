@@ -1,24 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
-import { Bet } from '@/types/database';
-import { fetchActiveBets, subscribeToBetsChanges } from '@/features/home/api/bets';
-import type { Database } from '@/integrations/supabase/types';
-import { SortMode, sortBetsByMode } from '@/features/home/hooks/sortBets';
+import { Bet } from "@/types/database";
+import {
+  fetchActiveBets,
+  subscribeToBetsChanges,
+} from "@/features/home/api/bets";
+import type { Database } from "@/integrations/supabase/types";
+import { SortMode, sortBetsByMode } from "@/features/home/hooks/sortBets";
 
-export type { SortMode } from '@/features/home/hooks/sortBets';
+export type { SortMode } from "@/features/home/hooks/sortBets";
 
-type BetRow = Database['public']['Tables']['bets']['Row'];
+type BetRow = Database["public"]["Tables"]["bets"]["Row"];
 
 const REALTIME_BATCH_MS = 150;
 
 function getBetId(input: unknown): string | null {
-  if (!input || typeof input !== 'object') {
+  if (!input || typeof input !== "object") {
     return null;
   }
 
   const value = (input as { id?: unknown }).id;
-  return typeof value === 'string' ? value : null;
+  return typeof value === "string" ? value : null;
 }
 
 function toBet(row: BetRow): Bet {
@@ -67,12 +70,12 @@ function removeBet(previous: Bet[], betId: string): Bet[] {
 export function applyBetsRealtimePayloads(
   previous: Bet[],
   payloads: RealtimePostgresChangesPayload<BetRow>[],
-  selectedCategory: string | null
+  selectedCategory: string | null,
 ): Bet[] {
   let next = previous;
 
   for (const payload of payloads) {
-    if (payload.eventType === 'INSERT') {
+    if (payload.eventType === "INSERT") {
       const row = payload.new;
       if (!getBetId(row) || !isBetVisible(row, selectedCategory)) {
         continue;
@@ -81,7 +84,7 @@ export function applyBetsRealtimePayloads(
       continue;
     }
 
-    if (payload.eventType === 'UPDATE') {
+    if (payload.eventType === "UPDATE") {
       const newRow = payload.new;
       const oldRow = payload.old;
       const oldId = getBetId(oldRow);
@@ -104,7 +107,7 @@ export function applyBetsRealtimePayloads(
       continue;
     }
 
-    if (payload.eventType === 'DELETE') {
+    if (payload.eventType === "DELETE") {
       const oldId = getBetId(payload.old);
       if (oldId) {
         next = removeBet(next, oldId);
@@ -118,7 +121,9 @@ export function applyBetsRealtimePayloads(
 export function useBets(selectedCategory: string | null, sort: SortMode) {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
-  const pendingPayloadsRef = useRef<RealtimePostgresChangesPayload<BetRow>[]>([]);
+  const pendingPayloadsRef = useRef<RealtimePostgresChangesPayload<BetRow>[]>(
+    [],
+  );
   const flushTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -149,7 +154,9 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
       const queuedPayloads = pendingPayloadsRef.current;
       pendingPayloadsRef.current = [];
 
-      setBets((previous) => applyBetsRealtimePayloads(previous, queuedPayloads, selectedCategory));
+      setBets((previous) =>
+        applyBetsRealtimePayloads(previous, queuedPayloads, selectedCategory),
+      );
     };
 
     const scheduleFlushPayloadQueue = () => {
@@ -157,7 +164,10 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
         return;
       }
 
-      flushTimeoutRef.current = window.setTimeout(flushPayloadQueue, REALTIME_BATCH_MS);
+      flushTimeoutRef.current = window.setTimeout(
+        flushPayloadQueue,
+        REALTIME_BATCH_MS,
+      );
     };
 
     void load();
@@ -182,7 +192,7 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
     (a: Bet, b: Bet) => {
       return sortBetsByMode(sort, a, b);
     },
-    [sort]
+    [sort],
   );
 
   const liveBets = useMemo(() => {

@@ -115,7 +115,7 @@ describe('ProfilePage username route', () => {
           },
         });
       }
-      if (fn === 'get_user_rankings') {
+      if (fn === 'get_user_stats') {
         return Promise.resolve({ data: [] });
       }
       if (fn === 'get_public_badges') {
@@ -147,7 +147,7 @@ describe('ProfilePage username route', () => {
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
       if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
-      if (fn === 'get_user_rankings') {
+      if (fn === 'get_user_stats') {
         return Promise.resolve({
           data: [{
             id: 'current-user-id',
@@ -550,7 +550,7 @@ describe('ProfilePage username route', () => {
         const limit = args?.p_limit ?? casinoHistory.length;
         return Promise.resolve({ data: casinoHistory.slice(offset, offset + limit) });
       }
-      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_stats') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: null });
     });
 
@@ -633,7 +633,7 @@ describe('ProfilePage username route', () => {
         });
       }
       if (fn === 'get_user_casino_history') return Promise.resolve({ data: [] });
-      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_stats') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: null });
     });
 
@@ -678,7 +678,7 @@ describe('ProfilePage username route', () => {
         const limit = args?.p_limit ?? casinoEntries.length;
         return Promise.resolve({ data: casinoEntries.slice(offset, offset + limit) });
       }
-      if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+      if (fn === 'get_user_stats') return Promise.resolve({ data: [] });
       return Promise.resolve({ data: null });
     });
 
@@ -747,7 +747,7 @@ describe('ProfilePage username route', () => {
         if (fn === 'get_user_casino_history') {
           return Promise.resolve({ data: null, error: new Error('casino history failed') });
         }
-        if (fn === 'get_user_rankings') return Promise.resolve({ data: [] });
+        if (fn === 'get_user_stats') return Promise.resolve({ data: [] });
         return Promise.resolve({ data: null });
       });
 

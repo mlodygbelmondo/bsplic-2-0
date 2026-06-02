@@ -70,7 +70,7 @@ describe('ProfilePage avatar upload', () => {
 
     rpcMock.mockImplementation((fn: string) => {
       if (fn === 'get_user_coupon_history') return Promise.resolve({ data: [] });
-      if (fn === 'get_user_rankings') {
+      if (fn === 'get_user_stats') {
         return Promise.resolve({
           data: [{
             id: 'user-1',

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -14,13 +14,13 @@ import {
   BadgePlus,
 } from 'lucide-react';
 
-import DashboardTab from './DashboardTab';
-import CreateBetTab from './CreateBetTab';
-import ManageBetsTab from './ManageBetsTab';
-import ProposalsTab from './ProposalsTab';
-import CategoriesTab from './CategoriesTab';
-import EniuBotTab from './EniuBotTab';
-import BonusCampaignsTab from './BonusCampaignsTab';
+const DashboardTab = lazy(() => import('./DashboardTab'));
+const CreateBetTab = lazy(() => import('./CreateBetTab'));
+const ManageBetsTab = lazy(() => import('./ManageBetsTab'));
+const ProposalsTab = lazy(() => import('./ProposalsTab'));
+const CategoriesTab = lazy(() => import('./CategoriesTab'));
+const EniuBotTab = lazy(() => import('./EniuBotTab'));
+const BonusCampaignsTab = lazy(() => import('./BonusCampaignsTab'));
 
 interface TabConfig {
   key: AdminTab;
@@ -58,6 +58,15 @@ const TABS: TabConfig[] = [
   { key: 'eniu', label: 'Eniu', shortLabel: 'Eniu', icon: Bot },
   { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonusy', icon: BadgePlus },
 ];
+
+function AdminTabFallback() {
+  return (
+    <div className="space-y-4">
+      <div className="h-24 rounded-lg bg-muted animate-pulse" />
+      <div className="h-48 rounded-lg bg-muted animate-pulse" />
+    </div>
+  );
+}
 
 export default function AdminLayout() {
   const { isAdmin, loading } = useAuth();
@@ -134,13 +143,15 @@ export default function AdminLayout() {
                 </h1>
               </div>
 
-              {tab === 'dashboard' && <DashboardTab />}
-              {tab === 'create' && <CreateBetTab />}
-              {tab === 'manage' && <ManageBetsTab />}
-              {tab === 'proposals' && <ProposalsTab />}
-              {tab === 'categories' && <CategoriesTab />}
-              {tab === 'eniu' && <EniuBotTab />}
-              {tab === 'bonuses' && <BonusCampaignsTab />}
+              <Suspense fallback={<AdminTabFallback />}>
+                {tab === 'dashboard' && <DashboardTab />}
+                {tab === 'create' && <CreateBetTab />}
+                {tab === 'manage' && <ManageBetsTab />}
+                {tab === 'proposals' && <ProposalsTab />}
+                {tab === 'categories' && <CategoriesTab />}
+                {tab === 'eniu' && <EniuBotTab />}
+                {tab === 'bonuses' && <BonusCampaignsTab />}
+              </Suspense>
             </div>
           </div>
         </main>

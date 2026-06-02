@@ -1,5 +1,4 @@
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import './index.css';
 
@@ -19,8 +18,23 @@ window.addEventListener('orientationchange', syncAppViewportHeight);
 window.visualViewport?.addEventListener('resize', syncAppViewportHeight);
 window.visualViewport?.addEventListener('scroll', syncAppViewportHeight);
 
-registerSW({
-  immediate: true,
-});
-
 createRoot(document.getElementById('root')!).render(<App />);
+
+const registerServiceWorker = () => {
+  const register = () => {
+    void import('virtual:pwa-register').then(({ registerSW }) => {
+      registerSW({
+        immediate: false,
+      });
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(register, { timeout: 3000 });
+    return;
+  }
+
+  window.setTimeout(register, 1500);
+};
+
+registerServiceWorker();

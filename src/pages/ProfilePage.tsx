@@ -19,6 +19,24 @@ const HISTORY_PREVIEW_FETCH_LIMIT = HISTORY_PREVIEW_SIZE + 1;
 const HISTORY_BATCH_SIZE = 30;
 const HISTORY_BATCH_FETCH_LIMIT = HISTORY_BATCH_SIZE + 1;
 
+interface UserStatsRow {
+  total_bets: number;
+  won_bets: number;
+  lost_bets: number;
+  win_rate: number;
+  total_profit: number;
+}
+
+function toRankingStats(stats: UserStatsRow) {
+  return {
+    totalBets: Number(stats.total_bets),
+    wins: Number(stats.won_bets),
+    losses: Number(stats.lost_bets),
+    winRate: Number(stats.win_rate),
+    totalProfit: Number(stats.total_profit),
+  };
+}
+
 function formatBadgeDate(value: string) {
   return new Intl.DateTimeFormat('pl-PL', {
     day: '2-digit',
@@ -291,27 +309,12 @@ export default function ProfilePage() {
       });
 
     if (isOwnProfile) {
-      // Use existing rankings RPC for own stats
+      // Fetch only this user's stats instead of recomputing the full leaderboard.
       supabase
-        .rpc('get_user_rankings')
-        .then(({ data }) => {
-          if (!data) return;
-          const userRanking = (data as Array<{
-            id: string;
-            total_bets: number;
-            won_bets: number;
-            lost_bets: number;
-            win_rate: number;
-            total_profit: number;
-          }>).find((entry) => entry.id === targetUserId);
-          if (!userRanking) return;
-          setRankingStats({
-            totalBets: Number(userRanking.total_bets),
-            wins: Number(userRanking.won_bets),
-            losses: Number(userRanking.lost_bets),
-            winRate: Number(userRanking.win_rate),
-            totalProfit: Number(userRanking.total_profit),
-          });
+        .rpc('get_user_stats', { p_user_id: targetUserId })
+        .then(({ data, error }) => {
+          if (cancelled || error || !data?.[0]) return;
+          setRankingStats(toRankingStats(data[0]));
         });
     } else {
       // Use get_public_profile RPC for other users

@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Navbar } from '@/components/Navbar';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Navbar } from "@/components/Navbar";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface RankEntry {
   id: string;
@@ -17,56 +18,61 @@ interface RankEntry {
   balance: number;
 }
 
-type SortKey = 'total_profit' | 'win_rate' | 'total_bets';
+type SortKey = "total_profit" | "win_rate" | "total_bets";
+type RankingType = "sportsbook" | "casino";
+
+function normalizeRankingRows(data: unknown): RankEntry[] {
+  return ((data ?? []) as RankEntry[]).map((r) => ({
+    ...r,
+    total_profit: Number(r.total_profit),
+    win_rate: Number(r.win_rate),
+    total_bets: Number(r.total_bets),
+    won_bets: Number(r.won_bets),
+    lost_bets: Number(r.lost_bets),
+    balance: Number(r.balance),
+  }));
+}
 
 export default function RankingsPage() {
-  const [rankings, setRankings] = useState<RankEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortKey>('total_profit');
-  const [rankingType, setRankingType] = useState<'sportsbook' | 'casino'>('sportsbook');
+  const [sortBy, setSortBy] = useState<SortKey>("total_profit");
+  const [rankingType, setRankingType] = useState<RankingType>("sportsbook");
   const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchRankings = async () => {
-      setLoading(true);
+  const {
+    data: rankings = [],
+    error,
+    isLoading: loading,
+  } = useQuery({
+    queryKey: ["rankings", rankingType],
+    queryFn: async () => {
       const { data, error } = await supabase.rpc(
-        rankingType === 'sportsbook' ? 'get_user_rankings' : 'get_casino_rankings'
+        rankingType === "sportsbook"
+          ? "get_user_rankings"
+          : "get_casino_rankings",
       );
 
       if (error) {
-        console.error('Rankings fetch error:', error);
-        setLoading(false);
-        return;
+        throw error;
       }
 
-      if (data) {
-        setRankings(
-          (data as RankEntry[]).map((r) => ({
-            ...r,
-            total_profit: Number(r.total_profit),
-            win_rate: Number(r.win_rate),
-            total_bets: Number(r.total_bets),
-            won_bets: Number(r.won_bets),
-            lost_bets: Number(r.lost_bets),
-            balance: Number(r.balance),
-          }))
-        );
-      }
+      return normalizeRankingRows(data);
+    },
+  });
 
-      setLoading(false);
-    };
-
-    fetchRankings();
-  }, [rankingType, user?.id]);
+  useEffect(() => {
+    if (error) {
+      console.error("Rankings fetch error:", error);
+    }
+  }, [error]);
 
   const sorted = useMemo(() => {
     return [...rankings].sort((a, b) => b[sortBy] - a[sortBy]);
   }, [rankings, sortBy]);
 
   const sortTabs: Array<{ key: SortKey; label: string }> = [
-    { key: 'total_profit', label: 'Profit' },
-    { key: 'win_rate', label: 'Win rate' },
-    { key: 'total_bets', label: 'Zakłady' },
+    { key: "total_profit", label: "Profit" },
+    { key: "win_rate", label: "Win rate" },
+    { key: "total_bets", label: "Zakłady" },
   ];
 
   return (
@@ -76,19 +82,21 @@ export default function RankingsPage() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Rankingi</h1>
           <div className="inline-flex w-max items-center rounded-lg border border-border bg-card p-1">
-            {([
-              ['sportsbook', 'Zakłady'],
-              ['casino', 'Kasyno'],
-            ] as const).map(([value, label]) => (
+            {(
+              [
+                ["sportsbook", "Zakłady"],
+                ["casino", "Kasyno"],
+              ] as const
+            ).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setRankingType(value)}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                  "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                   rankingType === value
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {label}
@@ -104,10 +112,10 @@ export default function RankingsPage() {
                 key={tab.key}
                 onClick={() => setSortBy(tab.key)}
                 className={cn(
-                  'shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all',
+                  "shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
                   sortBy === tab.key
-                    ? 'gradient-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                    ? "gradient-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:text-foreground",
                 )}
               >
                 {tab.label}
@@ -121,20 +129,29 @@ export default function RankingsPage() {
             <span>#</span>
             <span>Gracz</span>
             <span
-              className={cn('text-right cursor-pointer hover:text-foreground transition-colors', sortBy === 'total_profit' && 'text-foreground')}
-              onClick={() => setSortBy('total_profit')}
+              className={cn(
+                "text-right cursor-pointer hover:text-foreground transition-colors",
+                sortBy === "total_profit" && "text-foreground",
+              )}
+              onClick={() => setSortBy("total_profit")}
             >
               Profit
             </span>
             <span
-              className={cn('text-right cursor-pointer hover:text-foreground transition-colors', sortBy === 'win_rate' && 'text-foreground')}
-              onClick={() => setSortBy('win_rate')}
+              className={cn(
+                "text-right cursor-pointer hover:text-foreground transition-colors",
+                sortBy === "win_rate" && "text-foreground",
+              )}
+              onClick={() => setSortBy("win_rate")}
             >
               Win rate
             </span>
             <span
-              className={cn('text-right cursor-pointer hover:text-foreground transition-colors', sortBy === 'total_bets' && 'text-foreground')}
-              onClick={() => setSortBy('total_bets')}
+              className={cn(
+                "text-right cursor-pointer hover:text-foreground transition-colors",
+                sortBy === "total_bets" && "text-foreground",
+              )}
+              onClick={() => setSortBy("total_bets")}
             >
               Zakłady
             </span>
@@ -143,7 +160,10 @@ export default function RankingsPage() {
           {loading ? (
             <div className="space-y-0">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="grid grid-cols-5 gap-2 p-3 items-center">
+                <div
+                  key={i}
+                  className="grid grid-cols-5 gap-2 p-3 items-center"
+                >
                   <Skeleton className="h-4 w-6" />
                   <Skeleton className="h-4 w-20" />
                   <Skeleton className="h-4 w-14 ml-auto" />
@@ -156,31 +176,48 @@ export default function RankingsPage() {
             <>
               {sorted.map((r, i) => {
                 const rank = i + 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                const medal =
+                  rank === 1
+                    ? "🥇"
+                    : rank === 2
+                      ? "🥈"
+                      : rank === 3
+                        ? "🥉"
+                        : null;
 
                 return (
                   <div
                     key={r.id}
                     className={cn(
-                      'grid grid-cols-5 gap-2 p-3 text-sm items-center border-b border-border last:border-0 transition-colors',
-                      r.id === user?.id && 'bg-primary/10',
-                      rank <= 3 && 'font-semibold'
+                      "grid grid-cols-5 gap-2 p-3 text-sm items-center border-b border-border last:border-0 transition-colors",
+                      r.id === user?.id && "bg-primary/10",
+                      rank <= 3 && "font-semibold",
                     )}
                   >
-                    <span className="font-bold">
-                      {medal ?? rank}
-                    </span>
-                    <Link to={`/profile/${r.id}`} className="font-medium truncate hover:text-primary transition-colors">
+                    <span className="font-bold">{medal ?? rank}</span>
+                    <Link
+                      to={`/profile/${r.id}`}
+                      className="font-medium truncate hover:text-primary transition-colors"
+                    >
                       {r.username}
-                      {r.id === user?.id && <span className="text-xs text-muted-foreground ml-1">(ty)</span>}
+                      {r.id === user?.id && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (ty)
+                        </span>
+                      )}
                     </Link>
                     <span
                       className={cn(
-                        'text-right font-bold',
-                        r.total_profit > 0 ? 'text-success' : r.total_profit < 0 ? 'text-destructive' : ''
+                        "text-right font-bold",
+                        r.total_profit > 0
+                          ? "text-success"
+                          : r.total_profit < 0
+                            ? "text-destructive"
+                            : "",
                       )}
                     >
-                      {r.total_profit >= 0 ? '+' : ''}{r.total_profit.toFixed(2)} zł
+                      {r.total_profit >= 0 ? "+" : ""}
+                      {r.total_profit.toFixed(2)} zł
                     </span>
                     <span className="text-right">{r.win_rate.toFixed(1)}%</span>
                     <span className="text-right">{r.total_bets}</span>
@@ -188,10 +225,10 @@ export default function RankingsPage() {
                 );
               })}
               {sorted.length === 0 && (
-              <p className="text-center py-8 text-muted-foreground">
-                  {rankingType === 'sportsbook'
-                    ? 'Brak danych — nikt jeszcze nie postawił zakładu'
-                    : 'Brak danych — nikt jeszcze nie zagrał w kasynie'}
+                <p className="text-center py-8 text-muted-foreground">
+                  {rankingType === "sportsbook"
+                    ? "Brak danych — nikt jeszcze nie postawił zakładu"
+                    : "Brak danych — nikt jeszcze nie zagrał w kasynie"}
                 </p>
               )}
             </>
