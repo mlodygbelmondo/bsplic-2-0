@@ -714,6 +714,19 @@ export type Database = {
         }
         Returns: Json
       }
+      agent_accept_bet_proposals: {
+        Args: {
+          p_is_bsplicboost?: boolean
+          p_is_live?: boolean
+          p_proposal_ids: string[]
+          p_token: string
+        }
+        Returns: Json
+      }
+      agent_create_bets: {
+        Args: { p_bets: Json; p_token: string }
+        Returns: Json
+      }
       agent_create_bet_proposals: {
         Args: { p_proposals: Json; p_token: string }
         Returns: Json

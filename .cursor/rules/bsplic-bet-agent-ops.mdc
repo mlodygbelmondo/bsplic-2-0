@@ -1,0 +1,56 @@
+---
+description: BSPLIC sportsbook agent operations, Supabase RPCs, proposal publishing, direct bet creation, and settlement guardrails.
+globs:
+  - "**/*"
+alwaysApply: false
+---
+
+# BSPLIC Bet Agent Ops
+
+Use this rule when the user asks for BSPLIC sportsbook agent work: fetching context, creating proposals, accepting agent proposals, creating bets directly, checking settlement context, researching results, preparing settlement recommendations, settling approved bets, smoke-testing RPCs, or managing agent token scopes.
+
+## Guardrails
+
+- Work from `/home/piotr/bsplic-2-0`.
+- Load secrets from `/home/piotr/.codex-secrets/bsplic-agent.env`.
+- Never print `BSPLIC_AGENT_TOKEN`, Supabase keys, or raw env file contents.
+- Never use a Supabase service-role key for this workflow.
+- Always browse for current schedules, odds, or final results.
+- Cite sources in proposal and settlement reports.
+- Default to pending proposals. Publish proposals or create live bets directly only when the user explicitly asks for that exact action.
+- Never call `agent_settle_bet` until the user explicitly approves exact settlement recommendations in the current conversation.
+- Keep `accept:proposals`, `create:bets`, and `settle:bets` off the token unless intentionally enabled.
+
+## Files And Scripts
+
+- Agent env: `/home/piotr/.codex-secrets/bsplic-agent.env`
+- Accept proposals: `npm run agent:accept-proposals -- PROPOSAL_UUID`
+- Create direct bets: `npm run agent:create-bets -- ./payload.json`
+- Publishing migration: `supabase/migrations/20260603143000_agent_publish_bet_rpcs.sql`
+- Settlement migration: `supabase/migrations/20260524172000_canonical_sportsbook_settlement_rpc.sql`
+
+## Setup
+
+```bash
+cd /home/piotr/bsplic-2-0
+set +x
+source /home/piotr/.codex-secrets/bsplic-agent.env
+```
+
+## RPCs
+
+- `agent_get_bet_context` requires `read:bets`.
+- `agent_create_bet_proposals` requires `create:proposals`.
+- `agent_accept_bet_proposals` requires `accept:proposals`.
+- `agent_create_bets` requires `create:bets`.
+- `agent_get_pending_settlement_context` requires `read:settlement`.
+- `agent_settle_bet` requires `settle:bets`.
+
+## Workflow
+
+1. Fetch context first and check duplicates.
+2. Browse current event/result sources and cite them.
+3. For default generation, create pending proposals only.
+4. For reviewed publishing, accept exact pending agent proposal IDs only.
+5. For direct publishing, create bets only when the user explicitly asked to bypass proposals.
+6. For settlement, report recommendations first and wait for explicit approval.

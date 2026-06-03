@@ -8,6 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "perf:build": "npm run build && node scripts/measure-build-size.mjs",
+    "agent:accept-proposals": "node scripts/agent-accept-proposals.mjs",
+    "agent:create-bets": "node scripts/agent-create-bets.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

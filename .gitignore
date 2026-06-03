@@ -19,7 +19,7 @@ dist-ssr
 .env.test.local
 .env.production.local
 .env.dawdal
-.codex
+.codex/environments/
 .learnings
 
 # Editor directories and files
