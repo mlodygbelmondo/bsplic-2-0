@@ -753,6 +753,19 @@ export type Database = {
         }
         Returns: Json
       }
+      review_bet_proposal: {
+        Args: {
+          p_bet_type?: string
+          p_category_id?: string | null
+          p_ends_at?: string | null
+          p_is_bsplicboost?: boolean
+          p_options?: Json
+          p_proposal_id: string
+          p_status: string
+          p_title?: string | null
+        }
+        Returns: Json
+      }
       award_badge: {
         Args: { p_badge_key: string; p_user_id: string }
         Returns: undefined
@@ -1196,7 +1209,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1324,7 +1337,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "moderator", "user"],
     },
   },
 } as const

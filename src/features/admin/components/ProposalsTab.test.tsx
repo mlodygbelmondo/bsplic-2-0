@@ -1,15 +1,24 @@
-import { render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ProposalsTab from './ProposalsTab';
 
 const fromMock = vi.fn();
+const rpcMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
+const toastInfoMock = vi.fn();
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: (...args: unknown[]) => fromMock(...args),
+    rpc: (...args: unknown[]) => rpcMock(...args),
   },
 }));
 
@@ -17,6 +26,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
+    info: (...args: unknown[]) => toastInfoMock(...args),
   },
 }));
 
@@ -77,6 +87,7 @@ describe('ProposalsTab', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rpcMock.mockResolvedValue({ data: { status: 'rejected' }, error: null });
 
     fromMock.mockImplementation((table: string) => {
       if (table === 'bet_proposals') {
@@ -126,7 +137,9 @@ describe('ProposalsTab', () => {
     render(<ProposalsTab />);
 
     expect(await screen.findByText('Człowiek: nowy kupon')).toBeInTheDocument();
-    expect(await screen.findByText('Agent: sygnał wartościowy')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Agent: sygnał wartościowy'),
+    ).toBeInTheDocument();
 
     const humanCard = screen
       .getByText('Człowiek: nowy kupon')
@@ -148,8 +161,61 @@ describe('ProposalsTab', () => {
     expect(within(agentCard).getByText('Agent')).toBeInTheDocument();
     expect(within(humanCard).queryByText('Pewność:')).not.toBeInTheDocument();
     expect(within(agentCard).getByText('Pewność: Wysoka')).toBeInTheDocument();
-    expect(within(agentCard).getByText('Kurs odchyla się od historycznej średniej')).toBeInTheDocument();
+    expect(
+      within(agentCard).getByText('Kurs odchyla się od historycznej średniej'),
+    ).toBeInTheDocument();
     expect(within(agentCard).getByText('Źródła: 2')).toBeInTheDocument();
     expect(within(agentCard).getByText('Sprawdzono: 3')).toBeInTheDocument();
+  });
+
+  it('rejects proposals through the review RPC', async () => {
+    render(<ProposalsTab />);
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Odrzuć propozycję: Człowiek: nowy kupon',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(rpcMock).toHaveBeenCalledWith('review_bet_proposal', {
+        p_proposal_id: 'proposal-human',
+        p_status: 'rejected',
+      }),
+    );
+    expect(toastInfoMock).toHaveBeenCalledWith('Propozycja odrzucona');
+  });
+
+  it('accepts edited proposals through the review RPC', async () => {
+    render(<ProposalsTab />);
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Akceptuj propozycję: Człowiek: nowy kupon',
+      }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Akceptuj propozycję' }),
+    );
+
+    await waitFor(() =>
+      expect(rpcMock).toHaveBeenCalledWith('review_bet_proposal', {
+        p_proposal_id: 'proposal-human',
+        p_status: 'accepted',
+        p_title: 'Człowiek: nowy kupon',
+        p_category_id: null,
+        p_bet_type: '1x2',
+        p_options: [
+          { name: '1', odds: 1.9 },
+          { name: 'X', odds: 3.2 },
+          { name: '2', odds: 2.1 },
+        ],
+        p_ends_at: '2030-01-01T10:00:00.000Z',
+        p_is_bsplicboost: false,
+      }),
+    );
+    expect(toastSuccessMock).toHaveBeenCalledWith('Propozycja zaakceptowana');
   });
 });

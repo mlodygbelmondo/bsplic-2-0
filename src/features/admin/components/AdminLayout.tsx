@@ -69,7 +69,11 @@ function AdminTabFallback() {
 }
 
 export default function AdminLayout() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, isModerator, loading } = useAuth();
+  const availableTabs = isAdmin
+    ? TABS
+    : TABS.filter((availableTab) => availableTab.key === 'proposals');
+  const defaultTab: AdminTab = isAdmin ? 'dashboard' : 'proposals';
   const [tab, setTab] = useState<AdminTab>('dashboard');
 
   useEffect(() => {
@@ -86,7 +90,14 @@ export default function AdminLayout() {
   }, []);
 
   if (loading) return null;
-  if (!isAdmin) return <Navigate to="/" />;
+  if (!isAdmin && !isModerator) return <Navigate to="/" />;
+
+  const activeTab = availableTabs.some(
+    (availableTab) => availableTab.key === tab,
+  )
+    ? tab
+    : defaultTab;
+  const activeTabLabel = availableTabs.find((t) => t.key === activeTab)?.label;
 
   return (
     <div className="h-safe-screen overflow-hidden bg-muted/30 flex flex-col">
@@ -98,17 +109,17 @@ export default function AdminLayout() {
         <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-border bg-card overflow-y-auto">
           <div className="p-6 border-b border-border/50">
             <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Panel Admina
+              {isAdmin ? 'Panel Admina' : 'Panel Moderatora'}
             </h2>
           </div>
           <nav className="flex-1 py-4 px-3 space-y-1">
-            {TABS.map(({ key, label, icon: Icon }) => (
+            {availableTabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors text-left',
-                  tab === key
+                  activeTab === key
                     ? 'bg-primary/10 text-primary font-semibold'
                     : 'font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
@@ -116,7 +127,7 @@ export default function AdminLayout() {
                 <Icon
                   className={cn(
                     'h-4 w-4 shrink-0',
-                    tab === key ? 'text-primary' : '',
+                    activeTab === key ? 'text-primary' : '',
                   )}
                 />
                 {label}
@@ -132,25 +143,25 @@ export default function AdminLayout() {
               {/* Mobile page header */}
               <div className="md:hidden mb-6 flex items-center justify-between">
                 <h1 className="text-2xl font-bold tracking-tight">
-                  {TABS.find((t) => t.key === tab)?.label}
+                  {activeTabLabel}
                 </h1>
               </div>
 
               {/* Desktop page header */}
               <div className="hidden md:flex mb-8 items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">
-                  {TABS.find((t) => t.key === tab)?.label}
+                  {activeTabLabel}
                 </h1>
               </div>
 
               <Suspense fallback={<AdminTabFallback />}>
-                {tab === 'dashboard' && <DashboardTab />}
-                {tab === 'create' && <CreateBetTab />}
-                {tab === 'manage' && <ManageBetsTab />}
-                {tab === 'proposals' && <ProposalsTab />}
-                {tab === 'categories' && <CategoriesTab />}
-                {tab === 'eniu' && <EniuBotTab />}
-                {tab === 'bonuses' && <BonusCampaignsTab />}
+                {activeTab === 'dashboard' && <DashboardTab />}
+                {activeTab === 'create' && <CreateBetTab />}
+                {activeTab === 'manage' && <ManageBetsTab />}
+                {activeTab === 'proposals' && <ProposalsTab />}
+                {activeTab === 'categories' && <CategoriesTab />}
+                {activeTab === 'eniu' && <EniuBotTab />}
+                {activeTab === 'bonuses' && <BonusCampaignsTab />}
               </Suspense>
             </div>
           </div>
@@ -160,9 +171,9 @@ export default function AdminLayout() {
       {/* Mobile bottom tab bar - Pill style */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
         <div className="bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] flex items-center justify-around px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto relative overflow-visible">
-          {TABS.map(({ key, shortLabel, icon: Icon }) => {
+          {availableTabs.map(({ key, shortLabel, icon: Icon }) => {
             const isCenter = key === 'create';
-            const isActive = tab === key;
+            const isActive = activeTab === key;
 
             if (isCenter) {
               return (

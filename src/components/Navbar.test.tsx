@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,12 +21,14 @@ const rpcMock = vi.fn();
 let mockProfile: Record<string, unknown> | null = null;
 let mockUser: Record<string, unknown> | null = null;
 let mockIsAdmin = false;
+let mockIsModerator = false;
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: mockUser,
     profile: mockProfile,
     isAdmin: mockIsAdmin,
+    isModerator: mockIsModerator,
     signOut: signOutMock,
     refreshProfile: refreshProfileMock,
   }),
@@ -79,6 +87,7 @@ describe("Navbar", () => {
       last_topup_at: "2026-03-15T10:00:00.000Z",
     };
     mockIsAdmin = false;
+    mockIsModerator = false;
     canClaimTopupMock.mockReturnValue(true);
     rpcMock.mockResolvedValue({ error: null });
     refreshProfileMock.mockResolvedValue(undefined);
@@ -110,6 +119,25 @@ describe("Navbar", () => {
     mockIsAdmin = false;
     renderNavbar();
     expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+  });
+
+  it("shows desktop proposals link for moderators", () => {
+    mockIsModerator = true;
+    renderNavbar();
+
+    const proposalsLink = screen.getByRole("link", { name: /propozycje/i });
+    expect(proposalsLink).toHaveAttribute("href", "/admin");
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+  });
+
+  it("does not add moderator proposals link to the mobile menu", async () => {
+    mockIsModerator = true;
+    renderNavbar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Otwórz menu" }));
+
+    const menu = await screen.findByRole("dialog");
+    expect(within(menu).queryByText("Propozycje")).not.toBeInTheDocument();
   });
 
   it("displays user balance in the wallet button", () => {

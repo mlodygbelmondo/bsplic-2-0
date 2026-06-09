@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -162,9 +163,18 @@ export default function ProposalsTab() {
       .filter((o) => o.name.trim())
       .map((o) => ({ name: o.name.trim(), oddsRaw: o.odds.trim() }));
 
-    const minOptions = editing.betType === 'single' ? 1 : 2;
-    if (cleanedOptions.length < minOptions) {
-      toast.error('Za mało opcji');
+    const fixedOptionCounts: Partial<Record<EditableBetType, number>> = {
+      single: 1,
+      '12': 2,
+      '1x2': 3,
+    };
+    const fixedOptionCount = fixedOptionCounts[editing.betType];
+    if (
+      fixedOptionCount !== undefined
+        ? cleanedOptions.length !== fixedOptionCount
+        : cleanedOptions.length < 2
+    ) {
+      toast.error('Nieprawidłowa liczba opcji');
       return;
     }
     const invalidOddsIndex = cleanedOptions.findIndex((option) => {
@@ -188,35 +198,20 @@ export default function ProposalsTab() {
 
     setEditorLoading(true);
     try {
-      const { error: insertError } = await supabase.from('bets').insert([
-        {
-          title: editing.title.trim(),
-          category_id: editing.categoryId || null,
-          bet_type: editing.betType,
-          options: cleanedOptions.map((option) => ({
-            name: option.name,
-            odds: Number(option.oddsRaw),
-          })) as Json,
-          ends_at: endsAtDate.toISOString(),
-          is_bsplicboost: editing.isBsplicboost,
-        },
-      ]);
-      if (insertError) throw insertError;
-
-      const { error: proposalUpdateError } = await supabase
-        .from('bet_proposals')
-        .update({
-          status: 'accepted',
-          title: editing.title.trim(),
-          category_id: editing.categoryId || null,
-          bet_type: editing.betType,
-          options: cleanedOptions.map((option) => ({
-            name: option.name,
-            odds: Number(option.oddsRaw),
-          })) as Json,
-        })
-        .eq('id', editing.id);
-      if (proposalUpdateError) throw proposalUpdateError;
+      const { error } = await supabase.rpc('review_bet_proposal', {
+        p_proposal_id: editing.id,
+        p_status: 'accepted',
+        p_title: editing.title.trim(),
+        p_category_id: editing.categoryId || null,
+        p_bet_type: editing.betType,
+        p_options: cleanedOptions.map((option) => ({
+          name: option.name,
+          odds: Number(option.oddsRaw),
+        })) as Json,
+        p_ends_at: endsAtDate.toISOString(),
+        p_is_bsplicboost: editing.isBsplicboost,
+      });
+      if (error) throw error;
 
       toast.success('Propozycja zaakceptowana');
       setEditorOpen(false);
@@ -234,10 +229,10 @@ export default function ProposalsTab() {
   const reject = async (proposalId: string) => {
     setRejectingId(proposalId);
     try {
-      const { error } = await supabase
-        .from('bet_proposals')
-        .update({ status: 'rejected' })
-        .eq('id', proposalId);
+      const { error } = await supabase.rpc('review_bet_proposal', {
+        p_proposal_id: proposalId,
+        p_status: 'rejected',
+      });
       if (error) throw error;
       toast.info('Propozycja odrzucona');
       fetchProposals();
@@ -378,16 +373,13 @@ export default function ProposalsTab() {
 
       {/* Proposal editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent
-          className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6"
-          aria-describedby="proposal-editor-desc"
-        >
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Dostosuj propozycję</DialogTitle>
+            <DialogDescription className="sr-only">
+              Edytuj szczegóły propozycji przed jej zaakceptowaniem
+            </DialogDescription>
           </DialogHeader>
-          <p id="proposal-editor-desc" className="sr-only">
-            Edytuj szczegóły propozycji przed jej zaakceptowaniem
-          </p>
           {editing && (
             <div className="space-y-4">
               <div className="space-y-2">

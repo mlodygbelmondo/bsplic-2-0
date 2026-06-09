@@ -16,7 +16,8 @@ const NavbarMobileMenu = lazy(() => import("./NavbarMobileMenu"));
 const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
 
 export function Navbar() {
-  const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
+  const { user, profile, isAdmin, isModerator, signOut, refreshProfile } =
+    useAuth();
   const location = useLocation();
   const [topupOpen, setTopupOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -127,6 +128,19 @@ export function Navbar() {
                   )}
                 >
                   <ShieldCheck className="h-4 w-4 shrink-0" /> Admin
+                </Link>
+              )}
+              {!isAdmin && isModerator && (
+                <Link
+                  to="/admin"
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
+                    isActivePath("/admin")
+                      ? "text-primary-foreground"
+                      : "text-primary-foreground/70",
+                  )}
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" /> Propozycje
                 </Link>
               )}
             </div>

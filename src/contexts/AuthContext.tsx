@@ -16,6 +16,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isModerator: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
   const [loading, setLoading] = useState(true);
   const profileRequestIdRef = useRef(0);
   const inFlightProfileFetchesRef = useRef<Record<string, Promise<void>>>({});
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     inFlightProfileFetchesRef.current = {};
     setProfile(null);
     setIsAdmin(false);
+    setIsModerator(false);
   }, []);
 
   const fetchProfile = useCallback((userId: string) => {
@@ -66,10 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setProfile((profileResult.data as Profile | null) ?? null);
+        const roles = rolesResult.data ?? [];
         setIsAdmin(
-          rolesResult.data?.some(
-            (roleRow: { role: string }) => roleRow.role === 'admin',
-          ) ?? false,
+          roles.some((roleRow: { role: string }) => roleRow.role === 'admin'),
+        );
+        setIsModerator(
+          roles.some(
+            (roleRow: { role: string }) => roleRow.role === 'moderator',
+          ),
         );
       })
       .catch((error) => {
@@ -77,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profileRequestIdRef.current === requestId) {
           setProfile(null);
           setIsAdmin(false);
+          setIsModerator(false);
         }
       })
       .finally(() => {
@@ -169,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         isAdmin,
+        isModerator,
         loading,
         signIn,
         signUp,
