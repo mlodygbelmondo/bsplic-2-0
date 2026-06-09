@@ -34,6 +34,7 @@ import { useSocialRealtimeFeed } from '@/features/social/hooks/useSocialRealtime
 import { updateReactionCounts } from '@/features/social/lib/feedReactions';
 import { formatEventsCount } from '@/features/social/lib/socialFormatters';
 import { REACTION_TYPES } from '@/features/social/reactions';
+import { getSocialItemPath } from '@/features/social/routes';
 import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 
 const SOCIAL_FEED_PAGE_SIZE = 50;
@@ -691,6 +692,14 @@ export default function SocialPage() {
                     currentUserId={user?.id}
                     highlighted={
                       highlightedItemKey === `${item.item_type}-${item.id}`
+                    }
+                    onOpenItem={(selectedItem) =>
+                      navigate(
+                        getSocialItemPath(
+                          selectedItem.item_type,
+                          selectedItem.id,
+                        ),
+                      )
                     }
                     onOpenItemReactors={handleOpenItemReactors}
                     onOpenCommentReactors={handleOpenCommentReactors}

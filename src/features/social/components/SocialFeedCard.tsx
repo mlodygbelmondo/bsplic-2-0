@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
 
@@ -56,6 +56,8 @@ interface SocialFeedCardProps {
   isAko: boolean;
   currentUserId?: string;
   highlighted?: boolean;
+  defaultCommentsExpanded?: boolean;
+  onOpenItem?: (item: SocialFeedItem) => void;
   onOpenItemReactors: (item: SocialFeedItem) => void;
   onOpenCommentReactors: (commentId: string) => void;
 }
@@ -77,6 +79,8 @@ export const SocialFeedCard = memo(function SocialFeedCard({
   isAko: ako,
   currentUserId,
   highlighted = false,
+  defaultCommentsExpanded = false,
+  onOpenItem,
   onOpenItemReactors,
   onOpenCommentReactors,
 }: SocialFeedCardProps) {
@@ -106,11 +110,28 @@ export const SocialFeedCard = memo(function SocialFeedCard({
     };
   });
 
+  const handleOpenItem = (event: MouseEvent<HTMLDivElement>) => {
+    if (!onOpenItem) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (
+      target.closest(
+        'a, button, input, textarea, select, label, [role="button"], [data-prevent-card-navigation]',
+      )
+    ) {
+      return;
+    }
+
+    onOpenItem(item);
+  };
+
   return (
     <div
       id={`social-item-${item.item_type}-${item.id}`}
+      onClick={handleOpenItem}
       className={cn(
         'bg-card rounded-xl card-shadow overflow-hidden transition-shadow',
+        onOpenItem && 'cursor-pointer hover:shadow-lg',
         highlighted && 'ring-2 ring-primary/50 shadow-lg',
       )}
     >
@@ -179,7 +200,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       )}
       {item.item_type === 'casino' && <CasinoContent item={item} />}
 
-      <div className="px-4 pb-3 space-y-2">
+      <div className="px-4 pb-3 space-y-2" data-prevent-card-navigation>
         <ReactionBar
           reactions={item.reactions as ReactionCounts | null}
           myReaction={item.my_reaction as ReactionType | null}
@@ -193,6 +214,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
           comments={parsedComments}
           initialCount={item.comment_count ?? 0}
           commentsLoaded={commentsLoaded}
+          defaultExpanded={defaultCommentsExpanded}
           onFirstExpand={() => {
             if (commentsLoaded || commentsLoading) return;
             void onFirstExpandComments(item.id, item.item_type);

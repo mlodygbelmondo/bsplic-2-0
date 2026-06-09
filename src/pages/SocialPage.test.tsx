@@ -224,6 +224,15 @@ describe('SocialPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('opens a dedicated social item page when clicking a post card', async () => {
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+    renderSocialPage();
+
+    fireEvent.click(await screen.findByText('Cześć, to mój pierwszy post!'));
+
+    expect(navigateMock).toHaveBeenCalledWith('/social/post/post-1');
+  });
+
   it('displays both posts and coupons in mixed feed', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makeCouponFeedItem(),

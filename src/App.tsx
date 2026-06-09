@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const RankingsPage = lazy(() => import("./pages/RankingsPage"));
 const SocialPage = lazy(() => import("./pages/SocialPage"));
+const SocialItemPage = lazy(() => import("./pages/SocialItemPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -86,6 +87,10 @@ const App = () => (
               <Route path="/profile/:userId" element={<ProfilePage />} />
               <Route path="/rankings" element={<RankingsPage />} />
               <Route path="/social" element={<SocialPage />} />
+              <Route
+                path="/social/:itemType/:itemId"
+                element={<SocialItemPage />}
+              />
 
               <Route
                 path="/casino"

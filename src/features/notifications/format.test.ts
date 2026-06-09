@@ -29,12 +29,21 @@ describe('notifications format helpers', () => {
     expect(getNotificationLink(baseNotification)).toBe('/social');
   });
 
-  it('returns explicit notification link when available', () => {
+  it('returns dedicated social item route for legacy social query links', () => {
     expect(
       getNotificationLink({
         ...baseNotification,
         link_path: '/social?itemType=post&itemId=abc',
       }),
-    ).toBe('/social?itemType=post&itemId=abc');
+    ).toBe('/social/post/abc');
+  });
+
+  it('returns explicit notification link when available', () => {
+    expect(
+      getNotificationLink({
+        ...baseNotification,
+        link_path: '/profile/user-1',
+      }),
+    ).toBe('/profile/user-1');
   });
 });

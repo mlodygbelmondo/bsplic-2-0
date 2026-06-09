@@ -43,6 +43,7 @@ interface CommentThreadProps {
   disabled?: boolean;
   maxDepth?: number;
   currentUserId?: string;
+  defaultExpanded?: boolean;
 }
 
 export function CommentThread({
@@ -56,10 +57,11 @@ export function CommentThread({
   disabled,
   maxDepth = 3,
   currentUserId,
+  defaultExpanded = false,
 }: CommentThreadProps) {
   const tree = buildCommentTree(comments);
-  const [collapsed, setCollapsed] = useState(true);
-  const [showInput, setShowInput] = useState(false);
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
+  const [showInput, setShowInput] = useState(defaultExpanded);
 
   const totalCount = commentsLoaded ? comments.length : Math.max(comments.length, initialCount);
 

@@ -99,6 +99,21 @@ describe('CommentThread', () => {
     expect(screen.getByText('Widoczny komentarz')).toBeInTheDocument();
   });
 
+  it('can render comments expanded by default', () => {
+    const comments = [makeComment({ id: 'c1', content: 'Widoczny od razu' })];
+
+    render(
+      <CommentThread
+        {...defaultProps}
+        comments={comments}
+        defaultExpanded
+      />
+    );
+
+    expect(screen.getByText('Widoczny od razu')).toBeInTheDocument();
+    expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
+  });
+
   it('renders nested replies with indentation', () => {
     const comments = [
       makeComment({ id: 'c1', content: 'Komentarz główny', username: 'adam' }),

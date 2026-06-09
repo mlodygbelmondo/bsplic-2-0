@@ -1,4 +1,5 @@
 import type { NotificationType, UserNotification } from '@/types/database';
+import { getSocialItemPath, isFeedItemType } from '@/features/social/routes';
 
 export function formatNotificationTypeLabel(type: NotificationType): string {
   switch (type) {
@@ -32,5 +33,19 @@ export function formatNotificationTime(dateStr: string): string {
 }
 
 export function getNotificationLink(notification: UserNotification): string {
-  return notification.link_path || '/social';
+  const linkPath = notification.link_path || '/social';
+
+  try {
+    const url = new URL(linkPath, 'https://bsplic.local');
+    const itemType = url.searchParams.get('itemType') ?? undefined;
+    const itemId = url.searchParams.get('itemId');
+
+    if (url.pathname === '/social' && isFeedItemType(itemType) && itemId) {
+      return getSocialItemPath(itemType, itemId);
+    }
+  } catch {
+    return linkPath;
+  }
+
+  return linkPath;
 }
