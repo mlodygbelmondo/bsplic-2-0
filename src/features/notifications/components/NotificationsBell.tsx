@@ -17,6 +17,7 @@ import {
 import {
   getNotificationsSoundMuted,
   playNotificationSound,
+  prepareNotificationSound,
   setNotificationsSoundMuted,
 } from "@/features/notifications/sound";
 import {
@@ -198,6 +199,15 @@ export function NotificationsBell({
     const nextMuted = !soundMuted;
     setSoundMuted(nextMuted);
     setNotificationsSoundMuted(nextMuted);
+    if (!nextMuted) {
+      void prepareNotificationSound();
+    }
+  };
+
+  const handleBellClick = () => {
+    if (!soundMutedRef.current) {
+      void prepareNotificationSound();
+    }
   };
 
   return (
@@ -206,6 +216,7 @@ export function NotificationsBell({
         <button
           type="button"
           aria-label="Powiadomienia"
+          onClick={handleBellClick}
           className={`relative inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
             hasUnread
               ? "text-primary-foreground hover:bg-primary-foreground/20"

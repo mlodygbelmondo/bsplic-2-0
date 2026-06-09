@@ -4,6 +4,23 @@ interface WindowWithWebkitAudio extends Window {
   webkitAudioContext?: typeof AudioContext;
 }
 
+let notificationAudioContext: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+
+  if (notificationAudioContext && notificationAudioContext.state !== 'closed') {
+    return notificationAudioContext;
+  }
+
+  const win = window as WindowWithWebkitAudio;
+  const AudioContextCtor = window.AudioContext ?? win.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+
+  notificationAudioContext = new AudioContextCtor();
+  return notificationAudioContext;
+}
+
 export function getNotificationsSoundMuted(): boolean {
   if (typeof window === 'undefined') return false;
   return window.localStorage.getItem(SOUND_MUTED_STORAGE_KEY) === '1';
@@ -14,20 +31,20 @@ export function setNotificationsSoundMuted(muted: boolean): void {
   window.localStorage.setItem(SOUND_MUTED_STORAGE_KEY, muted ? '1' : '0');
 }
 
+export async function prepareNotificationSound(): Promise<void> {
+  const context = getAudioContext();
+  if (!context) return;
+
+  if (context.state === 'suspended') {
+    await context.resume();
+  }
+}
+
 export async function playNotificationSound(): Promise<void> {
-  if (typeof window === 'undefined') return;
-
-  const win = window as WindowWithWebkitAudio;
-  const AudioContextCtor = window.AudioContext ?? win.webkitAudioContext;
-  if (!AudioContextCtor) return;
-
-  let context: AudioContext | null = null;
-
   try {
-    context = new AudioContextCtor();
-    if (context.state === 'suspended') {
-      await context.resume();
-    }
+    await prepareNotificationSound();
+    const context = getAudioContext();
+    if (!context || context.state === 'closed') return;
 
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -45,13 +62,7 @@ export async function playNotificationSound(): Promise<void> {
 
     oscillator.start(now);
     oscillator.stop(now + 0.22);
-    oscillator.onended = () => {
-      void context?.close();
-      context = null;
-    };
   } catch {
-    if (context) {
-      await context.close().catch(() => undefined);
-    }
+    // Browsers may reject audio playback until the user interacts with the page.
   }
 }

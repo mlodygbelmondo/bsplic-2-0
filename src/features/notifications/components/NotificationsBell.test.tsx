@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   markNotificationRead: vi.fn(),
   channel: vi.fn(),
   removeChannel: vi.fn(),
+  prepareNotificationSound: vi.fn(),
   setNotificationsSoundMuted: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ vi.mock('@/features/notifications/api/notifications', () => ({
 vi.mock('@/features/notifications/sound', () => ({
   getNotificationsSoundMuted: () => false,
   playNotificationSound: vi.fn(),
+  prepareNotificationSound: () => mocks.prepareNotificationSound(),
   setNotificationsSoundMuted: (muted: boolean) =>
     mocks.setNotificationsSoundMuted(muted),
 }));
@@ -56,11 +58,13 @@ describe('NotificationsBell', () => {
     mocks.markNotificationRead.mockReset();
     mocks.channel.mockReset();
     mocks.removeChannel.mockReset();
+    mocks.prepareNotificationSound.mockReset();
     mocks.setNotificationsSoundMuted.mockReset();
 
     mocks.fetchUnreadNotificationsCount.mockResolvedValue(1);
     mocks.fetchUserNotifications.mockResolvedValue([]);
     mocks.channel.mockImplementation(createChannel);
+    mocks.prepareNotificationSound.mockResolvedValue(undefined);
   });
 
   it('keeps one realtime channel when popover and sound UI state changes', async () => {
@@ -89,5 +93,19 @@ describe('NotificationsBell', () => {
 
     expect(mocks.setNotificationsSoundMuted).toHaveBeenCalledWith(true);
     expect(mocks.channel).toHaveBeenCalledTimes(1);
+  });
+
+  it('prepares notification sound from the bell click before realtime inserts arrive', async () => {
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mocks.channel).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
+
+    expect(mocks.prepareNotificationSound).toHaveBeenCalledTimes(1);
   });
 });
