@@ -120,10 +120,23 @@
     --app-viewport-height: 100svh;
   }
 
+  /* Installed (home-screen) app: iOS computes the layout viewport, svh and
+     dvh ~59pt short of the real screen in standalone mode, which leaves a
+     bare html/body band under the app shell. 100vh is the only unit that
+     reports the true height there (no browser chrome exists, so the large
+     viewport is exact). Verified on the iOS simulator with an instrumented
+     probe page: screen 852pt, svh/dvh/innerHeight 793pt, vh 852pt. */
   @media (display-mode: standalone), (display-mode: fullscreen) {
     :root {
-      --app-viewport-height: 100dvh;
+      --app-viewport-height: 100vh;
     }
+  }
+
+  /* Legacy iOS webclips report navigator.standalone === true but do NOT
+     match (display-mode: standalone); index.html sets this class before
+     first paint. */
+  :root.standalone {
+    --app-viewport-height: 100vh;
   }
 
   /* Light theme: the pre-redesign palette, opt-in via the `light` class

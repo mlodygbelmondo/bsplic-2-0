@@ -22,11 +22,22 @@ describe('mobile viewport contract', () => {
     expect(css).toMatch(
       /\.h-safe-screen\s*{[\s\S]*height:\s*100svh;[\s\S]*height:\s*var\(--app-viewport-height,\s*100svh\);/,
     );
+    // iOS standalone mode: svh/dvh report ~59pt short of the real screen,
+    // only 100vh is exact there. Both the media query and the
+    // navigator.standalone class fallback must size the shell with 100vh.
     expect(css).toMatch(
-      /@media\s*\(display-mode:\s*standalone\),\s*\(display-mode:\s*fullscreen\)\s*{[\s\S]*--app-viewport-height:\s*100dvh;/,
+      /@media\s*\(display-mode:\s*standalone\),\s*\(display-mode:\s*fullscreen\)\s*{[\s\S]*--app-viewport-height:\s*100vh;/,
     );
+    expect(css).toMatch(/:root\.standalone\s*{[\s\S]*--app-viewport-height:\s*100vh;/);
     expect(entrypoint).not.toContain('visualViewport');
     expect(entrypoint).not.toContain('syncAppViewportHeight');
+  });
+
+  it('marks legacy iOS webclips with a standalone class before first paint', async () => {
+    const indexHtml = await readProjectFile('index.html');
+
+    expect(indexHtml).toContain('window.navigator.standalone === true');
+    expect(indexHtml).toContain("classList.add('standalone')");
   });
 
   it('paints the whole iOS PWA viewport behind the app shell', async () => {

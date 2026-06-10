@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f0e16" />
     <script>
+      // iOS home-screen webclips don't always match the
+      // (display-mode: standalone) media query; mark the root element before
+      // first paint so CSS can size the app shell with 100vh there.
+      if (window.navigator.standalone === true) {
+        document.documentElement.classList.add('standalone');
+      }
       // Apply the stored theme before first paint to avoid a flash.
       try {
         if (localStorage.getItem('bsplic.theme') === 'light') {
