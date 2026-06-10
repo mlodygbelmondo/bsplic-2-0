@@ -26,6 +26,7 @@ import {
   isFeedItemType,
 } from '@/features/social/routes';
 import { buildSocialContent } from '@/features/social/content';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   REACTION_TYPES,
   type ReactionCounts,
@@ -41,6 +42,7 @@ import type {
 const EMPTY_COMMENTS: SocialComment[] = [];
 
 export default function SocialItemPage() {
+  usePageTitle('Social');
   const { itemType: itemTypeParam, itemId } = useParams();
   const itemType = isFeedItemType(itemTypeParam) ? itemTypeParam : null;
   const { user } = useAuth();

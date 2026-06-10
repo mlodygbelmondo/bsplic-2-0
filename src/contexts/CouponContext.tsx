@@ -1,6 +1,49 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { CouponItem } from '@/types/database';
 import { toast } from 'sonner';
+
+const STORED_ITEMS_KEY = 'bsplic.coupon.items.v1';
+
+function isStorableCouponItem(value: unknown): value is CouponItem {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as CouponItem;
+  return (
+    typeof item.selectedOption === 'string' &&
+    typeof item.odds === 'number' &&
+    Number.isFinite(item.odds) &&
+    !!item.bet &&
+    typeof item.bet === 'object' &&
+    typeof item.bet.id === 'string'
+  );
+}
+
+function readStoredItems(): CouponItem[] {
+  try {
+    const raw = window.localStorage.getItem(STORED_ITEMS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isStorableCouponItem).filter((item) => {
+      if (!item.bet.is_active) return false;
+      const endsAt = new Date(item.bet.ends_at).getTime();
+      return Number.isFinite(endsAt) && endsAt > Date.now();
+    });
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredItems(items: CouponItem[]) {
+  try {
+    if (items.length === 0) {
+      window.localStorage.removeItem(STORED_ITEMS_KEY);
+    } else {
+      window.localStorage.setItem(STORED_ITEMS_KEY, JSON.stringify(items));
+    }
+  } catch {
+    // Storage unavailable (private mode, quota) — coupon just won't persist.
+  }
+}
 
 interface CouponContextType {
   items: CouponItem[];
@@ -17,8 +60,12 @@ interface CouponContextType {
 const CouponContext = createContext<CouponContextType | undefined>(undefined);
 
 export function CouponProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CouponItem[]>([]);
+  const [items, setItems] = useState<CouponItem[]>(readStoredItems);
   const [preferredCouponType, setPreferredCouponType] = useState<'single' | 'ako' | null>(null);
+
+  useEffect(() => {
+    writeStoredItems(items);
+  }, [items]);
 
   const addItem = (item: CouponItem) => {
     setItems(prev => {

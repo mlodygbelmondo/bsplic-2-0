@@ -47,8 +47,8 @@ export default defineConfig(({ mode }) => ({
         display: "standalone",
         display_override: ["window-controls-overlay", "standalone", "browser"],
         orientation: "portrait",
-        theme_color: "#dc2626",
-        background_color: "#111827",
+        theme_color: "#0f0e16",
+        background_color: "#0f0e16",
         lang: "pl",
         categories: ["sports", "productivity"],
         icons: [

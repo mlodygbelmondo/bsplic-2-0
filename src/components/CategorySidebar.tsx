@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Category } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Search } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionLoader } from '@/components/SectionLoader';
 
 interface CategorySidebarProps {
   selectedCategory: string | null;
@@ -56,8 +56,7 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
             Wszystkie
           </button>
 
-          {loading &&
-            [...Array(5)].map((_, index) => <Skeleton key={index} className="h-9 w-full rounded-md" />)}
+          {loading && <SectionLoader size="sm" label="Wczytywanie..." />}
 
           {!loading &&
             filteredCategories.map((category) => (

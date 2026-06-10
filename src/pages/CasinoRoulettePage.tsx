@@ -1,5 +1,6 @@
 import { CasinoLobby } from '@/features/casino/components/CasinoLobby';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { CSSProperties } from 'react';
 
 type CasinoBackgroundStyle = CSSProperties & {
@@ -8,6 +9,7 @@ type CasinoBackgroundStyle = CSSProperties & {
 };
 
 export default function CasinoRoulettePage() {
+  usePageTitle('Ruletka');
   const { user, profile, refreshProfile } = useAuth();
 
   if (!user || !profile) return null;

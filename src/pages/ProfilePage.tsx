@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge, PublicProfile } from "@/types/database";
 import { Navigate, useParams } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SectionLoader } from "@/components/SectionLoader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { PlayerCardHero } from "@/features/player-card/components/PlayerCardHero";
@@ -13,6 +13,7 @@ import { compressImageFile } from "@/features/social/images";
 import { ProfileBadgesSection } from "@/features/profile/components/ProfileBadgesSection";
 import { ProfileHistoryPanel } from "@/features/profile/components/ProfileHistoryPanel";
 import { useProfileHistory } from "@/features/profile/hooks/useProfileHistory";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface UserStatsRow {
   total_bets: number;
@@ -37,6 +38,7 @@ function getShareableProfileUrl() {
 }
 
 export default function ProfilePage() {
+  usePageTitle("Profil");
   const { user, profile, refreshProfile } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
   const normalizedUserRef = userRef ? decodeURIComponent(userRef) : undefined;
@@ -281,9 +283,8 @@ export default function ProfilePage() {
       <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
         <Navbar />
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-4xl mx-auto p-4 space-y-4">
-            <Skeleton className="h-28 w-full rounded-xl" />
-            <Skeleton className="h-56 w-full rounded-2xl" />
+          <div className="max-w-4xl mx-auto p-4">
+            <SectionLoader label="Wczytywanie profilu..." />
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import {
   SocialFeedItem,
@@ -8,8 +8,8 @@ import {
 } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2 } from 'lucide-react';
+import { SectionLoader } from '@/components/SectionLoader';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
@@ -35,11 +35,20 @@ import { updateReactionCounts } from '@/features/social/lib/feedReactions';
 import { formatEventsCount } from '@/features/social/lib/socialFormatters';
 import { REACTION_TYPES } from '@/features/social/reactions';
 import { getSocialItemPath } from '@/features/social/routes';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 
 const SOCIAL_FEED_PAGE_SIZE = 50;
 const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
 const EMPTY_COMMENTS: SocialComment[] = [];
+
+type FeedFilter = 'all' | 'coupon' | 'post' | 'casino';
+
+function parseFeedFilter(value: string | null): FeedFilter {
+  return value === 'coupon' || value === 'post' || value === 'casino'
+    ? value
+    : 'all';
+}
 function mergeFeedItem(
   items: SocialFeedItem[],
   nextItem: SocialFeedItem,
@@ -60,10 +69,8 @@ function mergeFeedItem(
 }
 
 export default function SocialPage() {
+  usePageTitle('Social');
   const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
-  const [feedFilter, setFeedFilter] = useState<
-    'all' | 'coupon' | 'post' | 'casino'
-  >('all');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -83,8 +90,29 @@ export default function SocialPage() {
   >({});
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  const feedFilter = parseFeedFilter(searchParams.get('filter'));
+  const setFeedFilter = useCallback(
+    (filter: FeedFilter) => {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          if (filter === 'all') {
+            next.delete('filter');
+          } else {
+            next.set('filter', filter);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(
     null,
   );
@@ -227,7 +255,7 @@ export default function SocialPage() {
     return () => {
       cancelled = true;
     };
-  }, [targetItemId, targetItemType, user?.id]);
+  }, [setFeedFilter, targetItemId, targetItemType, user?.id]);
 
   useEffect(() => {
     if (!highlightedItemKey) return;
@@ -591,7 +619,15 @@ export default function SocialPage() {
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        onScroll={() => {
+          const element = scrollContainerRef.current;
+          if (!element) return;
+          setShowBackToTop(element.scrollTop > 600);
+        }}
+        className="flex-1 min-h-0 overflow-y-auto"
+      >
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4">Social</h1>
 
@@ -657,11 +693,7 @@ export default function SocialPage() {
           )}
 
           {loading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
-              ))}
-            </div>
+            <SectionLoader label="Wczytywanie aktywności..." />
           ) : (
             <div className="space-y-3">
               {filteredFeedItems.length === 0 && !hasMore ? (
@@ -731,6 +763,21 @@ export default function SocialPage() {
           )}
         </div>
       </div>
+      {showBackToTop && (
+        <button
+          type="button"
+          aria-label="Wróć na górę"
+          onClick={() =>
+            scrollContainerRef.current?.scrollTo({
+              top: 0,
+              behavior: 'smooth',
+            })
+          }
+          className="press-scale fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-xl transition-colors hover:bg-muted"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
       <ReactorsDialog
         open={reactorsOpen}
         onOpenChange={setReactorsOpen}

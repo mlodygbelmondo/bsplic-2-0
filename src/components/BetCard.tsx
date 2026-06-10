@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
@@ -7,6 +7,18 @@ import { Sparkles, Users } from 'lucide-react';
 interface BetCardProps {
   bet: Bet;
   category?: Category;
+}
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+function formatTimeRemaining(remainingMs: number): string {
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  if (totalMinutes < 1) return 'za chwilę';
+  if (totalMinutes < 60) return `za ${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `za ${hours} godz. ${minutes} min` : `za ${hours} godz.`;
 }
 
 function formatBetDate(endsAt: string) {
@@ -33,7 +45,21 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
     () => new Date(bet.ends_at).getTime(),
     [bet.ends_at],
   );
-  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+  const [now, setNow] = useState(() => Date.now());
+  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= now;
+  const remainingMs = endTimestamp - now;
+  const endsSoon =
+    Number.isFinite(endTimestamp) &&
+    bet.is_active &&
+    remainingMs > 0 &&
+    remainingMs <= DAY_MS;
+
+  useEffect(() => {
+    if (!endsSoon) return;
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [endsSoon]);
+
   const isInProgress = isExpired && bet.winning_option === null;
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = useMemo(
@@ -71,8 +97,8 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   return (
     <div
       className={cn(
-        'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
-        isBsplicboost && 'bsplicboost-card border border-red-300/40',
+        'bg-card border border-border/60 rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        isBsplicboost && 'bsplicboost-card',
         bet.is_live && 'ring-1 ring-primary/30',
       )}
     >
@@ -95,7 +121,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
           {isBsplicboost && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-100/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-red-50 ring-1 ring-red-200/30">
+            <span className="bsplicboost-badge inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
               <Sparkles className="h-3 w-3" /> BSPLBOOST
             </span>
           )}
@@ -135,6 +161,16 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             title={bet.ends_at}
           >
             {endsAtLabel}
+            {endsSoon && (
+              <span
+                className={cn(
+                  'ml-1 font-semibold',
+                  remainingMs <= HOUR_MS ? 'text-red-500' : 'text-amber-600',
+                )}
+              >
+                · kończy się {formatTimeRemaining(remainingMs)}
+              </span>
+            )}
           </p>
         </div>
 
@@ -157,22 +193,23 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
         >
           {options.map((opt, index) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
+            const isLocked = isExpired || !bet.is_active;
             const isCenteredLastMultiOption =
               shouldCenterLastMultiOption && index === options.length - 1;
             return (
               <button
                 key={opt.name}
                 onClick={() => handleSelect(opt)}
-                disabled={isExpired || !bet.is_active}
+                disabled={isLocked}
                 className={cn(
                   'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
                   isCenteredLastMultiOption &&
                     'col-span-2 justify-self-center w-[48%]',
                   isSelected
                     ? 'odds-selected odds-chip-selected shadow-md'
-                    : 'odds-yellow hover:brightness-105',
-                  (isExpired || !bet.is_active) &&
-                    'opacity-40 cursor-not-allowed',
+                    : isLocked
+                      ? 'odds-locked cursor-not-allowed'
+                      : 'odds-yellow hover:brightness-105',
                 )}
               >
                 <span
@@ -180,9 +217,11 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                     'text-[12px] mb-0.5 truncate w-full text-center transition-colors duration-200',
                     isSelected
                       ? 'text-[#f6bf2b]'
-                      : index % 2 === 0
-                        ? 'text-zinc-900'
-                        : 'text-zinc-800',
+                      : isLocked
+                        ? 'text-inherit'
+                        : index % 2 === 0
+                          ? 'text-zinc-900'
+                          : 'text-zinc-800',
                   )}
                 >
                   {opt.name}
@@ -192,9 +231,11 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                     'text-[15px] font-bold transition-colors duration-200',
                     isSelected
                       ? 'text-[#f6bf2b]'
-                      : index % 2 === 0
-                        ? 'text-zinc-950'
-                        : 'text-zinc-900',
+                      : isLocked
+                        ? 'text-inherit'
+                        : index % 2 === 0
+                          ? 'text-zinc-950'
+                          : 'text-zinc-900',
                   )}
                 >
                   {opt.odds.toFixed(2)}

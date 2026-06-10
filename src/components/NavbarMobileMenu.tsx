@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, Moon, Plus, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/types/database";
 
@@ -34,6 +35,8 @@ export default function NavbarMobileMenu({
   onOpenTopup,
   signOut,
 }: NavbarMobileMenuProps) {
+  const { theme, toggleTheme } = useTheme();
+
   const handleOpenTopup = () => {
     if (!canTopup()) {
       toast.error("Już doładowano dzisiaj. Wróć jutro!");
@@ -121,7 +124,18 @@ export default function NavbarMobileMenu({
             )}
           </div>
 
-          <div className="border-t border-border p-4">
+          <div className="border-t border-border p-4 space-y-2">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+              {theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
+            </button>
             <SheetClose asChild>
               <button
                 onClick={handleSignOut}

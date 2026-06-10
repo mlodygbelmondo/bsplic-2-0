@@ -62,15 +62,18 @@ vi.mock("@/features/notifications/components/NotificationsBell", () => ({
 
 // Import the mocked function so we can control its return value per test
 import { canClaimTopup } from "@/features/social/polishDay";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 const canClaimTopupMock = vi.mocked(canClaimTopup);
 
 // ── Helpers ──────────────────────────────────────────────────
 
 function renderNavbar(pathname = "/") {
   return render(
-    <MemoryRouter initialEntries={[pathname]}>
-      <Navbar />
-    </MemoryRouter>,
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[pathname]}>
+        <Navbar />
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 
@@ -257,11 +260,18 @@ describe("Navbar", () => {
 
   // ── Sign out ─────────────────────────────────────────────
 
-  it("calls signOut when logout button is clicked", () => {
+  it("calls signOut from the user dropdown menu", async () => {
     renderNavbar();
-    const logoutButton = screen.getByTitle("Wyloguj");
-    fireEvent.click(logoutButton);
+    // Open the user menu (Radix trigger responds to keyboard activation)
+    fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
+    fireEvent.click(await screen.findByText("Wyloguj"));
     expect(signOutMock).toHaveBeenCalled();
+  });
+
+  it("shows theme toggle inside the user dropdown menu", async () => {
+    renderNavbar();
+    fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
+    expect(await screen.findByText("Tryb jasny")).toBeInTheDocument();
   });
 
   // ── No profile ───────────────────────────────────────────

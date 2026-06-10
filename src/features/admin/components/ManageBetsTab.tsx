@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionLoader } from '@/components/SectionLoader';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -333,14 +333,14 @@ export default function ManageBetsTab() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Szukaj zakładów..."
-              className="pl-10 bg-white border-border h-11 rounded-xl shadow-[0_8px_24px_rgba(15,23,42,0.06)] focus-visible:ring-primary/20"
+              className="pl-10 bg-card border-border h-11 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.25)] focus-visible:ring-primary/20"
               aria-label="Szukaj zakładów"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:w-auto md:min-w-[360px]">
             <Select value={statusFilter} onValueChange={(value: BetStatusFilter) => setStatusFilter(value)}>
-              <SelectTrigger className="h-11 rounded-xl bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <SelectTrigger className="h-11 rounded-xl bg-card shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -352,7 +352,7 @@ export default function ManageBetsTab() {
             </Select>
 
             <Select value={betTypeFilter} onValueChange={(value: BetTypeFilter) => setBetTypeFilter(value)}>
-              <SelectTrigger className="h-11 rounded-xl bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <SelectTrigger className="h-11 rounded-xl bg-card shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
                 <SelectValue placeholder="Typ zakładu" />
               </SelectTrigger>
               <SelectContent>
@@ -375,7 +375,7 @@ export default function ManageBetsTab() {
       {/* Mobile card list */}
       <div className="space-y-4 md:hidden pb-20">
         {loading ? (
-          [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)
+          <SectionLoader label="Wczytywanie zakładów..." />
         ) : paginated.length === 0 ? (
           <div className="text-center bg-card border border-border rounded-xl p-8 text-muted-foreground">Brak zakładów</div>
         ) : (
@@ -432,9 +432,7 @@ export default function ManageBetsTab() {
       {/* Desktop table */}
       <div className="hidden md:block bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-4 space-y-3">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-          </div>
+          <SectionLoader label="Wczytywanie zakładów..." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1060px] table-fixed text-sm">
@@ -495,14 +493,14 @@ export default function ManageBetsTab() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Więcej opcji">
-                              <MoreHorizontal className="h-3.5 w-3.5 text-gray-950" />
+                              <MoreHorizontal className="h-3.5 w-3.5 text-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
                             {!bet.winning_option && (
                               <>
                                 <DropdownMenuItem onClick={() => resolveBet(bet, [], 'refund')} disabled={resolvingBetId === bet.id}>
-                                  <RotateCcw className="h-3.5 w-3.5 mr-2 text-gray-950" />
+                                  <RotateCcw className="h-3.5 w-3.5 mr-2 text-foreground" />
                                   Rozlicz 1.00
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -745,11 +743,11 @@ export default function ManageBetsTab() {
               <div className="pt-2 border-t border-border" />
               {resolveModal.is_bsplicboost && (
                 <Button variant="outline" className="w-full justify-start" onClick={() => submitSpecialSettlement('force_lost')} disabled={isResolveInProgress}>
-                  <CircleOff className="h-4 w-4 mr-2 text-gray-950" /> Ogłoś przegraną (wszyscy)
+                  <CircleOff className="h-4 w-4 mr-2 text-foreground" /> Ogłoś przegraną (wszyscy)
                 </Button>
               )}
               <Button variant="outline" className="w-full justify-start" onClick={() => submitSpecialSettlement('refund')} disabled={isResolveInProgress}>
-                <RotateCcw className="h-4 w-4 mr-2 text-gray-950" /> Rozlicz 1.00 (zwrot)
+                <RotateCcw className="h-4 w-4 mr-2 text-foreground" /> Rozlicz 1.00 (zwrot)
               </Button>
             </div>
           </DialogContent>
