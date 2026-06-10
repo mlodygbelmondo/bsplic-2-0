@@ -7,6 +7,7 @@ import { LoginPage } from "@/components/LoginPage";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CouponProvider } from "@/contexts/CouponContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 
 const loadProfilePage = () => import("./pages/ProfilePage");
@@ -147,52 +148,54 @@ function AuthenticatedRoute({ children }: { children: ReactNode }) {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Sonner richColors />
-    <ConnectionToasts />
-    <RoutePrefetcher />
-    <BrowserRouter>
-      <AuthProvider>
-        <AuthenticatedBonusCampaignSurface />
-        <CouponProvider>
-          <Suspense fallback={<AppLoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/profile/:userId" element={<ProfilePage />} />
-              <Route path="/rankings" element={<RankingsPage />} />
-              <Route path="/social" element={<SocialPage />} />
-              <Route
-                path="/social/:itemType/:itemId"
-                element={<SocialItemPage />}
-              />
-
-              <Route
-                path="/casino"
-                element={
-                  <AuthenticatedRoute>
-                    <CasinoLayout />
-                  </AuthenticatedRoute>
-                }
-              >
-                <Route index element={<CasinoHub />} />
-                <Route path="roulette" element={<CasinoRoulettePage />} />
+  <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <Sonner richColors />
+      <ConnectionToasts />
+      <RoutePrefetcher />
+      <BrowserRouter>
+        <AuthProvider>
+          <AuthenticatedBonusCampaignSurface />
+          <CouponProvider>
+            <Suspense fallback={<AppLoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/:userId" element={<ProfilePage />} />
+                <Route path="/rankings" element={<RankingsPage />} />
+                <Route path="/social" element={<SocialPage />} />
                 <Route
-                  path="roulette/dev"
-                  element={<CasinoRouletteDevPage />}
+                  path="/social/:itemType/:itemId"
+                  element={<SocialItemPage />}
                 />
-                <Route path="blackjack" element={<CasinoBlackjackPage />} />
-              </Route>
 
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </CouponProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+                <Route
+                  path="/casino"
+                  element={
+                    <AuthenticatedRoute>
+                      <CasinoLayout />
+                    </AuthenticatedRoute>
+                  }
+                >
+                  <Route index element={<CasinoHub />} />
+                  <Route path="roulette" element={<CasinoRoulettePage />} />
+                  <Route
+                    path="roulette/dev"
+                    element={<CasinoRouletteDevPage />}
+                  />
+                  <Route path="blackjack" element={<CasinoBlackjackPage />} />
+                </Route>
+
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </CouponProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

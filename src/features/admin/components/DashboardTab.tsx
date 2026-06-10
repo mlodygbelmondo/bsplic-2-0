@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionLoader } from '@/components/SectionLoader';
 import { toast } from 'sonner';
 import {
   BarChart3,
@@ -134,24 +134,7 @@ export default function DashboardTab() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-card rounded-xl p-4 card-shadow">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-7 w-16" />
-            </div>
-          ))}
-        </div>
-        <div className="bg-card rounded-xl p-4 card-shadow">
-          <Skeleton className="h-4 w-40 mb-4" />
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full mb-2" />
-          ))}
-        </div>
-      </div>
-    );
+    return <SectionLoader label="Wczytywanie statystyk..." />;
   }
 
   if (error) {
@@ -212,7 +195,7 @@ export default function DashboardTab() {
           return (
             <div key={card.label} className="bg-card rounded-xl p-4 card-shadow">
               <div className="flex items-center gap-2 mb-1.5">
-                <Icon className="h-4 w-4 text-gray-950 shrink-0" aria-hidden="true" />
+                <Icon className="h-4 w-4 text-foreground shrink-0" aria-hidden="true" />
                 <p className="text-xs text-muted-foreground font-medium truncate">
                   {card.label}
                 </p>
@@ -228,7 +211,7 @@ export default function DashboardTab() {
       {/* Recent Activity */}
       <div className="bg-card rounded-xl card-shadow">
         <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-          <Clock className="h-4 w-4 text-gray-950 shrink-0" aria-hidden="true" />
+          <Clock className="h-4 w-4 text-foreground shrink-0" aria-hidden="true" />
           <h3 className="text-sm font-semibold">Ostatnia aktywność</h3>
         </div>
 

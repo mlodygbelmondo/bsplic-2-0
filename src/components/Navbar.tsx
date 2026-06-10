@@ -1,10 +1,27 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, ShieldCheck, Wallet, Menu } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  Plus,
+  ShieldCheck,
+  Sun,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { canClaimTopup } from "@/features/social/polishDay";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const NotificationsBell = lazy(() =>
@@ -18,6 +35,7 @@ const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
 export function Navbar() {
   const { user, profile, isAdmin, isModerator, signOut, refreshProfile } =
     useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [topupOpen, setTopupOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,7 +86,7 @@ export function Navbar() {
           <div className="flex items-center gap-5">
             <Link
               to="/"
-              className="text-[17px] font-black text-primary-foreground tracking-tight hover:brightness-110 transition leading-none"
+              className="brand-logo-pill rounded-md px-2 py-[5px] text-[14px] font-black italic tracking-tight text-white leading-none transition hover:brightness-110"
             >
               BSPLIC 2.0
             </Link>
@@ -152,47 +170,88 @@ export function Navbar() {
                 <NotificationsBell userId={user?.id} />
               </Suspense>
             )}
-            {profile && (
+            {profile && isDesktopNav && (
               <button
                 onClick={openTopupDialog}
-                className="flex items-center gap-1 bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground px-2.5 py-1 rounded-full text-[12px] font-bold transition-colors"
+                className="press-scale navbar-chip flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2.5 text-[12px] font-bold text-primary-foreground transition-colors"
                 title={
                   canTopup()
                     ? "Doładuj portfel"
                     : "Już doładowano dzisiaj. Wróć jutro!"
                 }
               >
-                <Wallet className="h-3 w-3" />
+                <span className="flex h-5 w-5 items-center justify-center rounded-full gradient-primary">
+                  <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                </span>
                 {Number(profile.balance).toFixed(2)} zł
               </button>
             )}
             {profile && (
-              <Link
-                to="/profile"
-                className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition"
-              >
-                <Avatar className="h-6 w-6 bg-primary-foreground/20">
-                  <AvatarImage
-                    src={profile.avatar_url ?? undefined}
-                    alt={`Avatar ${profile.username}`}
-                  />
-                  <AvatarFallback className="bg-primary-foreground/20 text-[10px] font-bold text-primary-foreground">
-                    {profile.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline">{profile.username}</span>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition outline-none"
+                    title="Menu użytkownika"
+                  >
+                    <Avatar className="h-6 w-6 bg-primary-foreground/20">
+                      <AvatarImage
+                        src={profile.avatar_url ?? undefined}
+                        alt={`Avatar ${profile.username}`}
+                      />
+                      <AvatarFallback className="bg-primary-foreground/20 text-[10px] font-bold text-primary-foreground">
+                        {profile.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline">{profile.username}</span>
+                    <ChevronDown className="h-3 w-3 opacity-70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer">
+                      <UserRound className="mr-2 h-4 w-4" /> Profil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={toggleTheme}
+                    className="cursor-pointer"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Moon className="mr-2 h-4 w-4" />
+                    )}
+                    {theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => signOut()}
+                    className="cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Wyloguj
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <button
-              onClick={() => signOut()}
-              className="text-primary-foreground/60 hover:text-primary-foreground transition-colors ml-1"
-              title="Wyloguj"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
           </div>
 
           <div className="lg:hidden flex items-center gap-2">
+            {profile && !isDesktopNav && (
+              <button
+                onClick={openTopupDialog}
+                className="press-scale navbar-chip flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] font-bold text-primary-foreground transition-colors"
+                title={
+                  canTopup()
+                    ? "Doładuj portfel"
+                    : "Już doładowano dzisiaj. Wróć jutro!"
+                }
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full gradient-primary">
+                  <Plus className="h-3 w-3" strokeWidth={3} />
+                </span>
+                {Number(profile.balance).toFixed(2)} zł
+              </button>
+            )}
             {!isDesktopNav && (
               <Suspense fallback={null}>
                 <NotificationsBell

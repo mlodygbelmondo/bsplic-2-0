@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { SectionLoader } from "@/components/SectionLoader";
 import {
   deriveCouponStatus,
   getDisplayedCouponOdds,
@@ -97,10 +97,10 @@ function SportsbookHistory({
               key={value}
               onClick={() => history.setFilter(value)}
               className={cn(
-                "shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all",
+                "press-scale shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
                 history.filter === value
-                  ? "gradient-primary text-primary-foreground shadow-sm"
-                  : "bg-muted",
+                  ? "bg-foreground text-background shadow-md"
+                  : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
               {SPORTSBOOK_FILTER_LABELS[value]}
@@ -402,13 +402,7 @@ function CasinoHistory({
 }
 
 function HistorySkeleton() {
-  return (
-    <div className="space-y-2">
-      {[...Array(3)].map((_, index) => (
-        <Skeleton key={index} className="h-14 w-full rounded-lg" />
-      ))}
-    </div>
-  );
+  return <SectionLoader size="sm" label="Wczytywanie historii..." />;
 }
 
 function deriveSportsbookCouponRows(

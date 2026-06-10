@@ -198,10 +198,10 @@ describe('SocialPage', () => {
 
   // ── Feed rendering ───────────────────────────────────────
 
-  it('renders loading skeletons then feed items', async () => {
+  it('renders loader then feed items', async () => {
     renderSocialPage();
-    // While loading, skeletons are shown (they are generic divs, hard to query, but
-    // after the feed resolves the item should appear).
+    // While loading, the branded loader is shown; after the feed resolves
+    // the item should appear.
     expect(await screen.findByText('Typster')).toBeInTheDocument();
   });
 

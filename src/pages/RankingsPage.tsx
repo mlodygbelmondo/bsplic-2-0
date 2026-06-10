@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SectionLoader } from "@/components/SectionLoader";
 import { Link } from "react-router-dom";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -160,20 +160,7 @@ export default function RankingsPage() {
           </div>
 
           {loading ? (
-            <div className="space-y-0">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-5 gap-2 p-3 items-center"
-                >
-                  <Skeleton className="h-4 w-6" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-14 ml-auto" />
-                  <Skeleton className="h-4 w-10 ml-auto" />
-                  <Skeleton className="h-4 w-8 ml-auto" />
-                </div>
-              ))}
-            </div>
+            <SectionLoader label="Wczytywanie rankingu..." />
           ) : (
             <>
               {sorted.map((r, i) => {

@@ -98,7 +98,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
     <div
       className={cn(
         'bg-card border border-border/60 rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
-        isBsplicboost && 'bsplicboost-card border border-red-300/40',
+        isBsplicboost && 'bsplicboost-card',
         bet.is_live && 'ring-1 ring-primary/30',
       )}
     >
@@ -121,7 +121,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
           {isBsplicboost && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-100/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-red-50 ring-1 ring-red-200/30">
+            <span className="bsplicboost-badge inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
               <Sparkles className="h-3 w-3" /> BSPLBOOST
             </span>
           )}
@@ -193,22 +193,23 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
         >
           {options.map((opt, index) => {
             const isSelected = selectedInCoupon?.selectedOption === opt.name;
+            const isLocked = isExpired || !bet.is_active;
             const isCenteredLastMultiOption =
               shouldCenterLastMultiOption && index === options.length - 1;
             return (
               <button
                 key={opt.name}
                 onClick={() => handleSelect(opt)}
-                disabled={isExpired || !bet.is_active}
+                disabled={isLocked}
                 className={cn(
                   'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
                   isCenteredLastMultiOption &&
                     'col-span-2 justify-self-center w-[48%]',
                   isSelected
                     ? 'odds-selected odds-chip-selected shadow-md'
-                    : 'odds-yellow hover:brightness-105',
-                  (isExpired || !bet.is_active) &&
-                    'opacity-40 cursor-not-allowed',
+                    : isLocked
+                      ? 'odds-locked cursor-not-allowed'
+                      : 'odds-yellow hover:brightness-105',
                 )}
               >
                 <span
@@ -216,9 +217,11 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                     'text-[12px] mb-0.5 truncate w-full text-center transition-colors duration-200',
                     isSelected
                       ? 'text-[#f6bf2b]'
-                      : index % 2 === 0
-                        ? 'text-zinc-900'
-                        : 'text-zinc-800',
+                      : isLocked
+                        ? 'text-inherit'
+                        : index % 2 === 0
+                          ? 'text-zinc-900'
+                          : 'text-zinc-800',
                   )}
                 >
                   {opt.name}
@@ -228,9 +231,11 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                     'text-[15px] font-bold transition-colors duration-200',
                     isSelected
                       ? 'text-[#f6bf2b]'
-                      : index % 2 === 0
-                        ? 'text-zinc-950'
-                        : 'text-zinc-900',
+                      : isLocked
+                        ? 'text-inherit'
+                        : index % 2 === 0
+                          ? 'text-zinc-950'
+                          : 'text-zinc-900',
                   )}
                 >
                   {opt.odds.toFixed(2)}

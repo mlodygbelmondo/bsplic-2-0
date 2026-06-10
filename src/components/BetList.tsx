@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Lightbulb } from "lucide-react";
 import { BetCard } from "./BetCard";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { SectionLoader } from "@/components/SectionLoader";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
 import { Category } from "@/types/database";
 
@@ -10,6 +12,7 @@ interface BetListProps {
   onSelectCategory?: (id: string | null) => void;
   categories: Category[];
   categoryMap: Record<string, Category>;
+  onProposeClick?: () => void;
 }
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
@@ -37,11 +40,14 @@ export function BetList({
   onSelectCategory,
   categories,
   categoryMap,
+  onProposeClick,
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>(readStoredSort);
   const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
     useBets(selectedCategory, sort);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
+  const [actionsHidden, setActionsHidden] = useState(false);
+  const lastScrollTopRef = useRef(0);
 
   const handleSelectSort = (value: SortMode) => {
     setSort(value);
@@ -51,6 +57,28 @@ export function BetList({
       // Storage unavailable — sort just won't be remembered.
     }
   };
+
+  // Hide the action row while scrolling down through the list and bring it
+  // back as soon as the user scrolls up a little.
+  const handleListScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop } = event.currentTarget;
+    const delta = scrollTop - lastScrollTopRef.current;
+    if (scrollTop <= 32) {
+      setActionsHidden(false);
+    } else if (delta > 4) {
+      setActionsHidden(true);
+    } else if (delta < -4) {
+      setActionsHidden(false);
+    }
+    lastScrollTopRef.current = scrollTop;
+  };
+
+  // Changing sort/category remounts the scroll container at the top, so the
+  // row must be visible again.
+  useEffect(() => {
+    setActionsHidden(false);
+    lastScrollTopRef.current = 0;
+  }, [sort, selectedCategory]);
 
   useEffect(() => {
     if (
@@ -79,21 +107,43 @@ export function BetList({
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
-      <div className="flex items-center gap-1.5 mb-3 shrink-0">
-        {SORT_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => handleSelectSort(option.value)}
-            className={cn(
-              "press-scale px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200",
-              sort === option.value
-                ? "bg-foreground text-background shadow-md"
-                : "bg-card/80 text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30",
+      <div
+        className={cn(
+          "grid shrink-0 transition-all duration-300 ease-out",
+          actionsHidden
+            ? "grid-rows-[0fr] opacity-0 -translate-y-2 pointer-events-none"
+            : "grid-rows-[1fr] opacity-100 translate-y-0",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
+            <div className="flex items-center gap-1.5">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleSelectSort(option.value)}
+                  className={cn(
+                    "press-scale px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200",
+                    sort === option.value
+                      ? "bg-foreground text-background shadow-md"
+                      : "bg-card/80 text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {onProposeClick && (
+              <Button
+                onClick={onProposeClick}
+                size="sm"
+                className="propose-cta-button relative flex items-center overflow-hidden text-[14px] font-bold h-8 px-4 py-2 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
+              >
+                <Lightbulb className="h-3 w-3" /> Zaproponuj zakład
+              </Button>
             )}
-          >
-            {option.label}
-          </button>
-        ))}
+          </div>
+        </div>
       </div>
 
       {onSelectCategory && (
@@ -131,34 +181,11 @@ export function BetList({
       )}
 
       {loading ? (
-        <div className="space-y-2 overflow-y-auto px-1 pr-2 pb-3 -mx-1 min-h-0">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-card border border-border/60 rounded-lg overflow-hidden card-shadow"
-            >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/50">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-10" />
-              </div>
-              <div className="px-3 py-2.5">
-                <div className="mb-3 flex flex-col items-center gap-1.5">
-                  <Skeleton className="h-4 w-3/5" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <Skeleton className="h-[52px] rounded-md" />
-                  <Skeleton className="h-[52px] rounded-md" />
-                  <Skeleton className="h-[52px] rounded-md" />
-                </div>
-                <Skeleton className="mt-2 h-[3px] w-full rounded-full" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <SectionLoader label="Wczytywanie zakładów..." className="flex-1" />
       ) : (
         <div
           key={`${sort}:${selectedCategory ?? "all"}`}
+          onScroll={handleListScroll}
           className="overflow-y-auto px-1 pr-2 pb-3 -mx-1 min-h-0"
         >
           {liveBets.length > 0 && (

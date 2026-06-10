@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionLoader } from '@/components/SectionLoader';
 import { toast } from 'sonner';
 import { Check, XCircle, Plus, X, Inbox, Loader2 } from 'lucide-react';
 import type { EditableBetType } from '../constants';
@@ -252,35 +252,7 @@ export default function ProposalsTab() {
   /* ---------- Loading skeleton ---------- */
   if (loading) {
     return (
-      <div
-        className="space-y-3"
-        role="status"
-        aria-label="Ładowanie propozycji"
-      >
-        {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-card rounded-xl p-4 card-shadow space-y-2.5"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-3/5 rounded" />
-                <Skeleton className="h-3 w-2/5 rounded" />
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Skeleton className="h-8 w-24 rounded-md" />
-                <Skeleton className="h-8 w-20 rounded-md" />
-              </div>
-            </div>
-            <div className="flex gap-1.5">
-              <Skeleton className="h-5 w-16 rounded-full" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-              {i % 2 === 0 && <Skeleton className="h-5 w-14 rounded-full" />}
-            </div>
-          </div>
-        ))}
-        <span className="sr-only">Ładowanie propozycji...</span>
-      </div>
+      <SectionLoader label="Wczytywanie propozycji..." />
     );
   }
 
@@ -291,7 +263,7 @@ export default function ProposalsTab() {
         {proposals.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="rounded-full bg-muted p-5 mb-4">
-              <Inbox className="h-8 w-8 text-slate-900" aria-hidden="true" />
+              <Inbox className="h-8 w-8 text-foreground" aria-hidden="true" />
             </div>
             <h3 className="text-base font-semibold mb-1">Brak propozycji</h3>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
@@ -358,7 +330,7 @@ export default function ProposalsTab() {
                       />
                     ) : (
                       <XCircle
-                        className="h-3 w-3 mr-1 text-slate-900"
+                        className="h-3 w-3 mr-1 text-foreground"
                         aria-hidden="true"
                       />
                     )}
@@ -540,7 +512,7 @@ export default function ProposalsTab() {
                               : p,
                           )
                         }
-                        className="text-slate-900 hover:text-destructive transition-colors"
+                        className="text-foreground hover:text-destructive transition-colors"
                         aria-label={`Usuń opcję ${index + 1}`}
                       >
                         <X className="h-4 w-4" />
@@ -565,7 +537,7 @@ export default function ProposalsTab() {
                     }
                   >
                     <Plus
-                      className="h-3 w-3 mr-1 text-slate-900"
+                      className="h-3 w-3 mr-1 text-foreground"
                       aria-hidden="true"
                     />{' '}
                     Dodaj opcję

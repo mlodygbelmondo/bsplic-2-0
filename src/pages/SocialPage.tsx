@@ -8,7 +8,7 @@ import {
 } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SectionLoader } from '@/components/SectionLoader';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
@@ -693,11 +693,7 @@ export default function SocialPage() {
           )}
 
           {loading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-xl" />
-              ))}
-            </div>
+            <SectionLoader label="Wczytywanie aktywności..." />
           ) : (
             <div className="space-y-3">
               {filteredFeedItems.length === 0 && !hasMore ? (
