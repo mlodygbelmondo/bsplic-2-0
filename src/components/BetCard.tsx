@@ -97,23 +97,26 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   return (
     <div
       className={cn(
-        'bg-card border border-border/60 rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        'bet-card overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        bet.is_live && 'bet-card-live',
         isBsplicboost && 'bsplicboost-card',
-        bet.is_live && 'ring-1 ring-primary/30',
       )}
     >
-      {/* Top bar */}
+      {/* Top bar: meta sits directly on the card surface; only boost cards
+          keep their branded gradient strip. */}
       <div
         className={cn(
-          'flex items-center justify-between px-3 py-1.5 border-b border-border',
-          isBsplicboost ? 'bsplicboost-topbar' : 'bg-muted/50',
+          'flex items-center justify-between gap-2',
+          isBsplicboost
+            ? 'bsplicboost-topbar px-3 py-1.5'
+            : 'px-3.5 pt-2.5 pb-0.5',
         )}
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
           {category && (
             <span
               className={cn(
-                'text-[11px] font-medium flex items-center gap-1',
+                'text-[11px] font-semibold flex items-center gap-1 truncate',
                 isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground',
               )}
             >
@@ -121,23 +124,32 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             </span>
           )}
           {isBsplicboost && (
-            <span className="bsplicboost-badge inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
+            <span className="bsplicboost-badge inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide shrink-0">
               <Sparkles className="h-3 w-3" /> BSPLBOOST
-            </span>
-          )}
-          {bet.is_live && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-primary-foreground ml-1 gradient-primary px-1.5 py-0.5 rounded-full">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground pulse-live" />
-              LIVE
             </span>
           )}
         </div>
         <div
           className={cn(
-            'flex items-center gap-2 text-[10px]',
+            'flex items-center gap-2.5 text-[10px] shrink-0',
             isBsplicboost ? 'text-red-100/90' : 'text-muted-foreground',
           )}
         >
+          {bet.is_live && (
+            <span
+              className={cn(
+                'flex items-center gap-1 text-[11px] font-extrabold tracking-wide',
+                isBsplicboost ? 'text-red-100' : 'live-indicator',
+              )}
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full pulse-live bg-current',
+                )}
+              />
+              LIVE
+            </span>
+          )}
           <span className="flex items-center gap-0.5">
             <Users className="h-3 w-3" /> {bet.bet_count}
           </span>
@@ -145,14 +157,14 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
       </div>
 
       {/* Match content */}
-      <div className="px-3 py-2.5">
+      <div className={cn('px-3.5 pb-3', isBsplicboost ? 'pt-2.5' : 'pt-1.5')}>
         <div className="mb-3 text-center">
-          <p className="font-bold text-base sm:text-lg text-foreground leading-tight">
+          <p className="font-bold text-base sm:text-lg text-foreground leading-tight text-balance">
             {bet.title}
           </p>
           {isInProgress && (
-            <div className="mt-1 flex items-center justify-center gap-1 text-red-500 text-sm font-medium">
-              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            <div className="mt-1 flex items-center justify-center gap-1 live-indicator text-sm font-semibold">
+              <span className="h-2 w-2 rounded-full bg-current animate-pulse" />
               W trakcie
             </div>
           )}
@@ -177,7 +189,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
         {/* Odds buttons */}
         <div
           className={cn(
-            'grid gap-1.5',
+            'grid gap-2',
             useTwoColumnMultiLayout
               ? 'grid-cols-2'
               : useThreeColumnMultiLayout
@@ -202,7 +214,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                 onClick={() => handleSelect(opt)}
                 disabled={isLocked}
                 className={cn(
-                  'odds-chip flex flex-col items-center py-2 px-1.5 rounded-md text-[12px] font-semibold transition-all relative',
+                  'odds-chip flex flex-col items-center py-2.5 px-2 rounded-xl text-[12px] font-semibold transition-all relative',
                   isCenteredLastMultiOption &&
                     'col-span-2 justify-self-center w-[48%]',
                   isSelected
@@ -219,23 +231,19 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
                       ? 'text-[#f6bf2b]'
                       : isLocked
                         ? 'text-inherit'
-                        : index % 2 === 0
-                          ? 'text-zinc-900'
-                          : 'text-zinc-800',
+                        : 'text-zinc-800',
                   )}
                 >
                   {opt.name}
                 </span>
                 <span
                   className={cn(
-                    'text-[15px] font-bold transition-colors duration-200',
+                    'text-[16px] font-extrabold italic leading-none transition-colors duration-200',
                     isSelected
                       ? 'text-[#f6bf2b]'
                       : isLocked
-                        ? 'text-inherit'
-                        : index % 2 === 0
-                          ? 'text-zinc-950'
-                          : 'text-zinc-900',
+                        ? 'text-inherit line-through decoration-2'
+                        : 'text-zinc-950',
                   )}
                 >
                   {opt.odds.toFixed(2)}

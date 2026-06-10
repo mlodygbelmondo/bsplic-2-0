@@ -153,7 +153,7 @@ export function BetList({
               <button
                 onClick={() => onSelectCategory(null)}
                 className={cn(
-                  "press-scale shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200",
+                  "press-scale shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
                   !selectedCategory
                     ? "bg-foreground text-background shadow-md"
                     : "bg-card text-foreground border border-border hover:border-foreground/30",
@@ -166,7 +166,7 @@ export function BetList({
                   key={cat.id}
                   onClick={() => onSelectCategory(cat.id)}
                   className={cn(
-                    "press-scale shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200",
+                    "press-scale shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
                     selectedCategory === cat.id
                       ? "bg-foreground text-background shadow-md"
                       : "bg-card text-foreground border border-border hover:border-foreground/30",
@@ -186,11 +186,11 @@ export function BetList({
         <div
           key={`${sort}:${selectedCategory ?? "all"}`}
           onScroll={handleListScroll}
-          className="overflow-y-auto px-1 pr-2 pb-3 -mx-1 min-h-0"
+          className="overflow-y-auto scroll-fade-y px-1 pr-2 pb-3 -mx-1 min-h-0"
         >
           {liveBets.length > 0 && (
             <div className="mb-4">
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 {liveBets.map((bet, index) => (
                   <div
                     key={bet.id}
@@ -211,7 +211,7 @@ export function BetList({
             </div>
           )}
 
-          <div className="space-y-2 mb-8">
+          <div className="space-y-2.5 mb-8">
             {sortedBets.length === 0 && liveBets.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <p className="text-base font-medium">

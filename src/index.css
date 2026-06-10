@@ -573,6 +573,77 @@
     animation: player-card-shimmer 7.5s ease-in-out infinite;
     pointer-events: none;
   }
+  /* Soft vertical fade at both ends of a scroll container so content
+     slides out smoothly instead of being cut by a hard edge. Mask-only,
+     no backdrop-filter: stays compositor-cheap on older phones. */
+  .scroll-fade-y {
+    --scroll-fade-top: 18px;
+    --scroll-fade-bottom: 28px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--scroll-fade-top),
+      #000 calc(100% - var(--scroll-fade-bottom)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--scroll-fade-top),
+      #000 calc(100% - var(--scroll-fade-bottom)),
+      transparent 100%
+    );
+  }
+  /* In-play indicator text: bright red on the dark card, deeper red on
+     the light theme's white card to keep contrast. */
+  .live-indicator {
+    color: hsl(355 100% 66%);
+  }
+  .light .live-indicator {
+    color: hsl(355 100% 40%);
+  }
+  /* Bookmaker-style bet card: rounded slab on the card surface with a
+     faint red glow bleeding in from the top-right corner. */
+  .bet-card {
+    border-radius: 1.25rem;
+    border: 1px solid hsl(var(--border) / 0.55);
+    background:
+      radial-gradient(
+        120% 90% at 100% 0%,
+        hsl(355 85% 38% / 0.14),
+        transparent 55%
+      ),
+      hsl(var(--card));
+  }
+  /* Live bets glow hotter, like the in-play cards in real sportsbooks. */
+  .bet-card-live {
+    border-color: hsl(355 75% 50% / 0.35);
+    background:
+      radial-gradient(
+        130% 105% at 100% 0%,
+        hsl(355 90% 42% / 0.34),
+        transparent 58%
+      ),
+      radial-gradient(
+        90% 70% at 0% 100%,
+        hsl(355 85% 36% / 0.12),
+        transparent 50%
+      ),
+      hsl(var(--card));
+  }
+  .light .bet-card {
+    background: hsl(var(--card));
+  }
+  .light .bet-card-live {
+    border-color: hsl(355 80% 60% / 0.45);
+    background:
+      radial-gradient(
+        130% 105% at 100% 0%,
+        hsl(355 90% 60% / 0.12),
+        transparent 58%
+      ),
+      hsl(var(--card));
+  }
   .bsplicboost-card {
     position: relative;
     border-color: hsl(355 75% 50% / 0.45);

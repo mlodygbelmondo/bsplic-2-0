@@ -28,7 +28,7 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
   }, [categories, search]);
 
   return (
-    <aside className="w-[250px] hidden lg:block shrink-0 h-full p-2 pr-1">
+    <aside className="w-[250px] hidden lg:block shrink-0 h-full">
       <div className="h-full rounded-2xl bg-card border border-border card-shadow overflow-hidden flex flex-col">
         <div className="p-3 pb-2 border-b border-border/60">
           <h3 className="text-[15px] font-bold text-foreground mb-2">Kategorie</h3>
@@ -44,11 +44,11 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
           </div>
         </div>
 
-        <div className="px-3 py-2 space-y-1 flex-1 min-h-0 overflow-y-auto">
+        <div className="px-3 py-2 space-y-1 flex-1 min-h-0 overflow-y-auto scroll-fade-y">
           <button
             onClick={() => onSelectCategory(null)}
             className={cn(
-               'w-full text-left px-2.5 py-2 rounded text-[14px] font-medium transition-colors flex items-center gap-2.5',
+               'w-full text-left px-2.5 py-2 rounded-lg text-[14px] font-medium transition-colors flex items-center gap-2.5',
               selectedCategory === null ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-foreground'
             )}
           >
@@ -64,7 +64,7 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
                 key={category.id}
                 onClick={() => onSelectCategory(category.id)}
                 className={cn(
-                   'w-full text-left px-2.5 py-2 rounded text-[14px] font-medium transition-colors flex items-center gap-2.5',
+                   'w-full text-left px-2.5 py-2 rounded-lg text-[14px] font-medium transition-colors flex items-center gap-2.5',
                   selectedCategory === category.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-foreground'
                 )}
               >

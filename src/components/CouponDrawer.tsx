@@ -200,7 +200,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto scroll-fade-y px-3 py-3">
         {items.length === 0 ? (
           <div className="h-full flex items-center justify-center px-2">
             <p className="text-[12px] text-muted-foreground text-center max-w-[240px]">
@@ -226,7 +226,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
                     <p className="font-bold text-[13px] leading-snug mt-0.5">
                       {item.selectedOption}
                     </p>
-                    <span className="odds-yellow inline-block mt-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold">
+                    <span className="odds-yellow inline-block mt-1 rounded-md px-1.5 py-0.5 text-[11px] font-extrabold italic">
                       {item.odds.toFixed(2)}
                     </span>
                     {activeTab === 'single' && (
@@ -393,7 +393,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         </>
       )}
 
-      <aside className="hidden lg:block w-[300px] shrink-0 h-full p-2 pl-1">
+      <aside className="hidden lg:block w-[300px] shrink-0 h-full">
         <div className="h-full rounded-2xl bg-card border border-border card-shadow overflow-hidden">
           {drawerContent}
         </div>

@@ -23,7 +23,9 @@ export function HomeShell({
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
       <div className="h-full max-w-[1600px] mx-auto px-3 py-3 flex flex-col gap-3">
-        <div className="flex-1 min-h-0 flex">
+        {/* All three columns start at the same y; the bet list's scroll
+            edge lines up with the sidebar/coupon card tops. */}
+        <div className="flex-1 min-h-0 flex lg:gap-3">
           <CategorySidebar
             selectedCategory={selectedCategory}
             onSelectCategory={onSelectCategory}
@@ -31,7 +33,7 @@ export function HomeShell({
             loading={categoriesLoading}
           />
 
-          <main className="flex-1 min-w-0 px-1 lg:px-2 min-h-0 flex flex-col">
+          <main className="flex-1 min-w-0 min-h-0 flex flex-col">
             <BetList
               selectedCategory={selectedCategory}
               onSelectCategory={onSelectCategory}
