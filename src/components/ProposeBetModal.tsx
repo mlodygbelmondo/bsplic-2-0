@@ -171,7 +171,7 @@ export function ProposeBetModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto rounded-lg p-4 sm:p-6">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[calc(var(--app-viewport-height,100svh)-2rem)] overflow-y-auto rounded-lg p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-bold">Zaproponuj zakład</DialogTitle>
         </DialogHeader>

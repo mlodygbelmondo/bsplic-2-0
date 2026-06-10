@@ -434,7 +434,7 @@ describe('RouletteGame', () => {
     expect(drawer).toHaveTextContent('Typ zakładu');
     expect(drawer).toHaveTextContent('Wybierz stawkę');
     expect(drawer).toHaveClass(
-      'max-h-[calc(var(--app-viewport-height,100dvh)-4rem)]',
+      'max-h-[calc(var(--app-viewport-height,100svh)-4rem)]',
       'overflow-y-auto',
       'overscroll-contain',
     );

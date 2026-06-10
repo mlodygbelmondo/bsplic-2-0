@@ -76,9 +76,9 @@ export default function RankingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto max-w-3xl w-full mx-auto p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Rankingi</h1>
           <div className="inline-flex w-max items-center rounded-lg border border-border bg-card p-1">

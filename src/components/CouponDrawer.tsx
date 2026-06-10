@@ -293,7 +293,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
           />
           <aside
             className={cn(
-              'lg:hidden fixed inset-x-2 bottom-2 z-[81] bg-card border border-border rounded-2xl card-shadow h-[min(78vh,680px)] max-h-[78vh] overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out coupon-drawer-enter',
+              'lg:hidden fixed inset-x-2 bottom-2 z-[81] bg-card border border-border rounded-2xl card-shadow h-[min(calc(var(--app-viewport-height,100svh)-6rem),680px)] max-h-[calc(var(--app-viewport-height,100svh)-6rem)] overflow-hidden pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out coupon-drawer-enter',
               isClosing
                 ? 'translate-y-4 opacity-95'
                 : 'translate-y-0 opacity-100',

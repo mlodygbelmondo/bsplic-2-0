@@ -83,7 +83,7 @@ export function ReactorsDialog({ open, onOpenChange, target, initialEmoji }: Rea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-1rem)] max-w-md max-h-[80vh] overflow-hidden">
+      <DialogContent className="w-[calc(100%-1rem)] max-w-md max-h-[calc(var(--app-viewport-height,100svh)-4rem)] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Reakcje</DialogTitle>
         </DialogHeader>
@@ -112,7 +112,7 @@ export function ReactorsDialog({ open, onOpenChange, target, initialEmoji }: Rea
 
             {availableTabs.map((type) => (
               <TabsContent key={type} value={type} className="mt-0">
-                <div className="space-y-1 max-h-[50vh] overflow-y-auto pr-1">
+                <div className="space-y-1 max-h-[calc(var(--app-viewport-height,100svh)-12rem)] overflow-y-auto pr-1">
                   {reactorsByType[type].map((reactor) => (
                     <Link
                       key={`${reactor.user_id}-${reactor.created_at}`}

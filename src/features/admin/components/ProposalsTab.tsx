@@ -373,7 +373,7 @@ export default function ProposalsTab() {
 
       {/* Proposal editor dialog */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(var(--app-viewport-height,100svh)-2rem)] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Dostosuj propozycję</DialogTitle>
             <DialogDescription className="sr-only">

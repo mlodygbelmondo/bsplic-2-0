@@ -75,7 +75,7 @@ function AuthenticatedRoute({ children }: { children: ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Sonner position="top-right" richColors />
+    <Sonner richColors />
     <BrowserRouter>
       <AuthProvider>
         <AuthenticatedBonusCampaignSurface />

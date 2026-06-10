@@ -187,7 +187,7 @@ export function StakeDrawer({
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               data-testid="mobile-stake-drawer"
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[calc(var(--app-viewport-height,100dvh)-4rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[calc(var(--app-viewport-height,100svh)-4rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
             >
               {/* Drag handle */}
               <div className="mb-4 flex justify-center">

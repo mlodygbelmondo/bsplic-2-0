@@ -66,7 +66,7 @@
 
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-    --app-viewport-height: 100dvh;
+    --app-viewport-height: 100svh;
   }
 }
 
@@ -74,6 +74,14 @@
   * {
     @apply border-border;
   }
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family:
@@ -81,15 +89,41 @@
       system-ui,
       -apple-system,
       sans-serif;
-    min-height: 100vh;
     min-height: 100svh;
-    min-height: var(--app-viewport-height, 100dvh);
+    min-height: var(--app-viewport-height, 100svh);
   }
 
   #root {
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: var(--app-viewport-height, 100dvh);
+    height: 100svh;
+    height: var(--app-viewport-height, 100svh);
+    width: 100vw;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  [data-sonner-toaster] {
+    --width: 420px !important;
+  }
+
+  @media (max-width: 640px) {
+    [data-sonner-toaster] {
+      --mobile-offset: 16px !important;
+      --width: 100% !important;
+      left: var(--mobile-offset) !important;
+      right: var(--mobile-offset) !important;
+      width: 100% !important;
+    }
+
+    [data-sonner-toaster] [data-sonner-toast] {
+      left: 0 !important;
+      right: 0 !important;
+      width: calc(100% - var(--mobile-offset) * 2) !important;
+    }
+
+    [data-sonner-toaster][data-x-position='center'] {
+      transform: none !important;
+    }
   }
 }
 
@@ -113,14 +147,12 @@
     height: calc(2.75rem + var(--safe-area-top));
   }
   .min-safe-screen {
-    min-height: 100vh;
     min-height: 100svh;
-    min-height: var(--app-viewport-height, 100dvh);
+    min-height: var(--app-viewport-height, 100svh);
   }
   .h-safe-screen {
-    height: 100vh;
-    height: 100dvh;
-    height: var(--app-viewport-height, 100dvh);
+    height: 100svh;
+    height: var(--app-viewport-height, 100svh);
   }
   .safe-pad-y {
     padding-top: calc(1rem + var(--safe-area-top));
