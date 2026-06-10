@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type CasinoBackgroundStyle = CSSProperties & {
   "--casino-bg-desktop": string;
@@ -15,6 +16,7 @@ function getCasinoBackgroundStyle(desktopImage: string, mobileImage: string): Ca
 }
 
 export default function CasinoHub() {
+  usePageTitle("Kasyno");
   return (
     <div
       data-testid="casino-hub-page"

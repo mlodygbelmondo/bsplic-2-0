@@ -13,6 +13,7 @@ import { compressImageFile } from "@/features/social/images";
 import { ProfileBadgesSection } from "@/features/profile/components/ProfileBadgesSection";
 import { ProfileHistoryPanel } from "@/features/profile/components/ProfileHistoryPanel";
 import { useProfileHistory } from "@/features/profile/hooks/useProfileHistory";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface UserStatsRow {
   total_bets: number;
@@ -37,6 +38,7 @@ function getShareableProfileUrl() {
 }
 
 export default function ProfilePage() {
+  usePageTitle("Profil");
   const { user, profile, refreshProfile } = useAuth();
   const { userId: userRef } = useParams<{ userId: string }>();
   const normalizedUserRef = userRef ? decodeURIComponent(userRef) : undefined;

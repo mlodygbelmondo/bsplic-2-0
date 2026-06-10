@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Bet, BetOption, Category } from '@/types/database';
 import { useCoupon } from '@/contexts/CouponContext';
 import { cn } from '@/lib/utils';
@@ -7,6 +7,18 @@ import { Sparkles, Users } from 'lucide-react';
 interface BetCardProps {
   bet: Bet;
   category?: Category;
+}
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+function formatTimeRemaining(remainingMs: number): string {
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  if (totalMinutes < 1) return 'za chwilę';
+  if (totalMinutes < 60) return `za ${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes > 0 ? `za ${hours} godz. ${minutes} min` : `za ${hours} godz.`;
 }
 
 function formatBetDate(endsAt: string) {
@@ -33,7 +45,21 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
     () => new Date(bet.ends_at).getTime(),
     [bet.ends_at],
   );
-  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+  const [now, setNow] = useState(() => Date.now());
+  const isExpired = Number.isFinite(endTimestamp) && endTimestamp <= now;
+  const remainingMs = endTimestamp - now;
+  const endsSoon =
+    Number.isFinite(endTimestamp) &&
+    bet.is_active &&
+    remainingMs > 0 &&
+    remainingMs <= DAY_MS;
+
+  useEffect(() => {
+    if (!endsSoon) return;
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [endsSoon]);
+
   const isInProgress = isExpired && bet.winning_option === null;
   const endsAtLabel = useMemo(() => formatBetDate(bet.ends_at), [bet.ends_at]);
   const options = useMemo(
@@ -71,7 +97,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   return (
     <div
       className={cn(
-        'bg-card rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        'bg-card border border-border/60 rounded-lg overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
         isBsplicboost && 'bsplicboost-card border border-red-300/40',
         bet.is_live && 'ring-1 ring-primary/30',
       )}
@@ -135,6 +161,16 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             title={bet.ends_at}
           >
             {endsAtLabel}
+            {endsSoon && (
+              <span
+                className={cn(
+                  'ml-1 font-semibold',
+                  remainingMs <= HOUR_MS ? 'text-red-500' : 'text-amber-600',
+                )}
+              >
+                · kończy się {formatTimeRemaining(remainingMs)}
+              </span>
+            )}
           </p>
         </div>
 

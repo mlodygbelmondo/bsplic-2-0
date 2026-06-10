@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
 import { useCouponPlacement } from '@/features/home/hooks/useCouponPlacement';
 import { getCouponCategoryEmoji } from '@/features/coupons/categoryEmoji';
@@ -11,15 +13,40 @@ interface CouponDrawerProps {
   categoryMap: Record<string, Category>;
 }
 
+const LAST_STAKE_KEY = 'bsplic.coupon.last-stake';
+
+function readLastStake(): string {
+  try {
+    const raw = window.localStorage.getItem(LAST_STAKE_KEY);
+    const parsed = Number(raw);
+    if (raw && Number.isFinite(parsed) && parsed > 0) {
+      return raw;
+    }
+  } catch {
+    // Storage unavailable — fall back to the default stake.
+  }
+  return '10';
+}
+
+function writeLastStake(value: string) {
+  try {
+    window.localStorage.setItem(LAST_STAKE_KEY, value);
+  } catch {
+    // Storage unavailable — stake just won't be remembered.
+  }
+}
+
 export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
   const {
     items,
+    addItems,
     removeItem,
     clearCoupon,
     preferredCouponType,
     setPreferredCouponType,
   } = useCoupon();
-  const [stake, setStake] = useState('10');
+  const { profile } = useAuth();
+  const [stake, setStake] = useState(readLastStake);
   const [singleStakes, setSingleStakes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -49,17 +76,57 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
 
   const { placing, placeBet, potentialWin, effectiveTotalOdds, totalStake } =
     useCouponPlacement(activeTab, stake, singleStakes, () => {
-      setStake('10');
+      if (activeTab === 'ako') {
+        writeLastStake(stake);
+      }
       setSingleStakes({});
       handleClose();
     });
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsClosing(true);
     window.setTimeout(() => {
       setOpen(false);
       setIsClosing(false);
     }, 220);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, handleClose]);
+
+  const balance = Number(profile?.balance ?? 0);
+  const insufficientFunds = items.length > 0 && totalStake > balance;
+  const maxStake = (Math.floor(balance * 100) / 100).toString();
+
+  const handleClearCoupon = () => {
+    const clearedItems = items;
+    clearCoupon();
+    toast('Kupon wyczyszczony', {
+      action: {
+        label: 'Cofnij',
+        onClick: () => addItems(clearedItems),
+      },
+    });
+  };
+
+  const handleStakeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (placing || items.length === 0 || insufficientFunds) return;
+    event.currentTarget.blur();
+    void placeBet();
+  };
+
+  const selectInputContent = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.currentTarget.select();
   };
 
   const eventsLabel = useMemo(() => {
@@ -90,7 +157,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         <div className="flex items-center gap-1.5">
           {items.length > 0 && (
             <button
-              onClick={clearCoupon}
+              onClick={handleClearCoupon}
               className="text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
             >
               Wyczyść
@@ -159,7 +226,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
                     <p className="font-bold text-[13px] leading-snug mt-0.5">
                       {item.selectedOption}
                     </p>
-                    <span className="inline-block mt-1 text-[11px] font-bold text-primary">
+                    <span className="odds-yellow inline-block mt-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold">
                       {item.odds.toFixed(2)}
                     </span>
                     {activeTab === 'single' && (
@@ -178,6 +245,8 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
                               [item.bet.id]: event.target.value,
                             }))
                           }
+                          onFocus={selectInputContent}
+                          onKeyDown={handleStakeKeyDown}
                           className="h-8 text-base md:text-[12px] font-semibold text-center bg-muted border-border"
                           placeholder="0.00"
                         />
@@ -219,12 +288,14 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
               type="number"
               value={stake}
               onChange={(event) => setStake(event.target.value)}
+              onFocus={selectInputContent}
+              onKeyDown={handleStakeKeyDown}
               min={0.01}
               step={0.01}
               className="text-center font-bold text-base md:text-[13px] h-9 bg-muted border-border"
               placeholder="Stawka (zł)"
             />
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-5 gap-1.5">
               {stakePresets.map((preset) => (
                 <button
                   key={preset}
@@ -239,6 +310,19 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
                   {preset} zł
                 </button>
               ))}
+              <button
+                onClick={() => setStake(maxStake)}
+                disabled={balance <= 0}
+                title="Postaw całe saldo"
+                className={cn(
+                  'w-full text-[11px] font-semibold px-2 h-8 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+                  stake === maxStake && balance > 0
+                    ? 'bg-foreground text-background shadow-sm scale-[1.02]'
+                    : 'bg-card text-foreground hover:bg-muted',
+                )}
+              >
+                Max
+              </button>
             </div>
           </>
         ) : (
@@ -246,10 +330,15 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
             Łączna stawka: {totalStake.toFixed(2)} zł
           </div>
         )}
+        {insufficientFunds && (
+          <p className="text-[11px] font-semibold text-destructive">
+            Niewystarczające środki — saldo {balance.toFixed(2)} zł
+          </p>
+        )}
         <button
           onClick={placeBet}
-          disabled={placing || items.length === 0}
-          className="w-full gradient-primary text-primary-foreground font-bold h-10 text-[13px] rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={placing || items.length === 0 || insufficientFunds}
+          className="press-scale w-full gradient-primary text-primary-foreground font-bold h-10 text-[13px] rounded-lg shadow-[0_4px_16px_hsl(355_100%_45%/0.35)] transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {placing ? 'Stawianie...' : 'Obstaw'}
         </button>
@@ -263,9 +352,9 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         <button
           onClick={() => setOpen(true)}
           className={cn(
-            'coupon-mobile-trigger lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-colors',
+            'coupon-mobile-trigger press-scale lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-colors',
             hasItems
-              ? 'gradient-primary text-primary-foreground'
+              ? 'gradient-primary text-primary-foreground shadow-[0_8px_28px_hsl(355_100%_45%/0.45)]'
               : 'bg-card text-foreground border border-border',
           )}
           style={{ WebkitTapHighlightColor: 'transparent' }}
@@ -286,7 +375,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         <>
           <div
             className={cn(
-              'lg:hidden fixed inset-0 z-[70] bg-foreground/45 backdrop-blur-[1px] transition-opacity duration-200',
+              'lg:hidden fixed inset-0 z-[70] bg-black/60 backdrop-blur-[2px] transition-opacity duration-200',
               isClosing ? 'opacity-0' : 'opacity-100',
             )}
             onClick={handleClose}

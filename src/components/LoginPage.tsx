@@ -5,9 +5,27 @@ import { toast } from "sonner";
 
 type AuthView = "login" | "register" | "forgot";
 
+const LAST_EMAIL_KEY = "bsplic.auth.last-email";
+
+function readLastEmail(): string {
+  try {
+    return window.localStorage.getItem(LAST_EMAIL_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeLastEmail(value: string) {
+  try {
+    window.localStorage.setItem(LAST_EMAIL_KEY, value);
+  } catch {
+    // Storage unavailable — email just won't be prefilled next time.
+  }
+}
+
 export function LoginPage() {
   const [view, setView] = useState<AuthView>("login");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(readLastEmail);
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +38,7 @@ export function LoginPage() {
     try {
       if (view === "login") {
         await signIn(email, password);
+        writeLastEmail(email);
         toast.success("Zalogowano pomyślnie!");
       } else if (view === "register") {
         const { requiresEmailConfirmation } = await signUp(
@@ -27,6 +46,7 @@ export function LoginPage() {
           password,
           username,
         );
+        writeLastEmail(email);
         if (requiresEmailConfirmation) {
           toast.success(
             "Konto utworzone! Sprawdź email, aby potwierdzić konto.",

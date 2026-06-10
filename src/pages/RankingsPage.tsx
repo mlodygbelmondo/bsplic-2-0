@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface RankEntry {
   id: string;
@@ -34,6 +35,7 @@ function normalizeRankingRows(data: unknown): RankEntry[] {
 }
 
 export default function RankingsPage() {
+  usePageTitle("Rankingi");
   const [sortBy, setSortBy] = useState<SortKey>("total_profit");
   const [rankingType, setRankingType] = useState<RankingType>("sportsbook");
   const { user } = useAuth();
@@ -186,26 +188,24 @@ export default function RankingsPage() {
                         : null;
 
                 return (
-                  <div
+                  <Link
                     key={r.id}
+                    to={`/profile/${r.id}`}
                     className={cn(
-                      "grid grid-cols-5 gap-2 p-3 text-sm items-center border-b border-border last:border-0 transition-colors",
+                      "grid grid-cols-5 gap-2 p-3 text-sm items-center border-b border-border last:border-0 transition-colors hover:bg-muted/50",
                       r.id === user?.id && "bg-primary/10",
                       rank <= 3 && "font-semibold",
                     )}
                   >
                     <span className="font-bold">{medal ?? rank}</span>
-                    <Link
-                      to={`/profile/${r.id}`}
-                      className="font-medium truncate hover:text-primary transition-colors"
-                    >
+                    <span className="font-medium truncate">
                       {r.username}
                       {r.id === user?.id && (
                         <span className="text-xs text-muted-foreground ml-1">
                           (ty)
                         </span>
                       )}
-                    </Link>
+                    </span>
                     <span
                       className={cn(
                         "text-right font-bold",
@@ -221,7 +221,7 @@ export default function RankingsPage() {
                     </span>
                     <span className="text-right">{r.win_rate.toFixed(1)}%</span>
                     <span className="text-right">{r.total_bets}</span>
-                  </div>
+                  </Link>
                 );
               })}
               {sorted.length === 0 && (

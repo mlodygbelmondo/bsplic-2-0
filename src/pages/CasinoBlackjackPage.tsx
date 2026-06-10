@@ -1,6 +1,7 @@
 import { BlackjackGame } from "@/features/casino/components/games/BlackjackGame";
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type CasinoBackgroundStyle = CSSProperties & {
   "--casino-bg-desktop": string;
@@ -8,6 +9,7 @@ type CasinoBackgroundStyle = CSSProperties & {
 };
 
 export default function CasinoBlackjackPage() {
+  usePageTitle("Blackjack");
   return (
     <div
       data-testid="casino-blackjack-shell"
