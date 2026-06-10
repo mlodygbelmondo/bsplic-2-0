@@ -98,6 +98,20 @@ export default function AdminLayout() {
     ? tab
     : defaultTab;
   const activeTabLabel = availableTabs.find((t) => t.key === activeTab)?.label;
+  const createMobileTab = availableTabs.find(
+    (availableTab) => availableTab.key === 'create',
+  );
+  const nonCreateMobileTabs = availableTabs.filter(
+    (availableTab) => availableTab.key !== 'create',
+  );
+  const mobileSplitIndex = Math.ceil(nonCreateMobileTabs.length / 2);
+  const mobileTabs = createMobileTab
+    ? [
+        ...nonCreateMobileTabs.slice(0, mobileSplitIndex),
+        createMobileTab,
+        ...nonCreateMobileTabs.slice(mobileSplitIndex),
+      ]
+    : availableTabs;
 
   return (
     <div className="h-safe-screen overflow-hidden bg-muted/30 flex flex-col">
@@ -174,13 +188,36 @@ export default function AdminLayout() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
       >
         <div
-          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto"
+          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
           style={{
-            gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
           }}
         >
-          {availableTabs.map(({ key, label, shortLabel, icon: Icon }) => {
+          {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
+            const isCenter = key === 'create';
             const isActive = activeTab === key;
+
+            if (isCenter) {
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  aria-label={label}
+                  className="relative -top-4 flex min-w-0 flex-col items-center justify-center"
+                >
+                  <div
+                    className={cn(
+                      'flex h-[58px] w-[58px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
+                      isActive
+                        ? 'gradient-primary'
+                        : 'bg-primary hover:brightness-110',
+                    )}
+                  >
+                    <Icon className="h-6 w-6" strokeWidth={2.5} />
+                  </div>
+                </button>
+              );
+            }
 
             return (
               <button

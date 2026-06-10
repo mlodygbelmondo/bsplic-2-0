@@ -92,7 +92,7 @@ describe('AdminLayout', () => {
     expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument();
   });
 
-  it('lays out the mobile admin navigation in equal tab columns', () => {
+  it('lays out the mobile admin navigation as 3-1-3 with a floating create tab', () => {
     mockIsAdmin = true;
 
     renderAdminLayout();
@@ -105,8 +105,19 @@ describe('AdminLayout', () => {
     expect(tabGrid).toHaveStyle({
       gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
     });
-    expect(within(mobileNav).getByLabelText('Utwórz zakład')).toHaveTextContent(
-      'Dodaj',
-    );
+
+    const navButtons = within(mobileNav).getAllByRole('button');
+    expect(
+      navButtons.map((button) => button.getAttribute('aria-label')),
+    ).toEqual([
+      'Dashboard',
+      'Zarządzaj',
+      'Propozycje',
+      'Utwórz zakład',
+      'Kategorie',
+      'Eniu',
+      'Bonusy',
+    ]);
+    expect(navButtons[3]).toHaveClass('-top-4');
   });
 });
