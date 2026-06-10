@@ -33,30 +33,30 @@ const TABS: TabConfig[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
-    shortLabel: 'Dashboard',
+    shortLabel: 'Panel',
     icon: LayoutDashboard,
   },
   {
     key: 'manage',
     label: 'Zarządzaj',
-    shortLabel: 'Zarządzaj',
+    shortLabel: 'Bety',
     icon: ListChecks,
   },
   {
     key: 'create',
     label: 'Utwórz zakład',
-    shortLabel: 'Utwórz',
+    shortLabel: 'Dodaj',
     icon: PlusCircle,
   },
   {
     key: 'proposals',
     label: 'Propozycje',
-    shortLabel: 'Propozycje',
+    shortLabel: 'Propo',
     icon: Lightbulb,
   },
-  { key: 'categories', label: 'Kategorie', shortLabel: 'Kategorie', icon: Tag },
+  { key: 'categories', label: 'Kategorie', shortLabel: 'Kat.', icon: Tag },
   { key: 'eniu', label: 'Eniu', shortLabel: 'Eniu', icon: Bot },
-  { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonusy', icon: BadgePlus },
+  { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonus', icon: BadgePlus },
 ];
 
 function AdminTabFallback() {
@@ -168,56 +168,43 @@ export default function AdminLayout() {
         </main>
       </div>
 
-      {/* Mobile bottom tab bar - Pill style */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
-        <div className="bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] flex items-center justify-around px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto relative overflow-visible">
-          {availableTabs.map(({ key, shortLabel, icon: Icon }) => {
-            const isCenter = key === 'create';
+      {/* Mobile bottom tab bar */}
+      <nav
+        aria-label="Nawigacja admina"
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
+      >
+        <div
+          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto"
+          style={{
+            gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))`,
+          }}
+        >
+          {availableTabs.map(({ key, label, shortLabel, icon: Icon }) => {
             const isActive = activeTab === key;
-
-            if (isCenter) {
-              return (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  className="relative -top-4 flex flex-col items-center justify-center shrink-0 w-16"
-                >
-                  <div
-                    className={cn(
-                      'flex items-center justify-center h-[58px] w-[58px] rounded-full text-white shadow-lg transition-transform active:scale-95 border-4 border-background',
-                      isActive
-                        ? 'gradient-primary'
-                        : 'bg-primary hover:brightness-110',
-                    )}
-                  >
-                    <Icon className="h-6 w-6" strokeWidth={2.5} />
-                  </div>
-                </button>
-              );
-            }
 
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
+                aria-label={label}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 py-1 px-2 w-[64px] transition-colors',
+                  'min-w-0 flex flex-col items-center gap-1.5 rounded-md px-1 py-1.5 transition-colors',
                   isActive
-                    ? 'text-primary'
+                    ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon
                   className={cn(
-                    'h-5 w-5',
+                    'h-5 w-5 shrink-0',
                     isActive ? 'text-primary' : 'text-muted-foreground',
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span
                   className={cn(
-                    'text-[11px] font-medium leading-none',
-                    isActive && 'font-bold',
+                    'w-full truncate text-center text-[10px] font-medium leading-none',
+                    isActive && 'font-semibold',
                   )}
                 >
                   {shortLabel}

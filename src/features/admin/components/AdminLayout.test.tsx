@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -90,5 +90,23 @@ describe('AdminLayout', () => {
     expect(screen.getAllByText('Utwórz zakład').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Propozycje').length).toBeGreaterThan(0);
     expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument();
+  });
+
+  it('lays out the mobile admin navigation in equal tab columns', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+    const tabGrid = mobileNav.firstElementChild;
+
+    expect(tabGrid).toHaveStyle({
+      gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+    });
+    expect(within(mobileNav).getByLabelText('Utwórz zakład')).toHaveTextContent(
+      'Dodaj',
+    );
   });
 });
