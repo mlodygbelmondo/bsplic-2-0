@@ -97,7 +97,7 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
   return (
     <div
       className={cn(
-        'bet-card overflow-hidden card-shadow transition-shadow hover:card-shadow-hover',
+        'bet-card overflow-hidden transition-shadow',
         bet.is_live && 'bet-card-live',
         isBsplicboost && 'bsplicboost-card',
       )}

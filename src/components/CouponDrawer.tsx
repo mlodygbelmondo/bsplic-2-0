@@ -200,7 +200,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto scroll-fade-y px-3 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
         {items.length === 0 ? (
           <div className="h-full flex items-center justify-center px-2">
             <p className="text-[12px] text-muted-foreground text-center max-w-[240px]">

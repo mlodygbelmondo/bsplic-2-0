@@ -137,7 +137,7 @@ export function BetList({
               <Button
                 onClick={onProposeClick}
                 size="sm"
-                className="propose-cta-button relative flex items-center overflow-hidden text-[14px] font-bold h-8 px-4 py-2 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
+                className="propose-cta-button relative flex items-center overflow-hidden rounded-full text-[13px] font-bold h-9 px-4 py-1.5 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
               >
                 <Lightbulb className="h-3 w-3" /> Zaproponuj zakład
               </Button>
@@ -186,7 +186,7 @@ export function BetList({
         <div
           key={`${sort}:${selectedCategory ?? "all"}`}
           onScroll={handleListScroll}
-          className="overflow-y-auto scroll-fade-y px-1 pr-2 pb-3 -mx-1 min-h-0"
+          className="overflow-y-auto pb-3 min-h-0"
         >
           {liveBets.length > 0 && (
             <div className="mb-4">

@@ -44,7 +44,7 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
           </div>
         </div>
 
-        <div className="px-3 py-2 space-y-1 flex-1 min-h-0 overflow-y-auto scroll-fade-y">
+        <div className="px-3 py-2 space-y-1 flex-1 min-h-0 overflow-y-auto">
           <button
             onClick={() => onSelectCategory(null)}
             className={cn(

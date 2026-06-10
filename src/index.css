@@ -66,6 +66,55 @@
       0 2px 10px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.28);
     --shadow-card-hover:
       0 4px 14px rgba(0, 0, 0, 0.45), 0 14px 36px rgba(0, 0, 0, 0.38);
+    --bookmaker-surface:
+      radial-gradient(
+        115% 105% at 100% 0%,
+        hsl(355 88% 39% / 0.14) 0%,
+        hsl(355 82% 30% / 0.06) 38%,
+        transparent 64%
+      ),
+      linear-gradient(
+        150deg,
+        hsl(233 22% 13%) 0%,
+        hsl(239 24% 10%) 62%,
+        hsl(252 28% 8%) 100%
+      );
+    --bookmaker-surface-strong:
+      radial-gradient(
+        86% 120% at 100% 0%,
+        hsl(355 98% 49% / 0.34) 0%,
+        hsl(354 88% 36% / 0.18) 34%,
+        transparent 64%
+      ),
+      radial-gradient(
+        120% 105% at 88% -14%,
+        hsl(355 100% 58% / 0.1) 0%,
+        transparent 48%
+      ),
+      linear-gradient(
+        150deg,
+        hsl(228 27% 13%) 0%,
+        hsl(236 28% 10%) 60%,
+        hsl(250 31% 8%) 100%
+      );
+    --bookmaker-surface-live:
+      radial-gradient(
+        86% 122% at 100% 0%,
+        hsl(355 100% 52% / 0.46) 0%,
+        hsl(354 92% 38% / 0.24) 34%,
+        transparent 66%
+      ),
+      radial-gradient(
+        95% 82% at 0% 100%,
+        hsl(355 85% 35% / 0.14),
+        transparent 54%
+      ),
+      linear-gradient(
+        150deg,
+        hsl(228 28% 13%) 0%,
+        hsl(236 29% 10%) 58%,
+        hsl(250 32% 8%) 100%
+      );
 
     --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -126,9 +175,18 @@
     --sidebar-border: 220 13% 90%;
     --sidebar-ring: 355 100% 44%;
 
-    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.05), 0 5px 14px rgba(15, 23, 42, 0.07);
     --shadow-card-hover:
-      0 4px 12px rgba(0, 0, 0, 0.1), 0 12px 32px rgba(0, 0, 0, 0.14);
+      0 2px 6px rgba(15, 23, 42, 0.08), 0 8px 18px rgba(15, 23, 42, 0.1);
+    --bookmaker-surface: hsl(var(--card));
+    --bookmaker-surface-strong: hsl(var(--card));
+    --bookmaker-surface-live:
+      radial-gradient(
+        120% 90% at 100% 0%,
+        hsl(355 90% 58% / 0.09),
+        transparent 58%
+      ),
+      hsl(var(--card));
   }
 }
 
@@ -400,6 +458,74 @@
   .gradient-cta {
     background: linear-gradient(135deg, hsl(355 100% 50%), hsl(15 90% 55%));
   }
+  .auth-shell {
+    background:
+      radial-gradient(
+        900px 520px at 50% -18%,
+        hsl(355 88% 34% / 0.34),
+        transparent 58%
+      ),
+      radial-gradient(
+        720px 440px at 100% 0%,
+        hsl(355 82% 28% / 0.2),
+        transparent 60%
+      ),
+      linear-gradient(
+        180deg,
+        hsl(252 24% 9%) 0%,
+        hsl(244 25% 7%) 52%,
+        hsl(250 28% 5%) 100%
+      );
+  }
+  .light .auth-shell {
+    background: linear-gradient(135deg, hsl(355 100% 50%), hsl(355 85% 39%));
+  }
+  .auth-background-decoration::before,
+  .auth-background-decoration::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    border-radius: 999px;
+  }
+  .auth-background-decoration::before {
+    width: 34rem;
+    height: 16rem;
+    top: -6rem;
+    left: 50%;
+    transform: translateX(-50%) rotate(-8deg);
+    background: linear-gradient(
+      100deg,
+      transparent,
+      hsl(355 90% 55% / 0.11),
+      transparent
+    );
+  }
+  .auth-background-decoration::after {
+    width: 22rem;
+    height: 22rem;
+    right: -8rem;
+    top: -7rem;
+    background: radial-gradient(
+      circle,
+      hsl(355 95% 42% / 0.16),
+      transparent 64%
+    );
+  }
+  .light .auth-background-decoration::before {
+    background: linear-gradient(
+      100deg,
+      transparent,
+      hsl(0 0% 100% / 0.08),
+      transparent
+    );
+  }
+  .light .auth-background-decoration::after {
+    background: radial-gradient(
+      circle,
+      hsl(0 0% 100% / 0.08),
+      transparent 64%
+    );
+  }
   .propose-cta-button::after {
     content: '';
     position: absolute;
@@ -543,6 +669,9 @@
   .card-shadow-hover {
     box-shadow: var(--shadow-card-hover);
   }
+  .card-shadow.bg-card {
+    background: var(--bookmaker-surface);
+  }
   .player-card-hero {
     position: relative;
     overflow: hidden;
@@ -573,27 +702,6 @@
     animation: player-card-shimmer 7.5s ease-in-out infinite;
     pointer-events: none;
   }
-  /* Soft vertical fade at both ends of a scroll container so content
-     slides out smoothly instead of being cut by a hard edge. Mask-only,
-     no backdrop-filter: stays compositor-cheap on older phones. */
-  .scroll-fade-y {
-    --scroll-fade-top: 18px;
-    --scroll-fade-bottom: 28px;
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      #000 var(--scroll-fade-top),
-      #000 calc(100% - var(--scroll-fade-bottom)),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      #000 var(--scroll-fade-top),
-      #000 calc(100% - var(--scroll-fade-bottom)),
-      transparent 100%
-    );
-  }
   /* In-play indicator text: bright red on the dark card, deeper red on
      the light theme's white card to keep contrast. */
   .live-indicator {
@@ -602,47 +710,38 @@
   .light .live-indicator {
     color: hsl(355 100% 40%);
   }
-  /* Bookmaker-style bet card: rounded slab on the card surface with a
-     faint red glow bleeding in from the top-right corner. */
+  /* Bet cards get the strongest bookmaker surface in the product. */
   .bet-card {
     border-radius: 1.25rem;
-    border: 1px solid hsl(var(--border) / 0.55);
-    background:
-      radial-gradient(
-        120% 90% at 100% 0%,
-        hsl(355 85% 38% / 0.14),
-        transparent 55%
-      ),
-      hsl(var(--card));
+    border: 1px solid hsl(355 75% 50% / 0.24);
+    background: var(--bookmaker-surface-strong);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.05),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.25);
+  }
+  @media (hover: hover) {
+    .bet-card:hover {
+      box-shadow: var(--shadow-card-hover);
+    }
   }
   /* Live bets glow hotter, like the in-play cards in real sportsbooks. */
   .bet-card-live {
-    border-color: hsl(355 75% 50% / 0.35);
-    background:
-      radial-gradient(
-        130% 105% at 100% 0%,
-        hsl(355 90% 42% / 0.34),
-        transparent 58%
-      ),
-      radial-gradient(
-        90% 70% at 0% 100%,
-        hsl(355 85% 36% / 0.12),
-        transparent 50%
-      ),
-      hsl(var(--card));
+    border-color: hsl(355 88% 56% / 0.34);
+    background: var(--bookmaker-surface-live);
   }
   .light .bet-card {
+    border-color: hsl(var(--border));
     background: hsl(var(--card));
+    box-shadow: none;
+  }
+  @media (hover: hover) {
+    .light .bet-card:hover {
+      box-shadow: var(--shadow-card-hover);
+    }
   }
   .light .bet-card-live {
     border-color: hsl(355 80% 60% / 0.45);
-    background:
-      radial-gradient(
-        130% 105% at 100% 0%,
-        hsl(355 90% 60% / 0.12),
-        transparent 58%
-      ),
-      hsl(var(--card));
+    background: var(--bookmaker-surface-live);
   }
   .bsplicboost-card {
     position: relative;

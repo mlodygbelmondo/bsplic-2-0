@@ -96,8 +96,8 @@ export function Navbar() {
                 className={cn(
                   "text-[14px] font-semibold hover:text-primary-foreground hover:brightness-110 transition-colors leading-none",
                   isActivePath("/")
-                    ? "text-primary-foreground"
-                    : "text-primary-foreground/70",
+                    ? "text-navbar-foreground"
+                    : "text-navbar-foreground/90",
                 )}
               >
                 Zakłady
@@ -107,8 +107,8 @@ export function Navbar() {
                 className={cn(
                   "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
                   isActivePath("/casino")
-                    ? "text-primary-foreground"
-                    : "text-primary-foreground/70",
+                    ? "text-navbar-foreground"
+                    : "text-navbar-foreground/90",
                 )}
               >
                 Kasyno
@@ -118,8 +118,8 @@ export function Navbar() {
                 className={cn(
                   "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
                   isActivePath("/social")
-                    ? "text-primary-foreground"
-                    : "text-primary-foreground/70",
+                    ? "text-navbar-foreground"
+                    : "text-navbar-foreground/90",
                 )}
               >
                 Social
@@ -129,8 +129,8 @@ export function Navbar() {
                 className={cn(
                   "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
                   isActivePath("/rankings")
-                    ? "text-primary-foreground"
-                    : "text-primary-foreground/70",
+                    ? "text-navbar-foreground"
+                    : "text-navbar-foreground/90",
                 )}
               >
                 Rankingi
@@ -141,8 +141,8 @@ export function Navbar() {
                   className={cn(
                     "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
                     isActivePath("/admin")
-                      ? "text-primary-foreground"
-                      : "text-primary-foreground/70",
+                      ? "text-navbar-foreground"
+                      : "text-navbar-foreground/90",
                   )}
                 >
                   <ShieldCheck className="h-4 w-4 shrink-0" /> Admin
@@ -154,8 +154,8 @@ export function Navbar() {
                   className={cn(
                     "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
                     isActivePath("/admin")
-                      ? "text-primary-foreground"
-                      : "text-primary-foreground/70",
+                      ? "text-navbar-foreground"
+                      : "text-navbar-foreground/90",
                   )}
                 >
                   <ShieldCheck className="h-4 w-4 shrink-0" /> Propozycje
@@ -165,11 +165,6 @@ export function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center gap-2.5">
-            {isDesktopNav && (
-              <Suspense fallback={null}>
-                <NotificationsBell userId={user?.id} />
-              </Suspense>
-            )}
             {profile && isDesktopNav && (
               <button
                 onClick={openTopupDialog}
@@ -185,6 +180,11 @@ export function Navbar() {
                 </span>
                 {Number(profile.balance).toFixed(2)} zł
               </button>
+            )}
+            {isDesktopNav && (
+              <Suspense fallback={null}>
+                <NotificationsBell userId={user?.id} />
+              </Suspense>
             )}
             {profile && (
               <DropdownMenu>

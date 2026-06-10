@@ -80,28 +80,15 @@ export function LoginPage() {
   };
 
   const backgroundDecoration = (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div
-        className="absolute -top-20 -right-20 w-96 h-96 opacity-10"
-        style={{
-          background:
-            "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)",
-        }}
-      />
-      <div
-        className="absolute top-0 left-1/4 w-[600px] h-[200px] opacity-[0.07]"
-        style={{
-          background:
-            "repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.15) 8px, rgba(255,255,255,0.15) 16px)",
-          transform: "rotate(-15deg) translateY(-50px)",
-        }}
-      />
-    </div>
+    <div
+      className="auth-background-decoration absolute inset-0 overflow-hidden pointer-events-none"
+      aria-hidden="true"
+    />
   );
 
   if (view === "forgot") {
     return (
-      <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
+      <div className="h-safe-screen safe-pad-y auth-shell relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
         {backgroundDecoration}
         <div className="relative z-10 mb-8">
           <h1 className="text-4xl font-black text-primary-foreground tracking-tight">
@@ -157,7 +144,7 @@ export function LoginPage() {
   const isLogin = view === "login";
 
   return (
-    <div className="h-safe-screen safe-pad-y gradient-primary relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
+    <div className="h-safe-screen safe-pad-y auth-shell relative overflow-y-auto flex flex-col items-center justify-start md:justify-center px-4">
       {backgroundDecoration}
 
       <div className="relative z-10 mb-8">
