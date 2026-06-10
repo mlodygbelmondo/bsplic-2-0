@@ -130,7 +130,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       id={`social-item-${item.item_type}-${item.id}`}
       onClick={handleOpenItem}
       className={cn(
-        'bg-card rounded-xl card-shadow overflow-hidden transition-shadow',
+        'app-surface rounded-xl overflow-hidden transition-shadow',
         onOpenItem && 'cursor-pointer hover:shadow-lg',
         highlighted && 'ring-2 ring-primary/50 shadow-lg',
       )}
@@ -255,7 +255,7 @@ function CasinoContent({ item }: CasinoContentProps) {
 
   return (
     <div className="px-4 py-2">
-      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/70 p-3 text-sm">
+      <div className="app-subsurface flex items-center justify-between gap-3 rounded-lg p-3 text-sm">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">

@@ -8,26 +8,26 @@
   :root {
     color-scheme: dark;
 
-    --background: 252 22% 7%;
-    --foreground: 240 25% 96%;
+    --background: 338 100% 3%;
+    --foreground: 0 100% 96%;
 
-    --card: 235 19% 13%;
-    --card-foreground: 240 25% 96%;
+    --card: 340 68% 6%;
+    --card-foreground: 0 100% 96%;
 
-    --popover: 237 20% 11%;
-    --popover-foreground: 240 25% 96%;
+    --popover: 340 68% 6%;
+    --popover-foreground: 0 100% 96%;
 
-    --primary: 355 100% 47%;
+    --primary: 342 100% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 237 16% 17%;
-    --secondary-foreground: 240 25% 96%;
+    --secondary: 338 71% 10%;
+    --secondary-foreground: 0 100% 96%;
 
-    --muted: 236 16% 18%;
-    --muted-foreground: 234 14% 75%;
+    --muted: 338 71% 10%;
+    --muted-foreground: 0 48% 80%;
 
-    --accent: 236 16% 18%;
-    --accent-foreground: 240 25% 96%;
+    --accent: 338 71% 10%;
+    --accent-foreground: 0 100% 96%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -38,29 +38,38 @@
     --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 236 15% 24%;
-    --input: 236 15% 26%;
-    --ring: 355 100% 55%;
+    --border: 340 34% 18%;
+    --input: 340 34% 20%;
+    --ring: 342 100% 58%;
     --radius: 0.75rem;
 
-    --navbar: 250 24% 9%;
+    --navbar: 338 100% 3%;
     --navbar-foreground: 0 0% 100%;
+    --navbar-gradient:
+      linear-gradient(
+        90deg,
+        hsl(0 0% 0% / 0.99) 0%,
+        hsl(338 100% 4% / 0.99) 32%,
+        hsl(343 86% 20% / 0.98) 70%,
+        hsl(343 86% 34% / 0.98) 100%
+      );
+    --navbar-border: hsl(342 100% 52% / 0.28);
 
     --odds-bg: 46 98% 52%;
     --odds-fg: 25 6% 10%;
     --odds-bg-alt: 43 100% 58%;
     --odds-fg-alt: 30 8% 11%;
-    --odds-selected: 248 24% 5%;
+    --odds-selected: 338 100% 3%;
     --odds-selected-fg: 0 0% 100%;
 
-    --sidebar-background: 237 20% 11%;
-    --sidebar-foreground: 240 25% 96%;
-    --sidebar-primary: 355 100% 47%;
+    --sidebar-background: 340 68% 6%;
+    --sidebar-foreground: 0 100% 96%;
+    --sidebar-primary: 342 100% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 236 16% 18%;
-    --sidebar-accent-foreground: 240 25% 96%;
-    --sidebar-border: 236 15% 21%;
-    --sidebar-ring: 355 100% 55%;
+    --sidebar-accent: 338 71% 10%;
+    --sidebar-accent-foreground: 0 100% 96%;
+    --sidebar-border: 340 34% 18%;
+    --sidebar-ring: 342 100% 58%;
 
     --shadow-card:
       0 2px 10px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.28);
@@ -69,51 +78,41 @@
     --bookmaker-surface:
       radial-gradient(
         115% 105% at 100% 0%,
-        hsl(355 88% 39% / 0.14) 0%,
-        hsl(355 82% 30% / 0.06) 38%,
+        hsl(342 100% 52% / 0.16) 0%,
+        hsl(343 86% 32% / 0.08) 38%,
         transparent 64%
       ),
       linear-gradient(
         150deg,
-        hsl(233 22% 13%) 0%,
-        hsl(239 24% 10%) 62%,
-        hsl(252 28% 8%) 100%
+        hsl(340 68% 8%) 0%,
+        hsl(338 78% 5%) 64%,
+        hsl(0 0% 0%) 100%
       );
     --bookmaker-surface-strong:
       radial-gradient(
         86% 120% at 100% 0%,
-        hsl(355 98% 49% / 0.34) 0%,
-        hsl(354 88% 36% / 0.18) 34%,
+        hsl(342 100% 52% / 0.34) 0%,
+        hsl(343 86% 30% / 0.2) 34%,
         transparent 64%
-      ),
-      radial-gradient(
-        120% 105% at 88% -14%,
-        hsl(355 100% 58% / 0.1) 0%,
-        transparent 48%
       ),
       linear-gradient(
         150deg,
-        hsl(228 27% 13%) 0%,
-        hsl(236 28% 10%) 60%,
-        hsl(250 31% 8%) 100%
+        hsl(340 68% 9%) 0%,
+        hsl(338 80% 6%) 60%,
+        hsl(0 0% 0%) 100%
       );
     --bookmaker-surface-live:
       radial-gradient(
         86% 122% at 100% 0%,
-        hsl(355 100% 52% / 0.46) 0%,
-        hsl(354 92% 38% / 0.24) 34%,
+        hsl(342 100% 54% / 0.46) 0%,
+        hsl(343 86% 34% / 0.26) 34%,
         transparent 66%
-      ),
-      radial-gradient(
-        95% 82% at 0% 100%,
-        hsl(355 85% 35% / 0.14),
-        transparent 54%
       ),
       linear-gradient(
         150deg,
-        hsl(228 28% 13%) 0%,
-        hsl(236 29% 10%) 58%,
-        hsl(250 32% 8%) 100%
+        hsl(340 68% 9%) 0%,
+        hsl(338 82% 6%) 58%,
+        hsl(0 0% 0%) 100%
       );
 
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -218,18 +217,13 @@
     --app-aurora:
       radial-gradient(
         900px 480px at 12% -6%,
-        hsl(355 85% 30% / 0.2),
+        hsl(342 100% 42% / 0.22),
         transparent 58%
       ),
       radial-gradient(
-        720px 420px at 98% -4%,
-        hsl(345 80% 26% / 0.16),
-        transparent 56%
-      ),
-      radial-gradient(
-        1100px 760px at 50% 112%,
-        hsl(250 40% 14% / 0.5),
-        transparent 60%
+        780px 440px at 98% -4%,
+        hsl(343 86% 32% / 0.18),
+        transparent 58%
       );
   }
 
@@ -258,7 +252,7 @@
       100deg,
       transparent 6%,
       hsl(355 85% 30% / 0.12) 28%,
-      hsl(262 55% 30% / 0.1) 50%,
+      hsl(343 65% 22% / 0.1) 50%,
       hsl(350 90% 28% / 0.08) 72%,
       transparent 94%
     );
@@ -384,14 +378,10 @@
     background: linear-gradient(135deg, hsl(355 100% 50%), hsl(355 80% 40%));
   }
   .gradient-navbar {
-    background: linear-gradient(
-      180deg,
-      hsl(250 24% 11% / 0.97),
-      hsl(251 24% 8% / 0.97)
-    );
+    background: var(--navbar-gradient);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid hsl(236 15% 21% / 0.65);
+    border-bottom: 1px solid var(--navbar-border);
   }
   .light .gradient-navbar {
     background: linear-gradient(90deg, hsl(355 100% 44%), hsl(355 90% 38%));
@@ -400,13 +390,11 @@
     border-bottom: none;
   }
   .brand-logo-pill {
-    background: linear-gradient(135deg, hsl(355 100% 47%), hsl(352 95% 40%));
-    box-shadow:
-      0 2px 10px hsl(355 100% 45% / 0.35),
-      inset 0 1px 0 hsl(0 0% 100% / 0.18);
+    background: none;
+    color: hsl(0 0% 100%);
+    box-shadow: none;
   }
-  /* Light mode keeps the pre-redesign wordmark: plain white text on the
-     red navbar, no pill behind it. */
+  /* Keep the wordmark plain in both themes: white text, no pill surface. */
   .light .brand-logo-pill {
     background: none;
     color: hsl(0 0% 100%);
@@ -472,9 +460,9 @@
       ),
       linear-gradient(
         180deg,
-        hsl(252 24% 9%) 0%,
-        hsl(244 25% 7%) 52%,
-        hsl(250 28% 5%) 100%
+        hsl(348 20% 7%) 0%,
+        hsl(340 28% 5%) 52%,
+        hsl(0 0% 2%) 100%
       );
   }
   .light .auth-shell {
@@ -670,7 +658,40 @@
     box-shadow: var(--shadow-card-hover);
   }
   .card-shadow.bg-card {
+    border: 1px solid hsl(var(--border) / 0.82);
     background: var(--bookmaker-surface);
+  }
+  .light .card-shadow.bg-card {
+    border-color: hsl(var(--border));
+  }
+  .app-surface.app-surface {
+    border: 1px solid hsl(var(--border) / 0.9);
+    background:
+      radial-gradient(
+        120% 120% at 100% 0%,
+        hsl(var(--primary) / 0.09),
+        transparent 48%
+      ),
+      linear-gradient(
+        155deg,
+        hsl(var(--card) / 0.98),
+        hsl(var(--secondary) / 0.72)
+      );
+    box-shadow:
+      var(--shadow-card),
+      inset 0 1px 0 hsl(0 0% 100% / 0.05);
+  }
+  .app-subsurface.app-subsurface {
+    border: 1px solid hsl(var(--border) / 0.72);
+    background: hsl(var(--muted) / 0.52);
+  }
+  .light .app-surface.app-surface {
+    border-color: hsl(var(--border));
+    background: hsl(var(--card));
+    box-shadow: var(--shadow-card);
+  }
+  .light .app-subsurface.app-subsurface {
+    background: hsl(var(--muted) / 0.6);
   }
   .player-card-hero {
     position: relative;
@@ -760,8 +781,8 @@
       linear-gradient(
         160deg,
         hsl(348 35% 13%) 0%,
-        hsl(250 22% 10%) 60%,
-        hsl(248 24% 9%) 100%
+        hsl(340 28% 9%) 60%,
+        hsl(0 0% 4%) 100%
       );
     overflow: hidden;
   }

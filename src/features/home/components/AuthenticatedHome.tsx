@@ -53,7 +53,7 @@ export default function AuthenticatedHome() {
 
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
-      <Navbar />
+      <Navbar onOpenProposeModal={() => setProposeOpen(true)} />
 
       <HomeShell
         selectedCategory={selectedCategory}

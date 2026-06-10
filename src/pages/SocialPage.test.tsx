@@ -214,9 +214,9 @@ describe('SocialPage', () => {
   it('displays a post feed item', async () => {
     fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
     renderSocialPage();
-    expect(
-      await screen.findByText('Cześć, to mój pierwszy post!'),
-    ).toBeInTheDocument();
+    const postContent = await screen.findByText('Cześć, to mój pierwszy post!');
+    expect(postContent).toBeInTheDocument();
+    expect(postContent.closest('.app-surface')).not.toBeNull();
     expect(screen.getByText('Poster')).toBeInTheDocument();
     // No copy-coupon button for posts
     expect(

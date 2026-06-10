@@ -17,7 +17,7 @@ export function ProfileBadgesSection({ badges }: ProfileBadgesSectionProps) {
   return (
     <section
       aria-label="Odznaki"
-      className="bg-card rounded-xl p-4 card-shadow"
+      className="app-surface rounded-xl p-4"
     >
       <h2 className="font-bold mb-3">Odznaki</h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -28,10 +28,10 @@ export function ProfileBadgesSection({ badges }: ProfileBadgesSectionProps) {
               key={key}
               aria-label={definition.name}
               className={cn(
-                "rounded-xl border p-3 card-shadow transition-all",
+                "rounded-xl p-3 transition-all",
                 unlockedBadge
-                  ? "border-primary/20 bg-muted"
-                  : "border-border bg-background/60",
+                  ? "app-subsurface ring-1 ring-primary/25"
+                  : "app-subsurface",
               )}
             >
               <div className="flex items-start gap-3">

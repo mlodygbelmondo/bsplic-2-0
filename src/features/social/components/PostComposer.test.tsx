@@ -31,6 +31,12 @@ describe('PostComposer', () => {
     expect(screen.getByLabelText('Opublikuj post')).toBeInTheDocument();
   });
 
+  it('uses the shared dark-mode surface treatment', () => {
+    render(<PostComposer onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText('Treść posta').closest('.app-surface')).not.toBeNull();
+  });
+
   it('disables submit when content is empty', () => {
     render(<PostComposer onSubmit={vi.fn()} />);
 

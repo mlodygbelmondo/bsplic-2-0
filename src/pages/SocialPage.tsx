@@ -631,14 +631,14 @@ export default function SocialPage() {
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4">Social</h1>
 
-          <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+          <div className="app-subsurface mb-4 inline-flex items-center gap-1 rounded-lg p-1">
             <button
               type="button"
               className={cn(
                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'all'
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
               )}
               onClick={() => setFeedFilter('all')}
             >
@@ -650,7 +650,7 @@ export default function SocialPage() {
                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'coupon'
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
               )}
               onClick={() => setFeedFilter('coupon')}
             >
@@ -662,7 +662,7 @@ export default function SocialPage() {
                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'post'
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
               )}
               onClick={() => setFeedFilter('post')}
             >
@@ -674,7 +674,7 @@ export default function SocialPage() {
                 'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'casino'
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
               )}
               onClick={() => setFeedFilter('casino')}
             >

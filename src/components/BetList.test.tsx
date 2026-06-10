@@ -40,4 +40,19 @@ describe("BetList tabs", () => {
     fireEvent.click(screen.getByRole("button", { name: "Kończące się" }));
     expect(useBetsMock).toHaveBeenLastCalledWith(null, "ending_soon");
   });
+
+  it("keeps the propose bet action off the mobile home toolbar", () => {
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={[]}
+        categoryMap={{}}
+        onProposeClick={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /zaproponuj zakład/i }),
+    ).toHaveClass("hidden", "lg:inline-flex");
+  });
 });

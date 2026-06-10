@@ -43,10 +43,10 @@ export function ProfileHistoryPanel({ history }: ProfileHistoryPanelProps) {
   const filtered = deriveSportsbookCouponRows(visibleCoupons, history.filter);
 
   return (
-    <div className="bg-card rounded-xl p-4 card-shadow">
+    <div className="app-surface rounded-xl p-4">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-bold">Historia</h2>
-        <div className="inline-flex w-max items-center rounded-lg border border-border bg-muted/40 p-1">
+        <div className="app-subsurface inline-flex w-max items-center rounded-lg p-1">
           {HISTORY_TYPE_OPTIONS.map(([value, label]) => (
             <button
               key={value}
@@ -56,7 +56,7 @@ export function ProfileHistoryPanel({ history }: ProfileHistoryPanelProps) {
                 "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 history.historyType === value
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background hover:text-foreground",
+                  : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
               )}
             >
               {label}
@@ -100,7 +100,7 @@ function SportsbookHistory({
                 "press-scale shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
                 history.filter === value
                   ? "bg-foreground text-background shadow-md"
-                  : "bg-muted text-muted-foreground hover:text-foreground",
+                  : "border border-border/70 bg-muted/60 text-muted-foreground hover:border-primary/30 hover:text-foreground",
               )}
             >
               {SPORTSBOOK_FILTER_LABELS[value]}
@@ -195,7 +195,7 @@ function SportsbookCouponRow({
   });
 
   return (
-    <div className="bg-muted rounded-lg card-shadow overflow-hidden">
+    <div className="app-subsurface rounded-lg overflow-hidden">
       <button
         type="button"
         className="flex items-center justify-between p-3 w-full text-sm text-left"
@@ -322,7 +322,7 @@ function CasinoHistory({
             visibleCasinoHistory.map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm card-shadow"
+                className="app-subsurface flex items-center justify-between rounded-lg p-3 text-sm"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

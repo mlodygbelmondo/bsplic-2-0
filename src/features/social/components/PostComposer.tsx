@@ -128,7 +128,7 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
   };
 
   return (
-    <div className="bg-card rounded-xl card-shadow p-4">
+    <div className="app-surface rounded-xl p-4">
       <textarea
         ref={textareaRef}
         className="w-full resize-none bg-transparent border border-border rounded-lg p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"

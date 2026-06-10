@@ -217,13 +217,13 @@ export function NotificationsBell({
           type="button"
           aria-label="Powiadomienia"
           onClick={handleBellClick}
-          className={`relative inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
+          className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full p-0 transition-colors ${
             hasUnread
               ? "text-primary-foreground hover:bg-primary-foreground/20"
               : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
           } ${className ?? ""}`}
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-5 w-5" />
           {unreadBadge && (
             <span className="absolute -right-1 -top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 font-bold text-center">
               {unreadBadge}

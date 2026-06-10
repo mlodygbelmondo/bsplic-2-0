@@ -83,9 +83,10 @@ describe("RankingsPage", () => {
   });
 
   it("switches rankings between sportsbook and casino leaderboards", async () => {
-    renderWithProviders(<RankingsPage />);
+    const { container } = renderWithProviders(<RankingsPage />);
 
     expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect(container.querySelector(".app-surface")).toBeInTheDocument();
     expect(rpcMock).toHaveBeenCalledWith("get_user_rankings");
 
     fireEvent.click(screen.getByRole("button", { name: "Kasyno" }));

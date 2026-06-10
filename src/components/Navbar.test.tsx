@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -67,11 +68,15 @@ const canClaimTopupMock = vi.mocked(canClaimTopup);
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function renderNavbar(pathname = "/") {
+type NavbarTestProps = ComponentProps<typeof Navbar> & {
+  onOpenProposeModal?: () => void;
+};
+
+function renderNavbar(pathname = "/", props: NavbarTestProps = {}) {
   return render(
     <ThemeProvider>
       <MemoryRouter initialEntries={[pathname]}>
-        <Navbar />
+        <Navbar {...props} />
       </MemoryRouter>
     </ThemeProvider>,
   );
@@ -82,6 +87,9 @@ function renderNavbar(pathname = "/") {
 describe("Navbar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
+    document.documentElement.removeAttribute("data-dark-palette");
+    document.documentElement.classList.remove("light");
     mockUser = { id: "user-1", email: "test@test.com" };
     mockProfile = {
       id: "user-1",
@@ -143,6 +151,22 @@ describe("Navbar", () => {
     expect(within(menu).queryByText("Propozycje")).not.toBeInTheDocument();
   });
 
+  it("shows propose bet action in the mobile menu when provided", async () => {
+    const onOpenProposeModal = vi.fn();
+    renderNavbar("/", { onOpenProposeModal });
+
+    fireEvent.click(screen.getByRole("button", { name: "Otwórz menu" }));
+
+    const menu = await screen.findByRole("dialog");
+    const proposeButton = within(menu).getByRole("button", {
+      name: /zaproponuj zakład/i,
+    });
+
+    fireEvent.click(proposeButton);
+
+    expect(onOpenProposeModal).toHaveBeenCalledTimes(1);
+  });
+
   it("displays user balance in the wallet button", () => {
     renderNavbar();
     expect(screen.getByText("500.00 zł")).toBeInTheDocument();
@@ -158,6 +182,53 @@ describe("Navbar", () => {
         expect.objectContaining({ userId: "user-1" }),
       ),
     );
+  });
+
+  it("dims inactive desktop navigation links more clearly", () => {
+    renderNavbar("/");
+
+    expect(screen.getByRole("link", { name: "Zakłady" })).toHaveClass(
+      "text-navbar-foreground",
+    );
+    expect(screen.getByRole("link", { name: "Rankingi" })).toHaveClass(
+      "text-navbar-foreground/60",
+    );
+  });
+
+  it("keeps desktop navbar actions on a consistent center line", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(min-width: 1024px)",
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => {},
+    }));
+
+    try {
+      renderNavbar();
+
+      await waitFor(() => {
+        expect(screen.getByTitle("Doładuj portfel")).toHaveClass(
+          "h-8",
+          "leading-none",
+        );
+      });
+      expect(screen.getByTitle("Menu użytkownika")).toHaveClass(
+        "h-8",
+        "leading-none",
+      );
+      expect(notificationsBellMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          className: expect.stringContaining("h-8 w-8"),
+        }),
+      );
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   // ── Topup — canClaimTopup is true ─────────────────────
@@ -271,7 +342,41 @@ describe("Navbar", () => {
   it("shows theme toggle inside the user dropdown menu", async () => {
     renderNavbar();
     fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
-    expect(await screen.findByText("Tryb jasny")).toBeInTheDocument();
+    expect(await screen.findByText("Tryb ciemny")).toBeInTheDocument();
+  });
+
+  it("does not expose the temporary dark palette picker in the desktop menu", async () => {
+    renderNavbar();
+
+    fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
+
+    await screen.findByText("Tryb ciemny");
+
+    expect(screen.queryByText("Paleta dark")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /ruby/i })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("bsplic.darkPalette")).toBeNull();
+  });
+
+  it("does not expose the temporary dark palette picker in the mobile menu", async () => {
+    renderNavbar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Otwórz menu" }));
+
+    const menu = await screen.findByRole("dialog");
+    expect(within(menu).queryByText("Paleta dark")).not.toBeInTheDocument();
+    expect(
+      within(menu).queryByRole("button", { name: /ruby/i }),
+    ).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("bsplic.darkPalette")).toBeNull();
+  });
+
+  it("keeps the single ruby palette out of theme storage", async () => {
+    renderNavbar();
+
+    await waitFor(() => {
+      expect(document.documentElement).not.toHaveAttribute("data-dark-palette");
+    });
+    expect(window.localStorage.getItem("bsplic.darkPalette")).toBeNull();
   });
 
   // ── No profile ───────────────────────────────────────────

@@ -10,25 +10,27 @@ import {
 export type Theme = "dark" | "light";
 
 const THEME_STORAGE_KEY = "bsplic.theme";
+const LEGACY_DARK_PALETTE_STORAGE_KEY = "bsplic.darkPalette";
 
 // Keeps the browser/PWA chrome color in sync with the active theme.
 const THEME_META_COLORS: Record<Theme, string> = {
-  dark: "#0f0e16",
+  dark: "#090005",
   light: "#dc2626",
 };
 
 function readStoredTheme(): Theme {
   try {
-    return window.localStorage.getItem(THEME_STORAGE_KEY) === "light"
-      ? "light"
-      : "dark";
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === "dark"
+      ? "dark"
+      : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("light", theme === "light");
+  document.documentElement.removeAttribute("data-dark-palette");
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", THEME_META_COLORS[theme]);
@@ -48,8 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme);
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+      window.localStorage.removeItem(LEGACY_DARK_PALETTE_STORAGE_KEY);
     } catch {
-      // Storage unavailable — theme just won't persist.
+      // Storage unavailable — preferences just won't persist.
     }
   }, [theme]);
 

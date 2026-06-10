@@ -137,7 +137,7 @@ export function BetList({
               <Button
                 onClick={onProposeClick}
                 size="sm"
-                className="propose-cta-button relative flex items-center overflow-hidden rounded-full text-[13px] font-bold h-9 px-4 py-1.5 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
+                className="propose-cta-button relative hidden lg:inline-flex items-center overflow-hidden rounded-full text-[13px] font-bold h-9 px-4 py-1.5 gradient-cta text-primary-foreground shadow-md hover:brightness-110 transition"
               >
                 <Lightbulb className="h-3 w-3" /> Zaproponuj zakład
               </Button>

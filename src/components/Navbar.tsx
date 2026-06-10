@@ -32,7 +32,11 @@ const NotificationsBell = lazy(() =>
 const NavbarMobileMenu = lazy(() => import("./NavbarMobileMenu"));
 const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
 
-export function Navbar() {
+interface NavbarProps {
+  onOpenProposeModal?: () => void;
+}
+
+export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
   const { user, profile, isAdmin, isModerator, signOut, refreshProfile } =
     useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -86,7 +90,7 @@ export function Navbar() {
           <div className="flex items-center gap-5">
             <Link
               to="/"
-              className="brand-logo-pill rounded-md px-2 py-[5px] text-[14px] font-black italic tracking-tight text-white leading-none transition hover:brightness-110"
+              className="brand-logo-pill rounded-md px-2 py-[5px] text-[16px] font-black italic tracking-tight text-white leading-none transition hover:brightness-110"
             >
               BSPLIC 2.0
             </Link>
@@ -94,10 +98,10 @@ export function Navbar() {
               <Link
                 to="/"
                 className={cn(
-                  "text-[14px] font-semibold hover:text-primary-foreground hover:brightness-110 transition-colors leading-none",
+                  "text-[14px] font-semibold hover:text-navbar-foreground hover:brightness-110 transition-colors leading-none",
                   isActivePath("/")
                     ? "text-navbar-foreground"
-                    : "text-navbar-foreground/90",
+                    : "text-navbar-foreground/60",
                 )}
               >
                 Zakłady
@@ -105,10 +109,10 @@ export function Navbar() {
               <Link
                 to="/casino"
                 className={cn(
-                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
+                  "text-[14px] font-semibold hover:text-navbar-foreground transition-colors leading-none",
                   isActivePath("/casino")
                     ? "text-navbar-foreground"
-                    : "text-navbar-foreground/90",
+                    : "text-navbar-foreground/60",
                 )}
               >
                 Kasyno
@@ -116,10 +120,10 @@ export function Navbar() {
               <Link
                 to="/social"
                 className={cn(
-                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
+                  "text-[14px] font-semibold hover:text-navbar-foreground transition-colors leading-none",
                   isActivePath("/social")
                     ? "text-navbar-foreground"
-                    : "text-navbar-foreground/90",
+                    : "text-navbar-foreground/60",
                 )}
               >
                 Social
@@ -127,10 +131,10 @@ export function Navbar() {
               <Link
                 to="/rankings"
                 className={cn(
-                  "text-[14px] font-semibold hover:text-primary-foreground transition-colors leading-none",
+                  "text-[14px] font-semibold hover:text-navbar-foreground transition-colors leading-none",
                   isActivePath("/rankings")
                     ? "text-navbar-foreground"
-                    : "text-navbar-foreground/90",
+                    : "text-navbar-foreground/60",
                 )}
               >
                 Rankingi
@@ -139,10 +143,10 @@ export function Navbar() {
                 <Link
                   to="/admin"
                   className={cn(
-                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
+                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-navbar-foreground transition-colors",
                     isActivePath("/admin")
                       ? "text-navbar-foreground"
-                      : "text-navbar-foreground/90",
+                      : "text-navbar-foreground/60",
                   )}
                 >
                   <ShieldCheck className="h-4 w-4 shrink-0" /> Admin
@@ -152,10 +156,10 @@ export function Navbar() {
                 <Link
                   to="/admin"
                   className={cn(
-                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-primary-foreground transition-colors",
+                    "inline-flex items-center gap-1 text-[14px] font-semibold leading-none hover:text-navbar-foreground transition-colors",
                     isActivePath("/admin")
                       ? "text-navbar-foreground"
-                      : "text-navbar-foreground/90",
+                      : "text-navbar-foreground/60",
                   )}
                 >
                   <ShieldCheck className="h-4 w-4 shrink-0" /> Propozycje
@@ -164,46 +168,49 @@ export function Navbar() {
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2.5">
+          <div className="hidden lg:flex h-full items-center gap-3">
             {profile && isDesktopNav && (
               <button
                 onClick={openTopupDialog}
-                className="press-scale navbar-chip flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2.5 text-[12px] font-bold text-primary-foreground transition-colors"
+                className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full py-0 pl-1 pr-3 text-[13px] font-bold leading-none text-primary-foreground transition-colors"
                 title={
                   canTopup()
                     ? "Doładuj portfel"
                     : "Już doładowano dzisiaj. Wróć jutro!"
                 }
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full gradient-primary">
-                  <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
+                  <Plus className="h-4 w-4" strokeWidth={3} />
                 </span>
                 {Number(profile.balance).toFixed(2)} zł
               </button>
             )}
             {isDesktopNav && (
               <Suspense fallback={null}>
-                <NotificationsBell userId={user?.id} />
+                <NotificationsBell
+                  userId={user?.id}
+                  className="h-8 w-8 p-0 [&>svg]:h-5 [&>svg]:w-5"
+                />
               </Suspense>
             )}
             {profile && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center gap-1.5 text-primary-foreground text-[12px] font-medium hover:brightness-110 transition outline-none"
+                    className="flex h-8 items-center gap-2 text-[13px] font-medium leading-none text-primary-foreground transition hover:brightness-110 outline-none"
                     title="Menu użytkownika"
                   >
-                    <Avatar className="h-6 w-6 bg-primary-foreground/20">
+                    <Avatar className="h-7 w-7 bg-primary-foreground/20">
                       <AvatarImage
                         src={profile.avatar_url ?? undefined}
                         alt={`Avatar ${profile.username}`}
                       />
-                      <AvatarFallback className="bg-primary-foreground/20 text-[10px] font-bold text-primary-foreground">
+                      <AvatarFallback className="bg-primary-foreground/20 text-[11px] font-bold text-primary-foreground">
                         {profile.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden sm:inline">{profile.username}</span>
-                    <ChevronDown className="h-3 w-3 opacity-70" />
+                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
@@ -235,19 +242,19 @@ export function Navbar() {
             )}
           </div>
 
-          <div className="lg:hidden flex items-center gap-2">
+          <div className="lg:hidden flex h-full items-center gap-2">
             {profile && !isDesktopNav && (
               <button
                 onClick={openTopupDialog}
-                className="press-scale navbar-chip flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] font-bold text-primary-foreground transition-colors"
+                className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full py-0 pl-1 pr-2.5 text-[12px] font-bold leading-none text-primary-foreground transition-colors"
                 title={
                   canTopup()
                     ? "Doładuj portfel"
                     : "Już doładowano dzisiaj. Wróć jutro!"
                 }
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full gradient-primary">
-                  <Plus className="h-3 w-3" strokeWidth={3} />
+                <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
+                  <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                 </span>
                 {Number(profile.balance).toFixed(2)} zł
               </button>
@@ -263,7 +270,7 @@ export function Navbar() {
             <button
               type="button"
               aria-label="Otwórz menu"
-              className="text-primary-foreground/90 flex items-center justify-center hover:text-primary-foreground transition-colors p-1"
+              className="flex h-8 w-8 items-center justify-center text-primary-foreground/80 transition-colors hover:text-primary-foreground"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="h-6 w-6" />
@@ -278,6 +285,7 @@ export function Navbar() {
                   profile={profile}
                   canTopup={canTopup}
                   onOpenTopup={() => setTopupOpen(true)}
+                  onOpenProposeModal={onOpenProposeModal}
                   signOut={signOut}
                 />
               </Suspense>

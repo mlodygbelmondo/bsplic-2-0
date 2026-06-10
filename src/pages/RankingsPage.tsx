@@ -83,7 +83,7 @@ export default function RankingsPage() {
       <div className="flex-1 min-h-0 overflow-y-auto max-w-3xl w-full mx-auto p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Rankingi</h1>
-          <div className="inline-flex w-max items-center rounded-lg border border-border bg-card p-1">
+          <div className="app-subsurface inline-flex w-max items-center rounded-lg p-1">
             {(
               [
                 ["sportsbook", "Zakłady"],
@@ -98,7 +98,7 @@ export default function RankingsPage() {
                   "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                   rankingType === value
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                 )}
               >
                 {label}
@@ -117,7 +117,7 @@ export default function RankingsPage() {
                   "shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all",
                   sortBy === tab.key
                     ? "gradient-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
+                    : "border border-border/70 bg-muted/60 text-muted-foreground hover:border-primary/30 hover:text-foreground",
                 )}
               >
                 {tab.label}
@@ -126,7 +126,7 @@ export default function RankingsPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-xl overflow-hidden card-shadow">
+        <div className="app-surface rounded-xl overflow-hidden">
           <div className="grid grid-cols-5 gap-2 p-3 text-xs font-bold text-muted-foreground border-b">
             <span>#</span>
             <span>Gracz</span>

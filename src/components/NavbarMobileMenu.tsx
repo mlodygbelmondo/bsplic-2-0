@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogOut, Moon, Plus, Sun } from "lucide-react";
+import { Lightbulb, LogOut, Moon, Plus, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -22,6 +22,7 @@ interface NavbarMobileMenuProps {
   profile: Profile | null;
   canTopup: () => boolean;
   onOpenTopup: () => void;
+  onOpenProposeModal?: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -33,6 +34,7 @@ export default function NavbarMobileMenu({
   profile,
   canTopup,
   onOpenTopup,
+  onOpenProposeModal,
   signOut,
 }: NavbarMobileMenuProps) {
   const { theme, toggleTheme } = useTheme();
@@ -50,6 +52,11 @@ export default function NavbarMobileMenu({
   const handleSignOut = () => {
     onOpenChange(false);
     void signOut();
+  };
+
+  const handleOpenProposeModal = () => {
+    onOpenChange(false);
+    onOpenProposeModal?.();
   };
 
   return (
@@ -85,7 +92,7 @@ export default function NavbarMobileMenu({
             </div>
 
             {profile && (
-              <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-3">
+              <div className="app-subsurface rounded-lg p-3 space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Saldo</span>
                   <span className="font-bold text-foreground">
@@ -125,6 +132,15 @@ export default function NavbarMobileMenu({
           </div>
 
           <div className="border-t border-border p-4 space-y-2">
+            {onOpenProposeModal && (
+              <button
+                onClick={handleOpenProposeModal}
+                className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Lightbulb className="h-4 w-4" />
+                Zaproponuj zakład
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               className="w-full flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
