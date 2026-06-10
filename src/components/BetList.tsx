@@ -5,6 +5,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SectionLoader } from "@/components/SectionLoader";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
+import {
+  getNextScrollChromeState,
+  type ScrollChromeState,
+} from "@/lib/scroll-chrome";
 import { Category } from "@/types/database";
 
 interface BetListProps {
@@ -47,7 +51,7 @@ export function BetList({
     useBets(selectedCategory, sort);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const [actionsHidden, setActionsHidden] = useState(false);
-  const lastScrollTopRef = useRef(0);
+  const scrollChromeStateRef = useRef<ScrollChromeState>();
 
   const handleSelectSort = (value: SortMode) => {
     setSort(value);
@@ -61,23 +65,25 @@ export function BetList({
   // Hide the action row while scrolling down through the list and bring it
   // back as soon as the user scrolls up a little.
   const handleListScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop } = event.currentTarget;
-    const delta = scrollTop - lastScrollTopRef.current;
-    if (scrollTop <= 32) {
-      setActionsHidden(false);
-    } else if (delta > 4) {
-      setActionsHidden(true);
-    } else if (delta < -4) {
-      setActionsHidden(false);
-    }
-    lastScrollTopRef.current = scrollTop;
+    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+    const nextState = getNextScrollChromeState(
+      scrollChromeStateRef.current,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      },
+    );
+
+    scrollChromeStateRef.current = nextState;
+    setActionsHidden(nextState.hidden);
   };
 
   // Changing sort/category remounts the scroll container at the top, so the
   // row must be visible again.
   useEffect(() => {
     setActionsHidden(false);
-    lastScrollTopRef.current = 0;
+    scrollChromeStateRef.current = undefined;
   }, [sort, selectedCategory]);
 
   useEffect(() => {

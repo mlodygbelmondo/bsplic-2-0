@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { bindServiceWorkerUpdateChecks } from '@/lib/pwa-registration';
 import { showPwaUpdateToast } from '@/lib/pwa-update';
 import App from './App.tsx';
 import './index.css';
@@ -9,9 +10,14 @@ const registerServiceWorker = () => {
   const register = () => {
     void import('virtual:pwa-register').then(({ registerSW }) => {
       const updateSW = registerSW({
-        immediate: false,
+        immediate: true,
         onNeedRefresh() {
           showPwaUpdateToast(updateSW);
+        },
+        onRegisteredSW(_swUrl, registration) {
+          if (registration) {
+            bindServiceWorkerUpdateChecks(registration);
+          }
         },
       });
     });

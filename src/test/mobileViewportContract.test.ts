@@ -22,9 +22,22 @@ describe('mobile viewport contract', () => {
     expect(css).toMatch(
       /\.h-safe-screen\s*{[\s\S]*height:\s*100svh;[\s\S]*height:\s*var\(--app-viewport-height,\s*100svh\);/,
     );
-    expect(css).not.toContain('--app-viewport-height: 100dvh');
+    expect(css).toMatch(
+      /@media\s*\(display-mode:\s*standalone\),\s*\(display-mode:\s*fullscreen\)\s*{[\s\S]*--app-viewport-height:\s*100dvh;/,
+    );
     expect(entrypoint).not.toContain('visualViewport');
     expect(entrypoint).not.toContain('syncAppViewportHeight');
+  });
+
+  it('paints the whole iOS PWA viewport behind the app shell', async () => {
+    const css = await readProjectFile('src/index.css');
+
+    expect(css).toMatch(
+      /html,\s*body\s*{[\s\S]*background-color:\s*hsl\(var\(--background\)\);/,
+    );
+    expect(css).toMatch(
+      /#root\s*{[\s\S]*background-color:\s*hsl\(var\(--background\)\);/,
+    );
   });
 
   it('keeps rankings inside the fixed app shell with its own scroll area', async () => {

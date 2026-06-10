@@ -120,6 +120,12 @@
     --app-viewport-height: 100svh;
   }
 
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    :root {
+      --app-viewport-height: 100dvh;
+    }
+  }
+
   /* Light theme: the pre-redesign palette, opt-in via the `light` class
      on <html> (managed by ThemeContext, default stays dark). */
   .light {
@@ -196,6 +202,7 @@
   html,
   body {
     height: 100%;
+    background-color: hsl(var(--background));
     overflow: hidden;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
@@ -343,6 +350,7 @@
     height: 100svh;
     height: var(--app-viewport-height, 100svh);
     width: 100vw;
+    background-color: hsl(var(--background));
     overflow: hidden;
   }
 }
