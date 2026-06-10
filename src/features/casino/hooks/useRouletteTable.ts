@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  advanceRouletteRoundIfDue,
-  getCurrentRouletteRound,
-  getMyCurrentRouletteBets,
-  getRecentRouletteSpins,
-  getRecentRouletteWins,
-  getRouletteRoundParticipants,
+  getRouletteTableSnapshot,
   placeRouletteBet,
   subscribeToRouletteRounds,
 } from '@/features/casino/api/roulette';
@@ -26,6 +21,8 @@ import type {
 
 interface UseRouletteTableArgs {
   userId: string;
+  username?: string;
+  avatarUrl?: string | null;
   refreshProfile: () => Promise<void>;
 }
 
@@ -37,6 +34,8 @@ interface PlaceBetInput {
 
 export function useRouletteTable({
   userId,
+  username = 'Ty',
+  avatarUrl = null,
   refreshProfile,
 }: UseRouletteTableArgs) {
   const [currentRound, setCurrentRound] = useState<RouletteTableRound | null>(
@@ -73,32 +72,16 @@ export function useRouletteTable({
       }
 
       const snapshotPromise = (async () => {
-        await advanceRouletteRoundIfDue();
+        const snapshot = await getRouletteTableSnapshot();
 
-        const [round, spins, wins] = await Promise.all([
-          getCurrentRouletteRound(),
-          getRecentRouletteSpins(),
-          getRecentRouletteWins(),
-        ]);
-
-        setCurrentRound(round);
-        setRecentSpins(spins);
-        setRecentWins(wins);
-
-        if (round) {
-          const [bets, participants] = await Promise.all([
-            getMyCurrentRouletteBets(round.id),
-            getRouletteRoundParticipants(round.id),
-          ]);
-          setActiveBets(bets);
-          setRoundParticipants(participants);
-        } else {
-          setActiveBets([]);
-          setRoundParticipants([]);
-        }
+        setCurrentRound(snapshot.currentRound);
+        setRecentSpins(snapshot.recentSpins);
+        setRecentWins(snapshot.recentWins);
+        setActiveBets(snapshot.activeBets);
+        setRoundParticipants(snapshot.roundParticipants);
 
         const newestUserSettledWin =
-          wins.find((win) => win.user_id === userId) ?? null;
+          snapshot.recentWins.find((win) => win.user_id === userId) ?? null;
         if (
           newestUserSettledWin?.round_id &&
           newestUserSettledWin.round_id !== lastSettledRoundIdRef.current
@@ -201,14 +184,21 @@ export function useRouletteTable({
         });
 
         setActiveBets((previous) => [acceptedBet, ...previous]);
+        setRoundParticipants((previous) =>
+          upsertLocalRoundParticipant(previous, {
+            userId,
+            username,
+            avatarUrl,
+            acceptedBet,
+          }),
+        );
         await refreshProfileRef.current();
-        await syncSnapshot();
         return acceptedBet;
       } finally {
         setIsPlacingBet(false);
       }
     },
-    [currentRound, syncSnapshot, userId],
+    [avatarUrl, currentRound, userId, username],
   );
 
   const latestSettledRound = recentSpins[0] ?? null;
@@ -253,4 +243,55 @@ export function useRouletteTable({
       syncSnapshot,
     ],
   );
+}
+
+function upsertLocalRoundParticipant(
+  participants: RouletteRoundParticipant[],
+  {
+    userId,
+    username,
+    avatarUrl,
+    acceptedBet,
+  }: {
+    userId: string;
+    username: string;
+    avatarUrl: string | null;
+    acceptedBet: RouletteBetRecord;
+  },
+) {
+  const participantBet = {
+    bet_type: acceptedBet.bet_type,
+    bet_value: acceptedBet.bet_value,
+    stake: acceptedBet.stake,
+  };
+  const existing = participants.find((participant) => participant.user_id === userId);
+
+  if (!existing) {
+    return [
+      {
+        user_id: userId,
+        username,
+        avatar_url: avatarUrl,
+        total_stake: acceptedBet.stake,
+        bet_count: 1,
+        bets: [participantBet],
+      },
+      ...participants,
+    ];
+  }
+
+  return participants.map((participant) => {
+    if (participant.user_id !== userId) {
+      return participant;
+    }
+
+    return {
+      ...participant,
+      username: participant.username || username,
+      avatar_url: participant.avatar_url ?? avatarUrl,
+      total_stake: participant.total_stake + acceptedBet.stake,
+      bet_count: participant.bet_count + 1,
+      bets: [participantBet, ...participant.bets],
+    };
+  });
 }

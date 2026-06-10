@@ -701,6 +701,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_dashboard_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_credit_balance: {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
@@ -932,6 +936,20 @@ export type Database = {
           total_stake: number
           user_id: string
           username: string
+        }[]
+      }
+      get_roulette_table_snapshot: {
+        Args: {
+          p_recent_spins_limit?: number
+          p_recent_wins_limit?: number
+          p_table_key?: string
+        }
+        Returns: {
+          active_bets: Json
+          current_round: Json
+          recent_spins: Json
+          recent_wins: Json
+          round_participants: Json
         }[]
       }
       get_recent_roulette_spins: {

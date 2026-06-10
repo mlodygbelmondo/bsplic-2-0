@@ -21,6 +21,8 @@ interface PlaceRouletteBetParams {
 }
 
 const DEFAULT_TABLE_KEY = 'main';
+const DEFAULT_RECENT_SPINS_LIMIT = 10;
+const DEFAULT_RECENT_WINS_LIMIT = 20;
 
 type LegacyPlayRouletteRoundRow =
   Database['public']['Functions']['play_roulette_round']['Returns'][number];
@@ -36,6 +38,16 @@ type RoundParticipantRpcRow =
   Database['public']['Functions']['get_roulette_round_participants']['Returns'][number] & {
     bets?: unknown;
   };
+type RouletteSnapshotRpcRow =
+  Database['public']['Functions']['get_roulette_table_snapshot']['Returns'][number];
+
+export interface RouletteTableSnapshot {
+  currentRound: RouletteTableRound | null;
+  recentSpins: RouletteTableRound[];
+  recentWins: RouletteRecentWin[];
+  activeBets: RouletteBetRecord[];
+  roundParticipants: RouletteRoundParticipant[];
+}
 
 export async function playRouletteRoundLegacy({
   userId,
@@ -146,6 +158,25 @@ export async function getRouletteRoundParticipants(
   return ((data ?? []) as RoundParticipantRpcRow[]).map(normalizeRoundParticipant);
 }
 
+export async function getRouletteTableSnapshot(
+  tableKey = DEFAULT_TABLE_KEY,
+  recentSpinsLimit = DEFAULT_RECENT_SPINS_LIMIT,
+  recentWinsLimit = DEFAULT_RECENT_WINS_LIMIT,
+): Promise<RouletteTableSnapshot> {
+  const { data, error } = await supabase.rpc('get_roulette_table_snapshot', {
+    p_table_key: tableKey,
+    p_recent_spins_limit: recentSpinsLimit,
+    p_recent_wins_limit: recentWinsLimit,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Nie udało się pobrać stanu stołu ruletki');
+  }
+
+  const snapshot = Array.isArray(data) ? data[0] : data;
+  return normalizeRouletteTableSnapshot(snapshot as RouletteSnapshotRpcRow | null);
+}
+
 export async function placeRouletteBet({
   roundId,
   userId,
@@ -210,77 +241,120 @@ export function subscribeToRouletteRounds(
 }
 
 function normalizeRouletteRound(
-  round: RouletteRoundRow | CurrentRoundRpcRow | RecentSpinRpcRow | null,
+  round: RouletteRoundRow | CurrentRoundRpcRow | RecentSpinRpcRow | unknown,
 ): RouletteTableRound | null {
-  if (!round) {
+  if (!round || typeof round !== 'object') {
+    return null;
+  }
+
+  const row = round as Record<string, unknown>;
+  const id = getRequiredString(row, 'id');
+  const tableKey = getRequiredString(row, 'table_key');
+  const phase = getRequiredString(row, 'phase');
+  const bettingOpensAt = getRequiredString(row, 'betting_opens_at');
+  const bettingClosesAt = getRequiredString(row, 'betting_closes_at');
+  const createdAt = getRequiredString(row, 'created_at');
+
+  if (!id || !tableKey || !phase || !bettingOpensAt || !bettingClosesAt || !createdAt) {
     return null;
   }
 
   return {
-    id: round.id,
-    table_key: round.table_key,
-    round_number: Number(round.round_number),
-    phase: round.phase as RouletteTableRound['phase'],
-    betting_opens_at: round.betting_opens_at,
-    betting_closes_at: round.betting_closes_at,
-    spin_started_at: round.spin_started_at,
-    settled_at: round.settled_at,
+    id,
+    table_key: tableKey,
+    round_number: Number(row.round_number),
+    phase: phase as RouletteTableRound['phase'],
+    betting_opens_at: bettingOpensAt,
+    betting_closes_at: bettingClosesAt,
+    spin_started_at: getNullableString(row, 'spin_started_at'),
+    settled_at: getNullableString(row, 'settled_at'),
     winning_number:
-      round.winning_number === null || round.winning_number === undefined
+      row.winning_number === null || row.winning_number === undefined
         ? null
-        : Number(round.winning_number),
+        : Number(row.winning_number),
     winning_color:
-      round.winning_color === null || round.winning_color === undefined
+      row.winning_color === null || row.winning_color === undefined
         ? null
-        : (round.winning_color as RouletteColor),
-    created_at: round.created_at,
+        : (String(row.winning_color) as RouletteColor),
+    created_at: createdAt,
   };
 }
 
-function normalizeRouletteBet(bet: RouletteBetRow): RouletteBetRecord {
+function normalizeRouletteBet(bet: RouletteBetRow | unknown): RouletteBetRecord {
+  const row = (bet ?? {}) as Record<string, unknown>;
+
   return {
-    id: bet.id,
-    round_id: bet.round_id,
-    user_id: bet.user_id,
-    bet_type: bet.bet_type as RouletteBetType,
-    bet_value: bet.bet_value,
-    stake: Number(bet.stake),
-    payout: Number(bet.payout),
-    is_win: bet.is_win,
-    created_at: bet.created_at,
-    settled_at: bet.settled_at,
+    id: getRequiredString(row, 'id'),
+    round_id: getRequiredString(row, 'round_id'),
+    user_id: getNullableString(row, 'user_id') ?? undefined,
+    bet_type: getRequiredString(row, 'bet_type') as RouletteBetType,
+    bet_value: getRequiredString(row, 'bet_value'),
+    stake: Number(row.stake),
+    payout: Number(row.payout),
+    is_win: typeof row.is_win === 'boolean' ? row.is_win : null,
+    created_at: getRequiredString(row, 'created_at'),
+    settled_at: getNullableString(row, 'settled_at'),
   };
 }
 
-function normalizeRecentWin(win: RecentWinRpcRow): RouletteRecentWin {
+function normalizeRecentWin(win: RecentWinRpcRow | unknown): RouletteRecentWin {
+  const row = (win ?? {}) as Record<string, unknown>;
+
   return {
-    id: win.id,
-    round_id: win.round_id,
-    user_id: win.user_id,
-    username: win.username,
-    avatar_url: win.avatar_url,
-    bet_type: win.bet_type as RouletteBetType,
-    bet_value: win.bet_value,
-    stake: Number(win.stake),
-    payout: Number(win.payout),
-    is_win: win.is_win,
-    created_at: win.created_at,
-    settled_at: win.settled_at,
-    round_number: Number(win.round_number),
+    id: getRequiredString(row, 'id'),
+    round_id: getRequiredString(row, 'round_id'),
+    user_id: getRequiredString(row, 'user_id'),
+    username: getRequiredString(row, 'username'),
+    avatar_url: getNullableString(row, 'avatar_url'),
+    bet_type: getRequiredString(row, 'bet_type') as RouletteBetType,
+    bet_value: getRequiredString(row, 'bet_value'),
+    stake: Number(row.stake),
+    payout: Number(row.payout),
+    is_win: typeof row.is_win === 'boolean' ? row.is_win : null,
+    created_at: getRequiredString(row, 'created_at'),
+    settled_at: getNullableString(row, 'settled_at'),
+    round_number: Number(row.round_number),
   };
 }
 
 function normalizeRoundParticipant(
-  participant: RoundParticipantRpcRow,
+  participant: RoundParticipantRpcRow | unknown,
 ): RouletteRoundParticipant {
+  const row = (participant ?? {}) as Record<string, unknown>;
+
   return {
-    user_id: participant.user_id,
-    username: participant.username,
-    avatar_url: participant.avatar_url,
-    total_stake: Number(participant.total_stake),
-    bet_count: Number(participant.bet_count),
-    bets: normalizeParticipantBets(participant.bets),
+    user_id: getRequiredString(row, 'user_id'),
+    username: getRequiredString(row, 'username'),
+    avatar_url: getNullableString(row, 'avatar_url'),
+    total_stake: Number(row.total_stake),
+    bet_count: Number(row.bet_count),
+    bets: normalizeParticipantBets(row.bets),
   };
+}
+
+function normalizeRouletteTableSnapshot(
+  snapshot: RouletteSnapshotRpcRow | null,
+): RouletteTableSnapshot {
+  const row = (snapshot ?? {}) as Record<string, unknown>;
+
+  return {
+    currentRound: normalizeRouletteRound(row.current_round),
+    recentSpins: normalizeArray(row.recent_spins, normalizeRouletteRound),
+    recentWins: normalizeArray(row.recent_wins, normalizeRecentWin),
+    activeBets: normalizeArray(row.active_bets, normalizeRouletteBet),
+    roundParticipants: normalizeArray(row.round_participants, normalizeRoundParticipant),
+  };
+}
+
+function normalizeArray<T>(
+  value: unknown,
+  normalize: (row: unknown) => T | null,
+): T[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map(normalize).filter((item): item is T => Boolean(item));
 }
 
 function normalizeParticipantBets(bets: unknown): RouletteRoundParticipantBet[] {
@@ -307,4 +381,23 @@ function normalizeParticipantBets(bets: unknown): RouletteRoundParticipantBet[] 
       && bet.bet_value !== ''
       && Number.isFinite(bet.stake)
     ));
+}
+
+function getRequiredString(row: Record<string, unknown>, key: string) {
+  const value = row[key];
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return '';
+}
+
+function getNullableString(row: Record<string, unknown>, key: string) {
+  const value = row[key];
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return typeof value === 'string' ? value : String(value);
 }

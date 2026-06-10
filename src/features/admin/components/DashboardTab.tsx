@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { SectionLoader } from '@/components/SectionLoader';
 import { toast } from 'sonner';
+import {
+  fetchAdminDashboardSummary,
+  type DashboardStats,
+  type RecentActivity,
+} from '@/features/admin/dashboardApi';
 import {
   BarChart3,
   Wallet,
@@ -12,22 +16,6 @@ import {
   Trophy,
   Clock,
 } from 'lucide-react';
-
-interface DashboardStats {
-  totalBets: number;
-  totalPool: number;
-  pendingProposals: number;
-  activeBets: number;
-  resolvedToday: number;
-  topCategory: string | null;
-}
-
-interface RecentActivity {
-  id: string;
-  title: string;
-  winningOption: string;
-  resolvedAt: string;
-}
 
 export default function DashboardTab() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -45,83 +33,9 @@ export default function DashboardTab() {
   useEffect(() => {
     const load = async () => {
       try {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-
-        const [
-          { count: totalBets, error: e1 },
-          { data: stakes, error: e2 },
-          { count: pendingProposals, error: e3 },
-          { count: activeBets, error: e4 },
-          { count: resolvedToday, error: e5 },
-          { data: categoryData, error: e6 },
-          { data: recentResolved, error: e7 },
-        ] = await Promise.all([
-          supabase.from('placed_bets').select('*', { count: 'exact', head: true }),
-          supabase.from('placed_bets').select('stake'),
-          supabase
-            .from('bet_proposals')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'pending'),
-          supabase
-            .from('bets')
-            .select('*', { count: 'exact', head: true })
-            .eq('is_active', true),
-          supabase
-            .from('bets')
-            .select('*', { count: 'exact', head: true })
-            .not('winning_option', 'is', null)
-            .gte('created_at', todayStart.toISOString()),
-          supabase
-            .from('bets')
-            .select('category_id, categories(id, emoji, name)')
-            .eq('is_active', true)
-            .not('category_id', 'is', null),
-          supabase
-            .from('bets')
-            .select('id, title, winning_option, created_at')
-            .not('winning_option', 'is', null)
-            .order('created_at', { ascending: false })
-            .limit(5),
-        ]);
-
-        const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7;
-        if (firstError) throw firstError;
-
-        const totalPool = stakes?.reduce((acc, b) => acc + Number(b.stake), 0) || 0;
-
-        let topCategory: string | null = null;
-        if (categoryData && categoryData.length > 0) {
-          const freq: Record<string, number> = {};
-          const categoryLabels: Record<string, string> = {};
-          for (const row of categoryData) {
-            if (!row.category_id) continue;
-            freq[row.category_id] = (freq[row.category_id] || 0) + 1;
-            if (row.categories) {
-              categoryLabels[row.category_id] = `${row.categories.emoji} ${row.categories.name}`;
-            }
-          }
-          const topId = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-          topCategory = topId ? categoryLabels[topId] || null : null;
-        }
-
-        setStats({
-          totalBets: totalBets || 0,
-          totalPool,
-          pendingProposals: pendingProposals || 0,
-          activeBets: activeBets || 0,
-          resolvedToday: resolvedToday || 0,
-          topCategory,
-        });
-
-        setRecentActivity(
-          (recentResolved || []).map((r) => ({
-            id: r.id,
-            title: r.title,
-            winningOption: r.winning_option || '',
-            resolvedAt: r.created_at,
-          }))
-        );
+        const summary = await fetchAdminDashboardSummary();
+        setStats(summary.stats);
+        setRecentActivity(summary.recentActivity);
       } catch (err: unknown) {
         setError(true);
         const msg = err instanceof Error ? err.message : 'Nieznany błąd';

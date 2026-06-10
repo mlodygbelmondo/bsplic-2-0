@@ -55,7 +55,7 @@ export function RouletteGame({
   const [isSharingWin, setIsSharingWin] = useState(false);
   const isMobile = useIsMobile();
 
-  const table = useRouletteTable({ userId, refreshProfile });
+  const table = useRouletteTable({ userId, username, avatarUrl, refreshProfile });
   const submitDisabled = table.phase !== 'waiting' || !table.currentRound;
 
   const [dismissedWinKey, setDismissedWinKey] = useState<string | null>(null);

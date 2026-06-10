@@ -21,6 +21,12 @@ import {
   setNotificationsSoundMuted,
 } from "@/features/notifications/sound";
 import {
+  createUnreadCountState,
+  reduceUnreadCountState,
+  type NotificationRealtimePayload,
+  type UnreadCountAction,
+} from "@/features/notifications/unreadCount";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -43,6 +49,7 @@ export function NotificationsBell({
   const navigate = useNavigate();
   const openRef = useRef(open);
   const soundMutedRef = useRef(soundMuted);
+  const unreadCountStateRef = useRef(createUnreadCountState(0));
 
   const hasUnread = unreadCount > 0;
 
@@ -82,6 +89,20 @@ export function NotificationsBell({
     [userId],
   );
 
+  const applyUnreadCountAction = useCallback((action: UnreadCountAction) => {
+    setUnreadCount((previousCount) => {
+      const nextState = reduceUnreadCountState(
+        {
+          ...unreadCountStateRef.current,
+          count: previousCount,
+        },
+        action,
+      );
+      unreadCountStateRef.current = nextState;
+      return nextState.count;
+    });
+  }, []);
+
   useEffect(() => {
     if (!userId) {
       setNotifications([]);
@@ -100,11 +121,11 @@ export function NotificationsBell({
       try {
         const count = await fetchUnreadNotificationsCount(userId);
         if (!cancelled) {
-          setUnreadCount(count);
+          applyUnreadCountAction({ type: 'reconcile', count });
         }
       } catch {
         if (!cancelled) {
-          setUnreadCount(0);
+          applyUnreadCountAction({ type: 'reconcile', count: 0 });
         }
       }
     };
@@ -125,7 +146,10 @@ export function NotificationsBell({
           if (payload.eventType === "INSERT" && !soundMutedRef.current) {
             void playNotificationSound();
           }
-          void loadCount();
+          applyUnreadCountAction({
+            type: 'realtime',
+            payload: payload as NotificationRealtimePayload,
+          });
           if (openRef.current) {
             void loadNotifications(cancelledRef);
           }
@@ -137,7 +161,7 @@ export function NotificationsBell({
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [loadNotifications, userId]);
+  }, [applyUnreadCountAction, loadNotifications, userId]);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -162,7 +186,11 @@ export function NotificationsBell({
     if (!notification.is_read) {
       try {
         await markNotificationRead(userId, notification.id);
-        setUnreadCount((prev) => Math.max(prev - 1, 0));
+        applyUnreadCountAction({
+          type: 'mark-one-read',
+          notificationId: notification.id,
+          wasUnread: true,
+        });
         setNotifications((prev) =>
           prev.map((n) =>
             n.id === notification.id
@@ -186,7 +214,7 @@ export function NotificationsBell({
     if (!hasUnread) return;
     try {
       await markAllNotificationsRead(userId);
-      setUnreadCount(0);
+      applyUnreadCountAction({ type: 'mark-all-read' });
       setNotifications((prev) =>
         prev.map((item) => ({ ...item, is_read: true })),
       );

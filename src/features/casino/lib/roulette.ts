@@ -147,6 +147,10 @@ export function getRouletteNextSyncDelayMs(
 
   const targetMs = getRouletteCountdownTargetMs(round);
   if (targetMs) {
+    if (targetMs <= nowMs) {
+      return ROULETTE_SYNC_FALLBACK_MS;
+    }
+
     return Math.max(
       ROULETTE_SYNC_TARGET_BUFFER_MS,
       targetMs - nowMs + ROULETTE_SYNC_TARGET_BUFFER_MS,

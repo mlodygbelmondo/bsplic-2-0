@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,12 +43,17 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 function createChannel() {
   const channel = {
-    on: vi.fn(() => channel),
+    on: vi.fn((_event: string, _config: unknown, callback: (payload: unknown) => void) => {
+      notificationRealtimeHandler = callback;
+      return channel;
+    }),
     subscribe: vi.fn(() => channel),
   };
 
   return channel;
 }
+
+let notificationRealtimeHandler: ((payload: unknown) => void) | null = null;
 
 describe('NotificationsBell', () => {
   beforeEach(() => {
@@ -60,6 +65,7 @@ describe('NotificationsBell', () => {
     mocks.removeChannel.mockReset();
     mocks.prepareNotificationSound.mockReset();
     mocks.setNotificationsSoundMuted.mockReset();
+    notificationRealtimeHandler = null;
 
     mocks.fetchUnreadNotificationsCount.mockResolvedValue(1);
     mocks.fetchUserNotifications.mockResolvedValue([]);
@@ -107,5 +113,115 @@ describe('NotificationsBell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
 
     expect(mocks.prepareNotificationSound).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates the unread badge from realtime inserts without refetching the count', async () => {
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('1');
+    expect(mocks.fetchUnreadNotificationsCount).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      notificationRealtimeHandler?.({
+        eventType: 'INSERT',
+        new: {
+          id: 'notification-2',
+          user_id: 'user-1',
+          is_read: false,
+        },
+        old: {},
+      });
+    });
+
+    expect(await screen.findByText('2')).toBeInTheDocument();
+    expect(mocks.fetchUnreadNotificationsCount).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchUserNotifications).not.toHaveBeenCalled();
+  });
+
+  it('decrements the unread badge from realtime read updates without refetching the count', async () => {
+    mocks.fetchUnreadNotificationsCount.mockResolvedValue(2);
+
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('2');
+
+    act(() => {
+      notificationRealtimeHandler?.({
+        eventType: 'UPDATE',
+        old: {
+          id: 'notification-1',
+          user_id: 'user-1',
+          is_read: false,
+        },
+        new: {
+          id: 'notification-1',
+          user_id: 'user-1',
+          is_read: true,
+        },
+      });
+    });
+
+    expect(await screen.findByText('1')).toBeInTheDocument();
+    expect(mocks.fetchUnreadNotificationsCount).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not double-decrement when local read is echoed by realtime', async () => {
+    mocks.fetchUnreadNotificationsCount.mockResolvedValue(2);
+    mocks.fetchUserNotifications.mockResolvedValue([
+      {
+        id: 'notification-1',
+        user_id: 'user-1',
+        actor_user_id: null,
+        actor_username: null,
+        type: 'mention_post',
+        title: 'Wzmianka',
+        body: null,
+        link_path: '/social',
+        metadata: null,
+        is_read: false,
+        read_at: null,
+        created_at: '2026-06-11T10:00:00.000Z',
+      },
+    ]);
+    mocks.markNotificationRead.mockResolvedValue(true);
+
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
+    fireEvent.click(await screen.findByText('Wzmianka'));
+
+    expect(await screen.findByText('1')).toBeInTheDocument();
+
+    act(() => {
+      notificationRealtimeHandler?.({
+        eventType: 'UPDATE',
+        old: {
+          id: 'notification-1',
+          user_id: 'user-1',
+          is_read: false,
+        },
+        new: {
+          id: 'notification-1',
+          user_id: 'user-1',
+          is_read: true,
+        },
+      });
+    });
+
+    expect(await screen.findByText('1')).toBeInTheDocument();
   });
 });

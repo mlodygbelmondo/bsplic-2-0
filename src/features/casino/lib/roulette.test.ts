@@ -192,7 +192,7 @@ describe('getRouletteNextSyncDelayMs', () => {
     ).toBe(5_000 + ROULETTE_SYNC_TARGET_BUFFER_MS);
   });
 
-  it('uses a short delay when the target is already due', () => {
+  it('uses the fallback delay when the target is already due and cron owns advancement', () => {
     expect(
       getRouletteNextSyncDelayMs(
         {
@@ -202,7 +202,7 @@ describe('getRouletteNextSyncDelayMs', () => {
         },
         new Date('2026-04-17T12:00:25.000Z').getTime(),
       ),
-    ).toBe(ROULETTE_SYNC_TARGET_BUFFER_MS);
+    ).toBe(ROULETTE_SYNC_FALLBACK_MS);
   });
 
   it('uses a settled-round delay after settlement', () => {
