@@ -344,7 +344,7 @@ describe('RouletteGame', () => {
     );
   });
 
-  it('shows the betting countdown only inside the wheel hub', () => {
+  it('does not render a countdown overlay inside the game layout', () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
       currentRound: {
@@ -360,9 +360,7 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByTestId('roulette-hub-countdown')).toHaveTextContent(
-      '00:15',
-    );
+    expect(screen.queryByTestId('roulette-hub-countdown')).toBeNull();
     expect(screen.queryByText('Do spinu')).not.toBeInTheDocument();
     expect(screen.queryByText('LIVE')).not.toBeInTheDocument();
     expect(screen.queryByText('Przyjmowanie zakładów')).not.toBeInTheDocument();

@@ -427,8 +427,6 @@ export function RouletteGame({
             winningNumber={table.currentRound?.winning_number ?? null}
             spinStartedAt={table.currentRound?.spin_started_at ?? null}
             roundId={table.currentRound?.id ?? null}
-            countdownLabel={table.countdownLabel}
-            isIdle={table.isIdle}
           />
 
           <MyBetsStrip

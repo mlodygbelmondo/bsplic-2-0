@@ -81,14 +81,14 @@ export function StakeDrawer({
                 </button>
               </div>
               <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black p-3 shadow-2xl">
-                <div className="flex flex-1 items-center gap-2">
+                <div className="grid flex-1 grid-cols-4 gap-2">
                   {STAKE_PRESETS.map((preset) => (
                     <button
                       key={preset}
                       type="button"
                       onClick={() => onStakeChange(String(preset))}
                       className={cn(
-                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-all',
+                        'rounded-lg border py-2 text-sm font-medium transition-all',
                         parsedStake === preset
                           ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
                           : 'border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20',

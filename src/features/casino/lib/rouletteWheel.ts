@@ -5,7 +5,6 @@ export const ROULETTE_WHEEL_NUMBERS = [
 
 const SEGMENT_ANGLE = 360 / ROULETTE_WHEEL_NUMBERS.length;
 const BALL_FULL_SPINS = 4;
-const WHEEL_FULL_SPINS = 2;
 
 export type RouletteBallAngleOffsets = Partial<Record<number, number>>;
 
@@ -64,18 +63,12 @@ export function getRouletteBallAngleOffset(
   );
 }
 
-// The wheel artwork rotates during a spin. Ball angles are expressed in
-// viewport space, so the pocket angle must be shifted by the wheel's final
-// rotation for the ball to land on the same pocket of the rotated artwork.
 export function computeRouletteBallRotation(
   fromRotation: number,
   targetIdx: number,
-  wheelFinalRotation = 0,
 ) {
   const currentBase = normalizeRotation(fromRotation);
-  const targetBase = normalizeRotation(
-    getRouletteBallPocketAngle(targetIdx) + wheelFinalRotation,
-  );
+  const targetBase = normalizeRotation(getRouletteBallPocketAngle(targetIdx));
   let delta = targetBase - currentBase;
   if (delta < 0) delta += 360;
   return fromRotation + delta + BALL_FULL_SPINS * 360;
@@ -84,37 +77,10 @@ export function computeRouletteBallRotation(
 export function computeRouletteBallSettledRotation(
   fromRotation: number,
   targetIdx: number,
-  wheelFinalRotation = 0,
 ) {
   const currentBase = normalizeRotation(fromRotation);
-  const targetBase = normalizeRotation(
-    getRouletteBallPocketAngle(targetIdx) + wheelFinalRotation,
-  );
+  const targetBase = normalizeRotation(getRouletteBallPocketAngle(targetIdx));
   let delta = targetBase - currentBase;
   if (delta < 0) delta += 360;
   return fromRotation + delta;
-}
-
-// Deterministic per-round wheel resting angle: every client hashes the same
-// roundId to the same angle, so the shared table looks identical everywhere.
-export function getRouletteWheelTargetAngle(roundId: string) {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < roundId.length; i += 1) {
-    hash ^= roundId.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0) % 360;
-}
-
-// The wheel spins opposite to the ball (counter-clockwise), decelerating to a
-// full stop exactly at the hash-derived resting angle.
-export function computeRouletteWheelRotation(
-  fromRotation: number,
-  roundId: string,
-) {
-  const currentBase = normalizeRotation(fromRotation);
-  const targetBase = getRouletteWheelTargetAngle(roundId);
-  let delta = targetBase - currentBase;
-  if (delta > 0) delta -= 360;
-  return fromRotation + delta - WHEEL_FULL_SPINS * 360;
 }
