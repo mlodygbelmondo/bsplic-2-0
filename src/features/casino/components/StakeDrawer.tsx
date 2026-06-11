@@ -12,6 +12,8 @@ interface StakeDrawerProps {
   stake: string;
   loading: boolean;
   submitDisabled: boolean;
+  submitHint?: string | null;
+  potentialWin?: number | null;
   betControls?: ReactNode;
   onStakeChange: (value: string) => void;
   onSubmit: () => void;
@@ -24,6 +26,8 @@ export function StakeDrawer({
   stake,
   loading,
   submitDisabled,
+  submitHint = null,
+  potentialWin = null,
   betControls,
   onStakeChange,
   onSubmit,
@@ -36,6 +40,21 @@ export function StakeDrawer({
     const nextStake = Math.max(0.01, (Number(stake) || 0) * multiplier);
     onStakeChange(String(Math.round(nextStake * 100) / 100));
   };
+
+  const setMaxStake = () => {
+    onStakeChange(String(Math.max(0.01, Math.floor(balance * 100) / 100)));
+  };
+
+  const statusLine = submitHint ? (
+    <span className="text-amber-300/80">{submitHint}</span>
+  ) : potentialWin !== null ? (
+    <span>
+      Możliwa wygrana:{' '}
+      <span className="font-mono font-bold text-emerald-300">
+        {potentialWin.toFixed(2)} zł
+      </span>
+    </span>
+  ) : null;
 
   return (
     <>
@@ -103,6 +122,13 @@ export function StakeDrawer({
                   >
                     2x
                   </button>
+                  <button
+                    type="button"
+                    onClick={setMaxStake}
+                    className="h-10 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-white/75 transition-colors hover:border-amber-500/40 hover:text-amber-200"
+                  >
+                    MAX
+                  </button>
                 </div>
                 <Button
                   type="button"
@@ -120,8 +146,10 @@ export function StakeDrawer({
                   )}
                 </Button>
               </div>
-              <p className="mt-1 text-center text-[10px] text-white/30">
-                Saldo: {balance.toFixed(2)} zł
+              <p className="mt-1 flex items-center justify-center gap-3 text-center text-[10px] text-white/30">
+                <span>Saldo: {balance.toFixed(2)} zł</span>
+                {statusLine && <span>·</span>}
+                {statusLine}
               </p>
             </motion.div>
           ) : (
@@ -232,7 +260,7 @@ export function StakeDrawer({
                 className="mb-3 h-12 rounded-xl border-white/10 bg-white/[0.06] text-center text-lg font-bold text-white placeholder:text-white/20"
               />
 
-              <div className="mb-3 grid grid-cols-2 gap-2">
+              <div className="mb-3 grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => adjustStake(0.5)}
@@ -246,6 +274,13 @@ export function StakeDrawer({
                   className="rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-bold text-white/75 transition-colors active:border-amber-500/40 active:text-amber-200"
                 >
                   2x
+                </button>
+                <button
+                  type="button"
+                  onClick={setMaxStake}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-bold text-white/75 transition-colors active:border-amber-500/40 active:text-amber-200"
+                >
+                  MAX
                 </button>
               </div>
 
@@ -268,9 +303,9 @@ export function StakeDrawer({
                 )}
               </Button>
 
-              {submitDisabled && (
-                <p className="mt-2 text-center text-xs text-white/40">
-                  Zakłady zablokowane – trwa runda
+              {statusLine && (
+                <p className="mt-2 text-center text-xs text-white/45">
+                  {statusLine}
                 </p>
               )}
 

@@ -8,7 +8,7 @@ describe('WinBanner', () => {
     vi.useRealTimers();
   });
 
-  it('hides when the parent dismisses the win notification', () => {
+  it('hides when the parent dismisses the win notification', async () => {
     const props = {
       amount: 20,
       onShare: vi.fn(),
@@ -16,11 +16,14 @@ describe('WinBanner', () => {
     };
     const { rerender } = render(<WinBanner {...props} visible />);
 
-    expect(screen.getByText('Wygrałeś 20.00 zł!')).toBeInTheDocument();
+    // The amount counts up from zero, so wait for the final value.
+    expect(
+      await screen.findByText('Wygrałeś 20.00 zł!', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
 
     rerender(<WinBanner {...props} visible={false} />);
 
-    expect(screen.queryByText('Wygrałeś 20.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
   });
 
   it('can be closed with an accessible close button', () => {
@@ -37,7 +40,7 @@ describe('WinBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: /Zamknij powiadomienie o wygranej/i }));
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Wygrałeś 20.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
   });
 
   it('auto-dismisses after 6.5 seconds and stays outside page layout', () => {
@@ -66,6 +69,6 @@ describe('WinBanner', () => {
     });
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Wygrałeś 20.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
   });
 });

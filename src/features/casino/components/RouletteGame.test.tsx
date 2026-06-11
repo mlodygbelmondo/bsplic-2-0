@@ -79,7 +79,7 @@ describe('RouletteGame', () => {
     refresh: vi.fn(),
   };
 
-  it('shows validation error before placing a shared-table bet', async () => {
+  it('disables submit with a hint until the bet selection is complete', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
     render(
@@ -92,13 +92,27 @@ describe('RouletteGame', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Postaw' }));
+    expect(screen.getByRole('button', { name: 'Postaw' })).toBeDisabled();
+    expect(screen.getByText('Wybierz wartość zakładu')).toBeInTheDocument();
+    expect(toastErrorMock).not.toHaveBeenCalled();
+  });
 
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith(
-        'Wybierz poprawną wartość zakładu',
-      );
+  it('shows the live potential win once the selection is complete', async () => {
+    useRouletteTableMock.mockReturnValue(baseTableMock);
+
+    render(
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Czerwone' }));
+    fireEvent.change(screen.getByRole('spinbutton'), {
+      target: { value: '20' },
     });
+
+    expect(screen.getByRole('button', { name: 'Postaw' })).toBeEnabled();
+    expect(screen.getByText(/Możliwa wygrana/)).toBeInTheDocument();
+    expect(screen.getByText('40.00 zł')).toBeInTheDocument();
   });
 
   it('places a shared-table bet and shows accepted state', async () => {
@@ -305,14 +319,16 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    const submitButton = screen.getByRole('button', { name: 'Postaw' });
-    expect(submitButton).toBeEnabled();
-
     fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
     fireEvent.click(await screen.findByRole('button', { name: 'Czerwone' }));
     fireEvent.change(screen.getByRole('spinbutton'), {
       target: { value: '20' },
     });
+
+    // Betting stays enabled while the wheel spins - the bet queues into the
+    // next shared round.
+    const submitButton = screen.getByRole('button', { name: 'Postaw' });
+    expect(submitButton).toBeEnabled();
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -328,7 +344,7 @@ describe('RouletteGame', () => {
     );
   });
 
-  it('does not render a separate lower status bar container', () => {
+  it('shows the betting countdown only inside the wheel hub', () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
       currentRound: {
@@ -344,8 +360,10 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
+    expect(screen.getByTestId('roulette-hub-countdown')).toHaveTextContent(
+      '00:15',
+    );
     expect(screen.queryByText('Do spinu')).not.toBeInTheDocument();
-    expect(screen.queryByText('00:15')).not.toBeInTheDocument();
     expect(screen.queryByText('LIVE')).not.toBeInTheDocument();
     expect(screen.queryByText('Przyjmowanie zakładów')).not.toBeInTheDocument();
   });
@@ -708,13 +726,15 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Wygrałeś 40.00 zł!', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Trafiony spin: +40.00 zł');
     });
   });
 
-  it('shows a new win toast after dismissing the previous win toast', () => {
+  it('shows a new win toast after dismissing the previous win toast', async () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
       phase: 'settled',
@@ -746,11 +766,13 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Wygrałeś 40.00 zł!', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole('button', { name: /Zamknij powiadomienie o wygranej/i }),
     );
-    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
 
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
@@ -783,7 +805,9 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByText('Wygrałeś 60.00 zł!')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Wygrałeś 60.00 zł!', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
   });
 
   it('shares a freshly settled win with the settled spin result', async () => {
@@ -908,13 +932,15 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByText('Wygrałeś 40.00 zł!')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Wygrałeś 40.00 zł!', {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Udostępnij/i }));
 
     await waitFor(() => {
       expect(createCasinoShareMock).toHaveBeenCalled();
     });
-    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
 
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
@@ -939,7 +965,7 @@ describe('RouletteGame', () => {
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.queryByText('Wygrałeś 40.00 zł!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -9,10 +9,20 @@ import {
 import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
-import { ROULETTE_SPIN_REVEAL_MS } from "@/features/casino/lib/roulette";
+import {
+  getRouletteColor,
+  getRouletteColorLabel,
+  ROULETTE_SPIN_REVEAL_MS,
+} from "@/features/casino/lib/roulette";
+import {
+  playRouletteBallSettleClick,
+  playRouletteSpinTicks,
+  vibrateCasino,
+} from "@/features/casino/lib/casinoAudio";
 import {
   computeRouletteBallRotation,
   computeRouletteBallSettledRotation,
+  computeRouletteWheelRotation,
   getRouletteBallAngleOffset,
   getRouletteBallPocketAngle,
   type RouletteBallAngleOffsets,
@@ -36,8 +46,8 @@ const ROULETTE_BALL_TRANSLATE_X = "-50%";
 const ROULETTE_BALL_TRANSLATE_Y = "-50%";
 const ROULETTE_BALL_SETTLE_DELAY_MS = 100;
 const ROULETTE_BALL_SETTLE_DURATION_MS = 800;
-const ROULETTE_BALL_MIN_SPIN_DURATION_MS = 6000;
 const ROULETTE_BALL_MAX_SPIN_DURATION_MS = 9000;
+const ROULETTE_SPIN_EASING = "cubic-bezier(0.2, 0.8, 0.25, 1)";
 
 interface RouletteWheelAnimationTiming {
   settleDelayMs?: number;
@@ -54,6 +64,8 @@ interface ActiveBallSpin {
   targetIndex: number;
   targetNumber: number;
   targetRotation: number;
+  wheelFromRotation: number;
+  wheelTargetRotation: number;
 }
 
 interface RouletteWheelProps {
@@ -63,7 +75,27 @@ interface RouletteWheelProps {
   winningNumber: number | null;
   spinStartedAt: string | null;
   roundId: string | null;
+  countdownLabel?: string | null;
+  isIdle?: boolean;
 }
+
+const HUB_RESULT_COLOR_CLASSES = {
+  red: {
+    ring: "border-rose-400/70 shadow-[0_0_36px_rgba(244,63,94,0.45)]",
+    label: "text-rose-300",
+    glow: "bg-rose-500/25",
+  },
+  black: {
+    ring: "border-stone-300/50 shadow-[0_0_36px_rgba(214,211,209,0.3)]",
+    label: "text-stone-300",
+    glow: "bg-stone-400/15",
+  },
+  green: {
+    ring: "border-emerald-400/70 shadow-[0_0_36px_rgba(16,185,129,0.45)]",
+    label: "text-emerald-300",
+    glow: "bg-emerald-500/25",
+  },
+} as const;
 
 export const RouletteWheel = memo(function RouletteWheel({
   angleOffsetsDeg,
@@ -72,14 +104,18 @@ export const RouletteWheel = memo(function RouletteWheel({
   winningNumber,
   spinStartedAt,
   roundId,
+  countdownLabel = null,
+  isIdle = false,
 }: RouletteWheelProps) {
   const [activeSpin, setActiveSpin] = useState<ActiveBallSpin | null>(null);
   const ballRotationRef = useRef(0);
+  const wheelRotationRef = useRef(0);
   const triggeredRoundRef = useRef<string | null>(null);
   const cleanupRef = useRef<{
     settleTimer: number | null;
     rafIds: number[];
-  }>({ rafIds: [], settleTimer: null });
+    cancelTicks: (() => void) | null;
+  }>({ rafIds: [], settleTimer: null, cancelTicks: null });
 
   const targetIndex = useMemo(() => {
     if (winningNumber == null) return 0;
@@ -98,6 +134,9 @@ export const RouletteWheel = memo(function RouletteWheel({
         window.clearTimeout(cleanupRef.current.settleTimer);
         cleanupRef.current.settleTimer = null;
       }
+
+      cleanupRef.current.cancelTicks?.();
+      cleanupRef.current.cancelTicks = null;
     };
 
     if (phase === "waiting") {
@@ -125,9 +164,15 @@ export const RouletteWheel = memo(function RouletteWheel({
       clearPendingAnimationWork();
 
       const fromRotation = ballRotationRef.current;
+      const wheelFromRotation = wheelRotationRef.current;
+      const wheelTargetRotation = computeRouletteWheelRotation(
+        wheelFromRotation,
+        roundId,
+      );
       const targetRotation = computeRouletteBallRotation(
-        ballRotationRef.current,
+        fromRotation,
         targetIndex,
+        wheelTargetRotation,
       );
 
       const durationMs =
@@ -145,11 +190,16 @@ export const RouletteWheel = memo(function RouletteWheel({
         targetIndex,
         targetNumber,
         targetRotation,
+        wheelFromRotation,
+        wheelTargetRotation,
       });
+
+      cleanupRef.current.cancelTicks = playRouletteSpinTicks(durationMs);
 
       const firstRaf = window.requestAnimationFrame(() => {
         const secondRaf = window.requestAnimationFrame(() => {
           ballRotationRef.current = targetRotation;
+          wheelRotationRef.current = wheelTargetRotation;
           setActiveSpin((current) =>
             current?.roundId === roundId
               ? { ...current, phase: "spinning" }
@@ -172,8 +222,11 @@ export const RouletteWheel = memo(function RouletteWheel({
             const settledRotation = computeRouletteBallSettledRotation(
               current.targetRotation,
               current.targetIndex,
+              current.wheelTargetRotation,
             );
             ballRotationRef.current = settledRotation;
+            playRouletteBallSettleClick();
+            vibrateCasino(35);
             return {
               ...current,
               phase: "settled",
@@ -181,6 +234,7 @@ export const RouletteWheel = memo(function RouletteWheel({
             };
           });
           cleanupRef.current.settleTimer = null;
+          cleanupRef.current.cancelTicks = null;
         },
         durationMs +
           (animationTiming?.settleDelayMs ?? ROULETTE_BALL_SETTLE_DELAY_MS),
@@ -192,40 +246,38 @@ export const RouletteWheel = memo(function RouletteWheel({
     if (phase === "settled" && winningNumber != null) {
       setActiveSpin((current) => {
         const targetAngle = getRouletteBallPocketAngle(targetIndex);
-        if (!current) {
+        const settleInstantly = (settledRoundId: string) => {
+          const wheelTargetRotation = computeRouletteWheelRotation(
+            wheelRotationRef.current,
+            settledRoundId,
+          );
+          wheelRotationRef.current = wheelTargetRotation;
           const settledRotation = computeRouletteBallSettledRotation(
             ballRotationRef.current,
             targetIndex,
+            wheelTargetRotation,
           );
           ballRotationRef.current = settledRotation;
           return {
             durationMs: 0,
             fromRotation: settledRotation,
-            phase: "settled",
-            roundId: roundId ?? `settled-${winningNumber}`,
+            phase: "settled" as const,
+            roundId: settledRoundId,
             targetAngle,
             targetIndex,
             targetNumber: winningNumber,
             targetRotation: settledRotation,
+            wheelFromRotation: wheelTargetRotation,
+            wheelTargetRotation,
           };
+        };
+
+        if (!current) {
+          return settleInstantly(roundId ?? `settled-${winningNumber}`);
         }
 
         if (current.targetNumber !== winningNumber) {
-          const settledRotation = computeRouletteBallSettledRotation(
-            ballRotationRef.current,
-            targetIndex,
-          );
-          ballRotationRef.current = settledRotation;
-          return {
-            durationMs: 0,
-            fromRotation: settledRotation,
-            phase: "settled",
-            roundId: roundId ?? `settled-${winningNumber}`,
-            targetAngle,
-            targetIndex,
-            targetNumber: winningNumber,
-            targetRotation: settledRotation,
-          };
+          return settleInstantly(roundId ?? `settled-${winningNumber}`);
         }
 
         if (current.phase === "staged" || current.phase === "spinning") {
@@ -235,6 +287,7 @@ export const RouletteWheel = memo(function RouletteWheel({
         const settledRotation = computeRouletteBallSettledRotation(
           current.targetRotation,
           targetIndex,
+          current.wheelTargetRotation,
         );
         ballRotationRef.current = settledRotation;
         return {
@@ -264,12 +317,13 @@ export const RouletteWheel = memo(function RouletteWheel({
       if (cleanup.settleTimer !== null) {
         window.clearTimeout(cleanup.settleTimer);
       }
+      cleanup.cancelTicks?.();
     };
   }, []);
 
   const ballOrbitTransition =
     activeSpin?.phase === "spinning"
-      ? `transform ${activeSpin.durationMs / 1000}s cubic-bezier(0.2, 0.8, 0.25, 1)`
+      ? `transform ${activeSpin.durationMs / 1000}s ${ROULETTE_SPIN_EASING}`
       : "none";
   const ballRotation =
     activeSpin?.phase === "staged"
@@ -288,10 +342,40 @@ export const RouletteWheel = memo(function RouletteWheel({
         : ROULETTE_BALL_SETTLED_TOP;
   const ballTransition =
     activeSpin?.phase === "spinning"
-      ? `top ${activeSpin.durationMs / 1000}s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
+      ? `top ${activeSpin.durationMs / 1000}s ${ROULETTE_SPIN_EASING}, opacity 0.5s ease-out, transform 0.5s ease-out`
       : activeSpin?.phase === "settled"
         ? `top ${(animationTiming?.settleDurationMs ?? ROULETTE_BALL_SETTLE_DURATION_MS) / 1000}s cubic-bezier(0.18, 0.72, 0.2, 1), opacity 0.5s ease-out, transform 0.5s ease-out`
         : "none";
+
+  const wheelRotation = activeSpin
+    ? activeSpin.phase === "staged"
+      ? activeSpin.wheelFromRotation
+      : activeSpin.wheelTargetRotation
+    : wheelRotationRef.current;
+  const wheelTransition =
+    activeSpin?.phase === "spinning"
+      ? `transform ${activeSpin.durationMs / 1000}s ${ROULETTE_SPIN_EASING}`
+      : "none";
+
+  const hubState: "countdown" | "spinning" | "result" | null =
+    phase === "waiting"
+      ? countdownLabel && !isIdle
+        ? "countdown"
+        : null
+      : activeSpin
+        ? activeSpin.phase === "settled"
+          ? "result"
+          : "spinning"
+        : phase === "spinning"
+          ? "spinning"
+          : null;
+  const resultColor =
+    hubState === "result" && activeSpin
+      ? getRouletteColor(activeSpin.targetNumber)
+      : null;
+  const resultClasses = resultColor
+    ? HUB_RESULT_COLOR_CLASSES[resultColor]
+    : null;
 
   return (
     <motion.div
@@ -320,15 +404,32 @@ export const RouletteWheel = memo(function RouletteWheel({
           className="absolute inset-[7%] rounded-full bg-black/70 blur-3xl"
         />
 
-        <img
-          src={ROULETTE_WHEEL_IMAGE}
-          alt="Koło ruletki"
-          width={ROULETTE_WHEEL_IMAGE_SIZE}
-          height={ROULETTE_WHEEL_IMAGE_SIZE}
-          draggable={false}
-          className="relative z-10 block h-full w-full select-none object-contain opacity-95"
+        {/* The drop-shadow filter lives on this static wrapper so the shadow
+            does not orbit with the rotating artwork inside. */}
+        <div
+          className="relative z-10 h-full w-full"
           style={{ filter: ROULETTE_WHEEL_IMAGE_FILTER }}
-        />
+        >
+          <div
+            data-testid="roulette-wheel-rotor"
+            data-wheel-rotation={wheelRotation.toFixed(3)}
+            className="h-full w-full transform-gpu"
+            style={{
+              transform: `rotate(${wheelRotation}deg)`,
+              transformOrigin: "50% 50%",
+              transition: wheelTransition,
+            }}
+          >
+            <img
+              src={ROULETTE_WHEEL_IMAGE}
+              alt="Koło ruletki"
+              width={ROULETTE_WHEEL_IMAGE_SIZE}
+              height={ROULETTE_WHEEL_IMAGE_SIZE}
+              draggable={false}
+              className="block h-full w-full select-none object-contain opacity-95"
+            />
+          </div>
+        </div>
 
         <div
           aria-hidden="true"
@@ -370,6 +471,73 @@ export const RouletteWheel = memo(function RouletteWheel({
                 } as CSSProperties & { "--roulette-ball-size": string }
               }
             />
+          </div>
+        )}
+
+        {hubState && (
+          <div className="pointer-events-none absolute inset-[30%] z-30 flex items-center justify-center">
+            {hubState === "countdown" && (
+              <div data-testid="roulette-hub-countdown" className="text-center">
+                <p className="font-mono text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-3xl xl:text-4xl">
+                  {countdownLabel}
+                </p>
+                <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/55 sm:text-[10px]">
+                  do spinu
+                </p>
+              </div>
+            )}
+
+            {hubState === "spinning" && (
+              <p
+                data-testid="roulette-hub-spinning"
+                className="animate-pulse text-[11px] font-bold uppercase tracking-[0.35em] text-amber-200/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-sm"
+              >
+                Kręci się
+              </p>
+            )}
+
+            {hubState === "result" && activeSpin && resultClasses && (
+              <motion.div
+                key={`${activeSpin.roundId}-result`}
+                data-testid="roulette-hub-result"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 320, damping: 20 }}
+                className="relative flex h-full w-full flex-col items-center justify-center"
+              >
+                <motion.div
+                  aria-hidden="true"
+                  initial={{ opacity: 0.85, scale: 1.18 }}
+                  animate={{ opacity: 0, scale: 1.45 }}
+                  transition={{ duration: 0.9, ease: "easeOut" }}
+                  className={cn(
+                    "absolute inset-0 rounded-full",
+                    resultClasses.glow,
+                  )}
+                />
+                <motion.div
+                  aria-hidden="true"
+                  initial={{ opacity: 0, scale: 1.2 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className={cn(
+                    "absolute inset-[6%] rounded-full border-2",
+                    resultClasses.ring,
+                  )}
+                />
+                <p className="font-mono text-3xl font-black leading-none text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] sm:text-4xl xl:text-5xl">
+                  {activeSpin.targetNumber}
+                </p>
+                <p
+                  className={cn(
+                    "mt-1.5 text-[9px] font-bold uppercase tracking-[0.3em] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] sm:text-[11px]",
+                    resultClasses.label,
+                  )}
+                >
+                  {resultColor ? getRouletteColorLabel(resultColor) : ""}
+                </p>
+              </motion.div>
+            )}
           </div>
         )}
       </div>

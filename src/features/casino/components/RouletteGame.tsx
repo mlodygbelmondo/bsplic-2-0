@@ -1,23 +1,40 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
+import { Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
 import { createCasinoShare } from '@/features/social/api/social';
-import { validateRouletteBetInput } from '@/features/casino/lib/roulette';
+import {
+  getRoulettePayoutMultiplier,
+  validateRouletteBetInput,
+} from '@/features/casino/lib/roulette';
+import {
+  isCasinoSoundMuted,
+  playCasinoWinChime,
+  setCasinoSoundMuted,
+  vibrateCasino,
+} from '@/features/casino/lib/casinoAudio';
 import {
   getStoredRouletteBetType,
   storeRouletteBetType,
 } from '@/features/casino/lib/preferences';
-import type { RouletteBetType, RouletteRoundPhase } from '@/types/database';
+import type {
+  RouletteBetRecord,
+  RouletteBetType,
+  RouletteColor,
+  RouletteRoundPhase,
+} from '@/types/database';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getRouletteColor } from '@/features/casino/lib/roulette';
 
 import { BettingPanel } from './BettingPanel';
+import { MyBetsStrip } from './MyBetsStrip';
 import { RecentSpinsCarousel } from './RecentSpinsCarousel';
 import { RecentWinsFeed } from './RecentWinsFeed';
+import { RouletteStatsCard } from './RouletteStatsCard';
 import { RoundParticipantsList } from './RoundParticipantsList';
 import { RouletteWheel } from './RouletteWheel';
 import { StakeDrawer } from './StakeDrawer';
@@ -40,6 +57,13 @@ interface RouletteGameProps {
   onStatusChange?: (status: RouletteHeaderStatus) => void;
 }
 
+interface LastSettledBets {
+  roundId: string;
+  bets: RouletteBetRecord[];
+  winningNumber: number | null;
+  winningColor: RouletteColor | null;
+}
+
 export function RouletteGame({
   userId,
   username = 'Ty',
@@ -54,6 +78,9 @@ export function RouletteGame({
   const [betValue, setBetValue] = useState('');
   const [stake, setStake] = useState('10');
   const [isSharingWin, setIsSharingWin] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(() => isCasinoSoundMuted());
+  const [lastSettled, setLastSettled] = useState<LastSettledBets | null>(null);
   const isMobile = useIsMobile();
 
   const table = useRouletteTable({
@@ -62,14 +89,58 @@ export function RouletteGame({
     avatarUrl,
     refreshProfile,
   });
+
+  const stakeNumber = Number(stake);
+  const stakeValid =
+    Number.isFinite(stakeNumber) && stakeNumber > 0 && stakeNumber <= balance;
+  const submitHint = !betType
+    ? 'Wybierz typ zakładu'
+    : !betValue
+      ? 'Wybierz wartość zakładu'
+      : !Number.isFinite(stakeNumber) || stakeNumber <= 0
+        ? 'Podaj stawkę'
+        : stakeNumber > balance
+          ? 'Stawka przekracza saldo'
+          : null;
+  const potentialWin =
+    betType && betValue && stakeValid
+      ? stakeNumber * getRoulettePayoutMultiplier(betType)
+      : null;
   // Betting stays enabled while the wheel spins - the bet queues into the
   // next shared round on the server.
-  const submitDisabled = table.isLoading;
+  const submitDisabled = table.isLoading || submitHint !== null;
 
   const [dismissedWinKey, setDismissedWinKey] = useState<string | null>(null);
   const announcedWinKeysRef = useRef<Set<string>>(new Set());
   const sharedWinKeysRef = useRef<Set<string>>(new Set());
   const pendingWinRoundIdsRef = useRef<Set<string>>(new Set());
+
+  const myLiveBets = useMemo(
+    () => table.activeBets.filter((bet) => bet.is_win === null),
+    [table.activeBets],
+  );
+
+  useEffect(() => {
+    const settledBets = table.activeBets.filter((bet) => bet.is_win !== null);
+    if (settledBets.length === 0) return;
+
+    const roundId = settledBets[0].round_id;
+    const settledRound =
+      table.currentRound?.id === roundId
+        ? table.currentRound
+        : table.recentSpins.find((round) => round.id === roundId);
+
+    setLastSettled((current) =>
+      current?.roundId === roundId && current.bets.length === settledBets.length
+        ? current
+        : {
+            roundId,
+            bets: settledBets,
+            winningNumber: settledRound?.winning_number ?? null,
+            winningColor: settledRound?.winning_color ?? null,
+          },
+    );
+  }, [table.activeBets, table.currentRound, table.recentSpins]);
 
   const settledActiveWins = useMemo(
     () =>
@@ -109,6 +180,8 @@ export function RouletteGame({
         current && current !== latestUserWinKey ? null : current,
       );
       toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
+      playCasinoWinChime();
+      vibrateCasino([60, 40, 90]);
       confetti({
         particleCount: 150,
         spread: 70,
@@ -122,6 +195,14 @@ export function RouletteGame({
     setBetType(value);
     storeRouletteBetType(value);
     setBetValue('');
+  };
+
+  const handleToggleSound = () => {
+    setSoundMuted((current) => {
+      const next = !current;
+      setCasinoSoundMuted(next);
+      return next;
+    });
   };
 
   const handleSubmit = async () => {
@@ -153,6 +234,46 @@ export function RouletteGame({
           ? error.message
           : 'Nie udało się przyjąć zakładu.',
       );
+    }
+  };
+
+  const handleRepeatBets = async () => {
+    if (!lastSettled || isRepeating) return;
+
+    const totalStake = lastSettled.bets.reduce(
+      (sum, bet) => sum + bet.stake,
+      0,
+    );
+    if (totalStake > balance) {
+      toast.error('Saldo jest za małe, aby powtórzyć zakłady.');
+      return;
+    }
+
+    setIsRepeating(true);
+    try {
+      for (const bet of lastSettled.bets) {
+        const acceptedBet = await table.placeBet({
+          betType: bet.bet_type,
+          betValue: bet.bet_value,
+          stake: bet.stake,
+        });
+        if (acceptedBet?.round_id) {
+          pendingWinRoundIdsRef.current.add(acceptedBet.round_id);
+        }
+      }
+      toast.success(
+        lastSettled.bets.length === 1
+          ? 'Zakład powtórzony!'
+          : 'Zakłady powtórzone!',
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się powtórzyć zakładów.',
+      );
+    } finally {
+      setIsRepeating(false);
     }
   };
 
@@ -211,10 +332,16 @@ export function RouletteGame({
     }
   };
 
+  const settledWinningNumber =
+    table.currentRound?.phase === 'settled'
+      ? table.currentRound.winning_number
+      : null;
+
   const bettingPanel = (
     <BettingPanel
       betType={betType}
       betValue={betValue}
+      winningNumber={settledWinningNumber}
       onBetTypeChange={handleBetTypeChange}
       onBetValueChange={setBetValue}
     />
@@ -224,6 +351,7 @@ export function RouletteGame({
     <>
       <RoundParticipantsList participants={table.roundParticipants} />
       <RecentSpinsCarousel spins={table.recentSpins} />
+      <RouletteStatsCard spins={table.recentSpins} />
       <RecentWinsFeed wins={table.recentWins} />
     </>
   );
@@ -279,13 +407,37 @@ export function RouletteGame({
 
         <div
           data-testid="roulette-center-stage"
-          className="order-1 min-w-0 space-y-5 xl:order-2"
+          className="relative order-1 min-w-0 space-y-5 xl:order-2"
         >
+          <button
+            type="button"
+            onClick={handleToggleSound}
+            aria-label={soundMuted ? 'Włącz dźwięki' : 'Wycisz dźwięki'}
+            className="absolute right-1 top-1 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white"
+          >
+            {soundMuted ? (
+              <VolumeX className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Volume2 className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+
           <RouletteWheel
             phase={table.phase}
             winningNumber={table.currentRound?.winning_number ?? null}
             spinStartedAt={table.currentRound?.spin_started_at ?? null}
             roundId={table.currentRound?.id ?? null}
+            countdownLabel={table.countdownLabel}
+            isIdle={table.isIdle}
+          />
+
+          <MyBetsStrip
+            liveBets={myLiveBets}
+            settledBets={lastSettled?.bets ?? []}
+            resultNumber={lastSettled?.winningNumber ?? null}
+            resultColor={lastSettled?.winningColor ?? null}
+            isRepeating={isRepeating}
+            onRepeat={() => void handleRepeatBets()}
           />
         </div>
 
@@ -302,6 +454,8 @@ export function RouletteGame({
         stake={stake}
         loading={table.isPlacingBet}
         submitDisabled={submitDisabled}
+        submitHint={submitHint}
+        potentialWin={potentialWin}
         betControls={isMobile ? bettingPanel : undefined}
         onStakeChange={setStake}
         onSubmit={() => void handleSubmit()}

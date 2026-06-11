@@ -75,7 +75,7 @@ describe("RouletteWheel", () => {
     expect(document.querySelector("svg")).toBeNull();
   });
 
-  it("keeps the wheel image static and animates a responsive ball to the winning pocket", () => {
+  it("stages a rotating wheel rotor and a responsive ball for the winning pocket", () => {
     render(
       <RouletteWheel
         phase="spinning"
@@ -85,11 +85,13 @@ describe("RouletteWheel", () => {
       />,
     );
 
-    const wheelImage = screen.getByRole("img", { name: "Koło ruletki" });
+    const wheelRotor = screen.getByTestId("roulette-wheel-rotor");
     const ballOrbit = screen.getByTestId("roulette-ball-orbit");
     const ball = screen.getByTestId("roulette-ball");
 
-    expect(wheelImage.getAttribute("style") ?? "").not.toContain("rotate(");
+    // Staged: the wheel still sits at its previous resting rotation.
+    expect(Number(wheelRotor.getAttribute("data-wheel-rotation"))).toBe(0);
+    expect(wheelRotor.style.transition).toBe("none");
     expect(ballOrbit.getAttribute("data-target-number")).toBe("13");
     expect(ballOrbit.getAttribute("data-target-index")).toBe("12");
     expect(Number(ballOrbit.getAttribute("data-target-angle"))).toBeCloseTo(
@@ -129,17 +131,27 @@ describe("RouletteWheel", () => {
     });
 
     ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    const wheelRotor = screen.getByTestId("roulette-wheel-rotor");
+    const wheelRotation = Number(
+      wheelRotor.getAttribute("data-wheel-rotation"),
+    );
     expect(ballOrbit.getAttribute("data-animation-state")).toBe("spinning");
     expect(ballOrbit.getAttribute("style") ?? "").not.toContain(
       "transition: none",
     );
+    expect(wheelRotation).toBeLessThanOrEqual(-720);
+    expect(wheelRotor.style.transition).toContain("transform");
+    expect(wheelRotor.style.transition).toContain("cubic-bezier");
     expect(
       normalizeRotation(
         getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
       ),
     ).toBeCloseTo(
-      Number(ballOrbit.getAttribute("data-target-angle")) +
-        getRouletteBallAngleOffset(13),
+      normalizeRotation(
+        Number(ballOrbit.getAttribute("data-target-angle")) +
+          wheelRotation +
+          getRouletteBallAngleOffset(13),
+      ),
       2,
     );
 
@@ -392,6 +404,11 @@ describe("RouletteWheel", () => {
 
     const ballOrbit = screen.getByTestId("roulette-ball-orbit");
     const ball = screen.getByTestId("roulette-ball");
+    const wheelRotation = Number(
+      screen
+        .getByTestId("roulette-wheel-rotor")
+        .getAttribute("data-wheel-rotation"),
+    );
 
     expect(ballOrbit.getAttribute("data-animation-state")).toBe("settled");
     expect(ballOrbit.getAttribute("data-target-number")).toBe("13");
@@ -400,8 +417,11 @@ describe("RouletteWheel", () => {
         getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
       ),
     ).toBeCloseTo(
-      Number(ballOrbit.getAttribute("data-target-angle")) +
-        getRouletteBallAngleOffset(13),
+      normalizeRotation(
+        Number(ballOrbit.getAttribute("data-target-angle")) +
+          wheelRotation +
+          getRouletteBallAngleOffset(13),
+      ),
       2,
     );
     expect(ball.style.top).toBe("25.3%");
@@ -419,13 +439,25 @@ describe("RouletteWheel", () => {
     );
 
     const ballOrbit = screen.getByTestId("roulette-ball-orbit");
+    const wheelRotation = Number(
+      screen
+        .getByTestId("roulette-wheel-rotor")
+        .getAttribute("data-wheel-rotation"),
+    );
 
     expect(ballOrbit.getAttribute("data-angle-offset")).toBe("-2");
     expect(
       normalizeRotation(
         getRotation(ballOrbit.getAttribute("style") ?? "") ?? 0,
       ),
-    ).toBeCloseTo(Number(ballOrbit.getAttribute("data-target-angle")) - 2, 2);
+    ).toBeCloseTo(
+      normalizeRotation(
+        Number(ballOrbit.getAttribute("data-target-angle")) +
+          wheelRotation -
+          2,
+      ),
+      2,
+    );
   });
 
   it("uses custom animation timing for quick preview spins", () => {
@@ -528,7 +560,7 @@ describe("RouletteWheel", () => {
     restoreAnimationFrameMocks();
   });
 
-  it("does not render the winning number as a center overlay", () => {
+  it("renders the winning number and color in the wheel hub for settled rounds", () => {
     render(
       <RouletteWheel
         phase="settled"
@@ -538,6 +570,39 @@ describe("RouletteWheel", () => {
       />,
     );
 
-    expect(screen.queryByText("13")).toBeNull();
+    const hubResult = screen.getByTestId("roulette-hub-result");
+    expect(hubResult.textContent).toContain("13");
+    expect(hubResult.textContent).toContain("czarne");
+  });
+
+  it("shows the betting countdown in the wheel hub while waiting", () => {
+    render(
+      <RouletteWheel
+        phase="waiting"
+        winningNumber={null}
+        spinStartedAt={null}
+        roundId="round-1"
+        countdownLabel="00:12"
+      />,
+    );
+
+    expect(
+      screen.getByTestId("roulette-hub-countdown").textContent,
+    ).toContain("00:12");
+  });
+
+  it("hides the hub countdown when the table is idle", () => {
+    render(
+      <RouletteWheel
+        phase="waiting"
+        winningNumber={null}
+        spinStartedAt={null}
+        roundId={null}
+        countdownLabel="00:00"
+        isIdle
+      />,
+    );
+
+    expect(screen.queryByTestId("roulette-hub-countdown")).toBeNull();
   });
 });

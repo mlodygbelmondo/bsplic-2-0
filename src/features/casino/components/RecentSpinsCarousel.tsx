@@ -4,10 +4,32 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, History } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { RouletteTableRound } from '@/types/database';
+import { getRouletteColorLabel } from '@/features/casino/lib/roulette';
+import type { RouletteColor, RouletteTableRound } from '@/types/database';
 
 interface RecentSpinsCarouselProps {
   spins: RouletteTableRound[];
+}
+
+const STREAK_BADGE_CLASSES: Record<RouletteColor, string> = {
+  red: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
+  black: 'border-white/20 bg-white/[0.06] text-stone-200',
+  green: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
+};
+
+function getLeadingColorStreak(
+  spins: RouletteTableRound[],
+): { color: RouletteColor; length: number } | null {
+  const color = spins[0]?.winning_color;
+  if (!color) return null;
+
+  let length = 0;
+  for (const spin of spins) {
+    if (spin.winning_color !== color) break;
+    length += 1;
+  }
+
+  return length >= 2 ? { color, length } : null;
 }
 
 export function RecentSpinsCarousel({ spins }: RecentSpinsCarouselProps) {
@@ -40,6 +62,8 @@ export function RecentSpinsCarousel({ spins }: RecentSpinsCarouselProps) {
     };
   }, [emblaApi]);
 
+  const streak = getLeadingColorStreak(spins);
+
   if (spins.length === 0) return null;
 
   return (
@@ -50,11 +74,22 @@ export function RecentSpinsCarousel({ spins }: RecentSpinsCarouselProps) {
       className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm"
     >
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <History className="h-4 w-4 text-amber-400" />
+        <div className="flex min-w-0 items-center gap-2">
+          <History className="h-4 w-4 flex-shrink-0 text-amber-400" />
           <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
             Ostatnie spiny
           </p>
+          {streak && (
+            <span
+              data-testid="roulette-color-streak"
+              className={cn(
+                'truncate rounded-full border px-2 py-0.5 text-[10px] font-bold',
+                STREAK_BADGE_CLASSES[streak.color],
+              )}
+            >
+              {streak.length}× {getRouletteColorLabel(streak.color)} z rzędu
+            </span>
+          )}
         </div>
         <div className="flex gap-1">
           <button

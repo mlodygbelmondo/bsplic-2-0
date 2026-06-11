@@ -73,7 +73,8 @@ export function useRouletteTable({
       }
 
       const snapshotPromise = (async () => {
-        const snapshot = await getRouletteTableSnapshot();
+        // 50 spins of history feed the hot/cold + color distribution stats.
+        const snapshot = await getRouletteTableSnapshot('main', 50);
 
         setCurrentRound(snapshot.currentRound);
         setRecentSpins(snapshot.recentSpins);

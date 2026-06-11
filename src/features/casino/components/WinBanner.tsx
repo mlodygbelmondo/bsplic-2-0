@@ -11,8 +11,11 @@ interface WinBannerProps {
   onDismiss: () => void;
 }
 
+const COUNT_UP_DURATION_MS = 900;
+
 export function WinBanner({ visible, amount, onShare, onDismiss }: WinBannerProps) {
   const [show, setShow] = useState(false);
+  const [displayedAmount, setDisplayedAmount] = useState(0);
   const onDismissRef = useRef(onDismiss);
 
   useEffect(() => {
@@ -22,6 +25,27 @@ export function WinBanner({ visible, amount, onShare, onDismiss }: WinBannerProp
   useEffect(() => {
     setShow(visible);
   }, [visible]);
+
+  useEffect(() => {
+    if (!show) return undefined;
+
+    let rafId: number;
+    const startedAt = performance.now();
+
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / COUNT_UP_DURATION_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayedAmount(amount * eased);
+      if (progress < 1) {
+        rafId = window.requestAnimationFrame(step);
+      }
+    };
+
+    setDisplayedAmount(0);
+    rafId = window.requestAnimationFrame(step);
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [show, amount]);
 
   useEffect(() => {
     if (!show) return undefined;
@@ -62,8 +86,8 @@ export function WinBanner({ visible, amount, onShare, onDismiss }: WinBannerProp
             <Trophy className="h-5 w-5 text-emerald-300" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-emerald-100">
-              Wygrałeś {amount.toFixed(2)} zł!
+            <p className="text-sm font-bold tabular-nums text-emerald-100">
+              {`Wygrałeś ${displayedAmount.toFixed(2)} zł!`}
             </p>
             <p className="text-xs text-emerald-300/75">
               Gratulacje, trafiony zakład.

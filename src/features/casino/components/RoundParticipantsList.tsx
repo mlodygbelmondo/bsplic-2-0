@@ -1,11 +1,46 @@
 import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import {
   formatRouletteBetValue,
   getRouletteBetTypeLabel,
+  getRouletteColor,
 } from '@/features/casino/lib/roulette';
-import type { RouletteRoundParticipant } from '@/types/database';
+import type {
+  RouletteColor,
+  RouletteRoundParticipantBet,
+  RouletteRoundParticipant,
+} from '@/types/database';
+
+const BET_CHIP_COLOR_CLASSES: Record<RouletteColor, string> = {
+  red: 'border-rose-400/30 bg-rose-500/10 text-rose-200',
+  black: 'border-white/20 bg-white/[0.05] text-stone-200',
+  green: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200',
+};
+const BET_CHIP_NEUTRAL_CLASS =
+  'border-amber-300/15 bg-amber-300/10 text-amber-100/90';
+
+const BET_CHIP_DOT_CLASSES: Record<RouletteColor, string> = {
+  red: 'bg-rose-500',
+  black: 'border border-stone-500 bg-stone-900',
+  green: 'bg-emerald-500',
+};
+
+function getParticipantBetColor(
+  bet: RouletteRoundParticipantBet,
+): RouletteColor | null {
+  if (bet.bet_type === 'straight') {
+    const parsed = Number(bet.bet_value);
+    return Number.isInteger(parsed) ? getRouletteColor(parsed) : null;
+  }
+  if (bet.bet_type === 'color') {
+    return bet.bet_value === 'red' || bet.bet_value === 'black'
+      ? bet.bet_value
+      : null;
+  }
+  return null;
+}
 
 interface RoundParticipantsListProps {
   participants: RouletteRoundParticipant[];
@@ -70,16 +105,42 @@ export function RoundParticipantsList({ participants }: RoundParticipantsListPro
                 </span>
               </div>
               {participant.bets.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5 pl-12">
-                  {participant.bets.map((bet, index) => (
-                    <span
-                      key={`${bet.bet_type}-${bet.bet_value}-${index}`}
-                      className="rounded-full border border-amber-300/15 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold text-amber-100/90"
-                    >
-                      {getRouletteBetTypeLabel(bet.bet_type)}:{' '}
-                      {formatRouletteBetValue(bet.bet_type, bet.bet_value)}
-                    </span>
-                  ))}
+                <div className="mt-2 space-y-1 pl-12">
+                  {participant.bets.map((bet, index) => {
+                    const chipColor = getParticipantBetColor(bet);
+                    return (
+                      <div
+                        key={`${bet.bet_type}-${bet.bet_value}-${index}`}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                            chipColor
+                              ? BET_CHIP_COLOR_CLASSES[chipColor]
+                              : BET_CHIP_NEUTRAL_CLASS,
+                          )}
+                        >
+                          {chipColor && (
+                            <span
+                              aria-hidden="true"
+                              className={cn(
+                                'h-1.5 w-1.5 rounded-full',
+                                BET_CHIP_DOT_CLASSES[chipColor],
+                              )}
+                            />
+                          )}
+                          {getRouletteBetTypeLabel(bet.bet_type)}:{' '}
+                          {formatRouletteBetValue(bet.bet_type, bet.bet_value)}
+                        </span>
+                        {Number.isFinite(bet.stake) && (
+                          <span className="font-mono text-[11px] font-semibold text-amber-100/80">
+                            {bet.stake.toFixed(2)} zł
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
