@@ -24,18 +24,19 @@ describe('CasinoBlackjackPage', () => {
     ).toBeTruthy();
   });
 
-  it('uses concise non-beta blackjack header copy', () => {
+  it('renders blackjack without the top marketing header', () => {
     render(<CasinoBlackjackPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Blackjack' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('heading', { name: 'Blackjack' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Kasyno premium')).not.toBeInTheDocument();
     expect(screen.queryByText(/Beta/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Krupier dobiera do 16 i czeka na 17. Blackjack płaci 3:2.',
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Split działa/)).not.toBeInTheDocument();
   });
 });

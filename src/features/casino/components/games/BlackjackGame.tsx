@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { PlayingCard } from "./PlayingCard";
 
 const LAST_STAKE_STORAGE_KEY = "bsplic.blackjack.lastStake";
-const QUICK_STAKES = [5, 10, 25, 50, 100];
+const QUICK_STAKES = [10, 25, 50, 100, 250, 1000];
 
 function readLastStake(): string {
   try {
@@ -173,6 +173,7 @@ export function BlackjackGame() {
 
   const parsedBet = Number(betInput);
   const balance = Number(profile.balance);
+  const maxStake = Math.max(0, Math.floor(balance));
   const isBetValid =
     Number.isFinite(parsedBet) && parsedBet > 0 && parsedBet <= balance;
   const lastStake = Number(readLastStake());
@@ -343,45 +344,98 @@ export function BlackjackGame() {
               <h2 className="text-xl font-bold text-white">
                 Rozpocznij rozdanie
               </h2>
-              <div className="flex w-full flex-wrap justify-center gap-1.5">
-                {QUICK_STAKES.map((amount) => (
+              <div className="flex w-full flex-col gap-1.5">
+                <div className="flex w-full gap-1.5">
+                  {QUICK_STAKES.map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setBetInput(String(amount))}
+                      disabled={amount > balance}
+                      className={cn(
+                        "h-9 min-w-0 flex-1 basis-0 rounded-full border px-2 text-sm font-bold backdrop-blur-md transition-colors",
+                        Number(betInput) === amount
+                          ? "border-amber-300/70 bg-amber-400/20 text-amber-100"
+                          : "border-white/15 bg-black/35 text-white/75 hover:border-white/30 hover:text-white",
+                        amount > balance && "opacity-35",
+                      )}
+                    >
+                      {amount}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex w-full gap-1.5">
                   <button
-                    key={amount}
                     type="button"
-                    onClick={() => setBetInput(String(amount))}
-                    disabled={amount > balance}
-                    className={cn(
-                      "h-9 min-w-12 rounded-full border px-3 text-sm font-bold backdrop-blur-md transition-colors",
-                      Number(betInput) === amount
-                        ? "border-amber-300/70 bg-amber-400/20 text-amber-100"
-                        : "border-white/15 bg-black/35 text-white/75 hover:border-white/30 hover:text-white",
-                      amount > balance && "opacity-35",
-                    )}
+                    onClick={() => setBetInput("1")}
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
-                    {amount}
+                    MIN
                   </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setBetInput((current) => {
-                      const value = Number(current);
-                      if (!Number.isFinite(value) || value <= 0) return current;
-                      return String(Math.min(value * 2, Math.floor(balance)));
-                    })
-                  }
-                  className="h-9 min-w-12 rounded-full border border-white/15 bg-black/35 px-3 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white"
-                >
-                  x2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBetInput(String(Math.floor(balance)))}
-                  disabled={balance < 1}
-                  className="h-9 min-w-12 rounded-full border border-white/15 bg-black/35 px-3 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
-                >
-                  MAX
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBetInput(String(Math.max(1, Math.floor(balance / 4))))
+                    }
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                  >
+                    1/4
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBetInput(String(Math.max(1, Math.floor(balance / 2))))
+                    }
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                  >
+                    1/2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBetInput((current) => {
+                        const value = Number(current);
+                        if (!Number.isFinite(value) || value <= 0) {
+                          return current;
+                        }
+                        if (maxStake < 1) return current;
+                        return String(Math.min(value * 2, maxStake));
+                      })
+                    }
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                  >
+                    x2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBetInput((current) => {
+                        const value = Number(current);
+                        if (!Number.isFinite(value) || value <= 0) {
+                          return current;
+                        }
+                        if (maxStake < 1) return current;
+                        return String(Math.min(value * 4, maxStake));
+                      })
+                    }
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                  >
+                    x4
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBetInput(String(maxStake))}
+                    disabled={balance < 1}
+                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                  >
+                    MAX
+                  </button>
+                </div>
               </div>
               <div className="flex w-full flex-col items-stretch gap-3 min-[380px]:flex-row justify-center min-[380px]:items-center">
                 <Input

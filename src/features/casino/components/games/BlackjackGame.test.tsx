@@ -552,16 +552,27 @@ describe("BlackjackGame", () => {
     });
   });
 
-  it("offers quick stake chips and a mute toggle while betting", () => {
+  it("offers equal-width stake chips, modifiers, and a mute toggle while betting", () => {
     useBlackjackMock.mockReturnValue(baseBlackjackState);
 
     render(<BlackjackGame />);
 
-    for (const amount of ["5", "10", "25", "50", "100"]) {
-      expect(screen.getByRole("button", { name: amount })).toBeEnabled();
+    for (const amount of ["10", "25", "50", "100", "250", "1000"]) {
+      const button = screen.getByRole("button", { name: amount });
+      if (Number(amount) <= 250) {
+        expect(button).toBeEnabled();
+      } else {
+        expect(button).toBeDisabled();
+      }
+      expect(button).toHaveClass("flex-1", "basis-0");
     }
-    expect(screen.getByRole("button", { name: "x2" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "MAX" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "5" })).not.toBeInTheDocument();
+
+    for (const label of ["MIN", "1/4", "1/2", "x2", "x4", "MAX"]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toBeEnabled();
+      expect(button).toHaveClass("flex-1", "basis-0");
+    }
     expect(
       screen.getByRole("button", { name: "Wycisz dźwięki" }),
     ).toBeInTheDocument();
