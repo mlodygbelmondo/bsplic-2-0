@@ -100,9 +100,11 @@ Report `created`, `skipped`, `errors`, confidence, and sources.
 
 1. Fetch settlement context with `agent_get_pending_settlement_context`.
 2. Browse official/trusted result sources.
-3. Report recommendations with exact BSPLIC option names, mode, scope, confidence, sources, and uncertainty.
-4. Wait for explicit approval before calling `agent_settle_bet`.
-5. Use `pending_only` unless the user explicitly asks for correction scope `all`.
+3. Include ended, unresolved bets even when nobody placed them (`placed_bet_count = 0`) or when they have no pending legs (`pending_leg_count = 0`). Settlement still records the bet outcome, sets `winning_option`, and closes the market for historical/UI correctness.
+4. Report recommendations with exact BSPLIC option names, mode, scope, confidence, sources, and uncertainty.
+5. Wait for explicit approval before calling `agent_settle_bet`.
+6. Use `p_mode: "normal"` for ordinary winner settlement, `refund` for voids, or `force_lost` only when every option should lose.
+7. Use `pending_only` unless the user explicitly asks for correction scope `all`; `pending_only` is still appropriate for no-pick/no-pending bets because it closes the bet and records `winning_option` without reprocessing already settled legs.
 
 ## Smoke Tests
 
