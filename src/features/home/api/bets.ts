@@ -15,7 +15,11 @@ export async function fetchActiveBets(
   limit = ACTIVE_BETS_PAGE_SIZE,
   offset = 0,
 ) {
-  let query = supabase.from("bets").select("*").eq("is_active", true);
+  let query = supabase
+    .from("bets")
+    .select("*")
+    .eq("is_active", true)
+    .gt("ends_at", new Date().toISOString());
 
   if (selectedCategory) {
     query = query.eq("category_id", selectedCategory);

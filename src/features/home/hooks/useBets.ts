@@ -29,8 +29,17 @@ function toBet(row: BetRow): Bet {
   return row as unknown as Bet;
 }
 
-function isBetVisible(row: BetRow, selectedCategory: string | null): boolean {
+function isBetOpenForPlacement(row: Pick<BetRow, "ends_at" | "is_active">) {
   if (!row.is_active) {
+    return false;
+  }
+
+  const endsAt = new Date(row.ends_at).getTime();
+  return Number.isFinite(endsAt) && endsAt > Date.now();
+}
+
+function isBetVisible(row: BetRow, selectedCategory: string | null): boolean {
+  if (!isBetOpenForPlacement(row)) {
     return false;
   }
 

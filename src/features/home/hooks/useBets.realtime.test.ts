@@ -80,7 +80,11 @@ describe('applyBetsRealtimePayloads', () => {
       oldRow: { id: 'bet-1', bet_count: 11 },
     });
 
-    const result = applyBetsRealtimePayloads(initial, [firstUpdate, secondUpdate], null);
+    const result = applyBetsRealtimePayloads(
+      initial,
+      [firstUpdate, secondUpdate],
+      null,
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0].bet_count).toBe(12);
@@ -107,6 +111,38 @@ describe('applyBetsRealtimePayloads', () => {
     });
 
     const result = applyBetsRealtimePayloads([], [payload], 'cat-1');
+
+    expect(result).toEqual([]);
+  });
+
+  it('ignores already expired inserts', () => {
+    const payload = createPayload({
+      eventType: 'INSERT',
+      newRow: {
+        id: 'bet-expired',
+        ends_at: '2020-01-01T12:00:00.000Z',
+      },
+    });
+
+    const result = applyBetsRealtimePayloads([], [payload], null);
+
+    expect(result).toEqual([]);
+  });
+
+  it('removes bet from list when update moves it past the deadline', () => {
+    const initial = [createBet({ id: 'bet-1' })];
+    const payload = createPayload({
+      eventType: 'UPDATE',
+      newRow: {
+        id: 'bet-1',
+        ends_at: '2020-01-01T12:00:00.000Z',
+      },
+      oldRow: {
+        id: 'bet-1',
+      },
+    });
+
+    const result = applyBetsRealtimePayloads(initial, [payload], null);
 
     expect(result).toEqual([]);
   });
