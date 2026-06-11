@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maintenance</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        background: #ffffff;
+        color: #111111;
+        font-family:
+          Impact,
+          Haettenschweiler,
+          "Arial Narrow Bold",
+          sans-serif;
+      }
+
+      main {
+        width: min(960px, 100%);
+        padding: clamp(24px, 6vw, 72px) clamp(16px, 5vw, 48px);
+        text-align: center;
+      }
+
+      .images {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(12px, 3vw, 36px);
+      }
+
+      img {
+        width: min(42vw, 360px);
+        max-height: 46vh;
+        object-fit: contain;
+      }
+
+      p {
+        margin: clamp(20px, 5vw, 48px) 0 0;
+        font-size: clamp(28px, 7vw, 72px);
+        line-height: 0.98;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-label="Maintenance">
+      <div class="images">
+        <img src="/maintenance/thumbs-up.jpeg" alt="" />
+        <img src="/maintenance/grin.jpeg" alt="" />
+      </div>
+      <p>jebać kurwa kurwczala</p>
+    </main>
+  </body>
+</html>
