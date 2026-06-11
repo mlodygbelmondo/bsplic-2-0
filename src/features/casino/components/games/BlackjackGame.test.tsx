@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { BlackjackGame } from "./BlackjackGame";
@@ -519,8 +519,11 @@ describe("BlackjackGame", () => {
       screen.getByText("Wygrane: 1 • Przegrane: 1 • Remisy: 1"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Graj ponownie/i })).toHaveClass(
-      "hover:text-white",
+      "hover:text-black",
     );
+    expect(
+      screen.getByRole("button", { name: "Zmień stawkę" }),
+    ).toHaveClass("hover:text-white");
   });
 
   it("shows only the win title when blackjack resolves as won", async () => {
@@ -547,6 +550,103 @@ describe("BlackjackGame", () => {
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith("Blackjack: wygrana!");
     });
+  });
+
+  it("offers quick stake chips and a mute toggle while betting", () => {
+    useBlackjackMock.mockReturnValue(baseBlackjackState);
+
+    render(<BlackjackGame />);
+
+    for (const amount of ["5", "10", "25", "50", "100"]) {
+      expect(screen.getByRole("button", { name: amount })).toBeEnabled();
+    }
+    expect(screen.getByRole("button", { name: "x2" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "MAX" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Wycisz dźwięki" }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks split-aces hands and shows per-hand results once settled", () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: "lost",
+      stake: 40,
+      playerHands: [
+        {
+          id: "hand-1-a",
+          cards: [
+            { suit: "hearts", rank: "A", value: 11 },
+            { suit: "spades", rank: "K", value: 10 },
+          ],
+          stake: 20,
+          payout: 40,
+          status: "won",
+          doubleDownUsed: false,
+          isSplitAces: true,
+        },
+        {
+          id: "hand-1-b",
+          cards: [
+            { suit: "clubs", rank: "A", value: 11 },
+            { suit: "diamonds", rank: "2", value: 2 },
+          ],
+          stake: 20,
+          payout: 0,
+          status: "lost",
+          doubleDownUsed: false,
+          isSplitAces: true,
+        },
+      ],
+      playerHand: [
+        { suit: "hearts", rank: "A", value: 11 },
+        { suit: "spades", rank: "K", value: 10 },
+      ],
+      dealerHand: [
+        { suit: "diamonds", rank: "10", value: 10 },
+        { suit: "clubs", rank: "9", value: 9 },
+      ],
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getAllByText("ASY")).toHaveLength(2);
+    expect(screen.getByText("✓ +40.00 zł")).toBeInTheDocument();
+    expect(screen.getByText("✗ przegrana")).toBeInTheDocument();
+  });
+
+  it("animates the net win with a payout count-up", () => {
+    useBlackjackMock.mockReturnValue({
+      ...baseBlackjackState,
+      status: "won",
+      stake: 10,
+      playerHands: [
+        {
+          id: "hand-1",
+          cards: [
+            { suit: "hearts", rank: "10", value: 10 },
+            { suit: "spades", rank: "A", value: 11 },
+          ],
+          stake: 10,
+          payout: 25,
+          status: "won",
+          doubleDownUsed: false,
+          isSplitAces: false,
+        },
+      ],
+      playerHand: [
+        { suit: "hearts", rank: "10", value: 10 },
+        { suit: "spades", rank: "A", value: 11 },
+      ],
+      dealerHand: [
+        { suit: "diamonds", rank: "9", value: 9 },
+        { suit: "clubs", rank: "8", value: 8 },
+      ],
+    });
+
+    render(<BlackjackGame />);
+
+    expect(screen.getByTestId("blackjack-payout-countup")).toBeInTheDocument();
   });
 
   it("keeps the dealer hole-card slot stable when the dealer reveals and draws", () => {
@@ -587,7 +687,9 @@ describe("BlackjackGame", () => {
       "[&::-webkit-scrollbar]:hidden",
     );
     expect(hiddenSlot).toHaveClass("h-28", "w-20", "bg-transparent");
-    expect(screen.getByRole("img", { name: "Rewers karty" })).toHaveAttribute(
+    expect(
+      within(hiddenSlot).getByRole("img", { name: "Rewers karty" }),
+    ).toHaveAttribute(
       "src",
       "/casino/blackjack-card-reverse.png?v=20260503",
     );

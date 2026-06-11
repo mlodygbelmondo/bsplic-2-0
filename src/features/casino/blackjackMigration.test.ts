@@ -19,6 +19,10 @@ const insuranceMigrationPath = resolve(
   process.cwd(),
   'supabase/migrations/20260503013000_blackjack_insurance.sql',
 );
+const splitAcesPlayableMigrationPath = resolve(
+  process.cwd(),
+  'supabase/migrations/20260611170000_blackjack_split_aces_playable.sql',
+);
 
 describe('blackjack persistent table migration', () => {
   it.each([
@@ -76,6 +80,22 @@ describe('blackjack persistent table migration', () => {
     );
     expect(migration).toMatch(
       /RETURN\s+public\._blackjack_state\(v_game,\s+TRUE\)/i,
+    );
+  });
+
+  it('keeps hands playable after splitting aces', () => {
+    const migration = readFileSync(splitAcesPlayableMigrationPath, 'utf8');
+
+    expect(migration).toMatch(
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.blackjack_split/i,
+    );
+    // Split hands must always be created as 'playing' — no auto-stand for aces.
+    expect(migration).not.toMatch(/CASE\s+WHEN\s+v_split_aces\s+THEN\s+'stand'/i);
+    expect(migration).toMatch(/'playing',\s*\n\s*FALSE,\s*\n\s*v_split_aces/);
+    // The isSplitAces flag still reaches the hand object for UI badges.
+    expect(migration).toMatch(/v_split_aces\s*:=/);
+    expect(migration).toMatch(
+      /SELECT\s+d\.card,\s+d\.remaining,\s+d\.new_shoe_number,\s+d\.reshuffled/i,
     );
   });
 });

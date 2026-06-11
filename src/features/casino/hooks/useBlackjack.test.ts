@@ -268,6 +268,107 @@ describe('useBlackjack resume flow', () => {
     expect(result.current.actionMessage).toBeNull();
   });
 
+  it('stages the dealer reveal before landing a settled result', async () => {
+    vi.useFakeTimers();
+    try {
+      const playingGame = {
+        id: 'game-finale',
+        stake: 10,
+        initialStake: 10,
+        status: 'playing',
+        playerHand: [
+          { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+          { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+        ],
+        playerHands: [
+          {
+            id: 'hand-1',
+            cards: [
+              { id: 'p-1', suit: 'hearts', rank: '10', value: 10 },
+              { id: 'p-2', suit: 'spades', rank: '9', value: 9 },
+            ],
+            stake: 10,
+            payout: 0,
+            status: 'playing',
+            doubleDownUsed: false,
+            isSplitAces: false,
+          },
+        ],
+        activeHandIndex: 0,
+        dealerHand: [{ id: 'd-1', suit: 'clubs', rank: '7', value: 7 }],
+        payout: 0,
+        doubleDownUsed: false,
+        deckCount: 2,
+        cardsRemaining: 99,
+        shoeNumber: 2,
+        dealerHiddenCount: 1,
+        createdAt: '2026-06-11T12:00:00.000Z',
+        insuranceStatus: 'unavailable',
+        insuranceStake: 0,
+        insurancePayout: 0,
+      };
+      getCurrentBlackjackGameMock.mockResolvedValue(playingGame);
+      blackjackStandMock.mockResolvedValue({
+        ...playingGame,
+        status: 'won',
+        payout: 20,
+        dealerHiddenCount: 0,
+        dealerHand: [
+          { id: 'd-1', suit: 'clubs', rank: '7', value: 7 },
+          { id: 'd-2', suit: 'hearts', rank: 'K', value: 10 },
+        ],
+        playerHands: [
+          {
+            ...playingGame.playerHands[0],
+            status: 'won',
+            payout: 20,
+          },
+        ],
+      });
+
+      const { result } = renderHook(() =>
+        useBlackjack({ userId: 'user-1', refreshProfile: vi.fn() }),
+      );
+
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync();
+      });
+      expect(result.current.status).toBe('playing');
+
+      act(() => {
+        void result.current.stand();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      // The settled response is staged: still visually playing, hole hidden.
+      expect(result.current.status).toBe('playing');
+      expect(result.current.isRevealing).toBe(true);
+      expect(result.current.dealerHand).toHaveLength(1);
+      expect(result.current.dealerHiddenCount).toBe(1);
+      expect(result.current.playerHands[0].status).toBe('stand');
+
+      // Flip step reveals the hole card.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(result.current.dealerHand).toHaveLength(2);
+      expect(result.current.status).toBe('playing');
+
+      // Settle step lands the final result.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+      });
+      expect(result.current.status).toBe('won');
+      expect(result.current.isRevealing).toBe(false);
+      expect(result.current.playerHands[0].status).toBe('won');
+      expect(result.current.playerHands[0].payout).toBe(20);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('pauses actions for an insurance offer and resolves the choice through the server', async () => {
     getCurrentBlackjackGameMock.mockResolvedValue({
       id: 'game-insurance',

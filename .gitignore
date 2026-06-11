@@ -38,3 +38,4 @@ docs/design-references/
 docs/roulette-inspiration/
 tmp/imagegen/
 deno.lock
+.superpowers/

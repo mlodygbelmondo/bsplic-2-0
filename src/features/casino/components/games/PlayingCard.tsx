@@ -44,34 +44,6 @@ export const PlayingCard = memo(function PlayingCard({
     ease: "easeOut" as const,
     delay: isDealerHiddenCard ? 0.12 : Math.min(index * 0.025, 0.075),
   };
-  const cardSizeClass =
-    "relative flex h-28 w-20 flex-shrink-0 flex-col justify-between rounded-xl sm:h-32 sm:w-24 2xl:h-40 2xl:w-28";
-  const cardFrameClass = cn(cardSizeClass, "border border-white/10");
-
-  if (hidden) {
-    return (
-      <motion.div
-        data-card-animation="quick"
-        data-card-delay={transition.delay}
-        data-card-hidden="true"
-        data-card-id={card.id}
-        data-testid={testId}
-        initial={{ opacity: 0, scale: 0.82, ...initialOffset }}
-        animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-        transition={transition}
-        className={cn(cardSizeClass, "overflow-hidden bg-transparent p-0")}
-        style={{ zIndex: 0 }}
-      >
-        <img
-          src={cardReverseSrc}
-          alt="Rewers karty"
-          className="block h-full w-full rounded-xl object-fill"
-          draggable={false}
-        />
-      </motion.div>
-    );
-  }
-
   const symbol = suitSymbols[card.suit];
   const colorClass = suitColors[card.suit];
 
@@ -79,39 +51,69 @@ export const PlayingCard = memo(function PlayingCard({
     <motion.div
       data-card-animation="quick"
       data-card-delay={transition.delay}
+      data-card-hidden={hidden ? "true" : undefined}
       data-card-id={card.id}
       data-testid={testId}
       initial={{ opacity: 0, scale: 0.82, ...initialOffset }}
       animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
       transition={transition}
-      className={cn(cardFrameClass, "bg-white p-2 2xl:p-3")}
+      className="relative h-28 w-20 flex-shrink-0 bg-transparent [perspective:600px] sm:h-32 sm:w-24 2xl:h-40 2xl:w-28"
       style={{ zIndex: hidden ? 0 : index + 1 }}
     >
-      {/* Top left */}
-      <div className={cn("flex flex-col items-center", colorClass)}>
-        <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
-          {card.rank}
-        </span>
-        <span className="text-sm leading-none sm:text-base">{symbol}</span>
-      </div>
-
-      {/* Center large suit */}
-      <div
-        className={cn(
-          "absolute inset-0 flex items-center justify-center opacity-20 text-5xl sm:text-6xl 2xl:text-7xl",
-          colorClass,
-        )}
+      <motion.div
+        className="relative h-full w-full [transform-style:preserve-3d]"
+        initial={false}
+        animate={{ rotateY: hidden ? 180 : 0 }}
+        transition={{ type: "tween", duration: 0.45, ease: "easeInOut" }}
       >
-        {symbol}
-      </div>
+        {/* Face */}
+        <div
+          className={cn(
+            "absolute inset-0 flex flex-col justify-between rounded-xl border border-black/10 bg-gradient-to-br from-white via-white to-slate-200 p-2 shadow-[0_6px_18px_rgba(0,0,0,0.45)] [backface-visibility:hidden] 2xl:p-3",
+          )}
+        >
+          {/* Top left */}
+          <div className={cn("flex flex-col items-center self-start", colorClass)}>
+            <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
+              {card.rank}
+            </span>
+            <span className="text-sm leading-none sm:text-base">{symbol}</span>
+          </div>
 
-      {/* Bottom right */}
-      <div className={cn("flex flex-col items-center rotate-180", colorClass)}>
-        <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
-          {card.rank}
-        </span>
-        <span className="text-sm leading-none sm:text-base">{symbol}</span>
-      </div>
+          {/* Center large suit */}
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 flex items-center justify-center text-5xl opacity-15 sm:text-6xl 2xl:text-7xl",
+              colorClass,
+            )}
+          >
+            {symbol}
+          </div>
+
+          {/* Bottom right */}
+          <div
+            className={cn(
+              "flex rotate-180 flex-col items-center self-end",
+              colorClass,
+            )}
+          >
+            <span className="text-base font-bold leading-none sm:text-lg 2xl:text-xl">
+              {card.rank}
+            </span>
+            <span className="text-sm leading-none sm:text-base">{symbol}</span>
+          </div>
+        </div>
+
+        {/* Back */}
+        <div className="absolute inset-0 overflow-hidden rounded-xl shadow-[0_6px_18px_rgba(0,0,0,0.45)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <img
+            src={cardReverseSrc}
+            alt="Rewers karty"
+            className="block h-full w-full rounded-xl object-fill"
+            draggable={false}
+          />
+        </div>
+      </motion.div>
     </motion.div>
   );
 });
