@@ -1007,6 +1007,27 @@ export type Database = {
           user_id: string
         }[]
       }
+      place_roulette_table_bet: {
+        Args: {
+          p_bet_type: string
+          p_bet_value: string
+          p_stake: number
+          p_table_key?: string
+          p_user_id: string
+        }
+        Returns: {
+          bet_type: string
+          bet_value: string
+          created_at: string
+          id: string
+          is_win: boolean | null
+          payout: number
+          round_id: string
+          settled_at: string | null
+          stake: number
+          user_id: string
+        }[]
+      }
       claim_bonus_campaign: {
         Args: { p_campaign_id: string }
         Returns: {

@@ -147,14 +147,20 @@ export function getRouletteNextSyncDelayMs(
 
   const targetMs = getRouletteCountdownTargetMs(round);
   if (targetMs) {
-    if (targetMs <= nowMs) {
+    const msUntilTarget = targetMs - nowMs;
+
+    if (msUntilTarget <= 0) {
       return ROULETTE_SYNC_FALLBACK_MS;
     }
 
-    return Math.max(
-      ROULETTE_SYNC_TARGET_BUFFER_MS,
-      targetMs - nowMs + ROULETTE_SYNC_TARGET_BUFFER_MS,
-    );
+    if (msUntilTarget <= ROULETTE_SYNC_FALLBACK_MS) {
+      return Math.max(
+        ROULETTE_SYNC_TARGET_BUFFER_MS,
+        msUntilTarget + ROULETTE_SYNC_TARGET_BUFFER_MS,
+      );
+    }
+
+    return ROULETTE_SYNC_FALLBACK_MS;
   }
 
   if (round.phase === 'settled') {

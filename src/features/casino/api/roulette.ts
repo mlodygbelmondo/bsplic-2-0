@@ -13,11 +13,11 @@ import type {
 } from '@/types/database';
 
 interface PlaceRouletteBetParams {
-  roundId: string;
   userId: string;
   betType: RouletteBetType;
   betValue: string;
   stake: number;
+  tableKey?: string;
 }
 
 const DEFAULT_TABLE_KEY = 'main';
@@ -26,10 +26,13 @@ const DEFAULT_RECENT_WINS_LIMIT = 20;
 
 type LegacyPlayRouletteRoundRow =
   Database['public']['Functions']['play_roulette_round']['Returns'][number];
-type RouletteRoundRow = Database['public']['Tables']['casino_roulette_rounds']['Row'];
-type RouletteBetRow = Database['public']['Tables']['casino_roulette_bets']['Row'];
+type RouletteRoundRow =
+  Database['public']['Tables']['casino_roulette_rounds']['Row'];
+type RouletteBetRow =
+  Database['public']['Tables']['casino_roulette_bets']['Row'];
 type CurrentRoundRpcRow =
-  Database['public']['Functions']['get_current_roulette_round']['Returns'][number] | null;
+  | Database['public']['Functions']['get_current_roulette_round']['Returns'][number]
+  | null;
 type RecentSpinRpcRow =
   Database['public']['Functions']['get_recent_roulette_spins']['Returns'][number];
 type RecentWinRpcRow =
@@ -88,7 +91,9 @@ export async function getCurrentRouletteRound(
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się pobrać bieżącej rundy ruletki');
+    throw new Error(
+      error.message || 'Nie udało się pobrać bieżącej rundy ruletki',
+    );
   }
 
   const round = Array.isArray(data) ? data[0] : data;
@@ -108,7 +113,9 @@ export async function getRecentRouletteSpins(
     throw new Error(error.message || 'Nie udało się pobrać historii spinów');
   }
 
-  return (data ?? []).map((round) => normalizeRouletteRound(round as RecentSpinRpcRow)).filter(Boolean) as RouletteTableRound[];
+  return (data ?? [])
+    .map((round) => normalizeRouletteRound(round as RecentSpinRpcRow))
+    .filter(Boolean) as RouletteTableRound[];
 }
 
 export async function getRecentRouletteWins(
@@ -121,7 +128,9 @@ export async function getRecentRouletteWins(
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się pobrać ostatnich wygranych');
+    throw new Error(
+      error.message || 'Nie udało się pobrać ostatnich wygranych',
+    );
   }
 
   return (data ?? []).map((win) => normalizeRecentWin(win as RecentWinRpcRow));
@@ -144,9 +153,12 @@ export async function getMyCurrentRouletteBets(
 export async function getRouletteRoundParticipants(
   roundId: string,
 ): Promise<RouletteRoundParticipant[]> {
-  const { data, error } = await supabase.rpc('get_roulette_round_participants', {
-    p_round_id: roundId,
-  });
+  const { data, error } = await supabase.rpc(
+    'get_roulette_round_participants',
+    {
+      p_round_id: roundId,
+    },
+  );
 
   if (error) {
     if (error.message?.includes('get_roulette_round_participants')) {
@@ -155,7 +167,9 @@ export async function getRouletteRoundParticipants(
     throw new Error(error.message || 'Nie udało się pobrać graczy rundy');
   }
 
-  return ((data ?? []) as RoundParticipantRpcRow[]).map(normalizeRoundParticipant);
+  return ((data ?? []) as RoundParticipantRpcRow[]).map(
+    normalizeRoundParticipant,
+  );
 }
 
 export async function getRouletteTableSnapshot(
@@ -170,22 +184,26 @@ export async function getRouletteTableSnapshot(
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się pobrać stanu stołu ruletki');
+    throw new Error(
+      error.message || 'Nie udało się pobrać stanu stołu ruletki',
+    );
   }
 
   const snapshot = Array.isArray(data) ? data[0] : data;
-  return normalizeRouletteTableSnapshot(snapshot as RouletteSnapshotRpcRow | null);
+  return normalizeRouletteTableSnapshot(
+    snapshot as RouletteSnapshotRpcRow | null,
+  );
 }
 
 export async function placeRouletteBet({
-  roundId,
   userId,
   betType,
   betValue,
   stake,
+  tableKey = DEFAULT_TABLE_KEY,
 }: PlaceRouletteBetParams): Promise<RouletteBetRecord> {
-  const { data, error } = await supabase.rpc('place_roulette_bet', {
-    p_round_id: roundId,
+  const { data, error } = await supabase.rpc('place_roulette_table_bet', {
+    p_table_key: tableKey,
     p_user_id: userId,
     p_bet_type: betType,
     p_bet_value: betValue,
@@ -213,7 +231,9 @@ export async function advanceRouletteRoundIfDue(
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się zsynchronizować rundy ruletki');
+    throw new Error(
+      error.message || 'Nie udało się zsynchronizować rundy ruletki',
+    );
   }
 }
 
@@ -231,7 +251,8 @@ export function subscribeToRouletteRounds(
         table: 'casino_roulette_rounds',
         filter: `table_key=eq.${tableKey}`,
       },
-      (_payload: RealtimePostgresChangesPayload<RouletteRoundRow>) => onChange(),
+      (_payload: RealtimePostgresChangesPayload<RouletteRoundRow>) =>
+        onChange(),
     )
     .subscribe();
 
@@ -255,7 +276,14 @@ function normalizeRouletteRound(
   const bettingClosesAt = getRequiredString(row, 'betting_closes_at');
   const createdAt = getRequiredString(row, 'created_at');
 
-  if (!id || !tableKey || !phase || !bettingOpensAt || !bettingClosesAt || !createdAt) {
+  if (
+    !id ||
+    !tableKey ||
+    !phase ||
+    !bettingOpensAt ||
+    !bettingClosesAt ||
+    !createdAt
+  ) {
     return null;
   }
 
@@ -280,7 +308,9 @@ function normalizeRouletteRound(
   };
 }
 
-function normalizeRouletteBet(bet: RouletteBetRow | unknown): RouletteBetRecord {
+function normalizeRouletteBet(
+  bet: RouletteBetRow | unknown,
+): RouletteBetRecord {
   const row = (bet ?? {}) as Record<string, unknown>;
 
   return {
@@ -342,7 +372,10 @@ function normalizeRouletteTableSnapshot(
     recentSpins: normalizeArray(row.recent_spins, normalizeRouletteRound),
     recentWins: normalizeArray(row.recent_wins, normalizeRecentWin),
     activeBets: normalizeArray(row.active_bets, normalizeRouletteBet),
-    roundParticipants: normalizeArray(row.round_participants, normalizeRoundParticipant),
+    roundParticipants: normalizeArray(
+      row.round_participants,
+      normalizeRoundParticipant,
+    ),
   };
 }
 
@@ -357,7 +390,9 @@ function normalizeArray<T>(
   return value.map(normalize).filter((item): item is T => Boolean(item));
 }
 
-function normalizeParticipantBets(bets: unknown): RouletteRoundParticipantBet[] {
+function normalizeParticipantBets(
+  bets: unknown,
+): RouletteRoundParticipantBet[] {
   if (!Array.isArray(bets)) {
     return [];
   }
@@ -375,12 +410,13 @@ function normalizeParticipantBets(bets: unknown): RouletteRoundParticipantBet[] 
         stake: Number(rawBet.stake),
       };
     })
-    .filter((bet): bet is RouletteRoundParticipantBet => (
-      Boolean(bet)
-      && ['straight', 'color', 'parity', 'range'].includes(bet.bet_type)
-      && bet.bet_value !== ''
-      && Number.isFinite(bet.stake)
-    ));
+    .filter(
+      (bet): bet is RouletteRoundParticipantBet =>
+        Boolean(bet) &&
+        ['straight', 'color', 'parity', 'range'].includes(bet.bet_type) &&
+        bet.bet_value !== '' &&
+        Number.isFinite(bet.stake),
+    );
 }
 
 function getRequiredString(row: Record<string, unknown>, key: string) {

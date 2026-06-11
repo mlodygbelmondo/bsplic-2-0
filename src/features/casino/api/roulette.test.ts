@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getRouletteRoundParticipants, getRouletteTableSnapshot } from './roulette';
+import {
+  getRouletteRoundParticipants,
+  getRouletteTableSnapshot,
+  placeRouletteBet,
+} from './roulette';
 
 const rpcMock = vi.fn();
 
@@ -19,7 +23,8 @@ describe('roulette api', () => {
     rpcMock.mockResolvedValue({
       data: null,
       error: {
-        message: 'Could not find the function public.get_roulette_round_participants(p_round_id) in the schema cache',
+        message:
+          'Could not find the function public.get_roulette_round_participants(p_round_id) in the schema cache',
       },
     });
 
@@ -150,6 +155,47 @@ describe('roulette api', () => {
       p_table_key: 'main',
       p_recent_spins_limit: 10,
       p_recent_wins_limit: 20,
+    });
+  });
+
+  it('places a table bet without requiring an existing round id', async () => {
+    rpcMock.mockResolvedValue({
+      data: [
+        {
+          id: 'bet-1',
+          round_id: 'round-1',
+          user_id: 'user-1',
+          bet_type: 'color',
+          bet_value: 'red',
+          stake: 25,
+          payout: 0,
+          is_win: null,
+          created_at: '2026-06-11T10:00:01.000Z',
+          settled_at: null,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      placeRouletteBet({
+        userId: 'user-1',
+        betType: 'color',
+        betValue: 'red',
+        stake: 25,
+      }),
+    ).resolves.toMatchObject({
+      id: 'bet-1',
+      round_id: 'round-1',
+      bet_type: 'color',
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith('place_roulette_table_bet', {
+      p_table_key: 'main',
+      p_user_id: 'user-1',
+      p_bet_type: 'color',
+      p_bet_value: 'red',
+      p_stake: 25,
     });
   });
 });

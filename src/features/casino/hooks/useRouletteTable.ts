@@ -124,6 +124,10 @@ export function useRouletteTable({
   }, [syncSnapshot]);
 
   useEffect(() => {
+    if (!currentRound) {
+      return undefined;
+    }
+
     const nextSyncTimer = window.setTimeout(() => {
       void syncSnapshot();
     }, getRouletteNextSyncDelayMs(currentRound));
@@ -168,15 +172,10 @@ export function useRouletteTable({
 
   const placeBetForRound = useCallback(
     async ({ betType, betValue, stake }: PlaceBetInput) => {
-      if (!currentRound) {
-        throw new Error('Brak aktywnej rundy przy stole.');
-      }
-
       setIsPlacingBet(true);
 
       try {
         const acceptedBet = await placeRouletteBet({
-          roundId: currentRound.id,
           userId,
           betType,
           betValue,
@@ -193,12 +192,13 @@ export function useRouletteTable({
           }),
         );
         await refreshProfileRef.current();
+        await syncSnapshot();
         return acceptedBet;
       } finally {
         setIsPlacingBet(false);
       }
     },
-    [avatarUrl, currentRound, userId, username],
+    [avatarUrl, syncSnapshot, userId, username],
   );
 
   const latestSettledRound = recentSpins[0] ?? null;
@@ -264,7 +264,9 @@ function upsertLocalRoundParticipant(
     bet_value: acceptedBet.bet_value,
     stake: acceptedBet.stake,
   };
-  const existing = participants.find((participant) => participant.user_id === userId);
+  const existing = participants.find(
+    (participant) => participant.user_id === userId,
+  );
 
   if (!existing) {
     return [

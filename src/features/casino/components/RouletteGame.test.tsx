@@ -189,6 +189,44 @@ describe('RouletteGame', () => {
     expect(screen.getByText('LuckyFox')).toBeInTheDocument();
   });
 
+  it('lets the first player place a bet while the shared table is idle', async () => {
+    const placeBetMock = vi.fn().mockResolvedValue(undefined);
+
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      currentRound: null,
+      countdownLabel: '00:00',
+      countdownMs: 0,
+      placeBet: placeBetMock,
+    });
+
+    render(
+      <RouletteGame
+        userId="user-1"
+        username="Tester"
+        avatarUrl="https://cdn.example/tester.jpg"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Czerwone' }));
+    fireEvent.change(screen.getByRole('spinbutton'), {
+      target: { value: '20' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Postaw' }));
+
+    await waitFor(() => {
+      expect(placeBetMock).toHaveBeenCalledWith({
+        betType: 'color',
+        betValue: 'red',
+        stake: 20,
+      });
+    });
+  });
+
   it('lets the player choose a quick stake before placing a bet', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 

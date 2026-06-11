@@ -13,9 +13,7 @@ import {
 import type { RouletteBetType, RouletteRoundPhase } from '@/types/database';
 
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  getRouletteColor,
-} from '@/features/casino/lib/roulette';
+import { getRouletteColor } from '@/features/casino/lib/roulette';
 
 import { BettingPanel } from './BettingPanel';
 import { RecentSpinsCarousel } from './RecentSpinsCarousel';
@@ -49,14 +47,21 @@ export function RouletteGame({
   refreshProfile,
   onStatusChange,
 }: RouletteGameProps) {
-  const [betType, setBetType] = useState<RouletteBetType | ''>(() => getStoredRouletteBetType() ?? 'straight');
+  const [betType, setBetType] = useState<RouletteBetType | ''>(
+    () => getStoredRouletteBetType() ?? 'straight',
+  );
   const [betValue, setBetValue] = useState('');
   const [stake, setStake] = useState('10');
   const [isSharingWin, setIsSharingWin] = useState(false);
   const isMobile = useIsMobile();
 
-  const table = useRouletteTable({ userId, username, avatarUrl, refreshProfile });
-  const submitDisabled = table.phase !== 'waiting' || !table.currentRound;
+  const table = useRouletteTable({
+    userId,
+    username,
+    avatarUrl,
+    refreshProfile,
+  });
+  const submitDisabled = table.phase !== 'waiting' || table.isLoading;
 
   const [dismissedWinKey, setDismissedWinKey] = useState<string | null>(null);
   const announcedWinKeysRef = useRef<Set<string>>(new Set());
@@ -64,15 +69,18 @@ export function RouletteGame({
   const pendingWinRoundIdsRef = useRef<Set<string>>(new Set());
 
   const settledActiveWins = useMemo(
-    () => table.activeBets.filter((bet) => bet.is_win === true && bet.payout > 0),
+    () =>
+      table.activeBets.filter((bet) => bet.is_win === true && bet.payout > 0),
     [table.activeBets],
   );
   const recentSessionWins = useMemo(
-    () => table.recentWins.filter(
-      (win) => win.user_id === userId
-        && win.payout > 0
-        && pendingWinRoundIdsRef.current.has(win.round_id),
-    ),
+    () =>
+      table.recentWins.filter(
+        (win) =>
+          win.user_id === userId &&
+          win.payout > 0 &&
+          pendingWinRoundIdsRef.current.has(win.round_id),
+      ),
     [table.recentWins, userId],
   );
   const latestUserWin = settledActiveWins[0] ?? recentSessionWins[0] ?? null;
@@ -82,15 +90,21 @@ export function RouletteGame({
     : null;
 
   const showWinBanner =
-    totalWin > 0
-    && latestUserWinKey !== null
-    && latestUserWinKey !== dismissedWinKey
-    && !sharedWinKeysRef.current.has(latestUserWinKey);
+    totalWin > 0 &&
+    latestUserWinKey !== null &&
+    latestUserWinKey !== dismissedWinKey &&
+    !sharedWinKeysRef.current.has(latestUserWinKey);
 
   useEffect(() => {
-    if (latestUserWin && latestUserWinKey && !announcedWinKeysRef.current.has(latestUserWinKey)) {
+    if (
+      latestUserWin &&
+      latestUserWinKey &&
+      !announcedWinKeysRef.current.has(latestUserWinKey)
+    ) {
       announcedWinKeysRef.current.add(latestUserWinKey);
-      setDismissedWinKey((current) => (current && current !== latestUserWinKey ? null : current));
+      setDismissedWinKey((current) =>
+        current && current !== latestUserWinKey ? null : current,
+      );
       toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
       confetti({
         particleCount: 150,
@@ -132,19 +146,24 @@ export function RouletteGame({
 
   const handleShareWin = async () => {
     const winBet = latestUserWin;
-    if (!winBet || !table.currentRound || !latestUserWinKey || isSharingWin) return;
+    if (!winBet || !table.currentRound || !latestUserWinKey || isSharingWin)
+      return;
 
     setIsSharingWin(true);
     try {
-      const settledRound = table.recentSpins.find((round) => round.id === winBet.round_id)
-        ?? (table.currentRound.id === winBet.round_id ? table.currentRound : null);
+      const settledRound =
+        table.recentSpins.find((round) => round.id === winBet.round_id) ??
+        (table.currentRound.id === winBet.round_id ? table.currentRound : null);
       const winningNumber = settledRound?.winning_number ?? null;
-      const winningColor = settledRound?.winning_color
-        ?? (winningNumber === null ? null : getRouletteColor(winningNumber));
-      const winRoundNumber = settledRound?.round_number ?? table.currentRound.round_number;
-      const content = winningNumber === null
-        ? `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł`
-        : `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł. Numer ${winningNumber}.`;
+      const winningColor =
+        settledRound?.winning_color ??
+        (winningNumber === null ? null : getRouletteColor(winningNumber));
+      const winRoundNumber =
+        settledRound?.round_number ?? table.currentRound.round_number;
+      const content =
+        winningNumber === null
+          ? `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł`
+          : `Wygrana w ruletce: ${winBet.payout.toFixed(2)} zł. Numer ${winningNumber}.`;
 
       await createCasinoShare({
         userId,
@@ -164,7 +183,11 @@ export function RouletteGame({
       setDismissedWinKey(latestUserWinKey);
       toast.success('Wygrana udostępniona na Socialu!');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nie udało się udostępnić wygranej.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się udostępnić wygranej.',
+      );
     } finally {
       setIsSharingWin(false);
     }
@@ -193,11 +216,7 @@ export function RouletteGame({
     </>
   );
 
-  const rightRailContent = (
-    <>
-      {!isMobile && bettingPanel}
-    </>
-  );
+  const rightRailContent = <>{!isMobile && bettingPanel}</>;
 
   useEffect(() => {
     onStatusChange?.({
@@ -237,11 +256,17 @@ export function RouletteGame({
         data-testid="roulette-table-layout"
         className="grid min-w-0 gap-5 xl:grid-cols-[360px_minmax(520px,1fr)_360px]"
       >
-        <div data-testid="roulette-left-rail" className="order-2 min-w-0 space-y-5 xl:order-1">
+        <div
+          data-testid="roulette-left-rail"
+          className="order-2 min-w-0 space-y-5 xl:order-1"
+        >
           {leftRailContent}
         </div>
 
-        <div data-testid="roulette-center-stage" className="order-1 min-w-0 space-y-5 xl:order-2">
+        <div
+          data-testid="roulette-center-stage"
+          className="order-1 min-w-0 space-y-5 xl:order-2"
+        >
           <RouletteWheel
             phase={table.phase}
             winningNumber={table.currentRound?.winning_number ?? null}
@@ -250,7 +275,10 @@ export function RouletteGame({
           />
         </div>
 
-        <div data-testid="roulette-right-rail" className="order-3 min-w-0 space-y-5">
+        <div
+          data-testid="roulette-right-rail"
+          className="order-3 min-w-0 space-y-5"
+        >
           {rightRailContent}
         </div>
       </div>

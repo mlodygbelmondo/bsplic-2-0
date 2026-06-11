@@ -1,5 +1,5 @@
 import { act, render, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useRouletteTable } from './useRouletteTable';
 
@@ -14,15 +14,23 @@ const placeRouletteBetMock = vi.fn();
 const subscribeToRouletteRoundsMock = vi.fn();
 
 vi.mock('@/features/casino/api/roulette', () => ({
-  advanceRouletteRoundIfDue: (...args: unknown[]) => advanceRouletteRoundIfDueMock(...args),
-  getCurrentRouletteRound: (...args: unknown[]) => getCurrentRouletteRoundMock(...args),
-  getMyCurrentRouletteBets: (...args: unknown[]) => getMyCurrentRouletteBetsMock(...args),
-  getRecentRouletteSpins: (...args: unknown[]) => getRecentRouletteSpinsMock(...args),
-  getRecentRouletteWins: (...args: unknown[]) => getRecentRouletteWinsMock(...args),
-  getRouletteRoundParticipants: (...args: unknown[]) => getRouletteRoundParticipantsMock(...args),
-  getRouletteTableSnapshot: (...args: unknown[]) => getRouletteTableSnapshotMock(...args),
+  advanceRouletteRoundIfDue: (...args: unknown[]) =>
+    advanceRouletteRoundIfDueMock(...args),
+  getCurrentRouletteRound: (...args: unknown[]) =>
+    getCurrentRouletteRoundMock(...args),
+  getMyCurrentRouletteBets: (...args: unknown[]) =>
+    getMyCurrentRouletteBetsMock(...args),
+  getRecentRouletteSpins: (...args: unknown[]) =>
+    getRecentRouletteSpinsMock(...args),
+  getRecentRouletteWins: (...args: unknown[]) =>
+    getRecentRouletteWinsMock(...args),
+  getRouletteRoundParticipants: (...args: unknown[]) =>
+    getRouletteRoundParticipantsMock(...args),
+  getRouletteTableSnapshot: (...args: unknown[]) =>
+    getRouletteTableSnapshotMock(...args),
   placeRouletteBet: (...args: unknown[]) => placeRouletteBetMock(...args),
-  subscribeToRouletteRounds: (...args: unknown[]) => subscribeToRouletteRoundsMock(...args),
+  subscribeToRouletteRounds: (...args: unknown[]) =>
+    subscribeToRouletteRoundsMock(...args),
 }));
 
 type RouletteTableValue = ReturnType<typeof useRouletteTable>;
@@ -59,8 +67,15 @@ describe('useRouletteTable', () => {
       activeBets: [],
       roundParticipants: [],
     });
-    placeRouletteBetMock.mockResolvedValue({ id: 'bet-1', round_id: 'round-1' });
+    placeRouletteBetMock.mockResolvedValue({
+      id: 'bet-1',
+      round_id: 'round-1',
+    });
     subscribeToRouletteRoundsMock.mockReturnValue(vi.fn());
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('reads the roulette table through one snapshot RPC without browser-side advancement', async () => {
@@ -96,9 +111,10 @@ describe('useRouletteTable', () => {
     let resolveSnapshot: (() => void) | null = null;
 
     getRouletteTableSnapshotMock.mockImplementationOnce(
-      () => new Promise<void>((resolve) => {
-        resolveSnapshot = resolve;
-      }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSnapshot = resolve;
+        }),
     );
     subscribeToRouletteRoundsMock.mockImplementation((callback: () => void) => {
       onRoundChange = callback;
@@ -123,12 +139,32 @@ describe('useRouletteTable', () => {
     });
   });
 
+  it('does not poll an idle table without an active round', async () => {
+    vi.useFakeTimers();
+
+    render(<RouletteTableProbe />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not refresh the viewer profile for another player settled win', async () => {
     const refreshProfile = vi.fn().mockResolvedValue(undefined);
     getRouletteTableSnapshotMock.mockResolvedValue({
       currentRound: null,
       recentSpins: [{ id: 'round-1', phase: 'settled', round_number: 1 }],
-      recentWins: [{ id: 'win-1', round_id: 'round-1', user_id: 'user-2', payout: 50 }],
+      recentWins: [
+        { id: 'win-1', round_id: 'round-1', user_id: 'user-2', payout: 50 },
+      ],
       activeBets: [],
       roundParticipants: [],
     });
@@ -147,7 +183,9 @@ describe('useRouletteTable', () => {
     getRouletteTableSnapshotMock.mockResolvedValue({
       currentRound: null,
       recentSpins: [],
-      recentWins: [{ id: 'win-1', round_id: 'round-1', user_id: 'user-1', payout: 50 }],
+      recentWins: [
+        { id: 'win-1', round_id: 'round-1', user_id: 'user-1', payout: 50 },
+      ],
       activeBets: [],
       roundParticipants: [],
     });
@@ -159,22 +197,10 @@ describe('useRouletteTable', () => {
     });
   });
 
-  it('adds an accepted local bet to the participant list without another snapshot read', async () => {
+  it('places a bet into the current shared round and syncs the snapshot', async () => {
     let table: RouletteTableValue | null = null;
     const refreshProfile = vi.fn().mockResolvedValue(undefined);
-    getRouletteTableSnapshotMock.mockResolvedValue({
-      currentRound: {
-        id: 'round-1',
-        phase: 'waiting',
-        round_number: 12,
-        betting_closes_at: new Date(Date.now() + 10_000).toISOString(),
-      },
-      recentSpins: [],
-      recentWins: [],
-      activeBets: [],
-      roundParticipants: [],
-    });
-    placeRouletteBetMock.mockResolvedValue({
+    const acceptedBet = {
       id: 'bet-1',
       round_id: 'round-1',
       user_id: 'user-1',
@@ -185,11 +211,52 @@ describe('useRouletteTable', () => {
       is_win: null,
       created_at: '2026-06-11T10:00:01.000Z',
       settled_at: null,
-    });
+    };
+    const round = {
+      id: 'round-1',
+      phase: 'waiting',
+      round_number: 12,
+      betting_closes_at: new Date(Date.now() + 10_000).toISOString(),
+    };
 
-    render(<RouletteTableProbe refreshProfile={refreshProfile} onTable={(next) => {
-      table = next;
-    }} />);
+    getRouletteTableSnapshotMock
+      .mockResolvedValueOnce({
+        currentRound: {
+          ...round,
+        },
+        recentSpins: [],
+        recentWins: [],
+        activeBets: [],
+        roundParticipants: [],
+      })
+      .mockResolvedValueOnce({
+        currentRound: {
+          ...round,
+        },
+        recentSpins: [],
+        recentWins: [],
+        activeBets: [acceptedBet],
+        roundParticipants: [
+          {
+            user_id: 'user-1',
+            username: 'LuckyFox',
+            avatar_url: 'avatar.webp',
+            total_stake: 25,
+            bet_count: 1,
+            bets: [{ bet_type: 'color', bet_value: 'red', stake: 25 }],
+          },
+        ],
+      });
+    placeRouletteBetMock.mockResolvedValue(acceptedBet);
+
+    render(
+      <RouletteTableProbe
+        refreshProfile={refreshProfile}
+        onTable={(next) => {
+          table = next;
+        }}
+      />,
+    );
 
     await waitFor(() => {
       expect(table?.currentRound?.id).toBe('round-1');
@@ -203,7 +270,13 @@ describe('useRouletteTable', () => {
       });
     });
 
-    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(placeRouletteBetMock).toHaveBeenCalledWith({
+      userId: 'user-1',
+      betType: 'color',
+      betValue: 'red',
+      stake: 25,
+    });
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(2);
     expect(table?.roundParticipants).toEqual([
       {
         user_id: 'user-1',
@@ -214,5 +287,72 @@ describe('useRouletteTable', () => {
         bets: [{ bet_type: 'color', bet_value: 'red', stake: 25 }],
       },
     ]);
+  });
+
+  it('lets the first bet create a shared round from an idle table', async () => {
+    let table: RouletteTableValue | null = null;
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
+
+    getRouletteTableSnapshotMock
+      .mockResolvedValueOnce({
+        currentRound: null,
+        recentSpins: [],
+        recentWins: [],
+        activeBets: [],
+        roundParticipants: [],
+      })
+      .mockResolvedValueOnce({
+        currentRound: {
+          id: 'round-1',
+          phase: 'waiting',
+          round_number: 12,
+          betting_closes_at: new Date(Date.now() + 10_000).toISOString(),
+        },
+        recentSpins: [],
+        recentWins: [],
+        activeBets: [{ id: 'bet-1', round_id: 'round-1' }],
+        roundParticipants: [{ user_id: 'user-1', total_stake: 25 }],
+      });
+    placeRouletteBetMock.mockResolvedValue({
+      id: 'bet-1',
+      round_id: 'round-1',
+      user_id: 'user-1',
+      bet_type: 'color',
+      bet_value: 'red',
+      stake: 25,
+      payout: 0,
+      is_win: null,
+      created_at: '2026-06-11T10:00:01.000Z',
+      settled_at: null,
+    });
+
+    render(
+      <RouletteTableProbe
+        refreshProfile={refreshProfile}
+        onTable={(next) => {
+          table = next;
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(table?.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await table?.placeBet({
+        betType: 'color',
+        betValue: 'red',
+        stake: 25,
+      });
+    });
+
+    expect(placeRouletteBetMock).toHaveBeenCalledWith({
+      userId: 'user-1',
+      betType: 'color',
+      betValue: 'red',
+      stake: 25,
+    });
+    expect(table?.currentRound?.id).toBe('round-1');
   });
 });

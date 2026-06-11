@@ -192,6 +192,19 @@ describe('getRouletteNextSyncDelayMs', () => {
     ).toBe(5_000 + ROULETTE_SYNC_TARGET_BUFFER_MS);
   });
 
+  it('polls active rounds at the fallback cadence while the phase target is farther away', () => {
+    expect(
+      getRouletteNextSyncDelayMs(
+        {
+          phase: 'waiting',
+          betting_closes_at: '2026-04-17T12:00:15.000Z',
+          spin_started_at: null,
+        },
+        new Date('2026-04-17T12:00:03.000Z').getTime(),
+      ),
+    ).toBe(ROULETTE_SYNC_FALLBACK_MS);
+  });
+
   it('uses the fallback delay when the target is already due and cron owns advancement', () => {
     expect(
       getRouletteNextSyncDelayMs(
