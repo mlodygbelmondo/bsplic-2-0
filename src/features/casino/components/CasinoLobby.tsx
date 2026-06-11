@@ -26,6 +26,7 @@ export function CasinoLobby({
     phase: 'waiting',
     countdownLabel: '--:--',
     countdownMs: ROULETTE_BETTING_WINDOW_MS,
+    isIdle: false,
   });
   const progressValue = useMemo(() => {
     const maxMs = status.phase === 'spinning' ? ROULETTE_SPIN_REVEAL_MS : ROULETTE_BETTING_WINDOW_MS;
@@ -51,21 +52,30 @@ export function CasinoLobby({
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
               Ruletka
             </h1>
-            {status.phase !== 'waiting' && (
+            {status.isIdle ? (
               <p className="mt-1 text-xs font-medium text-white/50">
-                {getRoulettePhaseLabel(status.phase)}
+                Stół czeka na pierwszy zakład
               </p>
+            ) : (
+              status.phase !== 'waiting' && (
+                <p className="mt-1 text-xs font-medium text-white/50">
+                  {getRoulettePhaseLabel(status.phase)}
+                </p>
+              )
             )}
           </div>
 
           <div className="w-full max-w-xs space-y-2 md:w-72">
             <div className="flex items-center justify-between text-xs text-white/60">
-              <span>Do spinu</span>
+              <span>{status.isIdle ? 'Postaw, aby ruszyć rundę' : 'Do spinu'}</span>
               <span className="font-mono text-sm font-bold text-white">
-                {status.countdownLabel}
+                {status.isIdle ? '--:--' : status.countdownLabel}
               </span>
             </div>
-            <Progress value={progressValue} className="h-1.5 bg-white/10" />
+            <Progress
+              value={status.isIdle ? 0 : progressValue}
+              className="h-1.5 bg-white/10"
+            />
             <p className="text-right font-mono text-[11px] text-white/45">
               #{status.roundNumber ?? '—'}
             </p>

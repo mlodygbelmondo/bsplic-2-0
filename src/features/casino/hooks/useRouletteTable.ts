@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  advanceRouletteRoundIfDue,
   getRouletteTableSnapshot,
   placeRouletteBet,
   subscribeToRouletteRounds,
@@ -124,12 +125,25 @@ export function useRouletteTable({
   }, [syncSnapshot]);
 
   useEffect(() => {
-    if (!currentRound) {
-      return undefined;
-    }
-
+    // An idle table still polls (slowly) so a round started by another player
+    // shows up even when realtime drops the event.
     const nextSyncTimer = window.setTimeout(() => {
-      void syncSnapshot();
+      void (async () => {
+        if (currentRound) {
+          const targetMs = getRouletteCountdownTargetMs(currentRound);
+          if (targetMs !== null && Date.now() >= targetMs) {
+            // The phase is overdue: nudge the shared round forward ourselves
+            // instead of waiting for the backup cron tick.
+            try {
+              await advanceRouletteRoundIfDue();
+            } catch {
+              // Best effort - the snapshot below still reflects server state.
+            }
+          }
+        }
+
+        await syncSnapshot();
+      })();
     }, getRouletteNextSyncDelayMs(currentRound));
 
     return () => {
@@ -204,11 +218,13 @@ export function useRouletteTable({
   const latestSettledRound = recentSpins[0] ?? null;
   const phase: RouletteRoundPhase = currentRound?.phase ?? 'waiting';
   const countdownLabel = formatRouletteCountdown(countdownMs);
+  const isIdle = !isLoading && !currentRound;
 
   return useMemo(
     () => ({
       userId,
       currentRound,
+      isIdle,
       recentSpins,
       recentWins,
       activeBets,
@@ -227,6 +243,7 @@ export function useRouletteTable({
     [
       userId,
       currentRound,
+      isIdle,
       recentSpins,
       recentWins,
       activeBets,

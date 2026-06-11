@@ -70,6 +70,7 @@ describe('RouletteGame', () => {
     activeBets: [],
     roundParticipants: [],
     latestSettledRound: null,
+    isIdle: false,
     isLoading: false,
     isPlacingBet: false,
     isRefreshing: false,
@@ -269,7 +270,19 @@ describe('RouletteGame', () => {
     });
   });
 
-  it('disables betting controls once the wheel is spinning', () => {
+  it('queues a bet into the next round while the wheel is spinning', async () => {
+    const placeBetMock = vi.fn().mockResolvedValue({
+      id: 'bet-queued',
+      round_id: 'round-3',
+      bet_type: 'color' as const,
+      bet_value: 'red',
+      stake: 20,
+      payout: 0,
+      is_win: null,
+      created_at: '2026-04-17T12:00:16.000Z',
+      settled_at: null,
+    });
+
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
       phase: 'spinning',
@@ -285,13 +298,34 @@ describe('RouletteGame', () => {
         winning_number: 13,
         winning_color: 'black' as const,
       },
+      placeBet: placeBetMock,
     });
 
     render(
       <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
     );
 
-    expect(screen.getByRole('button', { name: 'Postaw' })).toBeDisabled();
+    const submitButton = screen.getByRole('button', { name: 'Postaw' });
+    expect(submitButton).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Czerwone' }));
+    fireEvent.change(screen.getByRole('spinbutton'), {
+      target: { value: '20' },
+    });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(placeBetMock).toHaveBeenCalledWith({
+        betType: 'color',
+        betValue: 'red',
+        stake: 20,
+      });
+    });
+
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'Zakład czeka na następną rundę!',
+    );
   });
 
   it('does not render a separate lower status bar container', () => {

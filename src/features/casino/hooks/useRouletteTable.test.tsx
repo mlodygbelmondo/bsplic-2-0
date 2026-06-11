@@ -139,7 +139,7 @@ describe('useRouletteTable', () => {
     });
   });
 
-  it('does not poll an idle table without an active round', async () => {
+  it('polls an idle table slowly so rounds started elsewhere still appear', async () => {
     vi.useFakeTimers();
 
     render(<RouletteTableProbe />);
@@ -150,11 +150,59 @@ describe('useRouletteTable', () => {
 
     expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(6_000);
+      await Promise.resolve();
     });
 
     expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+      await Promise.resolve();
+    });
+
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(2);
+    expect(advanceRouletteRoundIfDueMock).not.toHaveBeenCalled();
+  });
+
+  it('advances an overdue round before syncing instead of waiting for cron', async () => {
+    vi.useFakeTimers();
+    advanceRouletteRoundIfDueMock.mockResolvedValue(undefined);
+    getRouletteTableSnapshotMock.mockResolvedValue({
+      currentRound: {
+        id: 'round-1',
+        phase: 'waiting',
+        round_number: 12,
+        betting_closes_at: new Date(Date.now() + 2_000).toISOString(),
+      },
+      recentSpins: [],
+      recentWins: [],
+      activeBets: [],
+      roundParticipants: [],
+    });
+
+    render(<RouletteTableProbe />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(advanceRouletteRoundIfDueMock).not.toHaveBeenCalled();
+
+    // The sync timer fires just past betting_closes_at; the round is now
+    // overdue, so the client nudges it forward before reading the snapshot.
+    await act(async () => {
+      vi.advanceTimersByTime(2_500);
+      await Promise.resolve();
+    });
+
+    expect(advanceRouletteRoundIfDueMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(getRouletteTableSnapshotMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not refresh the viewer profile for another player settled win', async () => {

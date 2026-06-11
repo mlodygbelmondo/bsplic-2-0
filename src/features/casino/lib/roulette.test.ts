@@ -10,6 +10,7 @@ import {
   getRoulettePhaseLabel,
   ROULETTE_SPIN_REVEAL_MS,
   ROULETTE_SYNC_FALLBACK_MS,
+  ROULETTE_SYNC_IDLE_MS,
   ROULETTE_SYNC_SETTLED_MS,
   ROULETTE_SYNC_TARGET_BUFFER_MS,
   validateRouletteBetInput,
@@ -228,7 +229,7 @@ describe('getRouletteNextSyncDelayMs', () => {
     ).toBe(ROULETTE_SYNC_SETTLED_MS);
   });
 
-  it('falls back when there is no current round', () => {
-    expect(getRouletteNextSyncDelayMs(null)).toBe(ROULETTE_SYNC_FALLBACK_MS);
+  it('polls an idle table at the slow idle cadence', () => {
+    expect(getRouletteNextSyncDelayMs(null)).toBe(ROULETTE_SYNC_IDLE_MS);
   });
 });

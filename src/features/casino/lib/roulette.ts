@@ -47,6 +47,7 @@ const ROULETTE_BET_OPTIONS: Record<
 export const ROULETTE_BETTING_WINDOW_MS = 15_000;
 export const ROULETTE_SPIN_REVEAL_MS = 6_000;
 export const ROULETTE_SYNC_FALLBACK_MS = 5_000;
+export const ROULETTE_SYNC_IDLE_MS = 15_000;
 export const ROULETTE_SYNC_SETTLED_MS = 1_500;
 export const ROULETTE_SYNC_TARGET_BUFFER_MS = 250;
 
@@ -142,7 +143,7 @@ export function getRouletteNextSyncDelayMs(
   nowMs = Date.now(),
 ): number {
   if (!round) {
-    return ROULETTE_SYNC_FALLBACK_MS;
+    return ROULETTE_SYNC_IDLE_MS;
   }
 
   const targetMs = getRouletteCountdownTargetMs(round);

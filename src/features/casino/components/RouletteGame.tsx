@@ -28,6 +28,7 @@ export interface RouletteHeaderStatus {
   phase: RouletteRoundPhase;
   countdownLabel: string;
   countdownMs: number;
+  isIdle: boolean;
 }
 
 interface RouletteGameProps {
@@ -61,7 +62,9 @@ export function RouletteGame({
     avatarUrl,
     refreshProfile,
   });
-  const submitDisabled = table.phase !== 'waiting' || table.isLoading;
+  // Betting stays enabled while the wheel spins - the bet queues into the
+  // next shared round on the server.
+  const submitDisabled = table.isLoading;
 
   const [dismissedWinKey, setDismissedWinKey] = useState<string | null>(null);
   const announcedWinKeysRef = useRef<Set<string>>(new Set());
@@ -130,11 +133,20 @@ export function RouletteGame({
         balance,
       });
 
+      const roundIdAtSubmit = table.currentRound?.id ?? null;
       const acceptedBet = await table.placeBet(payload);
       if (acceptedBet?.round_id) {
         pendingWinRoundIdsRef.current.add(acceptedBet.round_id);
       }
-      toast.success('Zakład przyjęty do wspólnej rundy!');
+      const queuedForNextRound =
+        roundIdAtSubmit !== null &&
+        typeof acceptedBet?.round_id === 'string' &&
+        acceptedBet.round_id !== roundIdAtSubmit;
+      toast.success(
+        queuedForNextRound
+          ? 'Zakład czeka na następną rundę!'
+          : 'Zakład przyjęty do wspólnej rundy!',
+      );
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -224,6 +236,7 @@ export function RouletteGame({
       phase: table.currentRound?.phase ?? 'waiting',
       countdownLabel: table.countdownLabel,
       countdownMs: table.countdownMs,
+      isIdle: table.isIdle,
     });
   }, [
     onStatusChange,
@@ -231,6 +244,7 @@ export function RouletteGame({
     table.currentRound?.phase,
     table.countdownLabel,
     table.countdownMs,
+    table.isIdle,
   ]);
 
   return (
