@@ -31,6 +31,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 6000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -102,31 +103,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let hasAuthSignal = false;
+
+    const applyAuthSession = (nextSession: Session | null) => {
+      if (!isMounted) return;
+
+      hasAuthSignal = true;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      if (nextSession?.user) {
+        setTimeout(() => {
+          if (isMounted) {
+            void fetchProfile(nextSession.user.id);
+          }
+        }, 0);
+      } else {
+        clearProfileState();
+      }
+      setLoading(false);
+    };
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setTimeout(() => void fetchProfile(session.user.id), 0);
-      } else {
-        clearProfileState();
-      }
-      setLoading(false);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyAuthSession(session);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        void fetchProfile(session.user.id);
-      } else {
-        clearProfileState();
+    const timeoutId = window.setTimeout(() => {
+      if (!hasAuthSignal) {
+        console.warn(
+          'Supabase auth bootstrap timed out; showing logged-out UI.',
+        );
+        applyAuthSession(null);
       }
-      setLoading(false);
-    });
+    }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
-    return () => subscription.unsubscribe();
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        window.clearTimeout(timeoutId);
+        applyAuthSession(session);
+      })
+      .catch((error) => {
+        window.clearTimeout(timeoutId);
+        console.error('Supabase auth bootstrap error:', error);
+        applyAuthSession(null);
+      });
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, [clearProfileState, fetchProfile]);
 
   const signIn = async (email: string, password: string) => {
