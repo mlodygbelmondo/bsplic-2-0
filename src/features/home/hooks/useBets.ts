@@ -199,14 +199,6 @@ export function useBets(
     [],
   );
 
-  const refetchVisibleWindow = useCallback(async () => {
-    await loadBetsPage({
-      offset: 0,
-      append: false,
-      minimumWindowSize: betsRef.current.length || ACTIVE_BETS_PAGE_SIZE,
-    });
-  }, [loadBetsPage]);
-
   useEffect(() => {
     let mounted = true;
 
@@ -247,7 +239,15 @@ export function useBets(
       pendingPayloadsRef.current = [];
 
       if (queuedPayloads.length > 0) {
-        void refetchVisibleWindow();
+        const criteria = criteriaRef.current;
+        setBets((previous) =>
+          applyBetsRealtimePayloads(
+            previous,
+            queuedPayloads,
+            criteria.selectedCategory,
+            criteria.includeInProgress,
+          ),
+        );
       }
     };
 
@@ -276,7 +276,7 @@ export function useBets(
       }
       unsubscribe();
     };
-  }, [refetchVisibleWindow]);
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) {
