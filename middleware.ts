@@ -1,24 +1,29 @@
-import { get } from '@vercel/edge-config';
-import { next, rewrite } from '@vercel/functions';
+import { get } from "@vercel/edge-config";
+import { next, rewrite } from "@vercel/functions";
 
-const MAINTENANCE_PAGE = '/maintenance.html';
-const MAINTENANCE_KEY = 'maintenanceMode';
+const MAINTENANCE_PAGE = "/maintenance.html";
+const MAINTENANCE_STATUS_ENDPOINT = "/api/maintenance";
+const MAINTENANCE_KEY = "maintenanceMode";
 
-const PUBLIC_FILE_PATTERN = /\.(?:css|gif|ico|jpg|jpeg|js|json|map|png|svg|txt|webmanifest|webp|woff2?)$/i;
+const PUBLIC_FILE_PATTERN =
+  /\.(?:css|gif|ico|jpg|jpeg|js|json|map|png|svg|txt|webmanifest|webp|woff2?)$/i;
 const PUBLIC_PATH_PREFIXES = [
-  '/assets/',
-  '/badges/',
-  '/casino/',
-  '/maintenance/',
-  '/~oauth/',
+  "/assets/",
+  "/badges/",
+  "/casino/",
+  "/maintenance/",
+  "/~oauth/",
 ];
 
 export const config = {
-  matcher: '/:path*',
+  matcher: "/:path*",
 };
 
 function shouldSkipMiddleware(pathname: string) {
-  if (pathname === MAINTENANCE_PAGE) {
+  if (
+    pathname === MAINTENANCE_PAGE ||
+    pathname === MAINTENANCE_STATUS_ENDPOINT
+  ) {
     return true;
   }
 
@@ -43,7 +48,7 @@ export default async function middleware(request: Request) {
       return rewrite(new URL(MAINTENANCE_PAGE, request.url));
     }
   } catch (error) {
-    console.error('Failed to read maintenance mode from Edge Config', error);
+    console.error("Failed to read maintenance mode from Edge Config", error);
   }
 
   return next();

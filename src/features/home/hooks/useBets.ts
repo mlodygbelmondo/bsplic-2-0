@@ -38,8 +38,16 @@ function isBetOpenForPlacement(row: Pick<BetRow, "ends_at" | "is_active">) {
   return Number.isFinite(endsAt) && endsAt > Date.now();
 }
 
-function isBetVisible(row: BetRow, selectedCategory: string | null): boolean {
-  if (!isBetOpenForPlacement(row)) {
+function isBetVisible(
+  row: BetRow,
+  selectedCategory: string | null,
+  includeInProgress = false,
+): boolean {
+  if (includeInProgress) {
+    if (!row.is_active) {
+      return false;
+    }
+  } else if (!isBetOpenForPlacement(row)) {
     return false;
   }
 
@@ -81,13 +89,17 @@ export function applyBetsRealtimePayloads(
   previous: Bet[],
   payloads: RealtimePostgresChangesPayload<BetRow>[],
   selectedCategory: string | null,
+  includeInProgress = false,
 ): Bet[] {
   let next = previous;
 
   for (const payload of payloads) {
     if (payload.eventType === "INSERT") {
       const row = payload.new;
-      if (!getBetId(row) || !isBetVisible(row, selectedCategory)) {
+      if (
+        !getBetId(row) ||
+        !isBetVisible(row, selectedCategory, includeInProgress)
+      ) {
         continue;
       }
       next = upsertBet(next, toBet(row));
@@ -106,7 +118,7 @@ export function applyBetsRealtimePayloads(
         continue;
       }
 
-      if (isBetVisible(newRow, selectedCategory)) {
+      if (isBetVisible(newRow, selectedCategory, includeInProgress)) {
         next = upsertBet(next, toBet(newRow));
         continue;
       }
@@ -128,7 +140,11 @@ export function applyBetsRealtimePayloads(
   return next;
 }
 
-export function useBets(selectedCategory: string | null, sort: SortMode) {
+export function useBets(
+  selectedCategory: string | null,
+  sort: SortMode,
+  includeInProgress = false,
+) {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -138,15 +154,15 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
   );
   const flushTimeoutRef = useRef<number | null>(null);
   const betsRef = useRef<Bet[]>([]);
-  const criteriaRef = useRef({ selectedCategory, sort });
+  const criteriaRef = useRef({ selectedCategory, sort, includeInProgress });
 
   useEffect(() => {
     betsRef.current = bets;
   }, [bets]);
 
   useEffect(() => {
-    criteriaRef.current = { selectedCategory, sort };
-  }, [selectedCategory, sort]);
+    criteriaRef.current = { selectedCategory, sort, includeInProgress };
+  }, [selectedCategory, sort, includeInProgress]);
 
   const loadBetsPage = useCallback(
     async ({
@@ -167,6 +183,7 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
         criteria.sort,
         limit,
         offset,
+        criteria.includeInProgress,
       );
       const visiblePage = data.slice(0, limit - 1);
 
@@ -213,7 +230,7 @@ export function useBets(selectedCategory: string | null, sort: SortMode) {
     return () => {
       mounted = false;
     };
-  }, [loadBetsPage, selectedCategory, sort]);
+  }, [loadBetsPage, selectedCategory, sort, includeInProgress]);
 
   useEffect(() => {
     let mounted = true;

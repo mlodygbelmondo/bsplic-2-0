@@ -31,7 +31,11 @@ export default defineConfig(({ mode }) => ({
         "robots.txt",
       ],
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
+        navigateFallbackDenylist: [
+          /^\/~oauth/,
+          /^\/api\//,
+          /^\/maintenance\.html$/,
+        ],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
         globIgnores: ["badges/**/*"],
         cleanupOutdatedCaches: true,

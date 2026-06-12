@@ -81,6 +81,23 @@ function RoutePrefetcher() {
   return null;
 }
 
+// Fade out the static splash from index.html once React has painted the
+// first frame (which is the visually identical BrandedLoader or the app).
+function SplashScreenRemover() {
+  useEffect(() => {
+    const splash = document.getElementById("initial-splash");
+    if (!splash) {
+      return;
+    }
+
+    splash.classList.add("splash-done");
+    const timeoutId = window.setTimeout(() => splash.remove(), 600);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  return null;
+}
+
 function ConnectionToasts() {
   useEffect(() => {
     const handleOffline = () =>
@@ -151,6 +168,7 @@ const App = () => (
   <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <Sonner richColors />
+      <SplashScreenRemover />
       <ConnectionToasts />
       <RoutePrefetcher />
       <BrowserRouter>

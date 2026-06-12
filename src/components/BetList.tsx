@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Lightbulb } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { ChevronDown, Lightbulb } from "lucide-react";
 import { BetCard } from "./BetCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,6 +32,7 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 ];
 
 const SORT_STORAGE_KEY = "bsplic.home.sort";
+const ACTIVE_ONLY_STORAGE_KEY = "bsplic.home.activeOnly";
 
 function readStoredSort(): SortMode {
   try {
@@ -39,6 +46,41 @@ function readStoredSort(): SortMode {
   return "newest";
 }
 
+function readStoredActiveOnly(): boolean {
+  try {
+    return window.localStorage.getItem(ACTIVE_ONLY_STORAGE_KEY) !== "false";
+  } catch {
+    // Storage unavailable — default to active-only.
+  }
+  return true;
+}
+
+type MobilePanelKind = "sort" | "category";
+
+// Floating dropdown under a mobile filter trigger — overlays the bet list
+// instead of pushing it down. Options inside get the cascading
+// filter-option-enter animation when it opens.
+function MobileFilterPanel({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex flex-col gap-1.5 transition-opacity duration-150",
+        open
+          ? "pointer-events-auto opacity-100"
+          : "pointer-events-none opacity-0",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function BetList({
   selectedCategory,
   onSelectCategory,
@@ -47,11 +89,17 @@ export function BetList({
   onProposeClick,
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>(readStoredSort);
+  const [activeOnly, setActiveOnly] = useState<boolean>(readStoredActiveOnly);
   const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
-    useBets(selectedCategory, sort);
+    useBets(selectedCategory, sort, !activeOnly);
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const [actionsHidden, setActionsHidden] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
+
+  const toggleMobilePanel = (panel: MobilePanelKind) => {
+    setMobilePanel((previous) => (previous === panel ? null : panel));
+  };
 
   const handleSelectSort = (value: SortMode) => {
     setSort(value);
@@ -66,17 +114,29 @@ export function BetList({
   // back as soon as the user scrolls up a little.
   const handleListScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-    const nextState = getNextScrollChromeState(
-      scrollChromeStateRef.current,
-      {
-        scrollTop,
-        scrollHeight,
-        clientHeight,
-      },
-    );
+    const nextState = getNextScrollChromeState(scrollChromeStateRef.current, {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+    });
 
     scrollChromeStateRef.current = nextState;
     setActionsHidden(nextState.hidden);
+    if (nextState.hidden) {
+      setMobilePanel(null);
+    }
+  };
+
+  const handleToggleActiveOnly = () => {
+    setActiveOnly((previous) => {
+      const next = !previous;
+      try {
+        window.localStorage.setItem(ACTIVE_ONLY_STORAGE_KEY, String(next));
+      } catch {
+        // Storage unavailable — preference just won't be remembered.
+      }
+      return next;
+    });
   };
 
   // Changing sort/category remounts the scroll container at the top, so the
@@ -84,14 +144,10 @@ export function BetList({
   useEffect(() => {
     setActionsHidden(false);
     scrollChromeStateRef.current = undefined;
-  }, [sort, selectedCategory]);
+  }, [sort, selectedCategory, activeOnly]);
 
   useEffect(() => {
-    if (
-      loading ||
-      !hasMore ||
-      typeof IntersectionObserver === "undefined"
-    ) {
+    if (loading || !hasMore || typeof IntersectionObserver === "undefined") {
       return;
     }
 
@@ -121,8 +177,15 @@ export function BetList({
             : "grid-rows-[1fr] opacity-100 translate-y-0",
         )}
       >
-        <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
+        {/* overflow-hidden only while the bar is collapsing/collapsed —
+            otherwise it would clip the floating mobile dropdowns. */}
+        <div
+          className={cn(
+            "min-h-0",
+            actionsHidden ? "overflow-hidden" : "overflow-visible",
+          )}
+        >
+          <div className="hidden lg:flex flex-wrap items-center justify-between gap-2 pb-2.5">
             <div className="flex items-center gap-1.5">
               {SORT_OPTIONS.map((option) => (
                 <button
@@ -138,6 +201,32 @@ export function BetList({
                   {option.label}
                 </button>
               ))}
+              <span className="mx-0.5 h-4 w-px bg-border" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={handleToggleActiveOnly}
+                aria-pressed={activeOnly}
+                title={
+                  activeOnly
+                    ? "Pokazywane są tylko zakłady, które można obstawić"
+                    : "Pokazywane są też zakłady w trakcie rozliczania"
+                }
+                className={cn(
+                  "press-scale flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200",
+                  activeOnly
+                    ? "bg-foreground text-background shadow-md"
+                    : "bg-card/80 text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30",
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full transition-colors duration-200",
+                    activeOnly ? "bg-success" : "bg-muted-foreground/50",
+                  )}
+                  aria-hidden="true"
+                />
+                Aktywne
+              </button>
             </div>
             {onProposeClick && (
               <Button
@@ -149,48 +238,171 @@ export function BetList({
               </Button>
             )}
           </div>
-        </div>
-      </div>
 
-      {onSelectCategory && (
-        <div className="lg:hidden mb-3 -mx-3 px-3 shrink-0">
-          <div className="overflow-x-auto scrollbar-hide touch-pan-x">
-            <div className="flex min-w-full w-max gap-1.5 pb-1 pr-1">
+          {/* Mobile: one bar split into two dropdown triggers — bet types on
+              the left, categories on the right. */}
+          {mobilePanel !== null && (
+            <div
+              className="fixed inset-0 z-20 lg:hidden"
+              aria-hidden="true"
+              onClick={() => setMobilePanel(null)}
+            />
+          )}
+          <div className="lg:hidden flex items-start gap-2 pb-2.5">
+            {/* Left column: bet view type + Aktywne, options stack under
+                the trigger. */}
+            <div className="relative z-30 min-w-0 flex-1">
               <button
-                onClick={() => onSelectCategory(null)}
+                type="button"
+                onClick={() => toggleMobilePanel("sort")}
+                aria-expanded={mobilePanel === "sort"}
                 className={cn(
-                  "press-scale shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
-                  !selectedCategory
-                    ? "bg-foreground text-background shadow-md"
-                    : "bg-card text-foreground border border-border hover:border-foreground/30",
+                  "press-scale flex w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-all duration-200",
+                  mobilePanel === "sort"
+                    ? "border-foreground/40 bg-card text-foreground shadow-md"
+                    : "border-border bg-card/80 text-foreground",
                 )}
               >
-                🌐 Wszystkie
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => onSelectCategory(cat.id)}
+                <span className="flex items-center gap-1.5 truncate">
+                  {activeOnly && (
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-success"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="truncate">
+                    {SORT_OPTIONS.find((option) => option.value === sort)
+                      ?.label ?? "Sortowanie"}
+                  </span>
+                </span>
+                <ChevronDown
                   className={cn(
-                    "press-scale shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
-                    selectedCategory === cat.id
+                    "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                    mobilePanel === "sort" && "rotate-180",
+                  )}
+                />
+              </button>
+
+              <MobileFilterPanel open={mobilePanel === "sort"}>
+                {SORT_OPTIONS.map((option, index) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      handleSelectSort(option.value);
+                      setMobilePanel(null);
+                    }}
+                    className={cn(
+                      "press-scale w-full px-3.5 py-2 rounded-full text-[12px] font-semibold text-left transition-all duration-200",
+                      mobilePanel === "sort" && "filter-option-enter",
+                      sort === option.value
+                        ? "bg-foreground text-background shadow-md"
+                        : "bg-card text-foreground border border-border hover:border-foreground/30",
+                    )}
+                    style={{ "--stagger": index } as CSSProperties}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleToggleActiveOnly}
+                  aria-pressed={activeOnly}
+                  className={cn(
+                    "press-scale flex w-full items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                    mobilePanel === "sort" && "filter-option-enter",
+                    activeOnly
                       ? "bg-foreground text-background shadow-md"
-                      : "bg-card text-foreground border border-border hover:border-foreground/30",
+                      : "bg-card text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30",
+                  )}
+                  style={{ "--stagger": SORT_OPTIONS.length } as CSSProperties}
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full transition-colors duration-200",
+                      activeOnly ? "bg-success" : "bg-muted-foreground/50",
+                    )}
+                    aria-hidden="true"
+                  />
+                  Aktywne
+                </button>
+              </MobileFilterPanel>
+            </div>
+
+            {/* Right column: categories, stacked under the trigger. */}
+            {onSelectCategory && (
+              <div className="relative z-30 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => toggleMobilePanel("category")}
+                  aria-expanded={mobilePanel === "category"}
+                  className={cn(
+                    "press-scale flex w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-all duration-200",
+                    mobilePanel === "category"
+                      ? "border-foreground/40 bg-card text-foreground shadow-md"
+                      : "border-border bg-card/80 text-foreground",
                   )}
                 >
-                  {cat.emoji} {cat.name}
+                  <span className="truncate">
+                    {selectedCategory && categoryMap[selectedCategory]
+                      ? `${categoryMap[selectedCategory].emoji} ${categoryMap[selectedCategory].name}`
+                      : "🌐 Wszystkie"}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                      mobilePanel === "category" && "rotate-180",
+                    )}
+                  />
                 </button>
-              ))}
-            </div>
+
+                <MobileFilterPanel open={mobilePanel === "category"}>
+                  <button
+                    onClick={() => {
+                      onSelectCategory(null);
+                      setMobilePanel(null);
+                    }}
+                    className={cn(
+                      "press-scale flex w-full items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                      mobilePanel === "category" && "filter-option-enter",
+                      !selectedCategory
+                        ? "bg-foreground text-background shadow-md"
+                        : "bg-card text-foreground border border-border hover:border-foreground/30",
+                    )}
+                    style={{ "--stagger": 0 } as CSSProperties}
+                  >
+                    🌐 Wszystkie
+                  </button>
+                  {categories.map((cat, index) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        onSelectCategory(cat.id);
+                        setMobilePanel(null);
+                      }}
+                      className={cn(
+                        "press-scale flex w-full items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                        mobilePanel === "category" && "filter-option-enter",
+                        selectedCategory === cat.id
+                          ? "bg-foreground text-background shadow-md"
+                          : "bg-card text-foreground border border-border hover:border-foreground/30",
+                      )}
+                      style={{ "--stagger": index + 1 } as CSSProperties}
+                    >
+                      {cat.emoji} {cat.name}
+                    </button>
+                  ))}
+                </MobileFilterPanel>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {loading ? (
         <SectionLoader label="Wczytywanie zakładów..." className="flex-1" />
       ) : (
         <div
-          key={`${sort}:${selectedCategory ?? "all"}`}
+          key={`${sort}:${selectedCategory ?? "all"}:${activeOnly ? "active" : "all-states"}`}
           onScroll={handleListScroll}
           className="overflow-y-auto pb-3 min-h-0"
         >

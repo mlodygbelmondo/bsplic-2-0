@@ -14,12 +14,13 @@ export async function fetchActiveBets(
   sort: SortMode = "newest",
   limit = ACTIVE_BETS_PAGE_SIZE,
   offset = 0,
+  includeInProgress = false,
 ) {
-  let query = supabase
-    .from("bets")
-    .select("*")
-    .eq("is_active", true)
-    .gt("ends_at", new Date().toISOString());
+  let query = supabase.from("bets").select("*").eq("is_active", true);
+
+  if (!includeInProgress) {
+    query = query.gt("ends_at", new Date().toISOString());
+  }
 
   if (selectedCategory) {
     query = query.eq("category_id", selectedCategory);

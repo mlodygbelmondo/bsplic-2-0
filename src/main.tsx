@@ -1,14 +1,17 @@
-import { createRoot } from 'react-dom/client';
-import { bindServiceWorkerUpdateChecks } from '@/lib/pwa-registration';
-import { showPwaUpdateToast } from '@/lib/pwa-update';
-import App from './App.tsx';
-import './index.css';
+import { createRoot } from "react-dom/client";
+import { bindMaintenanceModeChecks } from "@/lib/maintenance-mode";
+import { bindServiceWorkerUpdateChecks } from "@/lib/pwa-registration";
+import { showPwaUpdateToast } from "@/lib/pwa-update";
+import App from "./App.tsx";
+import "./index.css";
 
-createRoot(document.getElementById('root')!).render(<App />);
+bindMaintenanceModeChecks();
+
+createRoot(document.getElementById("root")!).render(<App />);
 
 const registerServiceWorker = () => {
   const register = () => {
-    void import('virtual:pwa-register').then(({ registerSW }) => {
+    void import("virtual:pwa-register").then(({ registerSW }) => {
       const updateSW = registerSW({
         immediate: true,
         onNeedRefresh() {
@@ -23,7 +26,7 @@ const registerServiceWorker = () => {
     });
   };
 
-  if ('requestIdleCallback' in window) {
+  if ("requestIdleCallback" in window) {
     window.requestIdleCallback(register, { timeout: 3000 });
     return;
   }

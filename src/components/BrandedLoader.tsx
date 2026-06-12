@@ -1,15 +1,15 @@
+// Mirrors the inline PWA splash from index.html (same splash-* classes) so
+// the handoff from the static splash to this loader is seamless.
 export function BrandedLoader() {
   return (
-    <div className="min-safe-screen gradient-primary flex flex-col items-center justify-center gap-5">
-      <div className="brand-logo-pill rounded-lg px-4 py-2.5 text-2xl font-black italic tracking-tight text-white leading-none animate-pulse">
-        BSPLIC 2.0
-      </div>
-      <div
-        className="h-1 w-36 overflow-hidden rounded-full bg-white/20"
-        role="status"
-        aria-label="Ładowanie"
-      >
-        <div className="loader-bar-slide h-full w-1/3 rounded-full bg-white/80" />
+    <div className="min-safe-screen relative flex flex-col items-center justify-center overflow-hidden bg-[#0f0e16]">
+      <div className="splash-aurora splash-aurora-red" aria-hidden="true" />
+      <div className="splash-aurora splash-aurora-gold" aria-hidden="true" />
+      <div className="splash-center" role="status" aria-label="Ładowanie">
+        <div className="splash-wordmark">BSPLIC&nbsp;2.0</div>
+        <div className="splash-track">
+          <div className="splash-bar" />
+        </div>
       </div>
     </div>
   );
