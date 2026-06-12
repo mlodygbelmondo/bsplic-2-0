@@ -26,18 +26,17 @@ describe("BetList tabs", () => {
       name: /Najnowsze|Popularne|Kończące się/i,
     });
 
-    expect(tabButtons.map((button) => button.textContent)).toEqual([
-      "Najnowsze",
-      "Popularne",
-      "Kończące się",
-    ]);
+    // Sort options render both in the desktop tab row and in the mobile
+    // dropdown, so labels appear more than once.
+    const labels = new Set(tabButtons.map((button) => button.textContent));
+    expect(labels).toEqual(new Set(["Najnowsze", "Popularne", "Kończące się"]));
 
     expect(useBetsMock).toHaveBeenCalledWith(null, "newest");
 
-    fireEvent.click(screen.getByRole("button", { name: "Popularne" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Popularne" })[0]);
     expect(useBetsMock).toHaveBeenLastCalledWith(null, "popular");
 
-    fireEvent.click(screen.getByRole("button", { name: "Kończące się" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Kończące się" })[0]);
     expect(useBetsMock).toHaveBeenLastCalledWith(null, "ending_soon");
   });
 

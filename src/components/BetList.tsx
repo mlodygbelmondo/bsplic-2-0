@@ -70,7 +70,7 @@ function MobileFilterPanel({
   return (
     <div
       className={cn(
-        "absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex flex-col gap-1.5 transition-opacity duration-150",
+        "absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex max-h-[55dvh] flex-col gap-1.5 overflow-y-auto overscroll-contain bg-transparent transition-opacity duration-150 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         open
           ? "pointer-events-auto opacity-100"
           : "pointer-events-none opacity-0",
@@ -169,9 +169,22 @@ export function BetList({
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
+      {/* Backdrop closing the mobile dropdowns. Lives outside the filter bar
+          because the bar is transformed, which would re-anchor fixed
+          positioning to the bar instead of the viewport. */}
+      {mobilePanel !== null && (
+        <div
+          className="fixed inset-0 z-20 lg:hidden"
+          aria-hidden="true"
+          onClick={() => setMobilePanel(null)}
+        />
+      )}
       <div
         className={cn(
-          "grid shrink-0 transition-all duration-300 ease-out",
+          // Explicit z-index keeps the floating mobile dropdowns above the
+          // bet cards, which create their own stacking contexts via the
+          // bet-card-enter animation.
+          "relative z-30 grid shrink-0 transition-all duration-300 ease-out",
           actionsHidden
             ? "grid-rows-[0fr] opacity-0 -translate-y-2 pointer-events-none"
             : "grid-rows-[1fr] opacity-100 translate-y-0",
@@ -241,13 +254,6 @@ export function BetList({
 
           {/* Mobile: one bar split into two dropdown triggers — bet types on
               the left, categories on the right. */}
-          {mobilePanel !== null && (
-            <div
-              className="fixed inset-0 z-20 lg:hidden"
-              aria-hidden="true"
-              onClick={() => setMobilePanel(null)}
-            />
-          )}
           <div className="lg:hidden flex items-start gap-2 pb-2.5">
             {/* Left column: bet view type + Aktywne, options stack under
                 the trigger. */}

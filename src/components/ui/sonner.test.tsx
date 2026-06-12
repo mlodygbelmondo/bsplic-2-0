@@ -16,7 +16,12 @@ describe('Toaster', () => {
 
     const props = sonnerToasterMock.mock.calls[0][0];
     expect(props.position).toBe('top-center');
-    expect(props.mobileOffset).toBe(16);
+    expect(props.mobileOffset).toEqual({
+      top: 'calc(1rem + env(safe-area-inset-top, 0px))',
+      right: 16,
+      bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+      left: 16,
+    });
     expect(props.offset).toEqual({
       top: 'calc(4.75rem + env(safe-area-inset-top, 0px))',
       right: 16,

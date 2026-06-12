@@ -9,6 +9,15 @@ const TOASTER_OFFSET = {
   left: 16,
 } satisfies NonNullable<ToasterProps["offset"]>;
 
+// In standalone PWA mode the browser chrome is gone, so the toast must clear
+// the status bar / notch itself via the safe-area inset.
+const TOASTER_MOBILE_OFFSET = {
+  top: "calc(1rem + env(safe-area-inset-top, 0px))",
+  right: 16,
+  bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))",
+  left: 16,
+} satisfies NonNullable<ToasterProps["mobileOffset"]>;
+
 const DEFAULT_TOAST_OPTIONS = {
   duration: 2200,
   classNames: {
@@ -24,7 +33,7 @@ const DEFAULT_TOAST_OPTIONS = {
 
 const Toaster = ({
   position = "top-center",
-  mobileOffset = 16,
+  mobileOffset = TOASTER_MOBILE_OFFSET,
   offset = TOASTER_OFFSET,
   toastOptions,
   className,
