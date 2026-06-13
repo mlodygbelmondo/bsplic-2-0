@@ -142,6 +142,14 @@ export default function SocialPage() {
     if (feedFilter === 'all') return feedItems;
     return feedItems.filter((item) => item.item_type === feedFilter);
   }, [feedItems, feedFilter]);
+  const isFilteredEmpty =
+    feedFilter !== 'all' && feedItems.length > 0 && filteredFeedItems.length === 0;
+  const filteredEmptyTitle =
+    feedFilter === 'coupon'
+      ? 'Brak kuponów w tej chwili'
+      : feedFilter === 'post'
+        ? 'Brak postów w tej chwili'
+        : 'Brak aktywności kasyna w tej chwili';
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
@@ -698,10 +706,23 @@ export default function SocialPage() {
             <div className="space-y-3">
               {filteredFeedItems.length === 0 && !hasMore ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <p className="text-lg font-medium">Brak aktywności</p>
-                  <p className="text-sm mt-1">
-                    Nikt jeszcze nic nie opublikował.
+                  <p className="text-lg font-medium">
+                    {isFilteredEmpty ? filteredEmptyTitle : 'Brak aktywności'}
                   </p>
+                  <p className="text-sm mt-1">
+                    {isFilteredEmpty
+                      ? 'Zmień filtr, aby zobaczyć pozostałe wpisy.'
+                      : 'Nikt jeszcze nic nie opublikował.'}
+                  </p>
+                  {isFilteredEmpty && (
+                    <button
+                      type="button"
+                      onClick={() => setFeedFilter('all')}
+                      className="mt-4 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                    >
+                      Pokaż wszystko
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredFeedItems.map((item) => (
