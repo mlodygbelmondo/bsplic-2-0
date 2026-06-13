@@ -129,6 +129,16 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
     event.currentTarget.select();
   };
 
+  const doubleStake = () => {
+    const currentStake = Number(stake);
+    if (!Number.isFinite(currentStake) || currentStake <= 0) {
+      setStake('10');
+      return;
+    }
+
+    setStake((currentStake * 2).toFixed(2).replace(/\.00$/, ''));
+  };
+
   const eventsLabel = useMemo(() => {
     if (items.length === 1) {
       return 'zdarzenie';
@@ -295,7 +305,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
               className="text-center font-bold text-base md:text-[13px] h-9 bg-muted border-border"
               placeholder="Stawka (zł)"
             />
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-6 gap-1.5">
               {stakePresets.map((preset) => (
                 <button
                   key={preset}
@@ -310,6 +320,14 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
                   {preset} zł
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={doubleStake}
+                aria-label="Podwój stawkę"
+                className="w-full text-[11px] font-semibold px-2 h-8 rounded-md bg-card text-foreground transition-all duration-200 hover:bg-muted"
+              >
+                2x
+              </button>
               <button
                 onClick={() => setStake(maxStake)}
                 disabled={balance <= 0}
