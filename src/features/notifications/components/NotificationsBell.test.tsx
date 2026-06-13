@@ -82,7 +82,7 @@ describe('NotificationsBell', () => {
 
     await waitFor(() => expect(mocks.channel).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Powiadomienia/ }));
     expect(
       await screen.findByLabelText('Wycisz dźwięk powiadomień'),
     ).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('NotificationsBell', () => {
 
     await waitFor(() => expect(mocks.channel).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Powiadomienia/ }));
 
     expect(mocks.prepareNotificationSound).toHaveBeenCalledTimes(1);
   });
@@ -140,6 +140,22 @@ describe('NotificationsBell', () => {
     expect(await screen.findByText('2')).toBeInTheDocument();
     expect(mocks.fetchUnreadNotificationsCount).toHaveBeenCalledTimes(1);
     expect(mocks.fetchUserNotifications).not.toHaveBeenCalled();
+  });
+
+  it('announces the unread count on the bell button', async () => {
+    mocks.fetchUnreadNotificationsCount.mockResolvedValue(3);
+
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Powiadomienia, 3 nieprzeczytane',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('decrements the unread badge from realtime read updates without refetching the count', async () => {
@@ -201,7 +217,7 @@ describe('NotificationsBell', () => {
 
     await screen.findByText('2');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Powiadomienia' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Powiadomienia/ }));
     fireEvent.click(await screen.findByText('Wzmianka'));
 
     expect(await screen.findByText('1')).toBeInTheDocument();
