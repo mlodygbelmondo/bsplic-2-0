@@ -14,6 +14,9 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
   const navigate = useNavigate();
+  const hasConfirmation = confirmPassword.length > 0;
+  const passwordsMatch = password === confirmPassword;
+  const canSubmit = !loading && password.length >= 6 && passwordsMatch;
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -91,8 +94,9 @@ export default function ResetPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2 flex items-center">
               <div className="flex-1">
-                <label className="block text-xs text-muted-foreground mb-0.5">Nowe hasło</label>
+                <label htmlFor="new-password" className="block text-xs text-muted-foreground mb-0.5">Nowe hasło</label>
                 <input
+                  id="new-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -106,14 +110,16 @@ export default function ResetPasswordPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="text-muted-foreground ml-2"
+                aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
 
             <div className="bg-muted rounded-xl px-4 pt-2.5 pb-2">
-              <label className="block text-xs text-muted-foreground mb-0.5">Potwierdź hasło</label>
+              <label htmlFor="confirm-password" className="block text-xs text-muted-foreground mb-0.5">Potwierdź hasło</label>
               <input
+                id="confirm-password"
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -123,10 +129,19 @@ export default function ResetPasswordPage() {
                 minLength={6}
               />
             </div>
+            {hasConfirmation && (
+              <p
+                className={`text-xs font-semibold ${
+                  passwordsMatch ? "text-success" : "text-destructive"
+                }`}
+              >
+                {passwordsMatch ? "Hasła są zgodne" : "Hasła nie są takie same"}
+              </p>
+            )}
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={!canSubmit}
               className="w-full h-11 rounded-xl text-base font-bold gradient-primary text-primary-foreground shadow-lg hover:brightness-110 transition"
             >
               {loading ? "Zapisywanie..." : "Zmień hasło"}
