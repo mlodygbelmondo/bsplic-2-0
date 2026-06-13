@@ -178,6 +178,9 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
                     ? "Doładuj portfel"
                     : "Już doładowano dzisiaj. Wróć jutro!"
                 }
+                aria-label={`Portfel: ${Number(profile.balance).toFixed(2)} zł. ${
+                  canTopup() ? "Doładuj portfel" : "Doładowanie dostępne jutro"
+                }`}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
                   <Plus className="h-4 w-4" strokeWidth={3} />
@@ -252,6 +255,9 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
                     ? "Doładuj portfel"
                     : "Już doładowano dzisiaj. Wróć jutro!"
                 }
+                aria-label={`Portfel: ${Number(profile.balance).toFixed(2)} zł. ${
+                  canTopup() ? "Doładuj portfel" : "Doładowanie dostępne jutro"
+                }`}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
                   <Plus className="h-3.5 w-3.5" strokeWidth={3} />

@@ -172,6 +172,16 @@ describe("Navbar", () => {
     expect(screen.getByText("500.00 zł")).toBeInTheDocument();
   });
 
+  it("labels the wallet button with balance and top-up availability", () => {
+    renderNavbar();
+
+    expect(
+      screen.getByRole("button", {
+        name: "Portfel: 500.00 zł. Doładuj portfel",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("renders notifications bell and passes current user id", async () => {
     renderNavbar();
     expect(
