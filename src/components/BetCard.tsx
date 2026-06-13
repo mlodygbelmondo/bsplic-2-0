@@ -208,11 +208,17 @@ export const BetCard = memo(function BetCard({ bet, category }: BetCardProps) {
             const isLocked = isExpired || !bet.is_active;
             const isCenteredLastMultiOption =
               shouldCenterLastMultiOption && index === options.length - 1;
+            const optionLabel = isLocked
+              ? `${bet.title}: ${opt.name} zablokowane, kurs ${opt.odds.toFixed(2)}`
+              : isSelected
+                ? `${bet.title}: ${opt.name} wybrane, kurs ${opt.odds.toFixed(2)}`
+                : `${bet.title}: wybierz ${opt.name}, kurs ${opt.odds.toFixed(2)}`;
             return (
               <button
                 key={opt.name}
                 onClick={() => handleSelect(opt)}
                 disabled={isLocked}
+                aria-label={optionLabel}
                 className={cn(
                   'odds-chip flex flex-col items-center py-2.5 px-2 rounded-xl text-[12px] font-semibold transition-all relative',
                   isCenteredLastMultiOption &&
