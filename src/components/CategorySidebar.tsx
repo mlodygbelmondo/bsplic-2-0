@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Category } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { SectionLoader } from '@/components/SectionLoader';
 
 interface CategorySidebarProps {
@@ -41,6 +41,16 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
               placeholder="Szukaj kategorii..."
               className="bg-transparent outline-none w-full text-[13px] text-foreground placeholder:text-muted-foreground"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Wyczyść wyszukiwanie kategorii"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
