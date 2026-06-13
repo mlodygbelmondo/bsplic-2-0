@@ -98,4 +98,32 @@ describe("RankingsPage", () => {
     expect(await screen.findByText("CasinoKing")).toBeInTheDocument();
     expect(screen.queryByText("Tester")).not.toBeInTheDocument();
   });
+
+  it("shows a retry action when rankings fail to load", async () => {
+    rpcMock.mockRejectedValueOnce(new Error("network down")).mockResolvedValueOnce({
+      data: [
+        {
+          id: "user-1",
+          username: "Tester",
+          total_profit: 30,
+          win_rate: 50,
+          total_bets: 2,
+          won_bets: 1,
+          lost_bets: 1,
+          balance: 130,
+        },
+      ],
+    });
+
+    renderWithProviders(<RankingsPage />);
+
+    expect(
+      await screen.findByText("Nie udało się wczytać rankingu"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Spróbuj ponownie" }));
+
+    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+  });
 });

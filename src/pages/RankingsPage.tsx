@@ -44,6 +44,8 @@ export default function RankingsPage() {
     data: rankings = [],
     error,
     isLoading: loading,
+    isFetching,
+    refetch,
   } = useQuery({
     queryKey: ["rankings", rankingType],
     queryFn: async () => {
@@ -161,6 +163,23 @@ export default function RankingsPage() {
 
           {loading ? (
             <SectionLoader label="Wczytywanie rankingu..." />
+          ) : error ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm font-semibold text-foreground">
+                Nie udało się wczytać rankingu
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sprawdź połączenie i spróbuj ponownie.
+              </p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className="mt-4 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+              >
+                {isFetching ? "Ładowanie..." : "Spróbuj ponownie"}
+              </button>
+            </div>
           ) : (
             <>
               {sorted.map((r, i) => {
