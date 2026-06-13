@@ -61,9 +61,17 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
   };
 
   const canTopup = () => canClaimTopup(profile?.last_topup_at);
+  const topupAvailable = profile ? canTopup() : false;
+  const formattedBalance = Number(profile?.balance ?? 0).toFixed(2);
+  const walletButtonTitle = topupAvailable
+    ? "Doładuj portfel"
+    : "Już doładowano dzisiaj. Wróć jutro!";
+  const walletButtonLabel = `Portfel: ${formattedBalance} zł. ${
+    topupAvailable ? "Doładuj portfel" : "Doładowanie dostępne jutro"
+  }`;
 
   const openTopupDialog = () => {
-    if (!canTopup()) {
+    if (!topupAvailable) {
       toast.error("Już doładowano dzisiaj. Wróć jutro!");
       return;
     }
@@ -173,19 +181,13 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
               <button
                 onClick={openTopupDialog}
                 className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full py-0 pl-1 pr-3 text-[13px] font-bold leading-none text-primary-foreground transition-colors"
-                title={
-                  canTopup()
-                    ? "Doładuj portfel"
-                    : "Już doładowano dzisiaj. Wróć jutro!"
-                }
-                aria-label={`Portfel: ${Number(profile.balance).toFixed(2)} zł. ${
-                  canTopup() ? "Doładuj portfel" : "Doładowanie dostępne jutro"
-                }`}
+                title={walletButtonTitle}
+                aria-label={walletButtonLabel}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
                   <Plus className="h-4 w-4" strokeWidth={3} />
                 </span>
-                {Number(profile.balance).toFixed(2)} zł
+                {formattedBalance} zł
               </button>
             )}
             {isDesktopNav && (
@@ -250,19 +252,13 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
               <button
                 onClick={openTopupDialog}
                 className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full py-0 pl-1 pr-2.5 text-[12px] font-bold leading-none text-primary-foreground transition-colors"
-                title={
-                  canTopup()
-                    ? "Doładuj portfel"
-                    : "Już doładowano dzisiaj. Wróć jutro!"
-                }
-                aria-label={`Portfel: ${Number(profile.balance).toFixed(2)} zł. ${
-                  canTopup() ? "Doładuj portfel" : "Doładowanie dostępne jutro"
-                }`}
+                title={walletButtonTitle}
+                aria-label={walletButtonLabel}
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-primary">
                   <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                 </span>
-                {Number(profile.balance).toFixed(2)} zł
+                {formattedBalance} zł
               </button>
             )}
             {!isDesktopNav && (
