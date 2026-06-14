@@ -68,7 +68,7 @@ export function StakeDrawer({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 96, opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 520 }}
-              className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-5xl px-4"
+              className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-3xl px-4"
             >
               <div className="flex justify-center">
                 <button
@@ -91,7 +91,7 @@ export function StakeDrawer({
                       type="button"
                       onClick={() => onStakeChange(String(preset))}
                       className={cn(
-                        'flex h-10 w-20 items-center justify-center rounded-lg border text-sm font-medium tabular-nums transition-all xl:w-24',
+                        'flex h-10 w-16 items-center justify-center rounded-lg border text-sm font-medium tabular-nums transition-all',
                         parsedStake === preset
                           ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
                           : 'border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20',

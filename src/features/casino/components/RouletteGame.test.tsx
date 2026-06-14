@@ -550,8 +550,7 @@ describe('RouletteGame', () => {
     for (const preset of ['10', '25', '50', '100']) {
       expect(presetGroup.getByRole('button', { name: preset })).toHaveClass(
         'h-10',
-        'w-20',
-        'xl:w-24',
+        'w-16',
         'tabular-nums',
       );
     }
