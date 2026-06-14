@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RouletteGame } from './RouletteGame';
@@ -530,6 +536,25 @@ describe('RouletteGame', () => {
       'grid-cols-5',
       'sm:grid-cols-6',
     );
+  });
+
+  it('keeps desktop stake presets on equal fixed widths', () => {
+    useRouletteTableMock.mockReturnValue(baseTableMock);
+
+    render(
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
+    );
+
+    const presetGroup = within(screen.getByTestId('desktop-stake-presets'));
+
+    for (const preset of ['10', '25', '50', '100']) {
+      expect(presetGroup.getByRole('button', { name: preset })).toHaveClass(
+        'h-10',
+        'w-20',
+        'xl:w-24',
+        'tabular-nums',
+      );
+    }
   });
 
   it('supports halving and doubling the stake from the floating bar', () => {
