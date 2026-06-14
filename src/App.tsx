@@ -41,6 +41,11 @@ const BonusCampaignSurface = lazy(() =>
     (module) => ({ default: module.BonusCampaignSurface }),
   ),
 );
+const FeaturePollSurface = lazy(() =>
+  import("@/features/feature-polls/components/feature-poll-surface").then(
+    (module) => ({ default: module.FeaturePollSurface }),
+  ),
+);
 
 // Warm the lazy route chunks during idle time so in-app navigation
 // doesn't flash the full-screen loader on every page change.
@@ -150,6 +155,20 @@ function AuthenticatedBonusCampaignSurface() {
   );
 }
 
+function AuthenticatedFeaturePollSurface() {
+  const { user, profile, loading } = useAuth();
+
+  if (loading || !user || !profile) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <FeaturePollSurface />
+    </Suspense>
+  );
+}
+
 function AuthenticatedRoute({ children }: { children: ReactNode }) {
   const { user, profile, loading } = useAuth();
 
@@ -174,6 +193,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AuthenticatedBonusCampaignSurface />
+          <AuthenticatedFeaturePollSurface />
           <CouponProvider>
             <Suspense fallback={<AppLoadingFallback />}>
               <Routes>

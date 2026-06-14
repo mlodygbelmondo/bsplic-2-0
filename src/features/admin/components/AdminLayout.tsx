@@ -12,6 +12,8 @@ import {
   Tag,
   Bot,
   BadgePlus,
+  MoreHorizontal,
+  Vote,
 } from 'lucide-react';
 
 const DashboardTab = lazy(() => import('./DashboardTab'));
@@ -21,6 +23,7 @@ const ProposalsTab = lazy(() => import('./ProposalsTab'));
 const CategoriesTab = lazy(() => import('./CategoriesTab'));
 const EniuBotTab = lazy(() => import('./EniuBotTab'));
 const BonusCampaignsTab = lazy(() => import('./BonusCampaignsTab'));
+const FeaturePollsTab = lazy(() => import('./FeaturePollsTab'));
 
 interface TabConfig {
   key: AdminTab;
@@ -57,7 +60,35 @@ const TABS: TabConfig[] = [
   { key: 'categories', label: 'Kategorie', shortLabel: 'Kat.', icon: Tag },
   { key: 'eniu', label: 'Eniu', shortLabel: 'Eniu', icon: Bot },
   { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonus', icon: BadgePlus },
+  {
+    key: 'feature-polls',
+    label: 'Głosowania',
+    shortLabel: 'Głosy',
+    icon: Vote,
+  },
 ];
+
+const MOBILE_PRIMARY_TAB_KEYS: AdminTab[] = [
+  'manage',
+  'proposals',
+  'create',
+  'bonuses',
+  'more',
+];
+
+const MOBILE_MORE_TAB_KEYS: AdminTab[] = [
+  'dashboard',
+  'categories',
+  'eniu',
+  'feature-polls',
+];
+
+const MORE_TAB_CONFIG: TabConfig = {
+  key: 'more',
+  label: 'Więcej',
+  shortLabel: 'Więcej',
+  icon: MoreHorizontal,
+};
 
 function AdminTabFallback() {
   return (
@@ -96,22 +127,23 @@ export default function AdminLayout() {
     (availableTab) => availableTab.key === tab,
   )
     ? tab
+    : isAdmin && tab === 'more'
+      ? tab
     : defaultTab;
-  const activeTabLabel = availableTabs.find((t) => t.key === activeTab)?.label;
-  const createMobileTab = availableTabs.find(
-    (availableTab) => availableTab.key === 'create',
-  );
-  const nonCreateMobileTabs = availableTabs.filter(
-    (availableTab) => availableTab.key !== 'create',
-  );
-  const mobileSplitIndex = Math.ceil(nonCreateMobileTabs.length / 2);
-  const mobileTabs = createMobileTab
-    ? [
-        ...nonCreateMobileTabs.slice(0, mobileSplitIndex),
-        createMobileTab,
-        ...nonCreateMobileTabs.slice(mobileSplitIndex),
-      ]
+  const activeTabLabel =
+    activeTab === 'more'
+      ? MORE_TAB_CONFIG.label
+      : availableTabs.find((t) => t.key === activeTab)?.label;
+  const mobileTabs = isAdmin
+    ? MOBILE_PRIMARY_TAB_KEYS.map((key) =>
+        key === 'more'
+          ? MORE_TAB_CONFIG
+          : availableTabs.find((availableTab) => availableTab.key === key),
+      ).filter(Boolean) as TabConfig[]
     : availableTabs;
+  const mobileMoreTabs = MOBILE_MORE_TAB_KEYS.map((key) =>
+    availableTabs.find((availableTab) => availableTab.key === key),
+  ).filter(Boolean) as TabConfig[];
 
   return (
     <div className="h-safe-screen overflow-hidden bg-muted/30 flex flex-col">
@@ -176,6 +208,29 @@ export default function AdminLayout() {
                 {activeTab === 'categories' && <CategoriesTab />}
                 {activeTab === 'eniu' && <EniuBotTab />}
                 {activeTab === 'bonuses' && <BonusCampaignsTab />}
+                {activeTab === 'feature-polls' && <FeaturePollsTab />}
+                {activeTab === 'more' && (
+                  <div className="space-y-3">
+                    <h2 className="text-base font-semibold">
+                      Pozostałe sekcje
+                    </h2>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {mobileMoreTabs.map(({ key, label, icon: Icon }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setTab(key)}
+                          className="flex items-center gap-3 rounded-xl bg-card p-4 text-left card-shadow transition-colors hover:bg-muted"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <span className="font-semibold">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </Suspense>
             </div>
           </div>
@@ -195,7 +250,11 @@ export default function AdminLayout() {
         >
           {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
             const isCenter = key === 'create';
-            const isActive = activeTab === key;
+            const isMoreActive =
+              key === 'more' &&
+              (activeTab === 'more' ||
+                MOBILE_MORE_TAB_KEYS.includes(activeTab));
+            const isActive = activeTab === key || isMoreActive;
 
             if (isCenter) {
               return (

@@ -219,6 +219,156 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_poll_options: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          poll_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          poll_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          poll_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "feature_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_poll_votes: {
+        Row: {
+          id: string
+          option_id: string | null
+          other_text: string | null
+          poll_id: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          option_id?: string | null
+          other_text?: string | null
+          poll_id: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          option_id?: string | null
+          other_text?: string | null
+          poll_id?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "feature_poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "feature_polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_poll_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_polls: {
+        Row: {
+          allow_other: boolean
+          created_at: string
+          created_by: string | null
+          description: string
+          description_enabled: boolean
+          expires_at: string
+          id: string
+          is_active: boolean
+          question: string
+          question_enabled: boolean
+          starts_at: string | null
+          title: string
+          title_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allow_other?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          description_enabled?: boolean
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          question: string
+          question_enabled?: boolean
+          starts_at?: string | null
+          title?: string
+          title_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allow_other?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          description_enabled?: boolean
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          question?: string
+          question_enabled?: boolean
+          starts_at?: string | null
+          title?: string
+          title_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_polls_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -1046,6 +1196,54 @@ export type Database = {
           id: string
           starts_at: string
           title: string
+        }[]
+      }
+      admin_get_feature_polls: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allow_other: boolean
+          created_at: string
+          description: string
+          description_enabled: boolean
+          expires_at: string
+          id: string
+          is_active: boolean
+          options: Json
+          other_responses: Json
+          question: string
+          question_enabled: boolean
+          starts_at: string | null
+          title: string
+          title_enabled: boolean
+          total_votes: number
+          updated_at: string
+        }[]
+      }
+      get_available_feature_poll: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allow_other: boolean
+          description: string
+          description_enabled: boolean
+          expires_at: string
+          id: string
+          options: Json
+          question: string
+          question_enabled: boolean
+          starts_at: string | null
+          title: string
+          title_enabled: boolean
+        }[]
+      }
+      submit_feature_poll_vote: {
+        Args: {
+          p_option_id?: string | null
+          p_other_text?: string | null
+          p_poll_id: string
+        }
+        Returns: {
+          poll_id: string
+          submitted_at: string
         }[]
       }
       secure_daily_topup: {

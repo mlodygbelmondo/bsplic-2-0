@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,6 +48,10 @@ vi.mock('./BonusCampaignsTab', () => ({
   default: () => <div data-testid="bonuses-tab" />,
 }));
 
+vi.mock('./FeaturePollsTab', () => ({
+  default: () => <div data-testid="feature-polls-tab" />,
+}));
+
 function renderAdminLayout() {
   return render(
     <MemoryRouter initialEntries={['/admin']}>
@@ -92,7 +96,7 @@ describe('AdminLayout', () => {
     expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument();
   });
 
-  it('lays out the mobile admin navigation as 3-1-3 with a floating create tab', () => {
+  it('lays out the mobile admin navigation as a five-slot bar with More', () => {
     mockIsAdmin = true;
 
     renderAdminLayout();
@@ -103,21 +107,38 @@ describe('AdminLayout', () => {
     const tabGrid = mobileNav.firstElementChild;
 
     expect(tabGrid).toHaveStyle({
-      gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
     });
 
     const navButtons = within(mobileNav).getAllByRole('button');
     expect(
       navButtons.map((button) => button.getAttribute('aria-label')),
     ).toEqual([
-      'Dashboard',
       'Zarządzaj',
       'Propozycje',
       'Utwórz zakład',
-      'Kategorie',
-      'Eniu',
       'Bonusy',
+      'Więcej',
     ]);
-    expect(navButtons[3]).toHaveClass('-top-4');
+    expect(navButtons[2]).toHaveClass('-top-4');
+  });
+
+  it('renders lower-frequency admin sections inside the mobile More area', async () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+    fireEvent.click(
+      within(mobileNav).getByRole('button', { name: 'Więcej' }),
+    );
+
+    expect(screen.getByText('Pozostałe sekcje')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Dashboard' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Kategorie' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Eniu' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Głosowania' }).length).toBeGreaterThan(0);
   });
 });
