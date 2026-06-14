@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { CouponProvider } from '@/contexts/CouponContext';
 import { Bet } from '@/types/database';
@@ -95,5 +95,26 @@ describe('BetCard', () => {
     );
 
     expect(screen.queryByText('W trakcie')).not.toBeInTheDocument();
+  });
+
+  it('uses descriptive labels for odds buttons', () => {
+    const bet = createBet({});
+
+    render(
+      <CouponProvider>
+        <BetCard bet={bet} />
+      </CouponProvider>,
+    );
+
+    const optionButton = screen.getByRole('button', {
+      name: 'Legia vs Lech: wybierz Legia, kurs 2.10',
+    });
+    fireEvent.click(optionButton);
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Legia vs Lech: Legia wybrane, kurs 2.10',
+      }),
+    ).toBeInTheDocument();
   });
 });
