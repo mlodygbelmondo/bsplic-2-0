@@ -58,6 +58,9 @@ export function NotificationsBell({
     if (unreadCount > 99) return "99+";
     return String(unreadCount);
   }, [unreadCount]);
+  const bellLabel = unreadBadge
+    ? `Powiadomienia, ${unreadBadge} nieprzeczytane`
+    : "Powiadomienia";
 
   useEffect(() => {
     openRef.current = open;
@@ -243,7 +246,7 @@ export function NotificationsBell({
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label="Powiadomienia"
+          aria-label={bellLabel}
           onClick={handleBellClick}
           className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full p-0 transition-colors ${
             hasUnread
