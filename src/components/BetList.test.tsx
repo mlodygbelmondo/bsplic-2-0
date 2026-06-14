@@ -54,4 +54,52 @@ describe("BetList tabs", () => {
       screen.getByRole("button", { name: /zaproponuj zakład/i }),
     ).toHaveClass("hidden", "lg:inline-flex");
   });
+
+  it("hides the mobile filter toolbar with transform instead of collapsing layout height", () => {
+    render(
+      <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
+    );
+
+    const scrollContainer = screen.getByTestId("bet-list-scroll-container");
+    Object.defineProperties(scrollContainer, {
+      scrollTop: { configurable: true, value: 90 },
+      scrollHeight: { configurable: true, value: 1800 },
+      clientHeight: { configurable: true, value: 700 },
+    });
+
+    fireEvent.scroll(scrollContainer);
+
+    expect(screen.getByTestId("bet-list-mobile-toolbar")).toHaveClass(
+      "-translate-y-full",
+      "opacity-0",
+    );
+    expect(screen.getByTestId("bet-list-mobile-toolbar")).not.toHaveClass(
+      "grid-rows-[0fr]",
+    );
+  });
+
+  it("hides the desktop action toolbar with transform on downward scroll", () => {
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={[]}
+        categoryMap={{}}
+        onProposeClick={vi.fn()}
+      />,
+    );
+
+    const scrollContainer = screen.getByTestId("bet-list-scroll-container");
+    Object.defineProperties(scrollContainer, {
+      scrollTop: { configurable: true, value: 90 },
+      scrollHeight: { configurable: true, value: 1800 },
+      clientHeight: { configurable: true, value: 700 },
+    });
+
+    fireEvent.scroll(scrollContainer);
+
+    expect(screen.getByTestId("bet-list-desktop-toolbar")).toHaveClass(
+      "-translate-y-full",
+      "opacity-0",
+    );
+  });
 });

@@ -61,4 +61,13 @@ describe('CouponDrawer', () => {
 
     expect(screen.getByPlaceholderText('Stawka (zł)')).toHaveValue(20);
   });
+
+  it('positions the mobile trigger from the shared floating CTA stack offset', () => {
+    render(<CouponDrawer categoryMap={{}} />);
+
+    expect(screen.getByRole('button', { name: 'Otwórz kupon' })).toHaveClass(
+      'bottom-[calc(1rem+var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))]',
+      'transition-[bottom,background-color,color,border-color,box-shadow,transform]',
+    );
+  });
 });

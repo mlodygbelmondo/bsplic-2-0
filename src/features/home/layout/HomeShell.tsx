@@ -10,6 +10,7 @@ interface HomeShellProps {
   categories: Category[];
   categoryMap: Record<string, Category>;
   categoriesLoading: boolean;
+  onMobileChromeHiddenChange?: (hidden: boolean) => void;
 }
 
 export function HomeShell({
@@ -19,10 +20,11 @@ export function HomeShell({
   categories,
   categoryMap,
   categoriesLoading,
+  onMobileChromeHiddenChange,
 }: HomeShellProps) {
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
-      <div className="h-full max-w-[1600px] mx-auto px-3 py-3 flex flex-col gap-3">
+      <div className="h-full max-w-[1600px] mx-auto px-3 pb-0 pt-0 lg:py-3 flex flex-col gap-3">
         {/* All three columns start at the same y; the bet list's scroll
             edge lines up with the sidebar/coupon card tops. */}
         <div className="flex-1 min-h-0 flex lg:gap-3">
@@ -40,6 +42,7 @@ export function HomeShell({
               categories={categories}
               categoryMap={categoryMap}
               onProposeClick={onOpenProposeModal}
+              onScrollChromeHiddenChange={onMobileChromeHiddenChange}
             />
           </main>
 

@@ -370,7 +370,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
         <button
           onClick={() => setOpen(true)}
           className={cn(
-            'coupon-mobile-trigger press-scale lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-colors',
+            'coupon-mobile-trigger press-scale lg:hidden fixed bottom-[calc(1rem+var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-[bottom,background-color,color,border-color,box-shadow,transform] duration-200 ease-out',
             hasItems
               ? 'gradient-primary text-primary-foreground shadow-[0_8px_28px_hsl(355_100%_45%/0.45)]'
               : 'bg-card text-foreground border border-border',

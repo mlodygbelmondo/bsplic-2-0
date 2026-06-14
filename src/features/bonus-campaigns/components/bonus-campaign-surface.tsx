@@ -154,9 +154,9 @@ export function BonusCampaignSurface() {
               setModalOpen(true);
             }}
             className={cn(
-              'fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[70] md:bottom-6 md:right-6',
+              'fixed bottom-[calc(1rem+var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))] right-4 z-[70] md:bottom-6 md:right-6',
               'flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-lg',
-              'hover:brightness-110 transition',
+              'hover:brightness-110 transition-[bottom,filter] duration-200 ease-out',
             )}
             aria-label="Odbierz bonus"
           >

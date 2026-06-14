@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { canClaimTopup } from "@/features/social/polishDay";
 import { useTheme } from "@/contexts/ThemeContext";
+import { AppMobileBottomNav } from "@/components/AppMobileBottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -34,9 +35,13 @@ const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
 
 interface NavbarProps {
   onOpenProposeModal?: () => void;
+  mobileBottomNavHidden?: boolean;
 }
 
-export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
+export function Navbar({
+  onOpenProposeModal,
+  mobileBottomNavHidden = false,
+}: NavbarProps = {}) {
   const { user, profile, isAdmin, isModerator, signOut, refreshProfile } =
     useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -69,6 +74,21 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
   const walletButtonLabel = `Portfel: ${formattedBalance} zł. ${
     topupAvailable ? "Doładuj portfel" : "Doładowanie dostępne jutro"
   }`;
+  const showMobileBottomNav =
+    Boolean(profile) && !location.pathname.startsWith("/admin");
+  const mobileFloatingStackLowered =
+    !showMobileBottomNav || mobileBottomNavHidden;
+
+  useEffect(() => {
+    document.body.classList.toggle(
+      "mobile-bottom-nav-hidden",
+      mobileFloatingStackLowered,
+    );
+
+    return () => {
+      document.body.classList.remove("mobile-bottom-nav-hidden");
+    };
+  }, [mobileFloatingStackLowered]);
 
   const openTopupDialog = () => {
     if (!topupAvailable) {
@@ -297,6 +317,10 @@ export function Navbar({ onOpenProposeModal }: NavbarProps = {}) {
       </nav>
 
       <div className="navbar-offset" aria-hidden="true" />
+
+      {showMobileBottomNav && (
+        <AppMobileBottomNav hidden={mobileBottomNavHidden} />
+      )}
 
       {topupOpen && (
         <Suspense fallback={null}>

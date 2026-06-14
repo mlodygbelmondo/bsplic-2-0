@@ -32,6 +32,7 @@ export default function AuthenticatedHome() {
     readStoredCategory,
   );
   const [proposeOpen, setProposeOpen] = useState(false);
+  const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
   const {
     categories,
     categoryMap,
@@ -53,7 +54,10 @@ export default function AuthenticatedHome() {
 
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
-      <Navbar onOpenProposeModal={() => setProposeOpen(true)} />
+      <Navbar
+        onOpenProposeModal={() => setProposeOpen(true)}
+        mobileBottomNavHidden={mobileChromeHidden}
+      />
 
       <HomeShell
         selectedCategory={selectedCategory}
@@ -62,6 +66,7 @@ export default function AuthenticatedHome() {
         categories={categories}
         categoryMap={categoryMap}
         categoriesLoading={categoriesLoading}
+        onMobileChromeHiddenChange={setMobileChromeHidden}
       />
 
       <ProposeBetModal

@@ -183,8 +183,8 @@ export default function AdminLayout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-          <div className="h-full overflow-y-auto overscroll-contain">
+        <main className="flex-1 min-h-0 min-w-0 overflow-hidden">
+          <div className="h-full overflow-y-auto overscroll-contain pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
             <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
               {/* Mobile page header */}
               <div className="md:hidden mb-6 flex items-center justify-between">
@@ -243,7 +243,7 @@ export default function AdminLayout() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
       >
         <div
-          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-3.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
+          className="grid rounded-t-lg bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-3.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
           style={{
             gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
           }}
@@ -262,17 +262,17 @@ export default function AdminLayout() {
                   key={key}
                   onClick={() => setTab(key)}
                   aria-label={label}
-                  className="relative -top-5 flex min-h-[58px] w-full min-w-0 flex-col items-center justify-center"
+                  className="relative flex min-h-[50px] w-full min-w-0 flex-col items-center justify-center rounded-md px-1 py-1 transition-colors"
                 >
                   <div
                     className={cn(
-                      'flex h-[62px] w-[62px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
+                      'absolute -top-4 flex h-[52px] w-[52px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
                       isActive
                         ? 'gradient-primary'
                         : 'bg-primary hover:brightness-110',
                     )}
                   >
-                    <Icon className="h-7 w-7" strokeWidth={2.5} />
+                    <Icon className="h-6 w-6" strokeWidth={2.5} />
                   </div>
                 </button>
               );

@@ -73,4 +73,20 @@ describe('mobile viewport contract', () => {
     expect(joined).not.toMatch(/(?:max-h|h)-\[[^\]]*\d+vh[^\]]*\]/);
     expect(joined).toContain('var(--app-viewport-height');
   });
+
+  it('keeps floating mobile CTAs stacked around the bottom navigation state', async () => {
+    const [css, couponDrawer] = await Promise.all([
+      readProjectFile('src/index.css'),
+      readProjectFile('src/components/CouponDrawer.tsx'),
+    ]);
+
+    expect(css).toContain('--mobile-floating-stack-offset: 4.75rem');
+    expect(css).toMatch(
+      /body\.mobile-bottom-nav-hidden\s*{[\s\S]*--mobile-floating-stack-offset:\s*0rem;/,
+    );
+    expect(css).toMatch(
+      /\.bonus-campaign-cta-visible\s+\.coupon-mobile-trigger\s*{[\s\S]*bottom:\s*calc\(4\.5rem\s*\+\s*var\(--mobile-floating-stack-offset,\s*4\.75rem\)\s*\+\s*env\(safe-area-inset-bottom\)\);/,
+    );
+    expect(couponDrawer).toContain('var(--mobile-floating-stack-offset,4.75rem)');
+  });
 });

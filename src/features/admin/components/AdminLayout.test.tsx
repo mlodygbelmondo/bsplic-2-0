@@ -121,7 +121,7 @@ describe('AdminLayout', () => {
       'Bonusy',
       'Więcej',
     ]);
-    expect(navButtons[2]).toHaveClass('-top-5');
+    expect(navButtons[2]).toHaveClass('min-h-[50px]');
   });
 
   it('uses centered, accessible mobile admin navigation targets', () => {
@@ -135,18 +135,39 @@ describe('AdminLayout', () => {
     const tabGrid = mobileNav.firstElementChild;
     const navButtons = within(mobileNav).getAllByRole('button');
 
-    expect(tabGrid).toHaveClass('px-3.5');
+    expect(tabGrid).toHaveClass('px-3.5', 'rounded-t-lg');
     navButtons.forEach((button) => {
       expect(button).toHaveClass('items-center', 'justify-center');
     });
     expect(navButtons[0]).toHaveClass('min-h-[50px]');
-    expect(navButtons[2]).toHaveClass('-top-5', 'min-h-[58px]');
-    expect(navButtons[2].firstElementChild).toHaveClass('h-[62px]', 'w-[62px]');
-    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
+    expect(navButtons[2]).toHaveClass('relative', 'min-h-[50px]');
+    expect(navButtons[2]).not.toHaveClass('-top-5', 'min-h-[58px]');
+    expect(navButtons[2].firstElementChild).toHaveClass(
+      'absolute',
+      '-top-4',
+      'h-[52px]',
+      'w-[52px]',
+    );
+    expect(navButtons[2].firstElementChild).not.toHaveClass('h-[62px]', 'w-[62px]');
+    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-6', 'w-6');
     expect(navButtons[0]).toHaveClass('gap-2');
     expect(navButtons[0].firstElementChild).toHaveClass('h-[23px]', 'w-[23px]');
     expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[10px]');
     expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('text-[10px]');
+  });
+
+  it('does not reserve a fixed gray spacer above the mobile admin navigation', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const main = screen.getByRole('main');
+
+    expect(main).not.toHaveClass('pb-[calc(5rem+env(safe-area-inset-bottom))]');
+    expect(main.firstElementChild).toHaveClass(
+      'pb-[calc(5rem+env(safe-area-inset-bottom))]',
+      'md:pb-0',
+    );
   });
 
   it('renders lower-frequency admin sections inside the mobile More area', async () => {

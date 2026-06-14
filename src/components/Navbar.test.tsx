@@ -103,6 +103,7 @@ describe("Navbar", () => {
     rpcMock.mockResolvedValue({ error: null });
     refreshProfileMock.mockResolvedValue(undefined);
     notificationsBellMock.mockClear();
+    document.body.classList.remove("mobile-bottom-nav-hidden");
   });
 
   // ── Basic rendering ──────────────────────────────────────
@@ -111,10 +112,10 @@ describe("Navbar", () => {
     renderNavbar();
     expect(screen.getByText("BSPLIC 2.0")).toBeInTheDocument();
     // Desktop links
-    expect(screen.getByText("Zakłady")).toBeInTheDocument();
+    expect(screen.getAllByText("Zakłady").length).toBeGreaterThan(0);
     expect(screen.getByText("Kasyno")).toBeInTheDocument();
-    expect(screen.getByText("Social")).toBeInTheDocument();
-    expect(screen.getByText("Rankingi")).toBeInTheDocument();
+    expect(screen.getAllByText("Social").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rankingi").length).toBeGreaterThan(0);
     expect(
       (await screen.findAllByTestId("notifications-bell")).length,
     ).toBeGreaterThan(0);
@@ -124,6 +125,36 @@ describe("Navbar", () => {
     mockIsAdmin = true;
     renderNavbar();
     expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("keeps the regular mobile bottom navigation for admins outside the admin panel", () => {
+    mockIsAdmin = true;
+    renderNavbar("/");
+
+    expect(
+      screen.getByRole("navigation", { name: "Nawigacja aplikacji" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the regular mobile bottom navigation inside the admin panel", () => {
+    mockIsAdmin = true;
+    renderNavbar("/admin");
+
+    expect(
+      screen.queryByRole("navigation", { name: "Nawigacja aplikacji" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks the floating CTA stack as lowered when the mobile bottom navigation is hidden", () => {
+    renderNavbar("/", { mobileBottomNavHidden: true });
+
+    expect(document.body).toHaveClass("mobile-bottom-nav-hidden");
+  });
+
+  it("marks the floating CTA stack as lowered when the mobile bottom navigation is absent", () => {
+    renderNavbar("/admin");
+
+    expect(document.body).toHaveClass("mobile-bottom-nav-hidden");
   });
 
   it("does not show admin link for non-admin users", () => {
@@ -197,10 +228,10 @@ describe("Navbar", () => {
   it("dims inactive desktop navigation links more clearly", () => {
     renderNavbar("/");
 
-    expect(screen.getByRole("link", { name: "Zakłady" })).toHaveClass(
+    expect(screen.getAllByRole("link", { name: "Zakłady" })[0]).toHaveClass(
       "text-navbar-foreground",
     );
-    expect(screen.getByRole("link", { name: "Rankingi" })).toHaveClass(
+    expect(screen.getAllByRole("link", { name: "Rankingi" })[0]).toHaveClass(
       "text-navbar-foreground/60",
     );
   });
