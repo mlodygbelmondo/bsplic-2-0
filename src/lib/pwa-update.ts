@@ -1,31 +1,37 @@
-import { toast } from 'sonner';
-
-export const PWA_UPDATE_TOAST_ID = 'pwa-update';
+export const PWA_UPDATE_AVAILABLE_EVENT = 'bsplic:pwa-update-available';
 const RELOAD_FALLBACK_DELAY_MS = 2500;
 
 type UpdateServiceWorker = (reloadPage?: boolean) => Promise<void>;
 
-interface PwaUpdateToastOptions {
+interface PwaUpdateModalOptions {
   reload?: () => void;
   reloadFallbackDelayMs?: number;
 }
 
-export const showPwaUpdateToast = (
+export interface PwaUpdateAvailableEventDetail {
+  refresh: () => void;
+}
+
+export const createPwaUpdateRefreshHandler = (
   updateSW: UpdateServiceWorker,
   {
     reload = () => window.location.reload(),
     reloadFallbackDelayMs = RELOAD_FALLBACK_DELAY_MS,
-  }: PwaUpdateToastOptions = {},
+  }: PwaUpdateModalOptions = {},
+) => () => {
+  window.setTimeout(reload, reloadFallbackDelayMs);
+  void updateSW(false);
+};
+
+export const showPwaUpdateModal = (
+  updateSW: UpdateServiceWorker,
+  options: PwaUpdateModalOptions = {},
 ) => {
-  toast('Nowa wersja jest gotowa', {
-    id: PWA_UPDATE_TOAST_ID,
-    duration: Infinity,
-    action: {
-      label: 'Odśwież',
-      onClick: () => {
-        window.setTimeout(reload, reloadFallbackDelayMs);
-        void updateSW(false);
+  window.dispatchEvent(
+    new CustomEvent<PwaUpdateAvailableEventDetail>(PWA_UPDATE_AVAILABLE_EVENT, {
+      detail: {
+        refresh: createPwaUpdateRefreshHandler(updateSW, options),
       },
-    },
-  });
+    }),
+  );
 };

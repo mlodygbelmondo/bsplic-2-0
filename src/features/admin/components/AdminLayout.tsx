@@ -284,7 +284,7 @@ export default function AdminLayout() {
                 onClick={() => setTab(key)}
                 aria-label={label}
                 className={cn(
-                  'flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1 transition-colors',
+                  'flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-2 rounded-md px-1 py-1 transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground',

@@ -143,6 +143,7 @@ describe('AdminLayout', () => {
     expect(navButtons[2]).toHaveClass('-top-5', 'min-h-[58px]');
     expect(navButtons[2].firstElementChild).toHaveClass('h-[62px]', 'w-[62px]');
     expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
+    expect(navButtons[0]).toHaveClass('gap-2');
     expect(navButtons[0].firstElementChild).toHaveClass('h-[23px]', 'w-[23px]');
     expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[10px]');
     expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('text-[10px]');

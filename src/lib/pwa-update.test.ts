@@ -1,57 +1,59 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const toastMock = vi.hoisted(() => vi.fn());
+import {
+  PWA_UPDATE_AVAILABLE_EVENT,
+  showPwaUpdateModal,
+} from './pwa-update';
 
-vi.mock('sonner', () => ({
-  toast: toastMock,
-}));
-
-import { PWA_UPDATE_TOAST_ID, showPwaUpdateToast } from './pwa-update';
-
-describe('showPwaUpdateToast', () => {
+describe('showPwaUpdateModal', () => {
   beforeEach(() => {
     vi.useRealTimers();
-    toastMock.mockReset();
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('shows a persistent update toast with a reload action', () => {
+  it('announces an app update through a modal event with a refresh action', () => {
     const updateSW = vi.fn().mockResolvedValue(undefined);
+    const listener = vi.fn();
+    window.addEventListener(PWA_UPDATE_AVAILABLE_EVENT, listener);
 
-    showPwaUpdateToast(updateSW);
+    showPwaUpdateModal(updateSW);
 
-    expect(toastMock).toHaveBeenCalledWith('Nowa wersja jest gotowa', {
-      id: PWA_UPDATE_TOAST_ID,
-      duration: Infinity,
-      action: {
-        label: 'Odśwież',
-        onClick: expect.any(Function),
-      },
-    });
+    expect(listener).toHaveBeenCalledTimes(1);
+    const event = listener.mock.calls[0][0] as CustomEvent<{
+      refresh: () => void;
+    }>;
+    expect(event.detail.refresh).toEqual(expect.any(Function));
 
-    const [, options] = toastMock.mock.calls[0];
-    options.action.onClick();
+    event.detail.refresh();
     expect(updateSW).toHaveBeenCalledWith(false);
+
+    window.removeEventListener(PWA_UPDATE_AVAILABLE_EVENT, listener);
   });
 
   it('forces a reload if the service worker controllerchange reload does not arrive', async () => {
     vi.useFakeTimers();
     const updateSW = vi.fn().mockResolvedValue(undefined);
     const reload = vi.fn();
+    const listener = vi.fn();
+    window.addEventListener(PWA_UPDATE_AVAILABLE_EVENT, listener);
 
-    showPwaUpdateToast(updateSW, {
+    showPwaUpdateModal(updateSW, {
       reload,
       reloadFallbackDelayMs: 100,
     });
 
-    const [, options] = toastMock.mock.calls[0];
-    options.action.onClick();
+    const event = listener.mock.calls[0][0] as CustomEvent<{
+      refresh: () => void;
+    }>;
+    event.detail.refresh();
 
     await vi.runAllTimersAsync();
 
     expect(reload).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(PWA_UPDATE_AVAILABLE_EVENT, listener);
   });
 });

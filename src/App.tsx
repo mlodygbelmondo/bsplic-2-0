@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { toast } from "sonner";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { LoginPage } from "@/components/LoginPage";
+import { PwaUpdateModal } from "@/components/PwaUpdateModal";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CouponProvider } from "@/contexts/CouponContext";
@@ -189,6 +190,7 @@ const App = () => (
       <Sonner richColors />
       <SplashScreenRemover />
       <ConnectionToasts />
+      <PwaUpdateModal />
       <RoutePrefetcher />
       <BrowserRouter>
         <AuthProvider>
