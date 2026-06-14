@@ -104,8 +104,8 @@ export default function AdminLayout() {
   const availableTabs = isAdmin
     ? TABS
     : TABS.filter((availableTab) => availableTab.key === 'proposals');
-  const defaultTab: AdminTab = isAdmin ? 'dashboard' : 'proposals';
-  const [tab, setTab] = useState<AdminTab>('dashboard');
+  const defaultTab: AdminTab = isAdmin ? 'manage' : 'proposals';
+  const [tab, setTab] = useState<AdminTab>('manage');
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -183,7 +183,7 @@ export default function AdminLayout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           <div className="h-full overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
               {/* Mobile page header */}
@@ -220,7 +220,7 @@ export default function AdminLayout() {
                           key={key}
                           type="button"
                           onClick={() => setTab(key)}
-                          className="flex items-center gap-3 rounded-xl bg-card p-4 text-left card-shadow transition-colors hover:bg-muted"
+                          className="flex min-h-[56px] items-center gap-3 rounded-xl bg-card p-4 text-left card-shadow transition-colors hover:bg-muted"
                         >
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Icon className="h-5 w-5" />
@@ -262,17 +262,17 @@ export default function AdminLayout() {
                   key={key}
                   onClick={() => setTab(key)}
                   aria-label={label}
-                  className="relative -top-4 flex min-w-0 flex-col items-center justify-center"
+                  className="relative -top-5 flex min-h-[58px] w-full min-w-0 flex-col items-center justify-center"
                 >
                   <div
                     className={cn(
-                      'flex h-[58px] w-[58px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
+                      'flex h-[62px] w-[62px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
                       isActive
                         ? 'gradient-primary'
                         : 'bg-primary hover:brightness-110',
                     )}
                   >
-                    <Icon className="h-6 w-6" strokeWidth={2.5} />
+                    <Icon className="h-7 w-7" strokeWidth={2.5} />
                   </div>
                 </button>
               );
@@ -284,7 +284,7 @@ export default function AdminLayout() {
                 onClick={() => setTab(key)}
                 aria-label={label}
                 className={cn(
-                  'min-w-0 flex flex-col items-center gap-1.5 rounded-md px-1 py-1.5 transition-colors',
+                  'flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-md px-1 py-1.5 transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground',
@@ -292,14 +292,14 @@ export default function AdminLayout() {
               >
                 <Icon
                   className={cn(
-                    'h-5 w-5 shrink-0',
+                    'h-6 w-6 shrink-0',
                     isActive ? 'text-primary' : 'text-muted-foreground',
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span
                   className={cn(
-                    'w-full truncate text-center text-[10px] font-medium leading-none',
+                    'w-full truncate text-center text-[11px] font-medium leading-none',
                     isActive && 'font-semibold',
                   )}
                 >

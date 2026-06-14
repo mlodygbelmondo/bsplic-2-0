@@ -83,7 +83,7 @@ describe('AdminLayout', () => {
     expect(await screen.findByTestId('proposals-tab')).toBeInTheDocument();
   });
 
-  it('keeps the full admin panel for admins', async () => {
+  it('keeps the full admin panel for admins and opens bets first', async () => {
     mockIsAdmin = true;
 
     renderAdminLayout();
@@ -93,7 +93,8 @@ describe('AdminLayout', () => {
     expect(screen.getAllByText('Zarządzaj').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Utwórz zakład').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Propozycje').length).toBeGreaterThan(0);
-    expect(await screen.findByTestId('dashboard-tab')).toBeInTheDocument();
+    expect(await screen.findByTestId('manage-tab')).toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-tab')).not.toBeInTheDocument();
   });
 
   it('lays out the mobile admin navigation as a five-slot bar with More', () => {
@@ -120,7 +121,27 @@ describe('AdminLayout', () => {
       'Bonusy',
       'Więcej',
     ]);
-    expect(navButtons[2]).toHaveClass('-top-4');
+    expect(navButtons[2]).toHaveClass('-top-5');
+  });
+
+  it('uses centered, accessible mobile admin navigation targets', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+    const navButtons = within(mobileNav).getAllByRole('button');
+
+    navButtons.forEach((button) => {
+      expect(button).toHaveClass('items-center', 'justify-center');
+    });
+    expect(navButtons[0]).toHaveClass('min-h-[52px]');
+    expect(navButtons[2]).toHaveClass('-top-5', 'min-h-[58px]');
+    expect(navButtons[2].firstElementChild).toHaveClass('h-[62px]', 'w-[62px]');
+    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
+    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[11px]');
   });
 
   it('renders lower-frequency admin sections inside the mobile More area', async () => {

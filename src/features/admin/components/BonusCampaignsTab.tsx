@@ -186,7 +186,7 @@ export default function BonusCampaignsTab() {
           </div>
         </div>
 
-        <Button type="submit" disabled={creating} className="w-full sm:w-auto">
+        <Button type="submit" disabled={creating} className="min-h-11 w-full justify-center sm:w-auto">
           {creating ? 'Tworzenie...' : 'Utwórz kampanię'}
         </Button>
       </form>
@@ -232,7 +232,7 @@ export default function BonusCampaignsTab() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="shrink-0"
+                      className="min-h-11 w-full justify-center shrink-0 text-sm sm:w-auto sm:min-h-0 sm:h-9"
                       onClick={() => void handleDeactivate(campaign.id)}
                       disabled={deactivatingId === campaign.id}
                     >

@@ -171,6 +171,7 @@ export default function EniuBotTab() {
           <Button
             onClick={submitCommand}
             disabled={!command.trim() || submitting}
+            className="min-h-11 w-full justify-center sm:w-auto"
           >
             {submitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -204,6 +205,7 @@ export default function EniuBotTab() {
           <Button
             variant="outline"
             size="icon"
+            className="min-h-11 min-w-11"
             onClick={loadRuns}
             disabled={loadingRuns}
           >
@@ -289,7 +291,7 @@ export default function EniuBotTab() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="mt-3"
+                      className="mt-3 min-h-11 justify-center text-sm sm:min-h-0 sm:h-9"
                       aria-label="Ponów odpowiedź Eniu"
                       onClick={() => retryRun(run)}
                       disabled={retryingRunId !== null}

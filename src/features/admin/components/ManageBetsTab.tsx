@@ -398,14 +398,14 @@ export default function ManageBetsTab() {
                   <div className="shrink-0">{statusBadge(bet)}</div>
                 </div>
                 
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button size="sm" variant="secondary" className="h-8 rounded-lg text-xs font-medium" onClick={() => openEditor(bet)} aria-label={`Edytuj ${bet.title}`}>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Button size="sm" variant="secondary" className="min-h-11 justify-center rounded-lg text-sm font-medium" onClick={() => openEditor(bet)} aria-label={`Edytuj ${bet.title}`}>
                     Edytuj
                   </Button>
                   <Button
                     size="sm"
                     variant="default"
-                    className="h-8 rounded-lg text-xs font-semibold gradient-primary shadow-sm"
+                    className="min-h-11 justify-center rounded-lg text-sm font-semibold gradient-primary shadow-sm"
                     onClick={() => openResolveModal(bet)}
                     disabled={resolvingBetId === bet.id}
                   >
@@ -415,11 +415,11 @@ export default function ManageBetsTab() {
                     {bet.winning_option ? 'Korekta' : 'Wynik'}
                   </Button>
                   {!bet.winning_option && (
-                    <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs font-medium border-border hover:bg-muted" onClick={() => resolveBet(bet, [], 'refund')} disabled={resolvingBetId === bet.id}>
+                    <Button size="sm" variant="outline" className="min-h-11 justify-center rounded-lg text-sm font-medium border-border hover:bg-muted" onClick={() => resolveBet(bet, [], 'refund')} disabled={resolvingBetId === bet.id}>
                       <RotateCcw className="h-3 w-3 mr-1" /> 1.00
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-auto" onClick={() => deleteBet(bet)} disabled={deletingBetId === bet.id}>
+                  <Button size="sm" variant="ghost" className="min-h-11 w-full p-0 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteBet(bet)} disabled={deletingBetId === bet.id} aria-label={`Usuń ${bet.title}`}>
                     {deletingBetId === bet.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -600,20 +600,20 @@ export default function ManageBetsTab() {
                     <Input value={option.name} onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].name = e.target.value; return { ...p, options: o }; })} className="flex-1" />
                     <Input type="number" step="0.01" min="1" value={option.odds} onChange={(e) => setEditing((p) => { if (!p) return p; const o = [...p.options]; o[index].odds = e.target.value; return { ...p, options: o }; })} className="w-20" />
                     {!hasFixedOptionCount && editing.options.length > 2 && (
-                      <button type="button" onClick={() => setEditing((p) => p ? { ...p, options: p.options.filter((_, i) => i !== index) } : p)} className="text-muted-foreground hover:text-destructive">
+                      <button type="button" onClick={() => setEditing((p) => p ? { ...p, options: p.options.filter((_, i) => i !== index) } : p)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`Usuń opcję ${index + 1}`}>
                         <X className="h-4 w-4" />
                       </button>
                     )}
                   </div>
                 ))}
                 {!hasFixedOptionCount && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: '2' }] } : p)}>
+                  <Button type="button" variant="outline" size="sm" className="min-h-11 justify-center text-sm sm:min-h-0 sm:h-9" onClick={() => setEditing((p) => p ? { ...p, options: [...p.options, { name: '', odds: '2' }] } : p)}>
                     <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
                   </Button>
                 )}
               </div>
 
-              <Button onClick={updateBet} disabled={editorLoading} className="w-full gradient-primary text-primary-foreground font-bold">
+              <Button onClick={updateBet} disabled={editorLoading} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
                 {editorLoading ? 'Zapisywanie...' : 'Zapisz zmiany'}
               </Button>
             </div>
@@ -709,7 +709,7 @@ export default function ManageBetsTab() {
                     })}
                   </div>
                   <Button
-                    className="w-full gradient-primary text-primary-foreground font-bold mt-2"
+                    className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold mt-2"
                     disabled={selectedWinners.length === 0 || isResolveInProgress}
                     onClick={submitNormalSettlement}
                   >
@@ -729,10 +729,10 @@ export default function ManageBetsTab() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setResolveStep('selection')} disabled={isResolveInProgress}>
+                    <Button variant="outline" className="min-h-11 flex-1 justify-center" onClick={() => setResolveStep('selection')} disabled={isResolveInProgress}>
                       Wróć
                     </Button>
-                    <Button className="flex-1 gradient-primary text-primary-foreground" onClick={submitNormalSettlement} disabled={isResolveInProgress}>
+                    <Button className="min-h-11 flex-1 justify-center gradient-primary text-primary-foreground" onClick={submitNormalSettlement} disabled={isResolveInProgress}>
                       {isResolveInProgress ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                       Potwierdź
                     </Button>
@@ -742,11 +742,11 @@ export default function ManageBetsTab() {
 
               <div className="pt-2 border-t border-border" />
               {resolveModal.is_bsplicboost && (
-                <Button variant="outline" className="w-full justify-start" onClick={() => submitSpecialSettlement('force_lost')} disabled={isResolveInProgress}>
+                <Button variant="outline" className="min-h-11 w-full justify-center" onClick={() => submitSpecialSettlement('force_lost')} disabled={isResolveInProgress}>
                   <CircleOff className="h-4 w-4 mr-2 text-foreground" /> Ogłoś przegraną (wszyscy)
                 </Button>
               )}
-              <Button variant="outline" className="w-full justify-start" onClick={() => submitSpecialSettlement('refund')} disabled={isResolveInProgress}>
+              <Button variant="outline" className="min-h-11 w-full justify-center" onClick={() => submitSpecialSettlement('refund')} disabled={isResolveInProgress}>
                 <RotateCcw className="h-4 w-4 mr-2 text-foreground" /> Rozlicz 1.00 (zwrot)
               </Button>
             </div>

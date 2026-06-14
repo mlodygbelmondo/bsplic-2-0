@@ -304,11 +304,11 @@ export default function ProposalsTab() {
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="grid w-full grid-cols-2 gap-2 shrink-0 sm:flex sm:w-auto">
                   <Button
                     size="sm"
                     onClick={() => openEditor(proposal)}
-                    className="gradient-primary text-primary-foreground h-8 text-xs"
+                    className="min-h-11 justify-center gradient-primary text-primary-foreground text-sm sm:min-h-0 sm:h-8 sm:text-xs"
                     aria-label={`Akceptuj propozycję: ${proposal.title}`}
                     disabled={isRejecting}
                   >
@@ -319,7 +319,7 @@ export default function ProposalsTab() {
                     size="sm"
                     variant="outline"
                     onClick={() => reject(proposal.id)}
-                    className="h-8 text-xs"
+                    className="min-h-11 justify-center text-sm sm:min-h-0 sm:h-8 sm:text-xs"
                     disabled={isRejecting}
                     aria-label={`Odrzuć propozycję: ${proposal.title}`}
                   >
@@ -512,7 +512,7 @@ export default function ProposalsTab() {
                               : p,
                           )
                         }
-                        className="text-foreground hover:text-destructive transition-colors"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         aria-label={`Usuń opcję ${index + 1}`}
                       >
                         <X className="h-4 w-4" />
@@ -525,6 +525,7 @@ export default function ProposalsTab() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="min-h-11 justify-center text-sm sm:min-h-0 sm:h-9"
                     onClick={() =>
                       setEditing((p) =>
                         p
@@ -548,7 +549,7 @@ export default function ProposalsTab() {
               <Button
                 onClick={acceptEdited}
                 disabled={editorLoading}
-                className="w-full gradient-primary text-primary-foreground font-bold"
+                className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold"
                 aria-label={
                   editorLoading
                     ? 'Zapisywanie propozycji'

@@ -245,7 +245,7 @@ export default function CreateBetTab() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs bg-background"
+                  className="min-h-11 justify-center bg-background text-sm sm:min-h-0 sm:h-8 sm:text-xs"
                   onClick={() => setOptions([...options, { name: '', odds: '2' }])}
                 >
                   <Plus className="h-3 w-3 mr-1" /> Dodaj opcję
@@ -319,7 +319,7 @@ export default function CreateBetTab() {
       </div>
 
       {/* Submit */}
-      <div className="fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 p-4 bg-background/80 backdrop-blur-md border-t border-border lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 p-4 bg-background/80 backdrop-blur-md border-t border-border lg:hidden">
         <Button
           type="submit"
           size="lg"
