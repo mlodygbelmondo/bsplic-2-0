@@ -183,7 +183,7 @@ export default function AdminLayout() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="flex-1 min-h-0 min-w-0 overflow-hidden pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0">
           <div className="h-full overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
               {/* Mobile page header */}
@@ -220,7 +220,7 @@ export default function AdminLayout() {
                           key={key}
                           type="button"
                           onClick={() => setTab(key)}
-                          className="flex items-center gap-3 rounded-xl bg-card p-4 text-left card-shadow transition-colors hover:bg-muted"
+                          className="flex min-h-[56px] items-center gap-3 rounded-xl bg-card p-4 text-left card-shadow transition-colors hover:bg-muted"
                         >
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Icon className="h-5 w-5" />
@@ -243,7 +243,7 @@ export default function AdminLayout() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
       >
         <div
-          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
+          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2.5 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
           style={{
             gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
           }}
@@ -262,11 +262,11 @@ export default function AdminLayout() {
                   key={key}
                   onClick={() => setTab(key)}
                   aria-label={label}
-                  className="relative -top-4 flex min-w-0 flex-col items-center justify-center"
+                  className="relative -top-4 flex min-h-[76px] w-full min-w-0 flex-col items-center justify-center"
                 >
                   <div
                     className={cn(
-                      'flex h-[58px] w-[58px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
+                      'flex h-[68px] w-[68px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
                       isActive
                         ? 'gradient-primary'
                         : 'bg-primary hover:brightness-110',
@@ -284,7 +284,7 @@ export default function AdminLayout() {
                 onClick={() => setTab(key)}
                 aria-label={label}
                 className={cn(
-                  'min-w-0 flex flex-col items-center gap-1.5 rounded-md px-1 py-1.5 transition-colors',
+                  'flex min-h-[60px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg px-1.5 py-2 transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground',
@@ -299,7 +299,7 @@ export default function AdminLayout() {
                 />
                 <span
                   className={cn(
-                    'w-full truncate text-center text-[10px] font-medium leading-none',
+                    'w-full truncate text-center text-[11px] font-medium leading-none',
                     isActive && 'font-semibold',
                   )}
                 >

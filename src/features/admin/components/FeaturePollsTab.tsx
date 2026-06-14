@@ -251,6 +251,7 @@ export default function FeaturePollsTab() {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="min-h-11 justify-center text-sm sm:min-h-0 sm:h-9"
                 onClick={addOption}
               >
                 <Plus className="mr-1.5 h-4 w-4" />
@@ -269,6 +270,7 @@ export default function FeaturePollsTab() {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="min-h-11 min-w-11"
                     onClick={() => removeOption(index)}
                     disabled={form.options.length <= 2}
                     aria-label="Usuń opcję"
@@ -315,7 +317,7 @@ export default function FeaturePollsTab() {
           </div>
         </div>
 
-        <Button type="submit" disabled={creating} className="w-full sm:w-auto">
+        <Button type="submit" disabled={creating} className="min-h-11 w-full justify-center sm:w-auto">
           <ListPlus className="mr-1.5 h-4 w-4" />
           {creating ? 'Tworzenie...' : 'Utwórz głosowanie'}
         </Button>
@@ -371,7 +373,7 @@ export default function FeaturePollsTab() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="shrink-0"
+                      className="min-h-11 w-full justify-center shrink-0 text-sm sm:w-auto sm:min-h-0 sm:h-9"
                       onClick={() => void handleDeactivate(poll.id)}
                       disabled={deactivatingId === poll.id}
                     >

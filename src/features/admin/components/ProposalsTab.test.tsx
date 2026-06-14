@@ -186,6 +186,20 @@ describe('ProposalsTab', () => {
     expect(toastInfoMock).toHaveBeenCalledWith('Propozycja odrzucona');
   });
 
+  it('keeps proposal card actions large enough on mobile', async () => {
+    render(<ProposalsTab />);
+
+    const acceptButton = await screen.findByRole('button', {
+      name: 'Akceptuj propozycję: Człowiek: nowy kupon',
+    });
+    const rejectButton = screen.getByRole('button', {
+      name: 'Odrzuć propozycję: Człowiek: nowy kupon',
+    });
+
+    expect(acceptButton).toHaveClass('min-h-11', 'justify-center');
+    expect(rejectButton).toHaveClass('min-h-11', 'justify-center');
+  });
+
   it('accepts edited proposals through the review RPC', async () => {
     render(<ProposalsTab />);
 

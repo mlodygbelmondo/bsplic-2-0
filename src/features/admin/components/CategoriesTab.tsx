@@ -148,7 +148,7 @@ export default function CategoriesTab() {
           <div className="col-span-1 space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Kolor</label>
             <label
-              className="h-9 w-9 rounded-lg border-2 border-border block shadow-sm cursor-pointer relative overflow-hidden"
+              className="h-11 w-full min-w-11 rounded-lg border-2 border-border block shadow-sm cursor-pointer relative overflow-hidden"
               style={{ backgroundColor: newCat.color }}
               title={newCat.color}
             >
@@ -171,7 +171,7 @@ export default function CategoriesTab() {
             />
           </div>
           <div className="col-span-2">
-            <Button onClick={addCategory} disabled={adding} size="sm" className="w-full">
+            <Button onClick={addCategory} disabled={adding} size="sm" className="min-h-11 w-full justify-center text-sm">
               <Plus className="h-3 w-3 mr-1" /> Dodaj
             </Button>
           </div>
@@ -250,11 +250,11 @@ export default function CategoriesTab() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEditModal(cat)} aria-label={`Edytuj ${cat.name}`}>
-                <Pencil className="h-3 w-3 text-foreground" />
+              <Button size="sm" variant="outline" className="h-11 w-11 p-0 rounded-lg" onClick={() => openEditModal(cat)} aria-label={`Edytuj ${cat.name}`}>
+                <Pencil className="h-4 w-4 text-foreground" />
               </Button>
-              <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => deleteCategory(cat.id)} aria-label={`Usuń ${cat.name}`}>
-                <Trash2 className="h-3 w-3" />
+              <Button size="sm" variant="destructive" className="h-11 w-11 p-0 rounded-lg" onClick={() => deleteCategory(cat.id)} aria-label={`Usuń ${cat.name}`}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function CategoriesTab() {
               </div>
             </div>
 
-            <Button onClick={saveEdit} disabled={editSaving} className="w-full gradient-primary text-primary-foreground font-bold">
+            <Button onClick={saveEdit} disabled={editSaving} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
               {editSaving ? 'Zapisywanie…' : 'Zapisz zmiany'}
             </Button>
           </div>

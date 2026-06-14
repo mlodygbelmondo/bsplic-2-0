@@ -123,6 +123,25 @@ describe('AdminLayout', () => {
     expect(navButtons[2]).toHaveClass('-top-4');
   });
 
+  it('uses centered, accessible mobile admin navigation targets', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+    const navButtons = within(mobileNav).getAllByRole('button');
+
+    navButtons.forEach((button) => {
+      expect(button).toHaveClass('items-center', 'justify-center');
+    });
+    expect(navButtons[0]).toHaveClass('min-h-[60px]');
+    expect(navButtons[2]).toHaveClass('min-h-[76px]');
+    expect(navButtons[2].firstElementChild).toHaveClass('h-[68px]', 'w-[68px]');
+    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[11px]');
+  });
+
   it('renders lower-frequency admin sections inside the mobile More area', async () => {
     mockIsAdmin = true;
 

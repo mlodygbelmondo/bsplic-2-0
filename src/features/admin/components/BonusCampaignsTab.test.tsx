@@ -82,4 +82,14 @@ describe('BonusCampaignsTab', () => {
       );
     });
   });
+
+  it('keeps the mobile deactivate action full-width and centered', async () => {
+    render(<BonusCampaignsTab />);
+
+    const deactivateButton = await screen.findByRole('button', {
+      name: 'Wyłącz',
+    });
+
+    expect(deactivateButton).toHaveClass('min-h-11', 'w-full', 'justify-center');
+  });
 });
