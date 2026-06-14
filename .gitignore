@@ -22,6 +22,11 @@ dist-ssr
 .codex/environments/
 .learnings
 
+# Supabase local state
+.supabase/
+.supabase-token.env
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
