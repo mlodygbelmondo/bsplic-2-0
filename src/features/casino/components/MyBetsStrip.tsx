@@ -122,6 +122,14 @@ export function MyBetsStrip({
     0,
   );
   const totalPayout = settledBets.reduce((sum, bet) => sum + bet.payout, 0);
+  const repeatBetCount = settledBets.length;
+  const repeatButtonLabel = isRepeating
+    ? `Stawianie ${repeatBetCount} ${
+        repeatBetCount === 1 ? 'ostatniego zakładu' : 'ostatnich zakładów'
+      }`
+    : `Powtórz ${repeatBetCount} ${
+        repeatBetCount === 1 ? 'ostatni zakład' : 'ostatnich zakładów'
+      }`;
 
   return (
     <motion.div
@@ -173,6 +181,7 @@ export function MyBetsStrip({
             type="button"
             onClick={onRepeat}
             disabled={isRepeating}
+            aria-label={repeatButtonLabel}
             data-testid="roulette-repeat-bets"
             className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[11px] font-bold text-amber-200 transition-colors hover:bg-amber-400/20 disabled:opacity-50"
           >
