@@ -44,6 +44,12 @@ const EMPTY_COMMENTS: SocialComment[] = [];
 
 type FeedFilter = 'all' | 'coupon' | 'post' | 'casino';
 
+const FILTER_EMPTY_TITLES: Record<Exclude<FeedFilter, 'all'>, string> = {
+  coupon: 'Brak kuponów w tej chwili',
+  post: 'Brak postów w tej chwili',
+  casino: 'Brak aktywności kasyna w tej chwili',
+};
+
 function parseFeedFilter(value: string | null): FeedFilter {
   return value === 'coupon' || value === 'post' || value === 'casino'
     ? value
@@ -142,6 +148,14 @@ export default function SocialPage() {
     if (feedFilter === 'all') return feedItems;
     return feedItems.filter((item) => item.item_type === feedFilter);
   }, [feedItems, feedFilter]);
+  const isFilteredEmpty =
+    feedFilter !== 'all' && feedItems.length > 0 && filteredFeedItems.length === 0;
+  const emptyStateTitle = isFilteredEmpty
+    ? FILTER_EMPTY_TITLES[feedFilter]
+    : 'Brak aktywności';
+  const emptyStateDescription = isFilteredEmpty
+    ? 'Zmień filtr, aby zobaczyć pozostałe wpisy.'
+    : 'Nikt jeszcze nic nie opublikował.';
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
@@ -698,10 +712,21 @@ export default function SocialPage() {
             <div className="space-y-3">
               {filteredFeedItems.length === 0 && !hasMore ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  <p className="text-lg font-medium">Brak aktywności</p>
-                  <p className="text-sm mt-1">
-                    Nikt jeszcze nic nie opublikował.
+                  <p className="text-lg font-medium">
+                    {emptyStateTitle}
                   </p>
+                  <p className="text-sm mt-1">
+                    {emptyStateDescription}
+                  </p>
+                  {isFilteredEmpty && (
+                    <button
+                      type="button"
+                      onClick={() => setFeedFilter('all')}
+                      className="mt-4 rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                    >
+                      Pokaż wszystko
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredFeedItems.map((item) => (

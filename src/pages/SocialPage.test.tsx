@@ -463,6 +463,28 @@ describe('SocialPage', () => {
     expect(screen.getByText('Treść posta')).toBeInTheDocument();
   });
 
+  it('explains when the selected social filter has no matching activity', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-1',
+        username: 'Poster',
+        content: 'Treść posta',
+      }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Treść posta')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kupony' }));
+
+    expect(screen.getByText('Brak kuponów w tej chwili')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż wszystko' }));
+
+    expect(screen.getByText('Treść posta')).toBeInTheDocument();
+  });
+
   it('opens reactors dialog when clicking "Wyświetl reakcje"', async () => {
     fetchSocialFeedMock.mockResolvedValue([
       makePostFeedItem({
