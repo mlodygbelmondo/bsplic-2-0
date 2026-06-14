@@ -63,13 +63,13 @@ export default function ResetPasswordPage() {
         <div className="bg-card rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-sm text-center">
           <h2 className="text-xl font-bold text-card-foreground mb-3">Nieprawidłowy link</h2>
           <p className="text-sm text-muted-foreground mb-5">
-            Ten link do resetowania hasła jest nieprawidłowy lub wygasł.
+            Wróć do logowania i wyślij nowy link resetowania.
           </p>
           <Button
             onClick={() => navigate("/")}
             className="gradient-primary text-primary-foreground font-bold"
           >
-            Wróć do logowania
+            Otwórz logowanie
           </Button>
         </div>
       </div>

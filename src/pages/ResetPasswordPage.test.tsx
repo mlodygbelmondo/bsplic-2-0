@@ -29,6 +29,14 @@ vi.mock('sonner', () => ({
   },
 }));
 
+function renderResetPasswordPage() {
+  render(
+    <MemoryRouter>
+      <ResetPasswordPage />
+    </MemoryRouter>,
+  );
+}
+
 describe('ResetPasswordPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,11 +44,7 @@ describe('ResetPasswordPage', () => {
   });
 
   it('shows inline password confirmation feedback before submit', () => {
-    render(
-      <MemoryRouter>
-        <ResetPasswordPage />
-      </MemoryRouter>,
-    );
+    renderResetPasswordPage();
 
     fireEvent.change(screen.getByLabelText('Nowe hasło'), {
       target: { value: 'secret1' },
@@ -58,5 +62,18 @@ describe('ResetPasswordPage', () => {
 
     expect(screen.getByText('Hasła są zgodne')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Zmień hasło' })).toBeEnabled();
+  });
+
+  it('tells users how to recover from an expired reset link', () => {
+    window.location.hash = '';
+
+    renderResetPasswordPage();
+
+    expect(
+      screen.getByText('Wróć do logowania i wyślij nowy link resetowania.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Otwórz logowanie' }),
+    ).toBeInTheDocument();
   });
 });
