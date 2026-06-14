@@ -54,7 +54,7 @@ const TABS: TabConfig[] = [
   {
     key: 'proposals',
     label: 'Propozycje',
-    shortLabel: 'Propo',
+    shortLabel: 'Propozycje',
     icon: Lightbulb,
   },
   { key: 'categories', label: 'Kategorie', shortLabel: 'Kat.', icon: Tag },
@@ -243,7 +243,7 @@ export default function AdminLayout() {
         className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
       >
         <div
-          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
+          className="grid bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-3.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
           style={{
             gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
           }}
@@ -284,7 +284,7 @@ export default function AdminLayout() {
                 onClick={() => setTab(key)}
                 aria-label={label}
                 className={cn(
-                  'flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-md px-1 py-1.5 transition-colors',
+                  'flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1 transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground',
@@ -292,14 +292,14 @@ export default function AdminLayout() {
               >
                 <Icon
                   className={cn(
-                    'h-6 w-6 shrink-0',
+                    'h-[23px] w-[23px] shrink-0',
                     isActive ? 'text-primary' : 'text-muted-foreground',
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span
                   className={cn(
-                    'w-full truncate text-center text-[11px] font-medium leading-none',
+                    'w-full truncate text-center text-[10px] font-medium leading-none',
                     isActive && 'font-semibold',
                   )}
                 >

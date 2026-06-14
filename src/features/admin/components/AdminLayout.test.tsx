@@ -132,16 +132,20 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
+    const tabGrid = mobileNav.firstElementChild;
     const navButtons = within(mobileNav).getAllByRole('button');
 
+    expect(tabGrid).toHaveClass('px-3.5');
     navButtons.forEach((button) => {
       expect(button).toHaveClass('items-center', 'justify-center');
     });
-    expect(navButtons[0]).toHaveClass('min-h-[52px]');
+    expect(navButtons[0]).toHaveClass('min-h-[50px]');
     expect(navButtons[2]).toHaveClass('-top-5', 'min-h-[58px]');
     expect(navButtons[2].firstElementChild).toHaveClass('h-[62px]', 'w-[62px]');
     expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
-    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[11px]');
+    expect(navButtons[0].firstElementChild).toHaveClass('h-[23px]', 'w-[23px]');
+    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[10px]');
+    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('text-[10px]');
   });
 
   it('renders lower-frequency admin sections inside the mobile More area', async () => {
