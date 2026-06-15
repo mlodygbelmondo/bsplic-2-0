@@ -199,7 +199,7 @@ export function BetList({
           <div
             data-testid="bet-list-desktop-toolbar"
             className={cn(
-              "sticky top-0 z-30 hidden bg-background/95 pb-2.5 backdrop-blur-md transition-[transform,opacity] duration-200 ease-out will-change-transform supports-[backdrop-filter]:bg-background/85 lg:block",
+              "sticky top-0 z-30 hidden bg-transparent pb-2.5 transition-[transform,opacity] duration-200 ease-out will-change-transform lg:block",
               actionsHidden
                 ? "-translate-y-full opacity-0 pointer-events-none"
                 : "translate-y-0 opacity-100",
@@ -271,7 +271,7 @@ export function BetList({
                 : "translate-y-0 opacity-100",
             )}
           >
-            <div className="flex items-start gap-2 bg-background/95 pb-2 pt-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/85">
+            <div className="flex items-start gap-2 bg-transparent pb-2 pt-2">
               {/* Left column: bet view type + Aktywne, options stack under
                   the trigger. */}
               <div className="relative z-30 min-w-0 flex-1">
