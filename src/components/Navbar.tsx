@@ -285,7 +285,7 @@ export function Navbar({
               <Suspense fallback={null}>
                 <NotificationsBell
                   userId={user?.id}
-                  className="h-8 w-8 [&>svg]:h-6 [&>svg]:w-6"
+                  className="h-8 w-8 [&>svg]:h-5 [&>svg]:w-5"
                 />
               </Suspense>
             )}

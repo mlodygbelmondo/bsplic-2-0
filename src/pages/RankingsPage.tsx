@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 import { SectionLoader } from "@/components/SectionLoader";
 import { Link } from "react-router-dom";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import {
+  getNextScrollChromeState,
+  type ScrollChromeState,
+} from "@/lib/scroll-chrome";
 
 interface RankEntry {
   id: string;
@@ -38,6 +42,8 @@ export default function RankingsPage() {
   usePageTitle("Rankingi");
   const [sortBy, setSortBy] = useState<SortKey>("total_profit");
   const [rankingType, setRankingType] = useState<RankingType>("sportsbook");
+  const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
+  const mobileChromeStateRef = useRef<ScrollChromeState>();
   const { user } = useAuth();
 
   const {
@@ -81,8 +87,24 @@ export default function RankingsPage() {
 
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
-      <Navbar />
-      <div className="flex-1 min-h-0 overflow-y-auto max-w-3xl w-full mx-auto p-4">
+      <Navbar mobileBottomNavHidden={mobileChromeHidden} />
+      <div
+        data-testid="rankings-scroll-container"
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          const nextChromeState = getNextScrollChromeState(
+            mobileChromeStateRef.current,
+            {
+              scrollTop: element.scrollTop,
+              scrollHeight: element.scrollHeight,
+              clientHeight: element.clientHeight,
+            },
+          );
+          mobileChromeStateRef.current = nextChromeState;
+          setMobileChromeHidden(nextChromeState.hidden);
+        }}
+        className="flex-1 min-h-0 overflow-y-auto max-w-3xl w-full mx-auto px-4 pt-4 pb-[var(--mobile-bottom-nav-scroll-padding)] lg:pb-4"
+      >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold">Rankingi</h1>
           <div className="app-subsurface inline-flex w-max items-center rounded-lg p-1">

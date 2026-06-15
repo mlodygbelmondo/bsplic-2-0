@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import RankingsPage from "./RankingsPage";
 
 const rpcMock = vi.fn();
+const navbarMock = vi.hoisted(() => vi.fn(() => <div>Navbar</div>));
 
 vi.mock("@/components/Navbar", () => ({
-  Navbar: () => <div>Navbar</div>,
+  Navbar: (props: { mobileBottomNavHidden?: boolean }) => navbarMock(props),
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
@@ -43,6 +44,7 @@ function renderWithProviders(children: ReactNode) {
 describe("RankingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navbarMock.mockClear();
     rpcMock.mockImplementation((fn: string) => {
       if (fn === "get_user_rankings") {
         return Promise.resolve({
@@ -125,5 +127,37 @@ describe("RankingsPage", () => {
 
     expect(await screen.findByText("Tester")).toBeInTheDocument();
     expect(rpcMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("hides mobile bottom nav on deliberate downward scroll", async () => {
+    const { container } = renderWithProviders(<RankingsPage />);
+
+    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect(navbarMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mobileBottomNavHidden: false }),
+    );
+
+    const scrollContainer = container.querySelector(
+      "[data-testid='rankings-scroll-container']",
+    ) as HTMLDivElement;
+    Object.defineProperties(scrollContainer, {
+      scrollTop: { configurable: true, value: 90 },
+      scrollHeight: { configurable: true, value: 1800 },
+      clientHeight: { configurable: true, value: 700 },
+    });
+    fireEvent.scroll(scrollContainer);
+
+    expect(navbarMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mobileBottomNavHidden: true }),
+    );
+  });
+
+  it("reserves bottom scroll space for the mobile nav", async () => {
+    const { container } = renderWithProviders(<RankingsPage />);
+
+    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect(
+      container.querySelector("[data-testid='rankings-scroll-container']"),
+    ).toHaveClass("pb-[var(--mobile-bottom-nav-scroll-padding)]");
   });
 });

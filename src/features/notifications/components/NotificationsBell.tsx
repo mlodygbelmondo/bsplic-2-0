@@ -31,6 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NotificationsBellProps {
   userId?: string;
@@ -50,8 +51,10 @@ export function NotificationsBell({
   const openRef = useRef(open);
   const soundMutedRef = useRef(soundMuted);
   const unreadCountStateRef = useRef(createUnreadCountState(0));
+  const isMobile = useIsMobile();
 
   const hasUnread = unreadCount > 0;
+  const popoverAlign = isMobile ? "center" : "end";
 
   const unreadBadge = useMemo(() => {
     if (unreadCount <= 0) return null;
@@ -241,100 +244,145 @@ export function NotificationsBell({
     }
   };
 
+  const bellButton = (
+    <button
+      type="button"
+      aria-label={bellLabel}
+      onClick={() => {
+        handleBellClick();
+        if (isMobile) {
+          setOpen((current) => !current);
+        }
+      }}
+      className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full p-0 transition-colors ${
+        hasUnread
+          ? "text-primary-foreground hover:bg-primary-foreground/20"
+          : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+      } ${className ?? ""}`}
+    >
+      <Bell className="h-6 w-6" />
+      {unreadBadge && (
+        <span className="absolute -right-1 -top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 font-bold text-center">
+          {unreadBadge}
+        </span>
+      )}
+    </button>
+  );
+
+  const notificationsPanel = (
+    <>
+      <div className="border-b border-border px-3 py-2 flex items-center justify-between">
+        <p className="text-sm font-semibold">Powiadomienia</p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleSound}
+            aria-label={
+              soundMuted
+                ? "Włącz dźwięk powiadomień"
+                : "Wycisz dźwięk powiadomień"
+            }
+            className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+            title={soundMuted ? "Dźwięk wyłączony" : "Dźwięk włączony"}
+          >
+            {soundMuted ? (
+              <VolumeX className="h-4 w-4" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            className="text-xs text-primary disabled:text-muted-foreground"
+            disabled={!hasUnread}
+            onClick={() => void handleMarkAllRead()}
+          >
+            Oznacz wszystkie
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="px-3 py-4 text-xs text-muted-foreground">
+          Ładowanie...
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="px-3 py-4 text-xs text-muted-foreground">
+          Brak powiadomień
+        </div>
+      ) : (
+        <div className="max-h-[380px] overflow-y-auto py-1">
+          {notifications.map((notification) => (
+            <button
+              key={notification.id}
+              type="button"
+              onClick={() => void handleNotificationClick(notification)}
+              className={`w-full text-left px-3 py-2 hover:bg-muted/60 transition-colors border-l-2 ${notification.is_read ? "border-transparent" : "border-primary"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-foreground line-clamp-2">
+                  {notification.title}
+                </p>
+                {!notification.is_read && (
+                  <span
+                    className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              {notification.body && (
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                  {notification.body}
+                </p>
+              )}
+              <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>{formatNotificationTypeLabel(notification.type)}</span>
+                <span>{formatNotificationTime(notification.created_at)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {bellButton}
+        {open && (
+          <>
+            <button
+              type="button"
+              aria-label="Zamknij powiadomienia"
+              className="fixed inset-0 z-[70] bg-transparent"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              role="dialog"
+              aria-label="Powiadomienia"
+              data-align="viewport-center"
+              data-testid="notifications-popover-content"
+              className="fixed left-1/2 top-[calc(3.25rem+env(safe-area-inset-top))] z-[80] w-[calc(100vw-2rem)] max-w-[340px] -translate-x-1/2 rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none"
+            >
+              {notificationsPanel}
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={bellLabel}
-          onClick={handleBellClick}
-          className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full p-0 transition-colors ${
-            hasUnread
-              ? "text-primary-foreground hover:bg-primary-foreground/20"
-              : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
-          } ${className ?? ""}`}
-        >
-          <Bell className="h-5 w-5" />
-          {unreadBadge && (
-            <span className="absolute -right-1 -top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 font-bold text-center">
-              {unreadBadge}
-            </span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] p-0">
-        <div className="border-b border-border px-3 py-2 flex items-center justify-between">
-          <p className="text-sm font-semibold">Powiadomienia</p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleToggleSound}
-              aria-label={
-                soundMuted
-                  ? "Włącz dźwięk powiadomień"
-                  : "Wycisz dźwięk powiadomień"
-              }
-              className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted"
-              title={soundMuted ? "Dźwięk wyłączony" : "Dźwięk włączony"}
-            >
-              {soundMuted ? (
-                <VolumeX className="h-4 w-4" />
-              ) : (
-                <Volume2 className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              type="button"
-              className="text-xs text-primary disabled:text-muted-foreground"
-              disabled={!hasUnread}
-              onClick={() => void handleMarkAllRead()}
-            >
-              Oznacz wszystkie
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="px-3 py-4 text-xs text-muted-foreground">
-            Ładowanie...
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="px-3 py-4 text-xs text-muted-foreground">
-            Brak powiadomień
-          </div>
-        ) : (
-          <div className="max-h-[380px] overflow-y-auto py-1">
-            {notifications.map((notification) => (
-              <button
-                key={notification.id}
-                type="button"
-                onClick={() => void handleNotificationClick(notification)}
-                className={`w-full text-left px-3 py-2 hover:bg-muted/60 transition-colors border-l-2 ${notification.is_read ? "border-transparent" : "border-primary"}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium text-foreground line-clamp-2">
-                    {notification.title}
-                  </p>
-                  {!notification.is_read && (
-                    <span
-                      className="mt-1 h-2 w-2 rounded-full bg-primary shrink-0"
-                      aria-hidden="true"
-                    />
-                  )}
-                </div>
-                {notification.body && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                    {notification.body}
-                  </p>
-                )}
-                <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{formatNotificationTypeLabel(notification.type)}</span>
-                  <span>{formatNotificationTime(notification.created_at)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+      <PopoverTrigger asChild>{bellButton}</PopoverTrigger>
+      <PopoverContent
+        align={popoverAlign}
+        data-align={popoverAlign}
+        data-testid="notifications-popover-content"
+        className="w-[340px] p-0"
+      >
+        {notificationsPanel}
       </PopoverContent>
     </Popover>
   );

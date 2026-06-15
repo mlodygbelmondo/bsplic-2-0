@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   removeChannel: vi.fn(),
   prepareNotificationSound: vi.fn(),
   setNotificationsSoundMuted: vi.fn(),
+  useIsMobile: vi.fn(),
 }));
 
 vi.mock('@/features/notifications/api/notifications', () => ({
@@ -41,6 +42,10 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
+vi.mock('@/hooks/use-mobile', () => ({
+  useIsMobile: () => mocks.useIsMobile(),
+}));
+
 function createChannel() {
   const channel = {
     on: vi.fn((_event: string, _config: unknown, callback: (payload: unknown) => void) => {
@@ -65,12 +70,14 @@ describe('NotificationsBell', () => {
     mocks.removeChannel.mockReset();
     mocks.prepareNotificationSound.mockReset();
     mocks.setNotificationsSoundMuted.mockReset();
+    mocks.useIsMobile.mockReset();
     notificationRealtimeHandler = null;
 
     mocks.fetchUnreadNotificationsCount.mockResolvedValue(1);
     mocks.fetchUserNotifications.mockResolvedValue([]);
     mocks.channel.mockImplementation(createChannel);
     mocks.prepareNotificationSound.mockResolvedValue(undefined);
+    mocks.useIsMobile.mockReturnValue(false);
   });
 
   it('keeps one realtime channel when popover and sound UI state changes', async () => {
@@ -156,6 +163,56 @@ describe('NotificationsBell', () => {
         name: 'Powiadomienia, 3 nieprzeczytane',
       }),
     ).toBeInTheDocument();
+  });
+
+  it('uses a menu-sized bell icon', async () => {
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    const bellButton = await screen.findByRole('button', {
+      name: /^Powiadomienia/,
+    });
+
+    expect(bellButton.querySelector('svg')).toHaveClass('h-6', 'w-6');
+  });
+
+  it('centers the opened notifications panel in the mobile viewport and keeps desktop aligned to the end', async () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Powiadomienia/ }));
+
+    expect(await screen.findByTestId('notifications-popover-content')).toHaveAttribute(
+      'data-align',
+      'end',
+    );
+
+    unmount();
+    mocks.useIsMobile.mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <NotificationsBell userId="user-1" />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Powiadomienia/ }));
+
+    const mobileContent = await screen.findByTestId('notifications-popover-content');
+    expect(mobileContent).toHaveAttribute('data-align', 'viewport-center');
+    expect(mobileContent).toHaveClass(
+      'fixed',
+      'left-1/2',
+      '-translate-x-1/2',
+      'w-[calc(100vw-2rem)]',
+      'max-w-[340px]',
+    );
   });
 
   it('decrements the unread badge from realtime read updates without refetching the count', async () => {

@@ -16,6 +16,12 @@ vi.mock('@/contexts/AuthContext', () => ({
   }),
 }));
 
+vi.mock('@/contexts/ThemeContext', () => ({
+  useTheme: () => ({
+    theme: 'light',
+  }),
+}));
+
 vi.mock('@/components/Navbar', () => ({
   Navbar: () => <div data-testid="navbar" />,
 }));
@@ -105,7 +111,7 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
-    const tabGrid = mobileNav.firstElementChild;
+    const tabGrid = mobileNav.firstElementChild?.firstElementChild;
 
     expect(tabGrid).toHaveStyle({
       gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
@@ -132,28 +138,80 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
-    const tabGrid = mobileNav.firstElementChild;
+    const tabGrid = mobileNav.firstElementChild?.firstElementChild;
     const navButtons = within(mobileNav).getAllByRole('button');
 
-    expect(tabGrid).toHaveClass('px-3.5', 'rounded-t-lg');
+    expect(tabGrid).toHaveClass('px-2', 'rounded-t-lg');
     navButtons.forEach((button) => {
       expect(button).toHaveClass('items-center', 'justify-center');
     });
-    expect(navButtons[0]).toHaveClass('min-h-[50px]');
+    expect(navButtons[0]).toHaveClass(
+      'min-h-[54px]',
+      'gap-1',
+      'rounded-xl',
+      'text-[11px]',
+      'font-black',
+    );
     expect(navButtons[2]).toHaveClass('relative', 'min-h-[50px]');
     expect(navButtons[2]).not.toHaveClass('-top-5', 'min-h-[58px]');
     expect(navButtons[2].firstElementChild).toHaveClass(
       'absolute',
-      '-top-4',
-      'h-[52px]',
-      'w-[52px]',
+      '-top-5',
+      'h-[58px]',
+      'w-[58px]',
     );
     expect(navButtons[2].firstElementChild).not.toHaveClass('h-[62px]', 'w-[62px]');
-    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-6', 'w-6');
-    expect(navButtons[0]).toHaveClass('gap-2');
-    expect(navButtons[0].firstElementChild).toHaveClass('h-[23px]', 'w-[23px]');
-    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('text-[10px]');
-    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('text-[10px]');
+    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
+    expect(navButtons[0].firstElementChild).toHaveClass('h-5', 'w-5');
+    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('leading-none');
+    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('leading-none');
+  });
+
+  it('uses the same mobile glass surface for admin navigation', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+
+    expect(mobileNav.firstElementChild).toHaveClass('bg-white', 'rounded-t-lg');
+    expect(mobileNav.firstElementChild?.firstElementChild).toHaveClass(
+      'bg-white/72',
+      'backdrop-blur-xl',
+      'rounded-t-lg',
+    );
+    expect(within(mobileNav).getByRole('button', { name: 'Zarządzaj' })).not.toHaveClass(
+      'bg-primary/10',
+    );
+  });
+
+  it('hides the mobile admin navigation on deliberate downward scroll', () => {
+    mockIsAdmin = true;
+
+    renderAdminLayout();
+
+    const mobileNav = screen.getByRole('navigation', {
+      name: 'Nawigacja admina',
+    });
+    const scrollContainer = screen.getByTestId('admin-scroll-container');
+
+    Object.defineProperties(scrollContainer, {
+      scrollTop: { configurable: true, value: 120 },
+      scrollHeight: { configurable: true, value: 900 },
+      clientHeight: { configurable: true, value: 500 },
+    });
+
+    fireEvent.scroll(scrollContainer, {
+      currentTarget: {
+        scrollTop: 120,
+        scrollHeight: 900,
+        clientHeight: 500,
+      },
+    });
+
+    expect(mobileNav).toHaveClass('translate-y-full', 'opacity-0');
   });
 
   it('does not reserve a fixed gray spacer above the mobile admin navigation', () => {

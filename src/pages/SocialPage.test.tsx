@@ -33,6 +33,7 @@ const setPreferredCouponTypeMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const navigateMock = vi.fn();
+const navbarMock = vi.hoisted(() => vi.fn(() => <div>Navbar</div>));
 const realtimeHandlers: Array<{
   table: string;
   callback: (payload: {
@@ -70,7 +71,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 vi.mock('@/components/Navbar', () => ({
-  Navbar: () => <div>Navbar</div>,
+  Navbar: (props: { mobileBottomNavHidden?: boolean }) => navbarMock(props),
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -166,6 +167,7 @@ function renderSocialPageWithRoute(route: string) {
 describe('SocialPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navbarMock.mockClear();
     realtimeHandlers.length = 0;
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
     fetchSocialFeedItemMock.mockResolvedValue(null);
@@ -203,6 +205,32 @@ describe('SocialPage', () => {
     // While loading, the branded loader is shown; after the feed resolves
     // the item should appear.
     expect(await screen.findByText('Typster')).toBeInTheDocument();
+  });
+
+  it('hides mobile bottom nav on deliberate downward feed scroll', async () => {
+    const { container } = renderSocialPage();
+
+    expect(await screen.findByText('Typster')).toBeInTheDocument();
+    expect(navbarMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mobileBottomNavHidden: false }),
+    );
+
+    const scrollContainer = container.querySelector(
+      "[data-testid='social-scroll-container']",
+    ) as HTMLDivElement;
+    Object.defineProperties(scrollContainer, {
+      scrollTop: { configurable: true, value: 90 },
+      scrollHeight: { configurable: true, value: 1800 },
+      clientHeight: { configurable: true, value: 700 },
+    });
+    fireEvent.scroll(scrollContainer);
+
+    expect(navbarMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ mobileBottomNavHidden: true }),
+    );
+    expect(scrollContainer).toHaveClass(
+      'pb-[var(--mobile-bottom-nav-scroll-padding)]',
+    );
   });
 
   it('shows empty state when feed is empty', async () => {

@@ -272,6 +272,20 @@ describe("Navbar", () => {
     }
   });
 
+  it("uses a smaller notification bell icon on mobile", async () => {
+    renderNavbar();
+
+    await waitFor(() => {
+      expect(
+        notificationsBellMock.mock.calls.some(([props]) =>
+          typeof props.className === "string" &&
+          props.className.includes("[&>svg]:h-5 [&>svg]:w-5") &&
+          !props.className.includes("p-0"),
+        ),
+      ).toBe(true);
+    });
+  });
+
   // ── Topup — canClaimTopup is true ─────────────────────
 
   it("opens topup dialog when canClaimTopup returns true", async () => {

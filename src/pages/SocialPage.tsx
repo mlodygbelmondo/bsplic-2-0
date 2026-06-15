@@ -36,6 +36,10 @@ import { formatEventsCount } from '@/features/social/lib/socialFormatters';
 import { REACTION_TYPES } from '@/features/social/reactions';
 import { getSocialItemPath } from '@/features/social/routes';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import {
+  getNextScrollChromeState,
+  type ScrollChromeState,
+} from '@/lib/scroll-chrome';
 import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 
 const SOCIAL_FEED_PAGE_SIZE = 50;
@@ -99,6 +103,8 @@ export default function SocialPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const mobileChromeStateRef = useRef<ScrollChromeState>();
+  const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   const feedFilter = parseFeedFilter(searchParams.get('filter'));
@@ -632,15 +638,25 @@ export default function SocialPage() {
 
   return (
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
-      <Navbar />
+      <Navbar mobileBottomNavHidden={mobileChromeHidden} />
       <div
+        data-testid="social-scroll-container"
         ref={scrollContainerRef}
-        onScroll={() => {
-          const element = scrollContainerRef.current;
-          if (!element) return;
+        onScroll={(event) => {
+          const element = event.currentTarget;
           setShowBackToTop(element.scrollTop > 600);
+          const nextChromeState = getNextScrollChromeState(
+            mobileChromeStateRef.current,
+            {
+              scrollTop: element.scrollTop,
+              scrollHeight: element.scrollHeight,
+              clientHeight: element.clientHeight,
+            },
+          );
+          mobileChromeStateRef.current = nextChromeState;
+          setMobileChromeHidden(nextChromeState.hidden);
         }}
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-y-auto pb-[var(--mobile-bottom-nav-scroll-padding)] lg:pb-0"
       >
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4">Social</h1>

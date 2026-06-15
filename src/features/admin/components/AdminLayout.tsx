@@ -1,8 +1,26 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type UIEvent,
+} from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
+import {
+  getMobileBottomNavActiveClassName,
+  getMobileBottomNavInactiveClassName,
+  getMobileBottomNavSurfaceClassName,
+  getMobileBottomNavUnderlayClassName,
+} from '@/components/mobileBottomNavStyles';
 import { cn } from '@/lib/utils';
+import {
+  getNextScrollChromeState,
+  type ScrollChromeState,
+} from '@/lib/scroll-chrome';
 import type { AdminTab } from '../constants';
 import {
   LayoutDashboard,
@@ -90,6 +108,9 @@ const MORE_TAB_CONFIG: TabConfig = {
   icon: MoreHorizontal,
 };
 
+const MOBILE_NAV_ITEM_CLASS_NAME =
+  'flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-black transition-colors';
+
 function AdminTabFallback() {
   return (
     <div className="space-y-4">
@@ -101,11 +122,33 @@ function AdminTabFallback() {
 
 export default function AdminLayout() {
   const { isAdmin, isModerator, loading } = useAuth();
+  const { theme } = useTheme();
   const availableTabs = isAdmin
     ? TABS
     : TABS.filter((availableTab) => availableTab.key === 'proposals');
   const defaultTab: AdminTab = isAdmin ? 'manage' : 'proposals';
   const [tab, setTab] = useState<AdminTab>('manage');
+  const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
+  const mobileChromeStateRef = useRef<ScrollChromeState>();
+  const mobileActiveClassName = getMobileBottomNavActiveClassName(theme);
+  const mobileInactiveClassName = getMobileBottomNavInactiveClassName(theme);
+
+  const handleAdminScroll = (event: UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+    const nextChromeState = getNextScrollChromeState(
+      mobileChromeStateRef.current,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      },
+    );
+
+    mobileChromeStateRef.current = nextChromeState;
+    setMobileChromeHidden((current) =>
+      current === nextChromeState.hidden ? current : nextChromeState.hidden,
+    );
+  };
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -184,7 +227,11 @@ export default function AdminLayout() {
 
         {/* Main content */}
         <main className="flex-1 min-h-0 min-w-0 overflow-hidden">
-          <div className="h-full overflow-y-auto overscroll-contain pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <div
+            data-testid="admin-scroll-container"
+            onScroll={handleAdminScroll}
+            className="h-full overflow-y-auto overscroll-contain pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"
+          >
             <div className="mx-auto w-full max-w-none p-4 sm:p-6 md:p-8">
               {/* Mobile page header */}
               <div className="md:hidden mb-6 flex items-center justify-between">
@@ -240,74 +287,84 @@ export default function AdminLayout() {
       {/* Mobile bottom tab bar */}
       <nav
         aria-label="Nawigacja admina"
-        className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none"
+        className={cn(
+          'md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none transition-[transform,opacity] duration-200 ease-out will-change-transform',
+          mobileChromeHidden
+            ? 'translate-y-full opacity-0'
+            : 'translate-y-0 opacity-100',
+        )}
       >
         <div
-          className="grid rounded-t-lg bg-card/95 backdrop-blur-md border-t border-border/60 shadow-[0_-6px_18px_rgba(15,23,42,0.12)] px-3.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pointer-events-auto overflow-visible"
-          style={{
-            gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
-          }}
+          className={cn(
+            'pointer-events-auto overflow-visible',
+            getMobileBottomNavUnderlayClassName(theme),
+          )}
         >
-          {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
-            const isCenter = key === 'create';
-            const isMoreActive =
-              key === 'more' &&
-              (activeTab === 'more' ||
-                MOBILE_MORE_TAB_KEYS.includes(activeTab));
-            const isActive = activeTab === key || isMoreActive;
+          <div
+            className={cn(
+              'grid overflow-visible',
+              getMobileBottomNavSurfaceClassName(theme),
+            )}
+            style={{
+              gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
+            }}
+          >
+            {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
+              const isCenter = key === 'create';
+              const isMoreActive =
+                key === 'more' &&
+                (activeTab === 'more' ||
+                  MOBILE_MORE_TAB_KEYS.includes(activeTab));
+              const isActive = activeTab === key || isMoreActive;
 
-            if (isCenter) {
+              if (isCenter) {
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setTab(key)}
+                    aria-label={label}
+                    className="relative flex min-h-[50px] w-full min-w-0 flex-col items-center justify-center rounded-md px-1 py-1 transition-colors"
+                  >
+                    <div
+                      className={cn(
+                        'absolute -top-5 flex h-[58px] w-[58px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
+                        isActive
+                          ? 'gradient-primary'
+                          : 'bg-primary hover:brightness-110',
+                      )}
+                    >
+                      <Icon className="h-7 w-7" strokeWidth={2.5} />
+                    </div>
+                  </button>
+                );
+              }
+
               return (
                 <button
                   key={key}
                   onClick={() => setTab(key)}
                   aria-label={label}
-                  className="relative flex min-h-[50px] w-full min-w-0 flex-col items-center justify-center rounded-md px-1 py-1 transition-colors"
+                  className={cn(
+                    MOBILE_NAV_ITEM_CLASS_NAME,
+                    isActive ? mobileActiveClassName : mobileInactiveClassName,
+                  )}
                 >
-                  <div
+                  <Icon
+                    className="h-5 w-5 shrink-0"
+                    strokeWidth={isActive ? 2.6 : 2.2}
+                  />
+                  <span
                     className={cn(
-                      'absolute -top-4 flex h-[52px] w-[52px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
-                      isActive
-                        ? 'gradient-primary'
-                        : 'bg-primary hover:brightness-110',
+                      'w-full truncate text-center leading-none',
+                      isActive && 'font-semibold',
                     )}
                   >
-                    <Icon className="h-6 w-6" strokeWidth={2.5} />
-                  </div>
+                    {shortLabel}
+                  </span>
                 </button>
               );
-            }
-
-            return (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                aria-label={label}
-                className={cn(
-                  'flex min-h-[50px] min-w-0 flex-col items-center justify-center gap-2 rounded-md px-1 py-1 transition-colors',
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icon
-                  className={cn(
-                    'h-[23px] w-[23px] shrink-0',
-                    isActive ? 'text-primary' : 'text-muted-foreground',
-                  )}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                <span
-                  className={cn(
-                    'w-full truncate text-center text-[10px] font-medium leading-none',
-                    isActive && 'font-semibold',
-                  )}
-                >
-                  {shortLabel}
-                </span>
-              </button>
-            );
-          })}
+            })}
+          </div>
         </div>
       </nav>
     </div>

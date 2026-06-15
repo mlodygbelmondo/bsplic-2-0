@@ -16,8 +16,8 @@ describe('CasinoBlackjackPage', () => {
       '--casino-bg-mobile': "url('/casino/blackjack-mobile-background.webp')",
     });
     expect(screen.getByTestId('casino-blackjack-shell')).toHaveClass(
-      'h-full',
-      'overflow-hidden',
+      'min-h-full',
+      'overflow-visible',
     );
     expect(
       container.querySelector('[data-testid="casino-blackjack-shell"]'),
@@ -38,5 +38,13 @@ describe('CasinoBlackjackPage', () => {
       ),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Split działa/)).not.toBeInTheDocument();
+  });
+
+  it('reserves bottom scroll space for the mobile nav', () => {
+    render(<CasinoBlackjackPage />);
+
+    expect(screen.getByTestId('casino-blackjack-content')).toHaveClass(
+      'pb-[var(--mobile-bottom-nav-scroll-padding)]',
+    );
   });
 });
