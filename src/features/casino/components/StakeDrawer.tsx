@@ -189,13 +189,13 @@ export function StakeDrawer({
               initial={{ y: 100 }}
               animate={{ y: 0 }}
               exit={{ y: 100 }}
-              className="fixed inset-x-0 bottom-0 z-50"
+              className="fixed inset-x-0 bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))] z-50 transition-[bottom] duration-200 ease-out"
             >
               <button
                 type="button"
                 aria-label="Otwórz kupon ruletki"
                 onClick={() => setIsMobileOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-t-3xl border-t border-white/10 bg-black/90 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 text-white/70 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                className="flex w-full items-center justify-center gap-2 rounded-t-3xl border-t border-white/10 bg-black/90 pb-4 pt-4 text-white/70 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
               >
                 <ChevronUp className="h-5 w-5" />
                 <span className="text-sm font-semibold uppercase tracking-wider">
@@ -218,7 +218,7 @@ export function StakeDrawer({
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               data-testid="mobile-stake-drawer"
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[calc(var(--app-viewport-height,100svh)-4rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+              className="fixed inset-x-0 bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))] z-50 max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--mobile-floating-stack-offset,4.75rem)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-[bottom] duration-200 ease-out"
             >
               {/* Drag handle */}
               <div className="mb-4 flex justify-center">

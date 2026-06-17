@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
-import { Category, BetOption } from '@/types/database';
+import { Bet, Category, BetOption } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,11 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { EditableBetType } from '../constants';
 import { getErrorMessage, toInputDateTime, getTomorrowAt2359 } from '../helpers';
+import {
+  replaceBetAkoExclusions,
+  type BetAkoExclusionDraft,
+} from '../api/akoExclusions';
+import { AkoExclusionsEditor } from './AkoExclusionsEditor';
 
 interface BetOptionDraft {
   name: string;
@@ -26,13 +31,23 @@ export default function CreateBetTab() {
   const [endsAt, setEndsAt] = useState(() => toInputDateTime(getTomorrowAt2359()));
   const [options, setOptions] = useState<BetOptionDraft[]>([{ name: '1', odds: '2' }, { name: '2', odds: '2' }]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [existingBets, setExistingBets] = useState<Bet[]>([]);
+  const [akoExclusions, setAkoExclusions] = useState<BetAkoExclusionDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const [desktopRightHeight, setDesktopRightHeight] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
-      if (data) setCategories(data as Category[]);
+    Promise.all([
+      supabase.from('categories').select('*').order('sort_order'),
+      supabase
+        .from('bets')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false }),
+    ]).then(([categoryResult, betResult]) => {
+      if (categoryResult.data) setCategories(categoryResult.data as Category[]);
+      if (betResult.data) setExistingBets((betResult.data as unknown as Bet[]) || []);
     });
   }, []);
 
@@ -49,6 +64,10 @@ export default function CreateBetTab() {
   }, [betType]);
 
   const hasFixedOptionCount = betType === 'single' || betType === '12' || betType === '1x2';
+  const availableAkoBets = useMemo(
+    () => existingBets.filter((bet) => bet.is_active),
+    [existingBets],
+  );
 
   useEffect(() => {
     const syncHeight = () => {
@@ -115,7 +134,7 @@ export default function CreateBetTab() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('bets').insert([{
+      const { data, error } = await supabase.from('bets').insert([{
         title,
         category_id: categoryId || null,
         bet_type: betType,
@@ -123,10 +142,31 @@ export default function CreateBetTab() {
         ends_at: new Date(endsAt).toISOString(),
         is_live: isLive,
         is_bsplicboost: isBsplicboost,
-      }]);
+      }]).select('id').single();
       if (error) throw error;
+
+      const createdBetId = (data as { id?: string } | null)?.id;
+      if (!createdBetId) {
+        throw new Error('Zakład utworzony bez identyfikatora');
+      }
+
+      if (akoExclusions.length > 0) {
+        try {
+          await replaceBetAkoExclusions(createdBetId, akoExclusions);
+        } catch (exclusionError: unknown) {
+          toast.error(
+            `Zakład utworzony, ale nie zapisano wykluczeń AKO. Otwórz edycję zakładu i spróbuj ponownie. ${getErrorMessage(
+              exclusionError,
+              '',
+            )}`.trim(),
+          );
+          return;
+        }
+      }
+
       toast.success('Zakład utworzony!');
       setTitle('');
+      setAkoExclusions([]);
       setIsBsplicboost(false);
       setEndsAt(toInputDateTime(getTomorrowAt2359()));
       if (betType === 'single') setOptions([{ name: '1', odds: '2' }]);
@@ -230,6 +270,13 @@ export default function CreateBetTab() {
               </div>
             </div>
           </div>
+
+          <AkoExclusionsEditor
+            availableBets={availableAkoBets}
+            value={akoExclusions}
+            onChange={setAkoExclusions}
+            disabled={submitting}
+          />
         </div>
 
         <div

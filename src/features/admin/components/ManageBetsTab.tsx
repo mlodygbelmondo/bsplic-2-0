@@ -45,6 +45,12 @@ import {
 } from '../helpers';
 import type { EditableBetOption } from '../helpers';
 import { settleBetWithBackend, type CorrectionScope, type SettlementMode } from '../settlementApi';
+import {
+  fetchBetAkoExclusions,
+  replaceBetAkoExclusions,
+  type BetAkoExclusionDraft,
+} from '../api/akoExclusions';
+import { AkoExclusionsEditor } from './AkoExclusionsEditor';
 import { filterBets, type BetStatusFilter, type BetTypeFilter } from './manageBetsFilters';
 
 type ResolveStep = 'selection' | 'non_multi_warning';
@@ -59,6 +65,7 @@ interface BetEditor {
   isLive: boolean;
   isBsplicboost: boolean;
   isActive: boolean;
+  akoExclusions: BetAkoExclusionDraft[];
 }
 
 const PAGE_SIZE = 15;
@@ -77,6 +84,7 @@ export default function ManageBetsTab() {
   // Editor
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorLoading, setEditorLoading] = useState(false);
+  const [editorExclusionsLoading, setEditorExclusionsLoading] = useState(false);
   const [editing, setEditing] = useState<BetEditor | null>(null);
 
   // Resolve
@@ -152,12 +160,27 @@ export default function ManageBetsTab() {
       isLive: Boolean(bet.is_live),
       isBsplicboost: Boolean(bet.is_bsplicboost),
       isActive: Boolean(bet.is_active),
+      akoExclusions: [],
     });
     setEditorOpen(true);
+    setEditorExclusionsLoading(true);
+    fetchBetAkoExclusions(bet.id)
+      .then((exclusions) => {
+        setEditing((current) =>
+          current?.id === bet.id ? { ...current, akoExclusions: exclusions } : current,
+        );
+      })
+      .catch((err: unknown) => {
+        toast.error(getErrorMessage(err, 'Nie udało się pobrać wykluczeń AKO'));
+      })
+      .finally(() => {
+        setEditorExclusionsLoading(false);
+      });
   };
 
   const updateBet = async () => {
     if (!editing) return;
+    if (editorExclusionsLoading) { toast.error('Poczekaj, aż wykluczenia AKO się wczytają'); return; }
     if (!editing.title.trim()) { toast.error('Tytuł jest wymagany'); return; }
 
     const cleanedOptions = editing.options.map((option) => ({
@@ -197,6 +220,7 @@ export default function ManageBetsTab() {
         })
         .eq('id', editing.id);
       if (error) throw error;
+      await replaceBetAkoExclusions(editing.id, editing.akoExclusions);
       toast.success('Zakład zaktualizowany');
       setEditorOpen(false);
       setEditing(null);
@@ -613,7 +637,20 @@ export default function ManageBetsTab() {
                 )}
               </div>
 
-              <Button onClick={updateBet} disabled={editorLoading} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
+              <AkoExclusionsEditor
+                availableBets={bets}
+                currentBetId={editing.id}
+                value={editing.akoExclusions}
+                onChange={(akoExclusions) =>
+                  setEditing((current) =>
+                    current ? { ...current, akoExclusions } : current,
+                  )
+                }
+                disabled={editorLoading}
+                loading={editorExclusionsLoading}
+              />
+
+              <Button onClick={updateBet} disabled={editorLoading || editorExclusionsLoading} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
                 {editorLoading ? 'Zapisywanie...' : 'Zapisz zmiany'}
               </Button>
             </div>

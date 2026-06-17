@@ -141,6 +141,55 @@ export type Database = {
           },
         ]
       }
+      bet_ako_exclusions: {
+        Row: {
+          bet_id_a: string
+          bet_id_b: string
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          bet_id_a: string
+          bet_id_b: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          bet_id_a?: string
+          bet_id_b?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bet_ako_exclusions_bet_id_a_fkey"
+            columns: ["bet_id_a"]
+            isOneToOne: false
+            referencedRelation: "bets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bet_ako_exclusions_bet_id_b_fkey"
+            columns: ["bet_id_b"]
+            isOneToOne: false
+            referencedRelation: "bets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bet_ako_exclusions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bonus_campaign_claims: {
         Row: {
           amount: number
@@ -401,6 +450,7 @@ export type Database = {
           created_at: string
           id: string
           payout: number | null
+          settled_at: string | null
           stake: number
           status: string
           total_odds: number
@@ -410,6 +460,7 @@ export type Database = {
           created_at?: string
           id?: string
           payout?: number | null
+          settled_at?: string | null
           stake: number
           status?: string
           total_odds?: number
@@ -419,12 +470,221 @@ export type Database = {
           created_at?: string
           id?: string
           payout?: number | null
+          settled_at?: string | null
           stake?: number
           status?: string
           total_odds?: number
           user_id?: string
         }
         Relationships: []
+      }
+      daily_jackpot_pools: {
+        Row: {
+          created_at: string
+          draw_scheduled_at: string
+          drawn_at: string | null
+          entropy_hash: string | null
+          id: string
+          locked_at: string | null
+          min_unique_users: number
+          pool_date: string
+          prize_amount: number
+          rollover_from_pool_id: string | null
+          status: string
+          ticket_price: number
+          updated_at: string
+          winner_user_id: string | null
+          winning_ticket_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          draw_scheduled_at: string
+          drawn_at?: string | null
+          entropy_hash?: string | null
+          id?: string
+          locked_at?: string | null
+          min_unique_users?: number
+          pool_date: string
+          prize_amount?: number
+          rollover_from_pool_id?: string | null
+          status?: string
+          ticket_price?: number
+          updated_at?: string
+          winner_user_id?: string | null
+          winning_ticket_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          draw_scheduled_at?: string
+          drawn_at?: string | null
+          entropy_hash?: string | null
+          id?: string
+          locked_at?: string | null
+          min_unique_users?: number
+          pool_date?: string
+          prize_amount?: number
+          rollover_from_pool_id?: string | null
+          status?: string
+          ticket_price?: number
+          updated_at?: string
+          winner_user_id?: string | null
+          winning_ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_jackpot_pools_rollover_from_pool_id_fkey"
+            columns: ["rollover_from_pool_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_pools_winner_user_id_fkey"
+            columns: ["winner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_pools_winning_ticket_id_fkey"
+            columns: ["winning_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_jackpot_tickets: {
+        Row: {
+          id: string
+          pool_id: string
+          price: number
+          purchased_at: string
+          refunded_at: string | null
+          ticket_number: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          pool_id: string
+          price: number
+          purchased_at?: string
+          refunded_at?: string | null
+          ticket_number: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          pool_id?: string
+          price?: number
+          purchased_at?: string
+          refunded_at?: string | null
+          ticket_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_jackpot_tickets_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_jackpot_funding_entries: {
+        Row: {
+          amount: number
+          coupon_id: string | null
+          created_at: string
+          id: string
+          pool_id: string
+          source_day: string
+          source_pool_id: string | null
+          source_type: string
+        }
+        Insert: {
+          amount: number
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          pool_id: string
+          source_day: string
+          source_pool_id?: string | null
+          source_type: string
+        }
+        Update: {
+          amount?: number
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          pool_id?: string
+          source_day?: string
+          source_pool_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_jackpot_funding_entries_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_funding_entries_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_funding_entries_source_pool_id_fkey"
+            columns: ["source_pool_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_jackpot_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          pool_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          pool_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          pool_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_jackpot_events_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       casino_rounds: {
         Row: {
@@ -859,6 +1119,14 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
       }
+      admin_get_bet_ako_exclusions: {
+        Args: { p_bet_id: string }
+        Returns: Json
+      }
+      admin_replace_bet_ako_exclusions: {
+        Args: { p_bet_id: string; p_exclusions: Json }
+        Returns: Json
+      }
       admin_settle_bet: {
         Args: {
           p_bet_id: string
@@ -966,6 +1234,26 @@ export type Database = {
           win_rate: number
           won_bets: number
         }[]
+      }
+      get_daily_jackpot_state: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      buy_daily_jackpot_ticket: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
+      finalize_daily_jackpot_if_due: {
+        Args: { p_pool_date?: string | null }
+        Returns: Json
+      }
+      admin_finalize_daily_jackpot: {
+        Args: { p_pool_date: string }
+        Returns: Json
+      }
+      get_warsaw_draw_at: {
+        Args: { p_pool_date: string }
+        Returns: string
       }
       create_casino_social_share: {
         Args: {

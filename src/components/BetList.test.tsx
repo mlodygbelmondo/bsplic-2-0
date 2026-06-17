@@ -16,6 +16,17 @@ vi.mock("@/features/home/hooks/useBets", () => ({
     useBetsMock(selectedCategory, sort),
 }));
 
+vi.mock("@/features/jackpot/hooks/useDailyJackpot", () => ({
+  useDailyJackpot: () => ({
+    balance: 0,
+    buyTicket: vi.fn(),
+    buying: false,
+    loading: false,
+    refresh: vi.fn(),
+    snapshot: null,
+  }),
+}));
+
 describe("BetList tabs", () => {
   it("defaults to newest and supports ending-soon sort tab", () => {
     render(

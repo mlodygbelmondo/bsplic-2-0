@@ -520,15 +520,22 @@ describe('RouletteGame', () => {
     );
 
     expect(screen.queryByTestId('roulette-bet-panel')).not.toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole('button', { name: /Otwórz kupon ruletki/i }),
+    const mobileTrigger = screen.getByRole('button', {
+      name: /Otwórz kupon ruletki/i,
+    });
+
+    expect(mobileTrigger.parentElement).toHaveClass(
+      'bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))]',
     );
+
+    fireEvent.click(mobileTrigger);
 
     const drawer = screen.getByTestId('mobile-stake-drawer');
     expect(drawer).toHaveTextContent('Typ zakładu');
     expect(drawer).toHaveTextContent('Wybierz stawkę');
     expect(drawer).toHaveClass(
-      'max-h-[calc(var(--app-viewport-height,100svh)-4rem)]',
+      'bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))]',
+      'max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--mobile-floating-stack-offset,4.75rem)-env(safe-area-inset-bottom))]',
       'overflow-y-auto',
       'overscroll-contain',
     );

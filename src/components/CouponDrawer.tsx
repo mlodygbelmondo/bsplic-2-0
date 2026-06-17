@@ -4,10 +4,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCoupon } from '@/contexts/CouponContext';
 import { useCouponPlacement } from '@/features/home/hooks/useCouponPlacement';
 import { getCouponCategoryEmoji } from '@/features/coupons/categoryEmoji';
+import {
+  findAkoConflict,
+  formatAkoConflictMessage,
+} from '@/features/coupons/akoExclusions';
+import { fetchAkoExclusionsForBets } from '@/features/coupons/akoExclusionApi';
 import { Input } from '@/components/ui/input';
-import { X, Ticket } from 'lucide-react';
+import { AlertTriangle, X, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Category } from '@/types/database';
+import type { AkoExclusion } from '@/features/coupons/akoExclusions';
 
 interface CouponDrawerProps {
   categoryMap: Record<string, Category>;
@@ -51,6 +57,7 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [activeTab, setActiveTab] = useState<'single' | 'ako'>('single');
+  const [akoExclusions, setAkoExclusions] = useState<AkoExclusion[]>([]);
   const stakePresets = ['5', '10', '25', '50'];
 
   useEffect(() => {
@@ -105,6 +112,51 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
   const balance = Number(profile?.balance ?? 0);
   const insufficientFunds = items.length > 0 && totalStake > balance;
   const maxStake = (Math.floor(balance * 100) / 100).toString();
+  const selectedBetIds = useMemo(() => items.map((item) => item.bet.id), [items]);
+  const akoSelections = useMemo(
+    () =>
+      items.map((item) => ({
+        betId: item.bet.id,
+        title: item.bet.title,
+      })),
+    [items],
+  );
+  const akoConflict = useMemo(() => {
+    if (activeTab !== 'ako') {
+      return null;
+    }
+
+    return findAkoConflict(akoSelections, akoExclusions);
+  }, [activeTab, akoExclusions, akoSelections]);
+  const akoConflictMessage = akoConflict
+    ? formatAkoConflictMessage(akoConflict)
+    : null;
+  const hasAkoConflict = Boolean(akoConflict);
+
+  useEffect(() => {
+    if (selectedBetIds.length < 2) {
+      setAkoExclusions([]);
+      return;
+    }
+
+    let isCurrent = true;
+
+    fetchAkoExclusionsForBets(selectedBetIds)
+      .then((exclusions) => {
+        if (isCurrent) {
+          setAkoExclusions(exclusions);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setAkoExclusions([]);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedBetIds]);
 
   const handleClearCoupon = () => {
     const clearedItems = items;
@@ -120,7 +172,9 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
   const handleStakeKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    if (placing || items.length === 0 || insufficientFunds) return;
+    if (placing || items.length === 0 || insufficientFunds || hasAkoConflict) {
+      return;
+    }
     event.currentTarget.blur();
     void placeBet();
   };
@@ -353,9 +407,19 @@ export function CouponDrawer({ categoryMap }: CouponDrawerProps) {
             Niewystarczające środki — saldo {balance.toFixed(2)} zł
           </p>
         )}
+        {akoConflictMessage && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-[11px] font-semibold text-destructive">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p>{akoConflictMessage}</p>
+            </div>
+          </div>
+        )}
         <button
           onClick={placeBet}
-          disabled={placing || items.length === 0 || insufficientFunds}
+          disabled={
+            placing || items.length === 0 || insufficientFunds || hasAkoConflict
+          }
           className="press-scale w-full gradient-primary text-primary-foreground font-bold h-10 text-[13px] rounded-lg shadow-[0_4px_16px_hsl(355_100%_45%/0.35)] transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {placing ? 'Stawianie...' : 'Obstaw'}

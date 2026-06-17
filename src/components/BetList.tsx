@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SectionLoader } from "@/components/SectionLoader";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
+import { DailyJackpotCard } from "@/features/jackpot/components/DailyJackpotCard";
+import { useDailyJackpot } from "@/features/jackpot/hooks/useDailyJackpot";
 import {
   getNextScrollChromeState,
   type ScrollChromeState,
@@ -98,6 +100,7 @@ export function BetList({
   const [actionsHidden, setActionsHidden] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
+  const jackpot = useDailyJackpot();
 
   const toggleMobilePanel = (panel: MobilePanelKind) => {
     setMobilePanel((previous) => (previous === panel ? null : panel));
@@ -421,6 +424,14 @@ export function BetList({
               )}
             </div>
           </div>
+
+          <DailyJackpotCard
+            snapshot={jackpot.snapshot}
+            loading={jackpot.loading}
+            buying={jackpot.buying}
+            balance={jackpot.balance}
+            onBuy={jackpot.buyTicket}
+          />
 
           {liveBets.length > 0 && (
             <div className="mb-4">
