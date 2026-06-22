@@ -256,6 +256,11 @@ describe('SocialPage', () => {
     const scrollContainer = container.querySelector(
       "[data-testid='social-scroll-container']",
     ) as HTMLDivElement;
+    const filterBar = container.querySelector(
+      "[data-testid='social-filter-bar']",
+    );
+    expect(filterBar).toHaveAttribute('data-hidden', 'false');
+
     Object.defineProperties(scrollContainer, {
       scrollTop: { configurable: true, value: 90 },
       scrollHeight: { configurable: true, value: 1800 },
@@ -269,6 +274,7 @@ describe('SocialPage', () => {
     expect(scrollContainer).toHaveClass(
       'pb-[var(--mobile-bottom-nav-scroll-padding)]',
     );
+    expect(filterBar).toHaveAttribute('data-hidden', 'true');
   });
 
   it('uses an edge-to-edge mobile feed shell while restoring desktop spacing from sm up', async () => {
@@ -301,6 +307,9 @@ describe('SocialPage', () => {
       'sticky',
       'top-0',
       'z-20',
+      'grid',
+      'grid-cols-4',
+      'overflow-hidden',
       'rounded-none',
       'sm:rounded-lg',
     );

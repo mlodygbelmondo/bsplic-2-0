@@ -727,13 +727,14 @@ export default function SocialPage() {
 
           <div
             data-testid="social-filter-bar"
-            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-0 flex w-full items-center gap-2 overflow-x-auto rounded-none border-0 bg-card px-3 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
+            data-hidden={mobileChromeHidden}
+            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-0 grid w-full grid-cols-4 items-center gap-1 overflow-hidden rounded-none border-0 bg-card px-2 py-1 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:overflow-x-auto sm:rounded-lg sm:border sm:p-1"
           >
             <button
               type="button"
               data-active={feedFilter === 'all'}
               className={cn(
-                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button min-w-0 px-2 py-1.5 text-xs font-semibold rounded-md transition-colors sm:shrink-0 sm:px-3',
                 feedFilter === 'all'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -746,7 +747,7 @@ export default function SocialPage() {
               type="button"
               data-active={feedFilter === 'coupon'}
               className={cn(
-                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button min-w-0 px-2 py-1.5 text-xs font-semibold rounded-md transition-colors sm:shrink-0 sm:px-3',
                 feedFilter === 'coupon'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -759,7 +760,7 @@ export default function SocialPage() {
               type="button"
               data-active={feedFilter === 'post'}
               className={cn(
-                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button min-w-0 px-2 py-1.5 text-xs font-semibold rounded-md transition-colors sm:shrink-0 sm:px-3',
                 feedFilter === 'post'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -772,7 +773,7 @@ export default function SocialPage() {
               type="button"
               data-active={feedFilter === 'casino'}
               className={cn(
-                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button min-w-0 px-2 py-1.5 text-xs font-semibold rounded-md transition-colors sm:shrink-0 sm:px-3',
                 feedFilter === 'casino'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
