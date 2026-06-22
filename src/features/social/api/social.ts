@@ -1,5 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { RouletteBetType, RouletteColor, SocialFeedItem, SocialComment, ReactionEmoji } from '@/types/database';
+import type {
+  ReactionEmoji,
+  RouletteBetType,
+  RouletteColor,
+  SocialComment,
+  SocialFeedItem,
+  SocialStory,
+} from '@/types/database';
 
 // The generated Supabase types don't know about our new RPC functions yet.
 // We cast .rpc via unknown until types are regenerated.
@@ -41,6 +48,25 @@ export async function fetchSocialFeedItem(
 
 export async function createPost(userId: string, content: string): Promise<string> {
   const { data, error } = await rpc('create_social_post', {
+    p_user_id: userId,
+    p_content: content,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as unknown as string;
+}
+
+// ── Stories ───────────────────────────────────────────────────
+
+export async function fetchActiveSocialStories(): Promise<SocialStory[]> {
+  const { data, error } = await rpc('get_active_social_stories');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as SocialStory[];
+}
+
+export async function createSocialStory(userId: string, content: string): Promise<string> {
+  const { data, error } = await rpc('create_social_story', {
     p_user_id: userId,
     p_content: content,
   });

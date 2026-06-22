@@ -238,6 +238,16 @@ export interface SocialFeedItem {
   casino_winning_color?: RouletteColor | null;
 }
 
+export interface SocialStory {
+  id: string;
+  user_id: string;
+  username: string;
+  avatar_url?: string | null;
+  content: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface SocialComment {
   id: string;
   user_id: string;

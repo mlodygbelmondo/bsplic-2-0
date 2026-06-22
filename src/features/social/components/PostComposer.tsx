@@ -116,7 +116,7 @@ export function PostComposer({
               </span>
               <span
                 data-testid="post-composer-media-affordance"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-emerald-600"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary"
                 aria-hidden="true"
               >
                 <ImagePlus className="h-6 w-6" />

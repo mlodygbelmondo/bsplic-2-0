@@ -746,14 +746,15 @@
     }
 
     .social-mobile-page .social-facebook-feed,
-    .social-composer-sheet {
+    .social-composer-sheet,
+    .social-story-composer-sheet {
       --background: 210 17% 95%;
       --foreground: 210 12% 5%;
       --card: 0 0% 100%;
       --card-foreground: 210 12% 5%;
       --popover: 0 0% 100%;
       --popover-foreground: 210 12% 5%;
-      --primary: 214 89% 52%;
+      --primary: 355 100% 44%;
       --primary-foreground: 0 0% 100%;
       --secondary: 210 17% 95%;
       --secondary-foreground: 210 12% 5%;
@@ -763,7 +764,7 @@
       --accent-foreground: 210 12% 5%;
       --border: 214 13% 88%;
       --input: 214 13% 88%;
-      --ring: 214 89% 52%;
+      --ring: 355 100% 44%;
     }
 
     .social-mobile-page.h-safe-screen.bg-background::before,
@@ -919,6 +920,16 @@
     .social-mobile-page .social-story-create .social-story-label {
       text-align: center;
       color: hsl(var(--foreground));
+    }
+
+    .social-story-progress {
+      width: 100%;
+      transform-origin: left center;
+      animation: social-story-progress 7s linear forwards;
+    }
+
+    .story-viewer-text {
+      overflow-wrap: anywhere;
     }
 
     .social-mobile-page .social-facebook-card.app-surface:hover {
@@ -1471,6 +1482,15 @@
   }
   100% {
     transform: translateX(400%);
+  }
+}
+
+@keyframes social-story-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
   }
 }
 

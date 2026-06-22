@@ -10,7 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SocialPage from './SocialPage';
-import type { SocialFeedItem } from '@/types/database';
+import type { SocialFeedItem, SocialStory } from '@/types/database';
 import {
   makeCasinoFeedItem,
   makeCouponFeedItem,
@@ -23,9 +23,13 @@ import {
 const fetchSocialFeedMock = vi.fn<() => Promise<SocialFeedItem[]>>();
 const fetchSocialFeedItemMock = vi.fn<() => Promise<SocialFeedItem | null>>();
 const createPostMock = vi.fn<() => Promise<string>>();
+const fetchActiveSocialStoriesMock = vi.fn<() => Promise<SocialStory[]>>();
+const createSocialStoryMock = vi.fn<() => Promise<string>>();
 const fetchCommentsMock = vi.fn();
 const addCommentMock = vi.fn();
 const toggleReactionMock = vi.fn();
+const compressImageFileMock = vi.fn();
+const uploadSocialImageMock = vi.fn();
 const respondAsEniuMock = vi.fn();
 const fetchReactorsMock = vi.fn();
 const fetchBetsByIdsMock = vi.fn();
@@ -93,6 +97,10 @@ vi.mock('@/features/social/api/social', () => ({
   fetchSocialFeedItem: (...args: unknown[]) =>
     fetchSocialFeedItemMock(...(args as [])),
   createPost: (...args: unknown[]) => createPostMock(...(args as [])),
+  fetchActiveSocialStories: (...args: unknown[]) =>
+    fetchActiveSocialStoriesMock(...(args as [])),
+  createSocialStory: (...args: unknown[]) =>
+    createSocialStoryMock(...(args as [])),
   fetchComments: (...args: unknown[]) => fetchCommentsMock(...args),
   addComment: (...args: unknown[]) => addCommentMock(...args),
   toggleReaction: (...args: unknown[]) => toggleReactionMock(...args),
@@ -111,9 +119,9 @@ vi.mock('@/features/social/api/mentions', () => ({
 }));
 
 vi.mock('@/features/social/images', () => ({
-  compressImageFile: vi.fn(),
+  compressImageFile: (...args: unknown[]) => compressImageFileMock(...args),
   getSocialImageUrl: (path: string) => `https://cdn.example/${path}`,
-  uploadSocialImage: vi.fn(),
+  uploadSocialImage: (...args: unknown[]) => uploadSocialImageMock(...args),
 }));
 
 vi.mock('@/features/home/api/bets', () => ({
@@ -163,6 +171,19 @@ function renderSocialPageWithRoute(route: string) {
   );
 }
 
+function makeSocialStory(overrides: Partial<SocialStory> = {}): SocialStory {
+  return {
+    id: 'story-1',
+    user_id: 'user-story-1',
+    username: 'Poster',
+    avatar_url: 'https://cdn.example/poster.jpg',
+    content: 'Relacja dnia',
+    created_at: '2030-01-01T10:00:00.000Z',
+    expires_at: '2030-01-02T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
 // ── Tests ────────────────────────────────────────────────────
 
 describe('SocialPage', () => {
@@ -172,12 +193,28 @@ describe('SocialPage', () => {
     realtimeHandlers.length = 0;
     fetchSocialFeedMock.mockResolvedValue([makeCouponFeedItem()]);
     fetchSocialFeedItemMock.mockResolvedValue(null);
+    fetchActiveSocialStoriesMock.mockResolvedValue([]);
     fetchCommentsMock.mockResolvedValue([]);
     createPostMock.mockResolvedValue('new-post-id');
+    createSocialStoryMock.mockResolvedValue('story-new');
     addCommentMock.mockResolvedValue('new-comment-id');
     toggleReactionMock.mockResolvedValue('like');
+    compressImageFileMock.mockResolvedValue({
+      blob: new Blob(['story-image'], { type: 'image/jpeg' }),
+      width: 800,
+      height: 600,
+    });
+    uploadSocialImageMock.mockResolvedValue('user-1/story.jpg');
     respondAsEniuMock.mockResolvedValue({ ok: true });
     fetchReactorsMock.mockResolvedValue([]);
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:story-preview'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
 
     fetchBetsByIdsMock.mockResolvedValue([
       {
@@ -270,17 +307,14 @@ describe('SocialPage', () => {
   });
 
   it('renders a mobile Facebook-style stories strip below the composer', async () => {
-    fetchSocialFeedMock.mockResolvedValue([
-      makePostFeedItem({
-        id: 'post-story-1',
-        user_id: 'user-story-1',
-        username: 'Poster',
-        avatar_url: 'https://cdn.example/poster.jpg',
-      }),
-      makeCouponFeedItem({
-        id: 'coupon-story-1',
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+    fetchActiveSocialStoriesMock.mockResolvedValue([
+      makeSocialStory(),
+      makeSocialStory({
+        id: 'story-2',
         user_id: 'user-story-2',
         username: 'Typsterka',
+        avatar_url: null,
       }),
     ]);
 
@@ -294,11 +328,90 @@ describe('SocialPage', () => {
       within(stories).getByRole('button', { name: 'Utwórz relację' }),
     ).toBeInTheDocument();
     expect(
-      within(stories).getByRole('link', { name: 'Profil Poster' }),
+      await within(stories).findByRole('button', {
+        name: 'Otwórz relację Poster',
+      }),
     ).toBeInTheDocument();
     expect(
-      within(stories).getByRole('link', { name: 'Profil Typsterka' }),
+      within(stories).getByRole('button', {
+        name: 'Otwórz relację Typsterka',
+      }),
     ).toBeInTheDocument();
+  });
+
+  it('opens an active story in a full-screen viewer', async () => {
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+    fetchActiveSocialStoriesMock.mockResolvedValue([
+      makeSocialStory({ content: 'Zielony kupon zaraz siada' }),
+    ]);
+
+    renderSocialPage();
+
+    const openStory = await screen.findByRole('button', {
+      name: 'Otwórz relację Poster',
+    });
+    fireEvent.click(openStory);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Zielony kupon zaraz siada')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Zamknij relację' }),
+    ).toBeInTheDocument();
+  });
+
+  it('creates a text story and refreshes active stories', async () => {
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+
+    renderSocialPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Utwórz relację' }));
+    fireEvent.change(await screen.findByLabelText('Treść relacji'), {
+      target: { value: 'Moja relacja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Opublikuj relację' }));
+
+    await waitFor(() => {
+      expect(createSocialStoryMock).toHaveBeenCalledWith(
+        'user-1',
+        'Moja relacja',
+      );
+    });
+    expect(fetchActiveSocialStoriesMock).toHaveBeenCalledTimes(2);
+    expect(toastSuccessMock).toHaveBeenCalledWith('Relacja opublikowana');
+  });
+
+  it('creates an image story using the social image upload pipeline', async () => {
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+
+    renderSocialPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Utwórz relację' }));
+    fireEvent.change(await screen.findByLabelText('Dodaj zdjęcie do relacji'), {
+      target: {
+        files: [
+          new File(['raw'], 'story.png', {
+            type: 'image/png',
+          }),
+        ],
+      },
+    });
+
+    await screen.findByText(/Zdjęcie po kompresji/i);
+    fireEvent.change(screen.getByLabelText('Treść relacji'), {
+      target: { value: 'Screen z kuponu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Opublikuj relację' }));
+
+    await waitFor(() => {
+      expect(uploadSocialImageMock).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(Blob),
+      );
+    });
+    expect(createSocialStoryMock).toHaveBeenCalledWith(
+      'user-1',
+      'Screen z kuponu\n[[img:user-1/story.jpg]]',
+    );
   });
 
   it('shows empty state when feed is empty', async () => {
