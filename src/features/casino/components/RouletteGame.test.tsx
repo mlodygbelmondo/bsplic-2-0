@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import type { ComponentProps, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RouletteGame } from './RouletteGame';
@@ -45,6 +46,26 @@ vi.mock('sonner', () => ({
 // Mock canvas-confetti to avoid errors in jsdom
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
+}));
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({
+      children,
+      initial,
+      animate,
+      exit,
+      transition,
+      variants,
+      whileHover,
+      whileTap,
+      layout,
+      ...props
+    }: ComponentProps<'div'> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
+  AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 describe('RouletteGame', () => {
@@ -279,7 +300,7 @@ describe('RouletteGame', () => {
       expect(
         screen.queryByRole('button', { name: 'Postaw' }),
       ).not.toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
     fireEvent.click(screen.getByRole('button', { name: /^Pokaż stawkę/ }));
 

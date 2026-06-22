@@ -6,16 +6,19 @@ import {
   useState,
   type UIEvent,
 } from 'react';
+import LiquidGlass from 'liquid-glass-react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
 import {
-  getMobileBottomNavActiveClassName,
-  getMobileBottomNavInactiveClassName,
-  getMobileBottomNavSurfaceClassName,
-  getMobileBottomNavUnderlayClassName,
-} from '@/components/mobileBottomNavStyles';
+  getLiquidGlassMobileNavActiveItemClassName,
+  getLiquidGlassMobileNavBorderClassName,
+  getLiquidGlassMobileNavInactiveItemClassName,
+  getLiquidGlassMobileNavShellClassName,
+  LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME,
+  LIQUID_GLASS_MOBILE_NAV_STYLE,
+} from '@/components/liquidGlassMobileNavStyles';
 import { cn } from '@/lib/utils';
 import {
   getNextScrollChromeState,
@@ -108,9 +111,6 @@ const MORE_TAB_CONFIG: TabConfig = {
   icon: MoreHorizontal,
 };
 
-const MOBILE_NAV_ITEM_CLASS_NAME =
-  'flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-black transition-colors';
-
 function AdminTabFallback() {
   return (
     <div className="space-y-4">
@@ -130,8 +130,15 @@ export default function AdminLayout() {
   const [tab, setTab] = useState<AdminTab>('manage');
   const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
   const mobileChromeStateRef = useRef<ScrollChromeState>();
-  const mobileActiveClassName = getMobileBottomNavActiveClassName(theme);
-  const mobileInactiveClassName = getMobileBottomNavInactiveClassName(theme);
+  const mobileNavTone = 'default';
+  const mobileActiveClassName = getLiquidGlassMobileNavActiveItemClassName(
+    theme,
+    mobileNavTone,
+  );
+  const mobileInactiveClassName = getLiquidGlassMobileNavInactiveItemClassName(
+    theme,
+    mobileNavTone,
+  );
 
   const handleAdminScroll = (event: UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
@@ -288,83 +295,70 @@ export default function AdminLayout() {
       <nav
         aria-label="Nawigacja admina"
         className={cn(
-          'md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none transition-[transform,opacity] duration-200 ease-out will-change-transform',
+          'md:hidden fixed inset-x-0 bottom-0 z-50 pointer-events-none px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] transition-[transform,opacity] duration-200 ease-out will-change-transform',
           mobileChromeHidden
             ? 'translate-y-full opacity-0'
             : 'translate-y-0 opacity-100',
         )}
       >
-        <div
-          className={cn(
-            'pointer-events-auto overflow-visible',
-            getMobileBottomNavUnderlayClassName(theme),
-          )}
-        >
-          <div
-            className={cn(
-              'grid overflow-visible',
-              getMobileBottomNavSurfaceClassName(theme),
-            )}
-            style={{
-              gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
-            }}
+        <div className="pointer-events-auto relative mx-auto h-[72px] w-full max-w-[430px]">
+          <LiquidGlass
+            displacementScale={46}
+            blurAmount={0.035}
+            saturation={152}
+            aberrationIntensity={1.35}
+            elasticity={0.04}
+            cornerRadius={28}
+            padding="0px"
+            overLight={false}
+            mode="standard"
+            className="w-full"
+            style={LIQUID_GLASS_MOBILE_NAV_STYLE}
           >
-            {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
-              const isCenter = key === 'create';
-              const isMoreActive =
-                key === 'more' &&
-                (activeTab === 'more' ||
-                  MOBILE_MORE_TAB_KEYS.includes(activeTab));
-              const isActive = activeTab === key || isMoreActive;
+            <div
+              className={cn(
+                'grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] overflow-visible rounded-[1.75rem] border px-1.5 py-1.5 ring-1 backdrop-blur-2xl',
+                getLiquidGlassMobileNavShellClassName(theme, mobileNavTone),
+                getLiquidGlassMobileNavBorderClassName(theme, mobileNavTone),
+              )}
+              style={{
+                gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {mobileTabs.map(({ key, label, shortLabel, icon: Icon }) => {
+                const isMoreActive =
+                  key === 'more' &&
+                  (activeTab === 'more' ||
+                    MOBILE_MORE_TAB_KEYS.includes(activeTab));
+                const isActive = activeTab === key || isMoreActive;
 
-              if (isCenter) {
                 return (
                   <button
                     key={key}
                     onClick={() => setTab(key)}
                     aria-label={label}
-                    className="relative flex min-h-[50px] w-full min-w-0 flex-col items-center justify-center rounded-md px-1 py-1 transition-colors"
-                  >
-                    <div
-                      className={cn(
-                        'absolute -top-5 flex h-[58px] w-[58px] items-center justify-center rounded-full border-4 border-background text-white shadow-lg transition-transform active:scale-95',
-                        isActive
-                          ? 'gradient-primary'
-                          : 'bg-primary hover:brightness-110',
-                      )}
-                    >
-                      <Icon className="h-7 w-7" strokeWidth={2.5} />
-                    </div>
-                  </button>
-                );
-              }
-
-              return (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  aria-label={label}
-                  className={cn(
-                    MOBILE_NAV_ITEM_CLASS_NAME,
-                    isActive ? mobileActiveClassName : mobileInactiveClassName,
-                  )}
-                >
-                  <Icon
-                    className="h-5 w-5 shrink-0"
-                    strokeWidth={isActive ? 2.6 : 2.2}
-                  />
-                  <span
                     className={cn(
-                      'w-full truncate text-center leading-none',
-                      isActive && 'font-semibold',
+                      LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME,
+                      isActive ? cn('font-bold', mobileActiveClassName) : mobileInactiveClassName,
                     )}
                   >
-                    {shortLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <Icon
+                      className="h-5 w-5 shrink-0"
+                      strokeWidth={isActive ? 2.4 : 2}
+                    />
+                    <span
+                      className={cn(
+                        'w-full truncate pb-0.5 text-center leading-[1.15]',
+                        isActive && 'font-bold',
+                      )}
+                    >
+                      {shortLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </LiquidGlass>
         </div>
       </nav>
     </div>

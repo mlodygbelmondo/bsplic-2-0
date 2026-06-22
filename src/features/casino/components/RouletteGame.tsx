@@ -288,7 +288,11 @@ export function RouletteGame({
     if (!winBet || !table.currentRound || !latestUserWinKey || isSharingWin)
       return;
 
+    const previousDismissedWinKey = dismissedWinKey;
     setIsSharingWin(true);
+    sharedWinKeysRef.current.add(latestUserWinKey);
+    setDismissedWinKey(latestUserWinKey);
+
     try {
       const settledRound =
         table.recentSpins.find((round) => round.id === winBet.round_id) ??
@@ -318,10 +322,10 @@ export function RouletteGame({
       });
 
       pendingWinRoundIdsRef.current.delete(winBet.round_id);
-      sharedWinKeysRef.current.add(latestUserWinKey);
-      setDismissedWinKey(latestUserWinKey);
       toast.success('Wygrana udostępniona na Socialu!');
     } catch (error) {
+      sharedWinKeysRef.current.delete(latestUserWinKey);
+      setDismissedWinKey(previousDismissedWinKey);
       toast.error(
         error instanceof Error
           ? error.message

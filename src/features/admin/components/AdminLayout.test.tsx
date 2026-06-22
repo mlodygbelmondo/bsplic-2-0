@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,6 +25,32 @@ vi.mock('@/contexts/ThemeContext', () => ({
 
 vi.mock('@/components/Navbar', () => ({
   Navbar: () => <div data-testid="navbar" />,
+}));
+
+const liquidGlassMock = vi.hoisted(() =>
+  vi.fn(
+    ({
+      children,
+      overLight,
+      mode,
+    }: {
+      children: ReactNode;
+      overLight?: boolean;
+      mode?: string;
+    }) => (
+      <div
+        data-testid="admin-liquid-glass"
+        data-mode={mode}
+        data-over-light={String(overLight)}
+      >
+        {children}
+      </div>
+    ),
+  ),
+);
+
+vi.mock('liquid-glass-react', () => ({
+  default: liquidGlassMock,
 }));
 
 vi.mock('./DashboardTab', () => ({
@@ -71,6 +98,7 @@ function renderAdminLayout() {
 
 describe('AdminLayout', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockIsAdmin = false;
     mockIsModerator = false;
     mockLoading = false;
@@ -111,7 +139,7 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
-    const tabGrid = mobileNav.firstElementChild?.firstElementChild;
+    const tabGrid = screen.getByTestId('admin-liquid-glass').firstElementChild;
 
     expect(tabGrid).toHaveStyle({
       gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
@@ -127,7 +155,7 @@ describe('AdminLayout', () => {
       'Bonusy',
       'Więcej',
     ]);
-    expect(navButtons[2]).toHaveClass('min-h-[50px]');
+    expect(navButtons[2]).toHaveClass('h-[58px]');
   });
 
   it('uses centered, accessible mobile admin navigation targets', () => {
@@ -138,36 +166,41 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
-    const tabGrid = mobileNav.firstElementChild?.firstElementChild;
+    const tabGrid = screen.getByTestId('admin-liquid-glass').firstElementChild;
     const navButtons = within(mobileNav).getAllByRole('button');
 
-    expect(tabGrid).toHaveClass('px-2', 'rounded-t-lg');
+    expect(screen.getByTestId('admin-liquid-glass')).toBeInTheDocument();
+    expect(tabGrid).toHaveClass('rounded-[1.75rem]');
     navButtons.forEach((button) => {
       expect(button).toHaveClass('items-center', 'justify-center');
     });
     expect(navButtons[0]).toHaveClass(
-      'min-h-[54px]',
-      'gap-1',
-      'rounded-xl',
-      'text-[11px]',
-      'font-black',
-    );
-    expect(navButtons[2]).toHaveClass('relative', 'min-h-[50px]');
-    expect(navButtons[2]).not.toHaveClass('-top-5', 'min-h-[58px]');
-    expect(navButtons[2].firstElementChild).toHaveClass(
-      'absolute',
-      '-top-5',
       'h-[58px]',
-      'w-[58px]',
+      'gap-1',
+      'rounded-[1.35rem]',
+      'text-[12px]',
+      'font-bold',
     );
-    expect(navButtons[2].firstElementChild).not.toHaveClass('h-[62px]', 'w-[62px]');
-    expect(navButtons[2].firstElementChild?.firstElementChild).toHaveClass('h-7', 'w-7');
+    expect(navButtons[1]).toHaveClass(
+      'h-[58px]',
+      'text-[12px]',
+      'font-medium',
+    );
+    expect(navButtons[2]).toHaveClass(
+      'h-[58px]',
+      'gap-1',
+      'rounded-[1.35rem]',
+      'text-[12px]',
+    );
+    expect(navButtons[2]).not.toHaveClass('relative', 'min-h-[50px]');
     expect(navButtons[0].firstElementChild).toHaveClass('h-5', 'w-5');
-    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('leading-none');
-    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('leading-none');
+    expect(navButtons[2].firstElementChild).toHaveClass('h-5', 'w-5');
+    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('leading-[1.15]');
+    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('leading-[1.15]');
+    expect(within(navButtons[2]).getByText('Dodaj')).toHaveClass('leading-[1.15]');
   });
 
-  it('uses the same mobile glass surface for admin navigation', () => {
+  it('uses the same liquid glass mobile surface for admin navigation', () => {
     mockIsAdmin = true;
 
     renderAdminLayout();
@@ -176,11 +209,18 @@ describe('AdminLayout', () => {
       name: 'Nawigacja admina',
     });
 
-    expect(mobileNav.firstElementChild).toHaveClass('bg-white', 'rounded-t-lg');
-    expect(mobileNav.firstElementChild?.firstElementChild).toHaveClass(
-      'bg-white/72',
-      'backdrop-blur-xl',
-      'rounded-t-lg',
+    expect(liquidGlassMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'standard',
+        overLight: false,
+      }),
+      undefined,
+    );
+    expect(mobileNav).toHaveClass('px-2');
+    expect(screen.getByTestId('admin-liquid-glass').firstElementChild).toHaveClass(
+      'bg-white/[0.86]',
+      'backdrop-blur-2xl',
+      'rounded-[1.75rem]',
     );
     expect(within(mobileNav).getByRole('button', { name: 'Zarządzaj' })).not.toHaveClass(
       'bg-primary/10',

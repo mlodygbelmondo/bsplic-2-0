@@ -287,16 +287,26 @@
     }
     .daily-jackpot-card__state {
       position: absolute;
+      display: inline-grid;
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      place-items: center;
       top: 0.92rem;
       right: 0.82rem;
       left: auto;
       bottom: auto;
       width: fit-content;
       max-width: calc(100% - 2rem);
+      height: 1.56rem;
       min-height: 1.56rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.38rem;
+      box-sizing: border-box;
       margin-top: 0;
-      padding: 0.22rem 0.48rem;
+      padding: 0 0.48rem;
       font-size: 0.64rem;
+      line-height: 1;
       white-space: nowrap;
     }
     .daily-jackpot-card__state--countdown .daily-jackpot-card__state-label {
@@ -306,11 +316,17 @@
       display: none;
     }
     .daily-jackpot-card__state svg {
+      display: block;
       width: 0.9rem;
       height: 0.9rem;
+      align-self: center;
+      transform: translateY(-0.5px);
     }
     .daily-jackpot-card__state strong {
+      display: block;
+      align-self: center;
       font-size: 0.66rem;
+      line-height: 1;
     }
     .daily-jackpot-card__art {
       right: -2.6rem;

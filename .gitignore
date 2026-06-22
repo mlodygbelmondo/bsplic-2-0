@@ -43,6 +43,7 @@ supabase/.temp/
 .ai*
 docs/design-references/
 docs/roulette-inspiration/
+design-reference/
 tmp/
 tmp/imagegen/
 deno.lock

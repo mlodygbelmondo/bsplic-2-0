@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Tunnel"
+  short_description: "Expose local dev server via Cloudflare"
+  default_prompt: "Use $dev-tunnel to expose this app on port 6767 for phone testing."

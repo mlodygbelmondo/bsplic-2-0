@@ -139,6 +139,9 @@ describe('DailyJackpotCard', () => {
       /\.daily-jackpot-card__state\s*\{[^}]*top:\s*0\.92rem;[^}]*right:\s*0\.82rem;/,
     );
     expect(mobileCss).toMatch(
+      /\.daily-jackpot-card__state\s*\{[^}]*display:\s*inline-grid;[^}]*grid-auto-flow:\s*column;[^}]*place-items:\s*center;[^}]*height:\s*1\.56rem;/,
+    );
+    expect(mobileCss).toMatch(
       /\.daily-jackpot-card__state--countdown\s+\.daily-jackpot-card__state-label\s*\{[^}]*display:\s*none;/,
     );
     expect(mobileCss).toMatch(
