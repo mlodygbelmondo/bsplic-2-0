@@ -92,19 +92,24 @@ describe("AppMobileBottomNav", () => {
 
     expect(glassLayer).not.toContainElement(activeLink);
     expect(itemsLayer).toContainElement(activeLink);
+    expect(itemsLayer).toHaveClass("items-center");
   });
 
   it("keeps the light active item free of label-like drop shadows", () => {
     renderBottomNav("/");
 
     const activeLink = screen.getByRole("link", { name: "Zakłady" });
+    const activeLabel = screen.getByText("Zakłady");
     const glassSurface = screen.getByTestId("liquid-glass").firstElementChild;
 
     expect(activeLink.className).not.toContain("0_4px_12px");
     expect(activeLink.className).not.toContain("0_10px_24px");
-    expect(glassSurface).toHaveClass("bg-white");
-    expect(glassSurface?.className).not.toContain("bg-white/[0.86]");
-    expect(glassSurface?.className).not.toContain("bg-white/[0.98]");
+    expect(glassSurface).toHaveClass("bg-white/[0.86]");
+    expect(activeLabel).toHaveClass(
+      "box-border",
+      "bg-white/[0.78]",
+      "[text-shadow:none]",
+    );
   });
 
   it("slides the mobile nav out without fading it away first", () => {

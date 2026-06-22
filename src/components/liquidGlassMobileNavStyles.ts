@@ -25,7 +25,7 @@ export function getLiquidGlassMobileNavShellClassName(
     return "bg-zinc-950/[0.84] shadow-[0_-16px_46px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.13)]";
   }
 
-  return "bg-white shadow-[0_-12px_32px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]";
+  return "bg-white/[0.86] shadow-[0_-12px_38px_rgba(15,23,42,0.16),0_-4px_24px_rgba(230,0,26,0.08),inset_0_1px_0_rgba(255,255,255,0.95)]";
 }
 
 export function getLiquidGlassMobileNavBorderClassName(
@@ -65,4 +65,13 @@ export function getLiquidGlassMobileNavInactiveItemClassName(
   return theme === "dark" || tone === "casino"
     ? "font-medium text-white/[0.68] hover:text-white"
     : "font-medium text-slate-950/[0.82] hover:text-slate-950";
+}
+
+export function getLiquidGlassMobileNavLabelClassName(
+  theme: Theme,
+  tone: MobileBottomNavTone,
+) {
+  return theme === "dark" || tone === "casino"
+    ? "[text-shadow:none]"
+    : "rounded-full bg-white/[0.78] px-1 py-0.5 shadow-none [text-shadow:none]";
 }

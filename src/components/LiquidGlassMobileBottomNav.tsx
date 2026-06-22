@@ -15,6 +15,7 @@ import {
   getLiquidGlassMobileNavActiveItemClassName,
   getLiquidGlassMobileNavBorderClassName,
   getLiquidGlassMobileNavInactiveItemClassName,
+  getLiquidGlassMobileNavLabelClassName,
   getLiquidGlassMobileNavShellClassName,
   LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME,
   LIQUID_GLASS_MOBILE_NAV_STYLE,
@@ -105,7 +106,7 @@ export function LiquidGlassMobileBottomNav({
 
         <div
           data-testid="mobile-bottom-nav-items"
-          className="pointer-events-auto absolute inset-0 grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-5 px-1.5 py-1.5"
+          className="pointer-events-auto absolute inset-0 grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-5 items-center px-1.5 py-1.5"
         >
           {MOBILE_NAV_ITEMS.map(({ to, label, icon: Icon, isActive }) => {
             const active = isActive(pathname);
@@ -134,7 +135,8 @@ export function LiquidGlassMobileBottomNav({
                 />
                 <span
                   className={cn(
-                    "w-full truncate pb-0.5 text-center leading-[1.15] [text-shadow:none]",
+                    "box-border max-w-full truncate text-center leading-[1.15]",
+                    getLiquidGlassMobileNavLabelClassName(theme, tone),
                     active && "font-bold",
                   )}
                 >
