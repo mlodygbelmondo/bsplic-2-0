@@ -364,6 +364,17 @@ export function RouletteGame({
   );
 
   const rightRailContent = <>{!isMobile && bettingPanel}</>;
+  const mobileCountdownLabel = table.isIdle
+    ? 'Czeka na zakład'
+    : table.phase === 'spinning'
+      ? 'Wynik za'
+      : 'Spin za';
+  const mobileCountdownText = table.isIdle ? '--:--' : table.countdownLabel;
+  const mobileRoundLabel =
+    table.currentRound?.round_number !== undefined &&
+    table.currentRound?.round_number !== null
+      ? `#${table.currentRound.round_number}`
+      : '#--';
 
   useEffect(() => {
     onStatusChange?.({
@@ -424,7 +435,7 @@ export function RouletteGame({
             type="button"
             onClick={handleToggleSound}
             aria-label={soundMuted ? 'Włącz dźwięki' : 'Wycisz dźwięki'}
-            className="absolute right-1 top-1 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white"
+            className="absolute right-1 top-14 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white md:top-1"
           >
             {soundMuted ? (
               <VolumeX className="h-4 w-4" aria-hidden="true" />
@@ -432,6 +443,25 @@ export function RouletteGame({
               <Volume2 className="h-4 w-4" aria-hidden="true" />
             )}
           </button>
+
+          <div
+            data-testid="roulette-mobile-countdown"
+            className="md:hidden rounded-2xl border border-white/10 bg-black/45 px-3 py-2 text-white/70 shadow-lg backdrop-blur-sm"
+          >
+            <div className="flex min-h-8 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/70">
+                  {mobileCountdownLabel}
+                </p>
+                <p className="font-mono text-[11px] text-white/45">
+                  {mobileRoundLabel}
+                </p>
+              </div>
+              <p className="shrink-0 font-mono text-lg font-black tabular-nums text-white">
+                {mobileCountdownText}
+              </p>
+            </div>
+          </div>
 
           <RouletteWheel
             phase={table.phase}

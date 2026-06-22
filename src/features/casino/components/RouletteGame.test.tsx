@@ -372,6 +372,29 @@ describe('RouletteGame', () => {
     expect(screen.queryByText('Przyjmowanie zakładów')).not.toBeInTheDocument();
   });
 
+  it('shows a compact mobile countdown above the roulette wheel', () => {
+    useIsMobileMock.mockReturnValue(true);
+    useRouletteTableMock.mockReturnValue({
+      ...baseTableMock,
+      currentRound: {
+        ...baseTableMock.currentRound,
+        round_number: 125,
+      },
+      countdownLabel: '00:08',
+    });
+
+    render(
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
+    );
+
+    const mobileCountdown = screen.getByTestId('roulette-mobile-countdown');
+
+    expect(mobileCountdown).toHaveClass('md:hidden');
+    expect(mobileCountdown).toHaveTextContent('Spin za');
+    expect(mobileCountdown).toHaveTextContent('00:08');
+    expect(mobileCountdown).toHaveTextContent('#125');
+  });
+
   it('does not render a separate active bets container', () => {
     useRouletteTableMock.mockReturnValue({
       ...baseTableMock,
