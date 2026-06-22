@@ -25,7 +25,7 @@ export function getLiquidGlassMobileNavShellClassName(
     return "bg-zinc-950/[0.84] shadow-[0_-16px_46px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.13)]";
   }
 
-  return "bg-white/[0.86] shadow-[0_-12px_38px_rgba(15,23,42,0.16),0_-4px_24px_rgba(230,0,26,0.08),inset_0_1px_0_rgba(255,255,255,0.95)]";
+  return "bg-white shadow-[0_-12px_32px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]";
 }
 
 export function getLiquidGlassMobileNavBorderClassName(
@@ -55,7 +55,7 @@ export function getLiquidGlassMobileNavActiveItemClassName(
     return "text-[#ffe14a] bg-white/[0.13] shadow-[0_0_0_1px_rgba(255,255,255,0.16),0_10px_24px_rgba(255,225,74,0.16),inset_0_1px_0_rgba(255,255,255,0.24)]";
   }
 
-  return "text-[#c90018] bg-[#c90018]/[0.10] shadow-[0_0_0_1px_rgba(201,0,24,0.12),0_4px_12px_rgba(201,0,24,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]";
+  return "text-[#c90018] bg-[#c90018]/[0.10] shadow-[0_0_0_1px_rgba(201,0,24,0.12),inset_0_1px_0_rgba(255,255,255,0.92)]";
 }
 
 export function getLiquidGlassMobileNavInactiveItemClassName(

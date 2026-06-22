@@ -344,11 +344,11 @@ export function BetListView({
             ref={mobileToolbarRef}
             data-testid="bet-list-mobile-toolbar"
             className={cn(
-              "sticky top-0 mb-2.5 lg:hidden transition-[transform,opacity] duration-200 ease-out",
+              "sticky top-0 mb-2.5 lg:hidden transition-transform duration-200 ease-out",
               mobilePanel !== null ? "z-50" : "z-30",
               actionsHidden
-                ? "-translate-y-full opacity-0"
-                : "opacity-100",
+                ? "-translate-y-full opacity-100 pointer-events-none"
+                : "translate-y-0 opacity-100",
               !actionsHidden && mobilePanel === null && "will-change-transform",
             )}
           >
@@ -361,7 +361,7 @@ export function BetListView({
                   onClick={() => toggleMobilePanel("sort")}
                   aria-expanded={mobilePanel === "sort"}
                   className={cn(
-                    "press-scale flex w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-all duration-200",
+                    "press-scale flex h-11 w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 text-sm font-semibold leading-none transition-all duration-200",
                     mobilePanel === "sort"
                       ? "border-foreground/40 bg-card text-foreground shadow-md"
                       : "border-border bg-card/80 text-foreground",
@@ -396,7 +396,7 @@ export function BetListView({
                         setMobilePanel(null);
                       }}
                       className={cn(
-                        "press-scale w-full px-3.5 py-2 rounded-full text-[12px] font-semibold text-left transition-all duration-200",
+                        "press-scale h-11 w-full shrink-0 rounded-full px-3.5 text-left text-sm font-semibold leading-none transition-all duration-200",
                         mobilePanel === "sort" && "filter-option-enter",
                         sort === option.value
                           ? "bg-foreground text-background shadow-md"
@@ -412,7 +412,7 @@ export function BetListView({
                     onClick={handleToggleActiveOnly}
                     aria-pressed={activeOnly}
                     className={cn(
-                      "press-scale flex w-full items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                      "press-scale flex h-11 w-full shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
                       mobilePanel === "sort" && "filter-option-enter",
                       activeOnly
                         ? "bg-foreground text-background shadow-md"
@@ -442,7 +442,7 @@ export function BetListView({
                     onClick={() => toggleMobilePanel("category")}
                     aria-expanded={mobilePanel === "category"}
                     className={cn(
-                      "press-scale flex w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-all duration-200",
+                      "press-scale flex h-11 w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 text-sm font-semibold leading-none transition-all duration-200",
                       mobilePanel === "category"
                         ? "border-foreground/40 bg-card text-foreground shadow-md"
                         : "border-border bg-card/80 text-foreground",
@@ -468,7 +468,7 @@ export function BetListView({
                         setMobilePanel(null);
                       }}
                       className={cn(
-                        "press-scale flex w-full items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                        "press-scale flex h-11 w-full shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
                         mobilePanel === "category" && "filter-option-enter",
                         !selectedCategory
                           ? "bg-foreground text-background shadow-md"
@@ -486,7 +486,7 @@ export function BetListView({
                           setMobilePanel(null);
                         }}
                         className={cn(
-                          "press-scale flex w-full items-center gap-1 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200",
+                          "press-scale flex h-11 w-full shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
                           mobilePanel === "category" && "filter-option-enter",
                           selectedCategory === cat.id
                             ? "bg-foreground text-background shadow-md"

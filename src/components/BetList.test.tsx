@@ -79,10 +79,13 @@ describe("BetList tabs", () => {
     expect(screen.getByTestId("home-top-banner")).toHaveTextContent("Jackpot");
   });
 
-  it("hides the mobile filter toolbar with transform instead of collapsing layout height", () => {
+  it("animates the mobile filter toolbar with explicit transform states instead of disappearing", () => {
     render(
       <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
     );
+
+    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
+    expect(mobileToolbar).toHaveClass("translate-y-0", "opacity-100");
 
     const scrollContainer = screen.getByTestId("bet-list-scroll-container");
     Object.defineProperties(scrollContainer, {
@@ -93,13 +96,98 @@ describe("BetList tabs", () => {
 
     fireEvent.scroll(scrollContainer);
 
-    expect(screen.getByTestId("bet-list-mobile-toolbar")).toHaveClass(
+    expect(mobileToolbar).toHaveClass(
       "-translate-y-full",
-      "opacity-0",
+      "opacity-100",
+      "pointer-events-none",
     );
-    expect(screen.getByTestId("bet-list-mobile-toolbar")).not.toHaveClass(
+    expect(mobileToolbar).not.toHaveClass(
       "grid-rows-[0fr]",
     );
+  });
+
+  it("uses taller one-line mobile filter buttons and dropdown options", async () => {
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={[
+          {
+            id: "sport",
+            name: "Sport",
+            emoji: "⚽",
+            color: "#16a34a",
+            sort_order: 1,
+            created_at: "2026-06-22T00:00:00.000Z",
+          },
+        ]}
+        categoryMap={{}}
+        onSelectCategory={vi.fn()}
+      />,
+    );
+
+    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
+    const sortTrigger = within(mobileToolbar).getByRole("button", {
+      expanded: false,
+      name: "Najnowsze",
+    });
+    const categoryTrigger = within(mobileToolbar).getByRole("button", {
+      expanded: false,
+      name: /Wszystkie/,
+    });
+
+    expect(sortTrigger).toHaveClass("h-11", "text-sm");
+    expect(categoryTrigger).toHaveClass("h-11", "text-sm");
+
+    fireEvent.click(sortTrigger);
+
+    const popularOption = within(mobileToolbar).getByRole("button", {
+      name: "Popularne",
+    });
+    const activeOnlyOption = within(mobileToolbar).getByRole("button", {
+      name: "Aktywne",
+    });
+
+    await waitFor(() => {
+      expect(popularOption).toHaveClass("h-11", "text-sm");
+      expect(activeOnlyOption).toHaveClass("h-11", "text-sm");
+    });
+  });
+
+  it("prevents crowded mobile category options from shrinking inside the scroll panel", async () => {
+    const categories = Array.from({ length: 14 }, (_, index) => ({
+      id: `category-${index}`,
+      name: `Kategoria ${index + 1}`,
+      emoji: "⚽",
+      color: "#16a34a",
+      sort_order: index,
+      created_at: "2026-06-22T00:00:00.000Z",
+    }));
+
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={categories}
+        categoryMap={{}}
+        onSelectCategory={vi.fn()}
+      />,
+    );
+
+    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
+    const categoryTrigger = within(mobileToolbar).getByRole("button", {
+      expanded: false,
+      name: /Wszystkie/,
+    });
+
+    fireEvent.click(categoryTrigger);
+
+    const firstCategoryOption = within(mobileToolbar)
+      .getAllByRole("button")
+      .find((button) => button.textContent?.trim() === "⚽ Kategoria 1");
+
+    await waitFor(() => {
+      expect(firstCategoryOption).toBeDefined();
+      expect(firstCategoryOption).toHaveClass("h-11", "shrink-0");
+    });
   });
 
   it("keeps visible mobile filter controls tappable when a dropdown is open", async () => {
@@ -118,7 +206,7 @@ describe("BetList tabs", () => {
 
     await waitFor(() => {
       expect(mobileToolbar).toHaveClass("z-50");
-      expect(mobileToolbar).not.toHaveClass("translate-y-0");
+      expect(mobileToolbar).toHaveClass("translate-y-0");
       expect(mobileToolbar).not.toHaveClass("will-change-transform");
       expect(mobileToolbar).not.toHaveClass("pointer-events-none");
     });
