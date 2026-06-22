@@ -42,6 +42,6 @@ describe('CasinoRoulettePage', () => {
     const { container } = render(<CasinoRoulettePage />);
     const content = container.querySelector('.max-w-\\[1800px\\]');
 
-    expect(content).toHaveClass('pt-3', 'md:p-6');
+    expect(content).toHaveClass('pt-1.5', 'md:p-6');
   });
 });

@@ -435,7 +435,7 @@ export function RouletteGame({
             type="button"
             onClick={handleToggleSound}
             aria-label={soundMuted ? 'Włącz dźwięki' : 'Wycisz dźwięki'}
-            className="absolute right-1 top-14 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white md:top-1"
+            className="absolute right-1 top-20 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white md:top-1"
           >
             {soundMuted ? (
               <VolumeX className="h-4 w-4" aria-hidden="true" />

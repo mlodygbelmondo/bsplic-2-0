@@ -393,6 +393,10 @@ describe('RouletteGame', () => {
     expect(mobileCountdown).toHaveTextContent('Spin za');
     expect(mobileCountdown).toHaveTextContent('00:08');
     expect(mobileCountdown).toHaveTextContent('#125');
+    expect(screen.getByRole('button', { name: 'Wycisz dźwięki' })).toHaveClass(
+      'top-20',
+      'md:top-1',
+    );
   });
 
   it('does not render a separate active bets container', () => {
