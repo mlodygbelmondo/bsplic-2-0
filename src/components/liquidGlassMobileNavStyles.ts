@@ -77,7 +77,7 @@ export function getLiquidGlassMobileNavLabelClassName(
   }
 
   if (active) {
-    return "inline-block max-w-full truncate rounded-full bg-[#c90018]/[0.12] px-1 py-0.5 shadow-none [text-shadow:none]";
+    return "inline-block max-w-full truncate rounded-full bg-[#fae6e8]/[0.82] px-1 py-0.5 shadow-none [text-shadow:none]";
   }
 
   return "inline-block max-w-full truncate rounded-full bg-white/[0.78] px-1 py-0.5 shadow-none [text-shadow:none]";

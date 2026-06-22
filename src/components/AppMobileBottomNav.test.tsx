@@ -84,10 +84,11 @@ describe("AppMobileBottomNav", () => {
     expect(glassLayer).toContainElement(activeLink);
     expect(screen.queryByTestId("mobile-bottom-nav-items")).not.toBeInTheDocument();
     expect(activeLabel).toHaveClass(
-      "bg-[#c90018]/[0.12]",
+      "bg-[#fae6e8]/[0.82]",
       "shadow-none",
       "[text-shadow:none]",
     );
+    expect(activeLabel.className).not.toContain("bg-[#c90018]/");
     expect(inactiveLabel).toHaveClass(
       "bg-white/[0.78]",
       "shadow-none",
