@@ -397,6 +397,10 @@ describe('RouletteGame', () => {
       'top-20',
       'md:top-1',
     );
+    expect(screen.getByTestId('roulette-center-stage')).toHaveClass(
+      'space-y-2',
+      'md:space-y-5',
+    );
   });
 
   it('does not render a separate active bets container', () => {
@@ -817,9 +821,9 @@ describe('RouletteGame', () => {
     expect(
       await screen.findByText('Wygrałeś 40.00 zł!', {}, { timeout: 3000 }),
     ).toBeInTheDocument();
-    await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Trafiony spin: +40.00 zł');
-    });
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      'Trafiony spin: +40.00 zł',
+    );
   });
 
   it('shows a new win toast after dismissing the previous win toast', async () => {
@@ -1054,6 +1058,12 @@ describe('RouletteGame', () => {
     );
 
     expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
-    expect(toastSuccessMock).toHaveBeenCalledTimes(2);
+    expect(toastSuccessMock).toHaveBeenCalledTimes(1);
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'Wygrana udostępniona na Socialu!',
+    );
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      'Trafiony spin: +40.00 zł',
+    );
   });
 });

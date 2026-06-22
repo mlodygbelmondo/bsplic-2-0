@@ -56,7 +56,14 @@ describe('WinBanner', () => {
       />,
     );
 
-    expect(screen.getByTestId('win-toast')).toHaveClass('fixed', 'pointer-events-none');
+    expect(screen.getByTestId('win-toast')).toHaveClass(
+      'fixed',
+      'pointer-events-none',
+      'top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)]',
+      'justify-center',
+      'sm:left-1/2',
+      'sm:-translate-x-1/2',
+    );
     expect(screen.getByRole('status')).toHaveClass('pointer-events-auto');
 
     act(() => {

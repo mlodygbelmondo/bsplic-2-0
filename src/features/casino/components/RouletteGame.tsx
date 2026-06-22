@@ -186,7 +186,6 @@ export function RouletteGame({
       setDismissedWinKey((current) =>
         current && current !== latestUserWinKey ? null : current,
       );
-      toast.success(`Trafiony spin: +${latestUserWin.payout.toFixed(2)} zł`);
       playCasinoWinChime();
       vibrateCasino([60, 40, 90]);
       confetti({
@@ -429,7 +428,7 @@ export function RouletteGame({
 
         <div
           data-testid="roulette-center-stage"
-          className="relative order-1 min-w-0 space-y-5 xl:order-2"
+          className="relative order-1 min-w-0 space-y-2 md:space-y-5 xl:order-2"
         >
           <button
             type="button"

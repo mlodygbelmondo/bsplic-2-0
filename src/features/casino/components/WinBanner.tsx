@@ -70,7 +70,7 @@ export function WinBanner({ visible, amount, onShare, onDismiss }: WinBannerProp
   return (
     <div
       data-testid="win-toast"
-      className="pointer-events-none fixed left-3 right-3 top-20 z-50 flex justify-end sm:left-auto sm:right-5 sm:top-24 sm:w-[440px]"
+      className="pointer-events-none fixed left-3 right-3 top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-50 flex justify-center sm:left-1/2 sm:right-auto sm:top-24 sm:w-[440px] sm:-translate-x-1/2"
     >
       <motion.div
         role="status"
