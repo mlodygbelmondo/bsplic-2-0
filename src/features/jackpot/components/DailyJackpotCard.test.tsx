@@ -184,6 +184,20 @@ describe('DailyJackpotCard', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the pool label and info icon visually quiet and centered', () => {
+    const css = readJackpotCss();
+
+    expect(css).toMatch(
+      /\.daily-jackpot-card__amount-heading\s*\{[^}]*align-items:\s*center;[^}]*gap:\s*0\.5rem;/,
+    );
+    expect(css).toMatch(
+      /\.daily-jackpot-card__info-trigger\s*\{[^}]*border:\s*1px solid hsl\(0 0% 82% \/ 0\.34\);[^}]*color:\s*hsl\(0 0% 86%\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/,
+    );
+    expect(css).toMatch(
+      /\.daily-jackpot-card__info-trigger:hover,\s*\.daily-jackpot-card__info-trigger:focus-visible\s*\{[^}]*border-color:\s*hsl\(0 0% 88% \/ 0\.48\);[^}]*color:\s*hsl\(0 0% 92%\);[^}]*background:\s*hsl\(0 0% 100% \/ 0\.06\);/,
+    );
+  });
+
   it('keeps the mobile jackpot card compact with horizontal stat tiles', () => {
     const mobileCss = getMediaCss('(max-width: 820px)');
     const smallMobileCss = getMediaCss('(max-width: 560px)');
