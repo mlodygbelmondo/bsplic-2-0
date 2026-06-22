@@ -70,8 +70,15 @@ export function getLiquidGlassMobileNavInactiveItemClassName(
 export function getLiquidGlassMobileNavLabelClassName(
   theme: Theme,
   tone: MobileBottomNavTone,
+  active: boolean,
 ) {
-  return theme === "dark" || tone === "casino"
-    ? "[text-shadow:none]"
-    : "rounded-full bg-white/[0.78] px-1 py-0.5 shadow-none [text-shadow:none]";
+  if (theme === "dark" || tone === "casino") {
+    return "[text-shadow:none]";
+  }
+
+  if (active) {
+    return "rounded-full bg-transparent px-1 py-0.5 shadow-none [text-shadow:none]";
+  }
+
+  return "rounded-full bg-white/[0.78] px-1 py-0.5 shadow-none [text-shadow:none]";
 }

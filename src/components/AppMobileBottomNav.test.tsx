@@ -100,12 +100,19 @@ describe("AppMobileBottomNav", () => {
 
     const activeLink = screen.getByRole("link", { name: "Zakłady" });
     const activeLabel = screen.getByText("Zakłady");
+    const inactiveLabel = screen.getByText("Social");
     const glassSurface = screen.getByTestId("liquid-glass").firstElementChild;
 
     expect(activeLink.className).not.toContain("0_4px_12px");
     expect(activeLink.className).not.toContain("0_10px_24px");
     expect(glassSurface).toHaveClass("bg-white/[0.86]");
+    expect(activeLabel).not.toHaveClass("bg-white/[0.78]");
     expect(activeLabel).toHaveClass(
+      "box-border",
+      "bg-transparent",
+      "[text-shadow:none]",
+    );
+    expect(inactiveLabel).toHaveClass(
       "box-border",
       "bg-white/[0.78]",
       "[text-shadow:none]",

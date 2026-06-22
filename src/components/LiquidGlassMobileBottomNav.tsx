@@ -136,7 +136,7 @@ export function LiquidGlassMobileBottomNav({
                 <span
                   className={cn(
                     "box-border max-w-full truncate text-center leading-[1.15]",
-                    getLiquidGlassMobileNavLabelClassName(theme, tone),
+                    getLiquidGlassMobileNavLabelClassName(theme, tone, active),
                     active && "font-bold",
                   )}
                 >
