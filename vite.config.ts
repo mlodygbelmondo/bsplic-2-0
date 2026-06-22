@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => ({
           /^\/maintenance\.html$/,
         ],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
-        globIgnores: ["badges/**/*", "pwa-splash/**/*"],
+        globIgnores: ["badges/**/*"],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
       },
@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => ({
         display_override: ["window-controls-overlay", "standalone", "browser"],
         orientation: "portrait",
         theme_color: "#0f0e16",
-        background_color: "#24030a",
+        background_color: "#0f0e16",
         lang: "pl",
         categories: ["sports", "productivity"],
         icons: [
