@@ -6,6 +6,22 @@ import { describe, expect, it } from 'vitest';
 const readProjectFile = async (path: string) =>
   readFile(join(process.cwd(), path), 'utf8');
 
+const IOS_STARTUP_IMAGES = [
+  'iphone-se',
+  'iphone-8',
+  'iphone-plus',
+  'iphone-12-mini',
+  'iphone-x',
+  'iphone-xr',
+  'iphone-xs-max',
+  'iphone-12',
+  'iphone-12-pro-max',
+  'iphone-14-pro',
+  'iphone-14-pro-max',
+  'iphone-16-pro',
+  'iphone-16-pro-max',
+] as const;
+
 describe('mobile viewport contract', () => {
   it('uses a stable svh app shell instead of visualViewport runtime resizing', async () => {
     const [css, entrypoint] = await Promise.all([
@@ -38,6 +54,22 @@ describe('mobile viewport contract', () => {
 
     expect(indexHtml).toContain('window.navigator.standalone === true');
     expect(indexHtml).toContain("classList.add('standalone')");
+  });
+
+  it('declares iOS PWA startup images so launch does not fall back to a black snapshot', async () => {
+    const [indexHtml, viteConfig] = await Promise.all([
+      readProjectFile('index.html'),
+      readProjectFile('vite.config.ts'),
+    ]);
+
+    expect(indexHtml).toContain('rel="apple-touch-startup-image"');
+    await Promise.all(IOS_STARTUP_IMAGES.map(async (name) => {
+      expect(indexHtml).toContain(`/pwa-splash/${name}.png`);
+      await expect(
+        readProjectFile(`public/pwa-splash/${name}.png`),
+      ).resolves.toBeTruthy();
+    }));
+    expect(viteConfig).toContain('"pwa-splash/**/*"');
   });
 
   it('paints the whole iOS PWA viewport behind the app shell', async () => {
