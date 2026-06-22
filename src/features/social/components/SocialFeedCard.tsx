@@ -1,6 +1,17 @@
 import { memo, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Copy, Loader2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Globe2,
+  Loader2,
+  MessageCircle,
+  MoreHorizontal,
+  Share2,
+  ThumbsUp,
+  X,
+} from 'lucide-react';
 
 import {
   deriveCouponStatus,
@@ -14,8 +25,14 @@ import {
 import { cn } from '@/lib/utils';
 import type { FeedItemType, SocialComment, SocialFeedItem } from '@/types/database';
 import { parseSocialContent } from '@/features/social/content';
-import type { ReactionCounts, ReactionType } from '@/features/social/reactions';
+import {
+  sortedReactions,
+  totalReactions,
+  type ReactionCounts,
+  type ReactionType,
+} from '@/features/social/reactions';
 import { formatSocialTimeAgo } from '@/features/social/lib/socialFormatters';
+import { getSocialItemPath } from '@/features/social/routes';
 import type { FlatComment } from '@/features/social/thread';
 import { CommentThread } from './CommentThread';
 import { ReactionBar } from './ReactionBar';
@@ -87,6 +104,8 @@ export const SocialFeedCard = memo(function SocialFeedCard({
   const expanded = expandedCoupons.has(item.id);
   const isCopying = copyingCoupons.has(item.id);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [commentsExpandSignal, setCommentsExpandSignal] = useState(0);
+  const [isHidden, setIsHidden] = useState(false);
   const hasAvatar = Boolean(item.avatar_url) && !avatarFailed;
 
   const commentsAsFlatComments: FlatComment[] = comments.map((c) => ({
@@ -125,6 +144,41 @@ export const SocialFeedCard = memo(function SocialFeedCard({
     onOpenItem(item);
   };
 
+  const handleMobileCommentClick = () => {
+    setCommentsExpandSignal((current) => current + 1);
+  };
+
+  const handleShareItem = async () => {
+    if (typeof window === 'undefined') return;
+
+    const url = `${window.location.origin}${getSocialItemPath(
+      item.item_type,
+      item.id,
+    )}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${item.username} w Socialu`,
+          url,
+        });
+        return;
+      } catch {
+        return;
+      }
+    }
+
+    try {
+      await navigator.clipboard?.writeText(url);
+    } catch {
+      // The share button is still useful where native sharing is available.
+    }
+  };
+
+  if (isHidden) {
+    return null;
+  }
+
   return (
     <div
       data-testid="social-feed-card"
@@ -160,8 +214,12 @@ export const SocialFeedCard = memo(function SocialFeedCard({
             <span className="block truncate text-[15px] font-semibold leading-tight group-hover:text-primary transition-colors sm:text-sm">
               {item.username}
             </span>
-            <span className="block text-xs leading-tight text-muted-foreground sm:text-[11px]">
-              {formatSocialTimeAgo(item.created_at)}
+            <span className="flex items-center gap-1 text-xs leading-tight text-muted-foreground sm:text-[11px]">
+              <span>{formatSocialTimeAgo(item.created_at)}</span>
+              <span className="sm:hidden" aria-hidden="true">
+                ·
+              </span>
+              <Globe2 className="h-3 w-3 sm:hidden" aria-hidden="true" />
             </span>
           </span>
         </Link>
@@ -171,7 +229,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
               type="button"
               onClick={() => void onCopyCoupon(item)}
               disabled={isCopying}
-              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="social-copy-coupon-button inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               aria-label="Skopiuj kupon"
             >
               {isCopying ? (
@@ -179,9 +237,26 @@ export const SocialFeedCard = memo(function SocialFeedCard({
               ) : (
                 <Copy className="h-3 w-3" />
               )}
-              Skopiuj kupon
+              <span className="hidden sm:inline">Skopiuj kupon</span>
             </button>
           )}
+          <button
+            type="button"
+            className="social-post-icon-button sm:hidden"
+            aria-label="Więcej opcji"
+            data-prevent-card-navigation
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            className="social-post-icon-button sm:hidden"
+            aria-label="Ukryj wpis"
+            onClick={() => setIsHidden(true)}
+            data-prevent-card-navigation
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
@@ -207,20 +282,38 @@ export const SocialFeedCard = memo(function SocialFeedCard({
         className="social-card-engagement space-y-2 px-3 pb-3 pt-1 sm:px-4"
         data-prevent-card-navigation
       >
-        <ReactionBar
+        <MobileFacebookEngagement
           reactions={item.reactions as ReactionCounts | null}
           myReaction={item.my_reaction as ReactionType | null}
-          onToggle={(emoji) => {
-            void onToggleReaction(item.id, item.item_type, emoji);
-          }}
-          onOpenReactors={() => onOpenItemReactors(item)}
+          commentCount={item.comment_count ?? comments.length}
           disabled={!isLoggedIn}
+          onOpenReactors={() => onOpenItemReactors(item)}
+          onLike={() => {
+            void onToggleReaction(item.id, item.item_type, 'like');
+          }}
+          onComment={handleMobileCommentClick}
+          onShare={() => {
+            void handleShareItem();
+          }}
         />
+        <div className="social-desktop-reaction-bar hidden sm:block">
+          <ReactionBar
+            reactions={item.reactions as ReactionCounts | null}
+            myReaction={item.my_reaction as ReactionType | null}
+            onToggle={(emoji) => {
+              void onToggleReaction(item.id, item.item_type, emoji);
+            }}
+            onOpenReactors={() => onOpenItemReactors(item)}
+            disabled={!isLoggedIn}
+          />
+        </div>
         <CommentThread
           comments={parsedComments}
           initialCount={item.comment_count ?? 0}
           commentsLoaded={commentsLoaded}
           defaultExpanded={defaultCommentsExpanded}
+          expandSignal={commentsExpandSignal}
+          hideToggleOnMobile
           onFirstExpand={() => {
             if (commentsLoaded || commentsLoading) return;
             void onFirstExpandComments(item.id, item.item_type);
@@ -245,6 +338,104 @@ export const SocialFeedCard = memo(function SocialFeedCard({
   );
 });
 
+interface MobileFacebookEngagementProps {
+  reactions: ReactionCounts | null;
+  myReaction: ReactionType | null;
+  commentCount: number;
+  disabled: boolean;
+  onOpenReactors: () => void;
+  onLike: () => void;
+  onComment: () => void;
+  onShare: () => void;
+}
+
+function MobileFacebookEngagement({
+  reactions,
+  myReaction,
+  commentCount,
+  disabled,
+  onOpenReactors,
+  onLike,
+  onComment,
+  onShare,
+}: MobileFacebookEngagementProps) {
+  const sorted = sortedReactions(reactions);
+  const reactionsTotal = totalReactions(reactions);
+  const visibleReactions = sorted.slice(0, 3);
+  const hasSummary = reactionsTotal > 0 || commentCount > 0;
+
+  return (
+    <div className="social-mobile-engagement sm:hidden">
+      {hasSummary && (
+        <div className="social-mobile-engagement-summary">
+          {reactionsTotal > 0 ? (
+            <button
+              type="button"
+              className="social-mobile-reaction-summary"
+              onClick={onOpenReactors}
+              disabled={disabled}
+              aria-label={`Wyświetl reakcje (${reactionsTotal})`}
+            >
+              <span className="social-mobile-reaction-stack" aria-hidden="true">
+                {visibleReactions.map(({ type, emoji }) => (
+                  <span key={type}>{emoji}</span>
+                ))}
+              </span>
+              <span>{reactionsTotal}</span>
+            </button>
+          ) : (
+            <span />
+          )}
+          {commentCount > 0 && (
+            <span className="social-mobile-comment-count">
+              {commentCount} {formatFeedCommentCount(commentCount)}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        data-testid="social-mobile-action-row"
+        className="social-mobile-action-row sm:hidden"
+      >
+        <button
+          type="button"
+          className={cn(
+            'social-mobile-action-button',
+            myReaction === 'like' && 'text-primary',
+          )}
+          onClick={onLike}
+          disabled={disabled}
+          aria-pressed={myReaction === 'like'}
+        >
+          <ThumbsUp
+            className="h-4 w-4"
+            fill={myReaction === 'like' ? 'currentColor' : 'none'}
+          />
+          <span>Lubię to</span>
+        </button>
+        <button
+          type="button"
+          className="social-mobile-action-button"
+          onClick={onComment}
+          disabled={disabled}
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span>Komentarz</span>
+        </button>
+        <button
+          type="button"
+          className="social-mobile-action-button"
+          onClick={onShare}
+        >
+          <Share2 className="h-4 w-4" />
+          <span>Udostępnij</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface CasinoContentProps {
   item: SocialFeedItem;
 }
@@ -261,7 +452,7 @@ function CasinoContent({ item }: CasinoContentProps) {
 
   return (
     <div className="px-3 py-2 sm:px-4">
-      <div className="app-subsurface flex items-center justify-between gap-3 rounded-lg p-2.5 text-sm sm:p-3">
+      <div className="app-subsurface social-casino-content flex items-center justify-between gap-3 rounded-lg p-2.5 text-sm sm:p-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
@@ -346,7 +537,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
     <>
       <button
         type="button"
-        className="flex items-center justify-between px-3 py-2 w-full text-sm text-left sm:px-4"
+        className="social-coupon-content flex items-center justify-between px-3 py-2 w-full text-sm text-left sm:px-4"
         onClick={() => ako && onToggle()}
       >
         <div className="min-w-0 flex-1">
@@ -402,7 +593,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       </button>
 
       {ako && expanded && (
-        <div className="border-t border-border px-3 pb-3 pt-2 space-y-1.5 sm:px-4">
+        <div className="social-coupon-legs border-t border-border px-3 pb-3 pt-2 space-y-1.5 sm:px-4">
           {item.legs!.map((leg) => (
             <div
               key={leg.id}
@@ -443,4 +634,13 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       )}
     </>
   );
+}
+
+function formatFeedCommentCount(count: number): string {
+  if (count === 1) return 'komentarz';
+  const lastTwo = count % 100;
+  if (lastTwo >= 12 && lastTwo <= 14) return 'komentarzy';
+  const lastDigit = count % 10;
+  if (lastDigit >= 2 && lastDigit <= 4) return 'komentarze';
+  return 'komentarzy';
 }

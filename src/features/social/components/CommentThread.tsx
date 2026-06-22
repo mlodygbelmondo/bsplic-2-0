@@ -44,6 +44,8 @@ interface CommentThreadProps {
   maxDepth?: number;
   currentUserId?: string;
   defaultExpanded?: boolean;
+  expandSignal?: number;
+  hideToggleOnMobile?: boolean;
 }
 
 export function CommentThread({
@@ -58,19 +60,44 @@ export function CommentThread({
   maxDepth = 3,
   currentUserId,
   defaultExpanded = false,
+  expandSignal,
+  hideToggleOnMobile = false,
 }: CommentThreadProps) {
   const tree = buildCommentTree(comments);
   const [collapsed, setCollapsed] = useState(!defaultExpanded);
   const [showInput, setShowInput] = useState(defaultExpanded);
+  const lastExpandSignalRef = useRef(expandSignal);
 
   const totalCount = commentsLoaded ? comments.length : Math.max(comments.length, initialCount);
+  const toggleLabel =
+    totalCount > 0 ? `${totalCount} ${formatCommentCount(totalCount)}` : 'Skomentuj';
+
+  useEffect(() => {
+    if (
+      expandSignal === undefined ||
+      expandSignal === lastExpandSignalRef.current
+    ) {
+      return;
+    }
+
+    lastExpandSignalRef.current = expandSignal;
+    setCollapsed(false);
+    setShowInput(true);
+
+    if (!commentsLoaded) {
+      onFirstExpand?.();
+    }
+  }, [commentsLoaded, expandSignal, onFirstExpand]);
 
   return (
     <div className="space-y-2">
       {/* Toggle comments button */}
       <button
         type="button"
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        className={cn(
+          'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors',
+          hideToggleOnMobile && 'hidden sm:flex',
+        )}
         onClick={() => {
           const willExpand = collapsed;
           setCollapsed(!collapsed);
@@ -84,9 +111,15 @@ export function CommentThread({
         aria-label={collapsed ? `Pokaż komentarze (${totalCount})` : 'Ukryj komentarze'}
       >
         <MessageCircle className="h-3.5 w-3.5" />
-        <span>
-          {totalCount > 0 ? `${totalCount} ${formatCommentCount(totalCount)}` : 'Skomentuj'}
-        </span>
+        {hideToggleOnMobile ? (
+          <span
+            className="social-comment-toggle-label"
+            data-label={toggleLabel}
+            aria-hidden="true"
+          />
+        ) : (
+          <span>{toggleLabel}</span>
+        )}
         {totalCount > 0 && (
           collapsed ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
         )}
@@ -208,13 +241,27 @@ function CommentNodeView({
           </div>
 
           <div className="flex items-center gap-3 mt-1">
-            <ReactionBar
-              reactions={node.reactions as ReactionCounts | null}
-              myReaction={node.my_reaction as ReactionType | null}
-              onToggle={(emoji) => onToggleReaction(node.id, emoji)}
-              onOpenReactors={() => onOpenCommentReactors?.(node.id)}
+            <div className="hidden sm:block">
+              <ReactionBar
+                reactions={node.reactions as ReactionCounts | null}
+                myReaction={node.my_reaction as ReactionType | null}
+                onToggle={(emoji) => onToggleReaction(node.id, emoji)}
+                onOpenReactors={() => onOpenCommentReactors?.(node.id)}
+                disabled={disabled}
+              />
+            </div>
+            <button
+              type="button"
+              className={cn(
+                'social-comment-mobile-action text-[11px] font-semibold text-muted-foreground transition-colors hover:text-primary sm:hidden',
+                node.my_reaction === 'like' && 'text-primary',
+              )}
+              onClick={() => onToggleReaction(node.id, 'like')}
               disabled={disabled}
-            />
+              aria-pressed={node.my_reaction === 'like'}
+            >
+              Lubię to
+            </button>
             {canReply && (
               <button
                 type="button"

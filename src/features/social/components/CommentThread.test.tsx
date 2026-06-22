@@ -114,6 +114,42 @@ describe('CommentThread', () => {
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
   });
 
+  it('can be expanded from a mobile post action without showing the inline toggle on mobile', () => {
+    const onFirstExpand = vi.fn();
+    const { rerender } = render(
+      <CommentThread
+        {...defaultProps}
+        comments={[]}
+        initialCount={2}
+        commentsLoaded={false}
+        onFirstExpand={onFirstExpand}
+        expandSignal={0}
+        hideToggleOnMobile
+      />,
+    );
+
+    expect(screen.getByLabelText('Pokaż komentarze (2)')).toHaveClass(
+      'hidden',
+      'sm:flex',
+    );
+    expect(screen.queryByLabelText('Napisz komentarz...')).not.toBeInTheDocument();
+
+    rerender(
+      <CommentThread
+        {...defaultProps}
+        comments={[]}
+        initialCount={2}
+        commentsLoaded={false}
+        onFirstExpand={onFirstExpand}
+        expandSignal={1}
+        hideToggleOnMobile
+      />,
+    );
+
+    expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
+    expect(onFirstExpand).toHaveBeenCalledTimes(1);
+  });
+
   it('renders nested replies with indentation', () => {
     const comments = [
       makeComment({ id: 'c1', content: 'Komentarz główny', username: 'adam' }),

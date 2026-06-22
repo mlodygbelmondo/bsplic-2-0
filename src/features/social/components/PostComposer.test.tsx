@@ -55,6 +55,7 @@ describe('PostComposer', () => {
     const trigger = screen.getByRole('button', { name: 'Utwórz post' });
 
     expect(composer).toHaveAttribute('data-state', 'trigger');
+    expect(screen.getByTestId('post-composer-media-affordance')).toBeInTheDocument();
     expect(screen.queryByLabelText('Treść posta')).not.toBeInTheDocument();
 
     fireEvent.click(trigger);

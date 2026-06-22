@@ -736,6 +736,9 @@
   .light .app-subsurface.app-subsurface {
     background: hsl(var(--muted) / 0.6);
   }
+  .social-comment-toggle-label::before {
+    content: attr(data-label);
+  }
   @media (max-width: 639px) {
     .social-mobile-page.h-safe-screen.bg-background {
       background: hsl(210 17% 95%);
@@ -796,12 +799,265 @@
       color: hsl(var(--foreground));
     }
 
+    .social-mobile-page .social-compose-entry {
+      margin-bottom: 0;
+    }
+
+    .social-mobile-page .social-compose-entry button {
+      background: hsl(var(--card));
+    }
+
+    .social-mobile-page .social-facebook-stories {
+      border-top: 1px solid hsl(var(--border));
+      border-bottom: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+      scrollbar-width: none;
+    }
+
+    .social-mobile-page .social-facebook-stories::-webkit-scrollbar {
+      display: none;
+    }
+
+    .social-mobile-page .social-story-tile {
+      position: relative;
+      display: block;
+      width: 6.6rem;
+      height: 9rem;
+      flex: 0 0 6.6rem;
+      overflow: hidden;
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.75rem;
+      background: hsl(var(--muted));
+      color: white;
+      box-shadow: 0 1px 2px hsl(0 0% 0% / 0.08);
+    }
+
+    .social-mobile-page .social-story-tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        hsl(0 0% 0% / 0) 35%,
+        hsl(0 0% 0% / 0.52) 100%
+      );
+      pointer-events: none;
+    }
+
+    .social-mobile-page .social-story-create {
+      background: hsl(var(--card));
+      color: hsl(var(--foreground));
+    }
+
+    .social-mobile-page .social-story-create::after {
+      content: none;
+    }
+
+    .social-mobile-page .social-story-image,
+    .social-mobile-page .social-story-create-image {
+      position: absolute;
+      inset: 0;
+      display: block;
+    }
+
+    .social-mobile-page .social-story-create-image {
+      bottom: 2.3rem;
+      overflow: hidden;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .social-mobile-page .social-story-avatar-ring {
+      position: absolute;
+      top: 0.45rem;
+      left: 0.45rem;
+      z-index: 1;
+      display: block;
+      width: 2rem;
+      height: 2rem;
+      overflow: hidden;
+      border: 3px solid hsl(var(--primary));
+      border-radius: 999px;
+      background: hsl(var(--card));
+    }
+
+    .social-mobile-page .social-story-create-plus {
+      position: absolute;
+      left: 50%;
+      bottom: 1.85rem;
+      z-index: 1;
+      display: flex;
+      width: 2rem;
+      height: 2rem;
+      transform: translateX(-50%);
+      align-items: center;
+      justify-content: center;
+      border: 3px solid hsl(var(--card));
+      border-radius: 999px;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .social-mobile-page .social-story-label {
+      position: absolute;
+      right: 0.45rem;
+      bottom: 0.45rem;
+      left: 0.45rem;
+      z-index: 1;
+      overflow: hidden;
+      text-align: left;
+      text-overflow: ellipsis;
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.05rem;
+      color: inherit;
+    }
+
+    .social-mobile-page .social-story-label::before {
+      content: attr(data-label);
+    }
+
+    .social-mobile-page .social-story-create .social-story-label {
+      text-align: center;
+      color: hsl(var(--foreground));
+    }
+
     .social-mobile-page .social-facebook-card.app-surface:hover {
       box-shadow: none;
     }
 
     .social-mobile-page .social-card-engagement {
       border-top: 1px solid hsl(var(--border) / 0.8);
+    }
+
+    .social-mobile-page .social-post-icon-button {
+      display: inline-flex;
+      width: 2rem;
+      height: 2rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      color: hsl(var(--muted-foreground));
+    }
+
+    .social-mobile-page .social-copy-coupon-button {
+      width: 2rem;
+      height: 2rem;
+      justify-content: center;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      padding: 0;
+      color: hsl(var(--muted-foreground));
+    }
+
+    .social-mobile-page .social-copy-coupon-button svg {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+
+    .social-mobile-page .social-copy-coupon-button:hover {
+      background: hsl(var(--muted));
+      color: hsl(var(--foreground));
+    }
+
+    .social-mobile-page .social-post-icon-button:hover {
+      background: hsl(var(--muted));
+      color: hsl(var(--foreground));
+    }
+
+    .social-mobile-page .social-mobile-engagement-summary {
+      display: flex;
+      min-height: 2rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.8125rem;
+    }
+
+    .social-mobile-page .social-mobile-reaction-summary {
+      display: inline-flex;
+      min-width: 0;
+      align-items: center;
+      gap: 0.35rem;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    .social-mobile-page .social-mobile-reaction-stack {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      align-items: center;
+    }
+
+    .social-mobile-page .social-mobile-reaction-stack span {
+      display: inline-flex;
+      width: 1.15rem;
+      height: 1.15rem;
+      align-items: center;
+      justify-content: center;
+      margin-left: -0.25rem;
+      border: 1px solid hsl(var(--card));
+      border-radius: 999px;
+      background: hsl(var(--card));
+      font-size: 0.72rem;
+      line-height: 1;
+    }
+
+    .social-mobile-page .social-mobile-reaction-stack span:last-child {
+      margin-left: 0;
+    }
+
+    .social-mobile-page .social-mobile-comment-count {
+      white-space: nowrap;
+      color: hsl(var(--muted-foreground));
+    }
+
+    .social-mobile-page .social-mobile-action-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid hsl(var(--border));
+      border-bottom: 1px solid hsl(var(--border) / 0.55);
+    }
+
+    .social-mobile-page .social-mobile-action-button {
+      display: inline-flex;
+      min-width: 0;
+      height: 2.35rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      border-radius: 0.375rem;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.84rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .social-mobile-page .social-mobile-action-button:hover {
+      background: hsl(var(--muted));
+    }
+
+    .social-mobile-page .social-mobile-action-button:disabled {
+      opacity: 0.55;
+    }
+
+    .social-mobile-page .social-coupon-content,
+    .social-mobile-page .social-casino-content.app-subsurface {
+      margin: 0 0.75rem 0.5rem;
+      width: calc(100% - 1.5rem);
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.75rem;
+      background: hsl(var(--muted));
+      padding: 0.75rem;
+    }
+
+    .social-mobile-page .social-coupon-legs {
+      margin: -0.2rem 0.75rem 0.65rem;
+      border: 1px solid hsl(var(--border));
+      border-radius: 0.75rem;
+      background: hsl(var(--card));
     }
 
     .social-mobile-page .social-comment-bubble,

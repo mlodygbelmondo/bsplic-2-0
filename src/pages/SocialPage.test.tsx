@@ -3,6 +3,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -266,6 +267,38 @@ describe('SocialPage', () => {
       'rounded-none',
       'sm:rounded-lg',
     );
+  });
+
+  it('renders a mobile Facebook-style stories strip below the composer', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-story-1',
+        user_id: 'user-story-1',
+        username: 'Poster',
+        avatar_url: 'https://cdn.example/poster.jpg',
+      }),
+      makeCouponFeedItem({
+        id: 'coupon-story-1',
+        user_id: 'user-story-2',
+        username: 'Typsterka',
+      }),
+    ]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+
+    const stories = screen.getByTestId('social-stories-strip');
+    expect(stories).toHaveClass('social-facebook-stories', 'sm:hidden');
+    expect(
+      within(stories).getByRole('button', { name: 'Utwórz relację' }),
+    ).toBeInTheDocument();
+    expect(
+      within(stories).getByRole('link', { name: 'Profil Poster' }),
+    ).toBeInTheDocument();
+    expect(
+      within(stories).getByRole('link', { name: 'Profil Typsterka' }),
+    ).toBeInTheDocument();
   });
 
   it('shows empty state when feed is empty', async () => {

@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Send, Loader2 } from 'lucide-react';
+import { ImagePlus, Send, Loader2 } from 'lucide-react';
 import { MentionSuggestions } from '@/features/social/components/MentionSuggestions';
 import { useMentionAutocomplete } from '@/features/social/hooks/useMentionAutocomplete';
 import { applyMention } from '@/features/social/mentions';
@@ -113,6 +113,13 @@ export function PostComposer({
               />
               <span className="min-w-0 flex-1 rounded-full bg-muted px-4 py-2.5 text-[15px] font-medium leading-none text-muted-foreground">
                 Co nowego?
+              </span>
+              <span
+                data-testid="post-composer-media-affordance"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-emerald-600"
+                aria-hidden="true"
+              >
+                <ImagePlus className="h-6 w-6" />
               </span>
             </button>
           </SheetTrigger>

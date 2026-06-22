@@ -7,9 +7,9 @@ import {
   FeedItemType,
 } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SectionLoader } from '@/components/SectionLoader';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUp, Loader2, Plus } from 'lucide-react';
 import { useCoupon } from '@/contexts/CouponContext';
 import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
 import { fetchBetsByIds } from '@/features/home/api/bets';
@@ -47,6 +47,12 @@ const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
 const EMPTY_COMMENTS: SocialComment[] = [];
 
 type FeedFilter = 'all' | 'coupon' | 'post' | 'casino';
+
+interface SocialStoryUser {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+}
 
 const FILTER_EMPTY_TITLES: Record<Exclude<FeedFilter, 'all'>, string> = {
   coupon: 'Brak kuponów w tej chwili',
@@ -154,6 +160,24 @@ export default function SocialPage() {
     if (feedFilter === 'all') return feedItems;
     return feedItems.filter((item) => item.item_type === feedFilter);
   }, [feedItems, feedFilter]);
+  const socialStoryUsers = useMemo<SocialStoryUser[]>(() => {
+    const seen = new Set<string>();
+    const users: SocialStoryUser[] = [];
+
+    for (const item of feedItems) {
+      if (seen.has(item.user_id)) continue;
+      seen.add(item.user_id);
+      users.push({
+        userId: item.user_id,
+        username: item.username,
+        avatarUrl: item.avatar_url,
+      });
+
+      if (users.length >= 8) break;
+    }
+
+    return users;
+  }, [feedItems]);
   const isFilteredEmpty =
     feedFilter !== 'all' && feedItems.length > 0 && filteredFeedItems.length === 0;
   const emptyStateTitle = isFilteredEmpty
@@ -732,6 +756,14 @@ export default function SocialPage() {
             </div>
           )}
 
+          {user && (
+            <SocialStoriesStrip
+              currentUsername={profile?.username ?? 'Ty'}
+              currentAvatarUrl={profile?.avatar_url ?? null}
+              users={socialStoryUsers}
+            />
+          )}
+
           {loading ? (
             <SectionLoader label="Wczytywanie aktywności..." />
           ) : (
@@ -836,5 +868,95 @@ export default function SocialPage() {
         initialEmoji={reactorsEmoji}
       />
     </div>
+  );
+}
+
+interface SocialStoriesStripProps {
+  currentUsername: string;
+  currentAvatarUrl: string | null;
+  users: SocialStoryUser[];
+}
+
+function SocialStoriesStrip({
+  currentUsername,
+  currentAvatarUrl,
+  users,
+}: SocialStoriesStripProps) {
+  return (
+    <div
+      data-testid="social-stories-strip"
+      className="social-facebook-stories mb-2 flex gap-2 overflow-x-auto px-2 pb-2 sm:hidden"
+    >
+      <button
+        type="button"
+        className="social-story-tile social-story-create"
+        aria-label="Utwórz relację"
+      >
+        <span className="social-story-create-image">
+          <StoryImage username={currentUsername} avatarUrl={currentAvatarUrl} />
+        </span>
+        <span className="social-story-create-plus">
+          <Plus className="h-4 w-4" />
+        </span>
+        <span
+          className="social-story-label"
+          data-label="Utwórz relację"
+          aria-hidden="true"
+        />
+      </button>
+
+      {users.map((storyUser) => (
+        <Link
+          key={storyUser.userId}
+          to={`/profile/${storyUser.userId}`}
+          className="social-story-tile"
+          aria-label={`Profil ${storyUser.username}`}
+        >
+          <span className="social-story-image">
+            <StoryImage
+              username={storyUser.username}
+              avatarUrl={storyUser.avatarUrl}
+            />
+          </span>
+          <span className="social-story-avatar-ring">
+            <StoryImage
+              username={storyUser.username}
+              avatarUrl={storyUser.avatarUrl}
+            />
+          </span>
+          <span
+            className="social-story-label"
+            data-label={storyUser.username}
+            aria-hidden="true"
+          />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+interface StoryImageProps {
+  username: string;
+  avatarUrl: string | null;
+}
+
+function StoryImage({ username, avatarUrl }: StoryImageProps) {
+  const fallback = username.charAt(0).toUpperCase();
+
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/80 via-sky-500 to-slate-900 text-2xl font-black text-white">
+      {fallback}
+    </span>
   );
 }
