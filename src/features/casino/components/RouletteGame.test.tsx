@@ -525,8 +525,12 @@ describe('RouletteGame', () => {
     });
 
     expect(mobileTrigger.parentElement).toHaveClass(
-      'bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))]',
+      'bottom-[var(--roulette-mobile-stake-nav-anchor)]',
     );
+    expect(mobileTrigger.parentElement).toHaveStyle({
+      '--roulette-mobile-stake-nav-anchor':
+        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
+    });
 
     fireEvent.click(mobileTrigger);
 
@@ -534,11 +538,15 @@ describe('RouletteGame', () => {
     expect(drawer).toHaveTextContent('Typ zakładu');
     expect(drawer).toHaveTextContent('Wybierz stawkę');
     expect(drawer).toHaveClass(
-      'bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))]',
-      'max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--mobile-floating-stack-offset,4.75rem)-env(safe-area-inset-bottom))]',
+      'bottom-[var(--roulette-mobile-stake-nav-anchor)]',
+      'max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--roulette-mobile-stake-nav-anchor))]',
       'overflow-y-auto',
       'overscroll-contain',
     );
+    expect(drawer).toHaveStyle({
+      '--roulette-mobile-stake-nav-anchor':
+        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
+    });
     expect(screen.getByTestId('roulette-bet-value-grid')).toHaveClass(
       'grid-cols-5',
       'sm:grid-cols-6',
