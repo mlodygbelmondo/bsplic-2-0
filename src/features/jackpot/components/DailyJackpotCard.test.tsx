@@ -191,7 +191,7 @@ describe('DailyJackpotCard', () => {
     const css = readJackpotCss();
 
     expect(css).toMatch(
-      /\.daily-jackpot-card__amount-heading\s*\{[^}]*align-items:\s*center;[^}]*gap:\s*0\.5rem;/,
+      /\.daily-jackpot-card__amount-heading\s*\{[^}]*align-items:\s*center;[^}]*gap:\s*0\.25rem;/,
     );
     expect(css).toMatch(
       /\.daily-jackpot-card__amount-label\s*\{[^}]*margin-top:\s*0;/,

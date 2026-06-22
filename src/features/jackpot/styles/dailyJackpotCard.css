@@ -69,7 +69,7 @@
   .daily-jackpot-card__amount-heading {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
   .daily-jackpot-card__amount-label {
     display: inline-block;
