@@ -23,8 +23,11 @@ const STAKE_PRESETS = [10, 25, 50, 100];
 const MOBILE_STAKE_DRAWER_STYLE = {
   '--roulette-mobile-stake-nav-anchor':
     'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
+  '--roulette-mobile-stake-top-anchor':
+    'calc(2.75rem + env(safe-area-inset-top))',
 } as CSSProperties & {
   '--roulette-mobile-stake-nav-anchor': string;
+  '--roulette-mobile-stake-top-anchor': string;
 };
 
 export function StakeDrawer({
@@ -226,7 +229,7 @@ export function StakeDrawer({
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               data-testid="mobile-stake-drawer"
               style={MOBILE_STAKE_DRAWER_STYLE}
-              className="fixed inset-x-0 bottom-[var(--roulette-mobile-stake-nav-anchor)] z-50 max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--roulette-mobile-stake-nav-anchor))] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-[bottom] duration-200 ease-out"
+              className="fixed inset-x-0 bottom-[var(--roulette-mobile-stake-nav-anchor)] z-50 max-h-[calc(var(--app-viewport-height,100svh)-var(--roulette-mobile-stake-top-anchor)-var(--roulette-mobile-stake-nav-anchor))] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-[bottom] duration-200 ease-out"
             >
               {/* Drag handle */}
               <div className="mb-4 flex justify-center">

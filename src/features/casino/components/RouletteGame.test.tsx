@@ -530,6 +530,8 @@ describe('RouletteGame', () => {
     expect(mobileTrigger.parentElement).toHaveStyle({
       '--roulette-mobile-stake-nav-anchor':
         'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
+      '--roulette-mobile-stake-top-anchor':
+        'calc(2.75rem + env(safe-area-inset-top))',
     });
 
     fireEvent.click(mobileTrigger);
@@ -539,13 +541,15 @@ describe('RouletteGame', () => {
     expect(drawer).toHaveTextContent('Wybierz stawkę');
     expect(drawer).toHaveClass(
       'bottom-[var(--roulette-mobile-stake-nav-anchor)]',
-      'max-h-[calc(var(--app-viewport-height,100svh)-4rem-var(--roulette-mobile-stake-nav-anchor))]',
+      'max-h-[calc(var(--app-viewport-height,100svh)-var(--roulette-mobile-stake-top-anchor)-var(--roulette-mobile-stake-nav-anchor))]',
       'overflow-y-auto',
       'overscroll-contain',
     );
     expect(drawer).toHaveStyle({
       '--roulette-mobile-stake-nav-anchor':
         'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
+      '--roulette-mobile-stake-top-anchor':
+        'calc(2.75rem + env(safe-area-inset-top))',
     });
     expect(screen.getByTestId('roulette-bet-value-grid')).toHaveClass(
       'grid-cols-5',
