@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 import { Bet, BetOption, Category } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +46,7 @@ import type { EditableBetOption } from '../helpers';
 import { settleBetWithBackend, type CorrectionScope, type SettlementMode } from '../settlementApi';
 import {
   fetchBetAkoExclusions,
-  replaceBetAkoExclusions,
+  updateBetWithAkoExclusions,
   type BetAkoExclusionDraft,
 } from '../api/akoExclusions';
 import { AkoExclusionsEditor } from './AkoExclusionsEditor';
@@ -84,8 +83,10 @@ export default function ManageBetsTab() {
   // Editor
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorLoading, setEditorLoading] = useState(false);
-  const [editorExclusionsLoading, setEditorExclusionsLoading] = useState(false);
+  const [editorExclusionsLoadingFor, setEditorExclusionsLoadingFor] = useState<string | null>(null);
+  const [editorExclusionsFailedFor, setEditorExclusionsFailedFor] = useState<string | null>(null);
   const [editing, setEditing] = useState<BetEditor | null>(null);
+  const activeEditorExclusionsRequest = useRef<string | null>(null);
 
   // Resolve
   const [resolveModal, setResolveModal] = useState<Bet | null>(null);
@@ -100,6 +101,8 @@ export default function ManageBetsTab() {
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
 
   const isResolveInProgress = Boolean(resolveModal && resolvingBetId === resolveModal.id);
+  const editorExclusionsLoading = Boolean(editing && editorExclusionsLoadingFor === editing.id);
+  const editorExclusionsFailed = Boolean(editing && editorExclusionsFailedFor === editing.id);
 
   const closeResolveModal = () => {
     if (isResolveInProgress) return;
@@ -107,6 +110,14 @@ export default function ManageBetsTab() {
     setSelectedWinners([]);
     setResolveStep('selection');
     setCorrectionScope('pending_only');
+  };
+
+  const closeEditor = () => {
+    activeEditorExclusionsRequest.current = null;
+    setEditorOpen(false);
+    setEditing(null);
+    setEditorExclusionsLoadingFor(null);
+    setEditorExclusionsFailedFor(null);
   };
 
   const fetchBets = async () => {
@@ -163,24 +174,32 @@ export default function ManageBetsTab() {
       akoExclusions: [],
     });
     setEditorOpen(true);
-    setEditorExclusionsLoading(true);
+    activeEditorExclusionsRequest.current = bet.id;
+    setEditorExclusionsLoadingFor(bet.id);
+    setEditorExclusionsFailedFor(null);
     fetchBetAkoExclusions(bet.id)
       .then((exclusions) => {
+        if (activeEditorExclusionsRequest.current !== bet.id) return;
+        setEditorExclusionsFailedFor((current) => current === bet.id ? null : current);
         setEditing((current) =>
           current?.id === bet.id ? { ...current, akoExclusions: exclusions } : current,
         );
       })
       .catch((err: unknown) => {
+        if (activeEditorExclusionsRequest.current !== bet.id) return;
+        setEditorExclusionsFailedFor(bet.id);
         toast.error(getErrorMessage(err, 'Nie udało się pobrać wykluczeń AKO'));
       })
       .finally(() => {
-        setEditorExclusionsLoading(false);
+        if (activeEditorExclusionsRequest.current !== bet.id) return;
+        setEditorExclusionsLoadingFor((current) => current === bet.id ? null : current);
       });
   };
 
   const updateBet = async () => {
     if (!editing) return;
     if (editorExclusionsLoading) { toast.error('Poczekaj, aż wykluczenia AKO się wczytają'); return; }
+    if (editorExclusionsFailed) { toast.error('Wykluczenia AKO nie wczytały się poprawnie'); return; }
     if (!editing.title.trim()) { toast.error('Tytuł jest wymagany'); return; }
 
     const cleanedOptions = editing.options.map((option) => ({
@@ -203,27 +222,23 @@ export default function ManageBetsTab() {
 
     setEditorLoading(true);
     try {
-      const { error } = await supabase
-        .from('bets')
-        .update({
-          title: editing.title.trim(),
-          category_id: editing.categoryId || null,
-          bet_type: editing.betType,
-          options: cleanedOptions.map((option) => ({
-            name: option.name,
-            odds: Number(option.oddsRaw),
-          })) as Json,
-          ends_at: endsAtDate.toISOString(),
-          is_live: editing.isLive,
-          is_bsplicboost: editing.isBsplicboost,
-          is_active: editing.isActive,
-        })
-        .eq('id', editing.id);
-      if (error) throw error;
-      await replaceBetAkoExclusions(editing.id, editing.akoExclusions);
+      await updateBetWithAkoExclusions({
+        betId: editing.id,
+        title: editing.title.trim(),
+        categoryId: editing.categoryId || null,
+        betType: editing.betType,
+        options: cleanedOptions.map((option) => ({
+          name: option.name,
+          odds: Number(option.oddsRaw),
+        })),
+        endsAt: endsAtDate.toISOString(),
+        isLive: editing.isLive,
+        isBsplicboost: editing.isBsplicboost,
+        isActive: editing.isActive,
+        exclusions: editing.akoExclusions,
+      });
       toast.success('Zakład zaktualizowany');
-      setEditorOpen(false);
-      setEditing(null);
+      closeEditor();
       fetchBets();
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Nie udało się zaktualizować zakładu'));
@@ -298,7 +313,7 @@ export default function ManageBetsTab() {
     try {
       const { error } = await supabase.from('bets').delete().eq('id', bet.id);
       if (error) throw error;
-      if (editing?.id === bet.id) { setEditorOpen(false); setEditing(null); }
+      if (editing?.id === bet.id) closeEditor();
       if (resolveModal?.id === bet.id) {
         setResolveModal(null);
         setSelectedWinners([]);
@@ -556,9 +571,14 @@ export default function ManageBetsTab() {
       )}
 
       {/* Edit dialog */}
-      <Dialog open={editorOpen} onOpenChange={(open) => { setEditorOpen(open); if (!open) setEditing(null); }}>
+      <Dialog open={editorOpen} onOpenChange={(open) => { if (open) setEditorOpen(true); else closeEditor(); }}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(var(--app-viewport-height,100svh)-2rem)] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader><DialogTitle>Edytuj zakład</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Edytuj zakład</DialogTitle>
+            <DialogDescription>
+              Zmień dane zakładu, opcje i wykluczenia AKO.
+            </DialogDescription>
+          </DialogHeader>
           {editing && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -646,11 +666,17 @@ export default function ManageBetsTab() {
                     current ? { ...current, akoExclusions } : current,
                   )
                 }
-                disabled={editorLoading}
+                disabled={editorLoading || editorExclusionsFailed}
                 loading={editorExclusionsLoading}
               />
 
-              <Button onClick={updateBet} disabled={editorLoading || editorExclusionsLoading} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
+              {editorExclusionsFailed && (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                  Wykluczenia AKO nie wczytały się poprawnie. Zamknij edycję i spróbuj ponownie.
+                </p>
+              )}
+
+              <Button onClick={updateBet} disabled={editorLoading || editorExclusionsLoading || editorExclusionsFailed} className="min-h-11 w-full justify-center gradient-primary text-primary-foreground font-bold">
                 {editorLoading ? 'Zapisywanie...' : 'Zapisz zmiany'}
               </Button>
             </div>

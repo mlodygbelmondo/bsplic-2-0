@@ -1,4 +1,11 @@
-import { Crown, Loader2, Ticket, Trophy } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  Clock3,
+  Loader2,
+  Ticket,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -6,9 +13,30 @@ import { cn } from '@/lib/utils';
 import {
   formatJackpotAmount,
   getDrawTimeLabel,
-  getParticipantProgressLabel,
 } from '../lib/jackpotFormat';
 import type { DailyJackpotSnapshot } from '../types';
+import '../styles/dailyJackpotCard.css';
+
+function formatJackpotHeroAmount(amount: number) {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  const hasCents = Math.round(safeAmount) !== safeAmount;
+
+  return `${safeAmount.toLocaleString('pl-PL', {
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0,
+  })} zł`;
+}
+
+function formatCountdown(totalMilliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(totalMilliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, '0'))
+    .join(':');
+}
 
 interface DailyJackpotCardProps {
   snapshot: DailyJackpotSnapshot | null;
@@ -16,6 +44,7 @@ interface DailyJackpotCardProps {
   buying: boolean;
   balance: number;
   onBuy: () => void;
+  onOpenDraw?: (poolId: string) => void;
 }
 
 export function DailyJackpotCard({
@@ -24,7 +53,42 @@ export function DailyJackpotCard({
   buying,
   balance,
   onBuy,
+  onOpenDraw,
 }: DailyJackpotCardProps) {
+  const snapshotStatus = snapshot?.status;
+  const drawScheduledAt = snapshot?.drawScheduledAt;
+  const serverNow = snapshot?.serverNow;
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    setElapsedSeconds(0);
+
+    if (snapshotStatus !== 'collecting') {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [drawScheduledAt, serverNow, snapshotStatus]);
+
+  const countdownLabel = useMemo(() => {
+    if (!drawScheduledAt || !serverNow) {
+      return '00:00:00';
+    }
+
+    const drawTime = new Date(drawScheduledAt).getTime();
+    const currentServerNow = new Date(serverNow).getTime();
+
+    if (!Number.isFinite(drawTime) || !Number.isFinite(currentServerNow)) {
+      return '00:00:00';
+    }
+
+    return formatCountdown(drawTime - currentServerNow - elapsedSeconds * 1000);
+  }, [drawScheduledAt, elapsedSeconds, serverNow]);
+
   if (loading && !snapshot) {
     return (
       <section className="mb-3 rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -39,115 +103,222 @@ export function DailyJackpotCard({
   }
 
   const hasPrize = snapshot.prizeAmount > 0;
+  if (!snapshot.poolId || !hasPrize) {
+    return null;
+  }
+
+  const userTicketCount = Math.min(
+    snapshot.currentUserTicketCount,
+    snapshot.maxTicketsPerPlayer,
+  );
+  const currentUserTicketNumbers =
+    snapshot.currentUserTicketNumbers.length > 0
+      ? snapshot.currentUserTicketNumbers
+      : snapshot.currentUserTicketNumber !== null
+        ? [snapshot.currentUserTicketNumber]
+        : [];
+  const currentUserTicketLabel =
+    currentUserTicketNumbers.length > 0
+      ? currentUserTicketNumbers
+          .map((ticketNumber) => `#${String(ticketNumber).padStart(2, '0')}`)
+          .join(' ')
+      : null;
+  const ticketLimitReached = userTicketCount >= snapshot.maxTicketsPerPlayer;
   const hasEnoughBalance = balance >= snapshot.ticketPrice;
+  const canOpenDraw = snapshot.status === 'drawn' && Boolean(snapshot.poolId);
   const canBuy =
     snapshot.status === 'collecting' &&
-    hasPrize &&
-    !snapshot.currentUserHasTicket &&
+    !ticketLimitReached &&
     hasEnoughBalance &&
     !buying;
+  const actionIsDraw = canOpenDraw;
+  const actionEnabled = actionIsDraw || canBuy;
 
-  const buttonLabel = snapshot.currentUserHasTicket
-    ? `Masz ticket #${snapshot.currentUserTicketNumber ?? '?'}`
-    : hasEnoughBalance
-      ? `Kup ticket za ${formatJackpotAmount(snapshot.ticketPrice)}`
-      : 'Brak środków na ticket';
+  const statusLabel = (() => {
+    if (snapshot.status === 'collecting') {
+      return userTicketCount > 0 ? 'Jesteś w grze' : 'Zbieramy tickety';
+    }
+
+    if (snapshot.status === 'locked') {
+      return 'Losowanie trwa';
+    }
+
+    if (snapshot.status === 'drawn') {
+      return snapshot.currentUserHasTicket
+        ? 'Wynik gotowy do obejrzenia'
+        : 'Losowanie zakończone';
+    }
+
+    if (snapshot.status === 'rolled_over') {
+      return 'Pula przechodzi dalej';
+    }
+
+    return 'Pula anulowana';
+  })();
+
+  const handlePrimaryAction = () => {
+    if (actionIsDraw && snapshot.poolId) {
+      if (onOpenDraw) {
+        onOpenDraw(snapshot.poolId);
+        return;
+      }
+
+      window.location.assign(`/jackpot/draw/${snapshot.poolId}`);
+      return;
+    }
+
+    if (canBuy) {
+      onBuy();
+    }
+  };
+
+  const buttonLabel = (() => {
+    if (actionIsDraw) {
+      return snapshot.currentUserHasTicket
+        ? 'Przejdź do losowania'
+        : 'Obejrzyj losowanie';
+    }
+
+    if (snapshot.status === 'locked') {
+      return 'Losowanie trwa';
+    }
+
+    if (snapshot.status === 'drawn') {
+      return 'Finał zakończony';
+    }
+
+    if (snapshot.status === 'rolled_over') {
+      return 'Pula przechodzi dalej';
+    }
+
+    if (snapshot.status === 'cancelled') {
+      return 'Pula anulowana';
+    }
+
+    if (ticketLimitReached) {
+      return 'Limit ticketów wykorzystany';
+    }
+
+    if (!hasEnoughBalance) {
+      return 'Brak środków na ticket';
+    }
+
+    return userTicketCount === 1
+      ? `Kup drugi ticket`
+      : `Kup ticket`;
+  })();
+  const legacyLimitLabel = `Limit ticketów ${snapshot.maxTicketsPerPlayer}/${snapshot.maxTicketsPerPlayer}`;
+  const drawTimeLabel = getDrawTimeLabel(
+    snapshot.drawScheduledAt,
+    snapshot.serverNow,
+  );
 
   return (
-    <section className="mb-3 overflow-hidden rounded-xl border border-amber-400/25 bg-[linear-gradient(135deg,hsl(var(--card))_0%,rgba(120,53,15,0.22)_52%,hsl(var(--card))_100%)] shadow-[0_12px_36px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-amber-300/15 bg-black/10 px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Crown className="h-4 w-4 text-amber-300" />
-              <h2 className="text-sm font-black uppercase tracking-wide">
-                Jackpot Dnia
-              </h2>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {snapshot.status === 'collecting'
-                ? getDrawTimeLabel(
-                    snapshot.drawScheduledAt,
-                    snapshot.serverNow,
-                  )
-                : 'Dzisiejszy finał puli'}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">
-              Pula
-            </p>
-            <p className="font-mono text-xl font-black text-amber-200">
-              {formatJackpotAmount(snapshot.prizeAmount)}
-            </p>
-          </div>
+    <section
+      aria-label="Jackpot Dnia"
+      className="daily-jackpot-card mb-4"
+    >
+      <div className="daily-jackpot-card__shine" aria-hidden="true" />
+      <div className="daily-jackpot-card__embers" aria-hidden="true" />
+
+      <div className="daily-jackpot-card__copy">
+        <span className="daily-jackpot-card__amount-label">Pula</span>
+        <p className="daily-jackpot-card__amount">
+          {formatJackpotHeroAmount(snapshot.prizeAmount)}
+          <span className="sr-only">
+            Jackpot Dnia.{' '}
+            {formatJackpotAmount(snapshot.prizeAmount)}
+          </span>
+        </p>
+      </div>
+
+      <div
+        className={cn(
+          'daily-jackpot-card__state',
+          snapshot.status === 'collecting' &&
+            'daily-jackpot-card__state--countdown',
+        )}
+        aria-live="polite"
+      >
+        <Clock3 className="h-4 w-4" />
+        <span className="daily-jackpot-card__state-label">
+          {snapshot.status === 'collecting' ? drawTimeLabel : statusLabel}
+        </span>
+        {snapshot.status === 'collecting' && (
+          <>
+            <span className="daily-jackpot-card__state-dot" aria-hidden="true">
+              •
+            </span>
+            <strong>{countdownLabel}</strong>
+          </>
+        )}
+      </div>
+
+      <img
+        className="daily-jackpot-card__art"
+        src="/jackpot/daily-jackpot-prizes.png"
+        alt=""
+        aria-hidden="true"
+      />
+
+      <div className="daily-jackpot-card__stats" aria-label="Dane jackpotu">
+        <div className="daily-jackpot-card__stat">
+          <Ticket className="h-6 w-6" />
+          <span className="daily-jackpot-card__price-label-desktop">
+            Cena ticketu
+          </span>
+          <span className="daily-jackpot-card__price-label-mobile">
+            Cena
+          </span>
+          <strong>{formatJackpotHeroAmount(snapshot.ticketPrice)}</strong>
+        </div>
+        <div className="daily-jackpot-card__stat">
+          <Users className="h-6 w-6" />
+          <span>Twoje tickety</span>
+          <strong>
+            {currentUserTicketLabel ?? `${userTicketCount} / ${snapshot.maxTicketsPerPlayer}`}
+          </strong>
+          {userTicketCount > 0 && (
+            <span className="sr-only">
+              Masz {userTicketCount}/{snapshot.maxTicketsPerPlayer} ticketów
+            </span>
+          )}
+        </div>
+        <div className="daily-jackpot-card__stat">
+          <Ticket className="h-6 w-6" />
+          <span>Limit</span>
+          <strong>Maks. {snapshot.maxTicketsPerPlayer}</strong>
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
-        <div className="space-y-2">
-          {snapshot.status === 'collecting' && (
-            <>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">
-                  <Ticket className="h-3.5 w-3.5" />
-                  {getParticipantProgressLabel(
-                    snapshot.participantCount,
-                    snapshot.minUniqueUsers,
-                  )}
-                </span>
-                <span>{snapshot.ticketCount} ticketów w puli</span>
-              </div>
-              {!hasPrize && (
-                <p className="text-xs text-muted-foreground">
-                  Brak aktywnej puli — wróć jutro.
-                </p>
-              )}
-            </>
-          )}
+      <span className="sr-only">Minimum {snapshot.minUniqueUsers} graczy</span>
 
-          {snapshot.status === 'locked' && (
-            <p className="text-sm font-semibold text-amber-200">
-              Losowanie trwa…
-            </p>
-          )}
+      {snapshot.status === 'rolled_over' && (
+        <p className="daily-jackpot-card__note">
+          Za mało uczestników. Ticket zwrócony, pula przechodzi na jutro.
+        </p>
+      )}
 
-          {snapshot.status === 'drawn' && (
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Trophy className="h-4 w-4 text-amber-300" />
-              <span>
-                Wygrał {snapshot.winnerUsername ?? 'zwycięzca'}
-              </span>
-              {snapshot.winningTicketNumber !== null && (
-                <span className="rounded-md bg-amber-300/10 px-2 py-0.5 text-xs text-amber-100">
-                  Ticket #{snapshot.winningTicketNumber}
-                </span>
-              )}
-            </div>
-          )}
-
-          {snapshot.status === 'rolled_over' && (
-            <p className="text-sm font-semibold text-muted-foreground">
-              Za mało uczestników — ticket zwrócony, pula przechodzi na jutro.
-            </p>
-          )}
-        </div>
-
-        <Button
-          type="button"
-          onClick={onBuy}
-          disabled={!canBuy}
-          className={cn(
-            'min-h-11 justify-center rounded-xl px-4 font-bold',
-            canBuy
-              ? 'bg-amber-400 text-black hover:bg-amber-300'
-              : 'bg-muted text-muted-foreground',
-          )}
-        >
-          {buying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {buttonLabel}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant={null}
+        size={null}
+        onClick={handlePrimaryAction}
+        disabled={!actionEnabled}
+        className={cn(
+          'daily-jackpot-card__button',
+          actionEnabled
+            ? 'daily-jackpot-card__button--hot'
+            : 'daily-jackpot-card__button--disabled',
+        )}
+      >
+        {buying && !actionIsDraw && (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        )}
+        <span>{buttonLabel}</span>
+        {ticketLimitReached && <span className="sr-only">{legacyLimitLabel}</span>}
+        {actionIsDraw && <ArrowRight className="h-4 w-4" />}
+      </Button>
     </section>
   );
 }

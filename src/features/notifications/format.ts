@@ -11,6 +11,8 @@ export function formatNotificationTypeLabel(type: NotificationType): string {
       return 'Wygrany kupon';
     case 'comment_post':
       return 'Komentarz do posta';
+    case 'jackpot_draw_ready':
+      return 'Losowanie jackpotu';
     default:
       return 'Powiadomienie';
   }

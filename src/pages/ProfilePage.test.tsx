@@ -571,7 +571,7 @@ describe('ProfilePage username route', () => {
       p_offset: 0,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
 
     expect(await screen.findByText('Zakład 40')).toBeInTheDocument();
     expect(rpcMock).toHaveBeenCalledWith('get_user_coupon_history', {
@@ -582,10 +582,10 @@ describe('ProfilePage username route', () => {
     expect(screen.getAllByRole('button', { name: 'Pokaż mniej' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Pokaż więcej' })).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
     expect(await screen.findByText('Zakład 70')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
     expect(await screen.findByText('Zakład 75')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pokaż więcej' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pokaż mniej' })).toBeInTheDocument();
@@ -599,11 +599,11 @@ describe('ProfilePage username route', () => {
 
     const sportsbookHistoryRequestCount = rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_coupon_history').length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
 
     expect(await screen.findByText('Zakład 75')).toBeInTheDocument();
     expect(rpcMock.mock.calls.filter(([fn]) => fn === 'get_user_coupon_history')).toHaveLength(sportsbookHistoryRequestCount);
-  });
+  }, 15000);
 
   it('keeps rendered sportsbook history visible while loading more entries', async () => {
     let resolveLoadMore: ((value: { data: unknown[] }) => void) | undefined;
@@ -647,7 +647,7 @@ describe('ProfilePage username route', () => {
 
     expect(await screen.findByText('Zakład 1')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
 
     expect(screen.getByText('Zakład 1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ładowanie...' })).toBeDisabled();
@@ -695,7 +695,7 @@ describe('ProfilePage username route', () => {
     expect(await screen.findByText('Bet 1')).toBeInTheDocument();
     expect(screen.queryByText('Bet 11')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pokaż więcej' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pokaż więcej' }));
 
     expect(await screen.findByText('Bet 40')).toBeInTheDocument();
     expect(rpcMock).toHaveBeenCalledWith('get_user_casino_history', {

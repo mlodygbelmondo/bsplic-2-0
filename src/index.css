@@ -785,7 +785,9 @@
   }
   @media (hover: hover) {
     .bet-card:hover {
-      box-shadow: var(--shadow-card-hover);
+      box-shadow:
+        inset 0 1px 0 hsl(0 0% 100% / 0.05),
+        inset 0 -1px 0 hsl(0 0% 0% / 0.25);
     }
   }
   /* Live bets glow hotter, like the in-play cards in real sportsbooks. */
@@ -800,7 +802,7 @@
   }
   @media (hover: hover) {
     .light .bet-card:hover {
-      box-shadow: var(--shadow-card-hover);
+      box-shadow: none;
     }
   }
   .light .bet-card-live {

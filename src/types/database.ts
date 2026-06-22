@@ -205,7 +205,12 @@ export type ReactionEmoji = 'like' | 'heart' | 'laugh' | 'wow' | 'sad' | 'angry'
 
 export type FeedItemType = 'post' | 'coupon' | 'casino';
 
-export type NotificationType = 'mention_post' | 'mention_comment' | 'coupon_won' | 'comment_post';
+export type NotificationType =
+  | 'mention_post'
+  | 'mention_comment'
+  | 'coupon_won'
+  | 'comment_post'
+  | 'jackpot_draw_ready';
 
 export interface SocialFeedItem {
   id: string;

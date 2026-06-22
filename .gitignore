@@ -19,7 +19,9 @@ dist-ssr
 .env.test.local
 .env.production.local
 .env.dawdal
+.test-credentials.local.md
 .codex/environments/
+.codex/tmp/
 .learnings
 
 # Supabase local state
@@ -41,6 +43,7 @@ supabase/.temp/
 .ai*
 docs/design-references/
 docs/roulette-inspiration/
+tmp/
 tmp/imagegen/
 deno.lock
 .superpowers/

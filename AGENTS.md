@@ -43,6 +43,7 @@
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - Keep secrets out of source code and commits.
+- For manual browser testing, use the reusable test account stored in `.test-credentials.local.md` instead of creating new accounts. The file is intentionally gitignored and must not be committed. Use a separate existing admin account for admin-only flows.
 
 ## Core Commands
 

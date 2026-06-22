@@ -1,5 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BetList } from "./BetList";
 
@@ -16,18 +22,12 @@ vi.mock("@/features/home/hooks/useBets", () => ({
     useBetsMock(selectedCategory, sort),
 }));
 
-vi.mock("@/features/jackpot/hooks/useDailyJackpot", () => ({
-  useDailyJackpot: () => ({
-    balance: 0,
-    buyTicket: vi.fn(),
-    buying: false,
-    loading: false,
-    refresh: vi.fn(),
-    snapshot: null,
-  }),
-}));
-
 describe("BetList tabs", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useBetsMock.mockClear();
+  });
+
   it("defaults to newest and supports ending-soon sort tab", () => {
     render(
       <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
@@ -66,6 +66,19 @@ describe("BetList tabs", () => {
     ).toHaveClass("hidden", "lg:inline-flex");
   });
 
+  it("renders an optional top banner before the bet cards", () => {
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={[]}
+        categoryMap={{}}
+        topBanner={<div data-testid="home-top-banner">Jackpot</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("home-top-banner")).toHaveTextContent("Jackpot");
+  });
+
   it("hides the mobile filter toolbar with transform instead of collapsing layout height", () => {
     render(
       <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
@@ -87,6 +100,28 @@ describe("BetList tabs", () => {
     expect(screen.getByTestId("bet-list-mobile-toolbar")).not.toHaveClass(
       "grid-rows-[0fr]",
     );
+  });
+
+  it("keeps visible mobile filter controls tappable when a dropdown is open", async () => {
+    render(
+      <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
+    );
+
+    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
+
+    fireEvent.click(
+      within(mobileToolbar).getByRole("button", {
+        expanded: false,
+        name: "Najnowsze",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(mobileToolbar).toHaveClass("z-50");
+      expect(mobileToolbar).not.toHaveClass("translate-y-0");
+      expect(mobileToolbar).not.toHaveClass("will-change-transform");
+      expect(mobileToolbar).not.toHaveClass("pointer-events-none");
+    });
   });
 
   it("hides the desktop action toolbar with transform on downward scroll", () => {

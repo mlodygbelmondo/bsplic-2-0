@@ -489,6 +489,11 @@ export type Database = {
           min_unique_users: number
           pool_date: string
           prize_amount: number
+          result_viewed_at: string | null
+          reward_auto_credited_at: string | null
+          reward_claimed_at: string | null
+          reward_credit_event_id: string | null
+          reward_credit_status: string
           rollover_from_pool_id: string | null
           status: string
           ticket_price: number
@@ -506,6 +511,11 @@ export type Database = {
           min_unique_users?: number
           pool_date: string
           prize_amount?: number
+          result_viewed_at?: string | null
+          reward_auto_credited_at?: string | null
+          reward_claimed_at?: string | null
+          reward_credit_event_id?: string | null
+          reward_credit_status?: string
           rollover_from_pool_id?: string | null
           status?: string
           ticket_price?: number
@@ -523,6 +533,11 @@ export type Database = {
           min_unique_users?: number
           pool_date?: string
           prize_amount?: number
+          result_viewed_at?: string | null
+          reward_auto_credited_at?: string | null
+          reward_claimed_at?: string | null
+          reward_credit_event_id?: string | null
+          reward_credit_status?: string
           rollover_from_pool_id?: string | null
           status?: string
           ticket_price?: number
@@ -550,6 +565,13 @@ export type Database = {
             columns: ["winning_ticket_id"]
             isOneToOne: false
             referencedRelation: "daily_jackpot_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_pools_reward_credit_event_id_fkey"
+            columns: ["reward_credit_event_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_events"
             referencedColumns: ["id"]
           },
         ]
@@ -1119,6 +1141,19 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
       }
+      admin_create_bet_with_ako_exclusions: {
+        Args: {
+          p_bet_type: string
+          p_category_id: string | null
+          p_ends_at: string
+          p_exclusions?: Json
+          p_is_bsplicboost?: boolean
+          p_is_live?: boolean
+          p_options: Json
+          p_title: string
+        }
+        Returns: string
+      }
       admin_get_bet_ako_exclusions: {
         Args: { p_bet_id: string }
         Returns: Json
@@ -1135,6 +1170,21 @@ export type Database = {
           p_winning_options?: string[]
         }
         Returns: Json
+      }
+      admin_update_bet_with_ako_exclusions: {
+        Args: {
+          p_bet_id: string
+          p_bet_type: string
+          p_category_id: string | null
+          p_ends_at: string
+          p_exclusions?: Json
+          p_is_active?: boolean
+          p_is_bsplicboost?: boolean
+          p_is_live?: boolean
+          p_options: Json
+          p_title: string
+        }
+        Returns: string
       }
       agent_accept_bet_proposals: {
         Args: {
@@ -1243,8 +1293,28 @@ export type Database = {
         Args: { p_pool_id: string }
         Returns: Json
       }
+      get_daily_jackpot_draw: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
+      reveal_daily_jackpot_draw: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
+      mark_daily_jackpot_result_viewed: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
+      claim_daily_jackpot_reward: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
       finalize_daily_jackpot_if_due: {
-        Args: { p_pool_date?: string | null }
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      maintain_daily_jackpot: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       admin_finalize_daily_jackpot: {

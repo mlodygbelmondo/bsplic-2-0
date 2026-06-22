@@ -3,7 +3,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { ChevronDown, Lightbulb } from "lucide-react";
 import { BetCard } from "./BetCard";
@@ -11,13 +13,11 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SectionLoader } from "@/components/SectionLoader";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
-import { DailyJackpotCard } from "@/features/jackpot/components/DailyJackpotCard";
-import { useDailyJackpot } from "@/features/jackpot/hooks/useDailyJackpot";
 import {
   getNextScrollChromeState,
   type ScrollChromeState,
 } from "@/lib/scroll-chrome";
-import { Category } from "@/types/database";
+import { Bet, Category } from "@/types/database";
 
 interface BetListProps {
   selectedCategory: string | null;
@@ -26,6 +26,20 @@ interface BetListProps {
   categoryMap: Record<string, Category>;
   onProposeClick?: () => void;
   onScrollChromeHiddenChange?: (hidden: boolean) => void;
+  topBanner?: ReactNode;
+}
+
+export interface BetListData {
+  loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  loadMore: () => void | Promise<void>;
+  liveBets: Bet[];
+  sortedBets: Bet[];
+}
+
+interface BetListViewProps extends BetListProps {
+  bets: BetListData;
 }
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
@@ -91,23 +105,64 @@ export function BetList({
   categoryMap,
   onProposeClick,
   onScrollChromeHiddenChange,
+  topBanner,
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>(readStoredSort);
   const [activeOnly, setActiveOnly] = useState<boolean>(readStoredActiveOnly);
+  const bets = useBets(selectedCategory, sort, !activeOnly);
+
+  return (
+    <BetListView
+      selectedCategory={selectedCategory}
+      onSelectCategory={onSelectCategory}
+      categories={categories}
+      categoryMap={categoryMap}
+      onProposeClick={onProposeClick}
+      onScrollChromeHiddenChange={onScrollChromeHiddenChange}
+      topBanner={topBanner}
+      bets={bets}
+      sort={sort}
+      onSortChange={setSort}
+      activeOnly={activeOnly}
+      onActiveOnlyChange={setActiveOnly}
+    />
+  );
+}
+
+interface BetListViewInternalProps extends BetListViewProps {
+  sort: SortMode;
+  onSortChange: Dispatch<SetStateAction<SortMode>>;
+  activeOnly: boolean;
+  onActiveOnlyChange: Dispatch<SetStateAction<boolean>>;
+}
+
+export function BetListView({
+  selectedCategory,
+  onSelectCategory,
+  categories,
+  categoryMap,
+  onProposeClick,
+  onScrollChromeHiddenChange,
+  topBanner,
+  bets,
+  sort,
+  onSortChange,
+  activeOnly,
+  onActiveOnlyChange,
+}: BetListViewInternalProps) {
   const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
-    useBets(selectedCategory, sort, !activeOnly);
+    bets;
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const [actionsHidden, setActionsHidden] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
-  const jackpot = useDailyJackpot();
 
   const toggleMobilePanel = (panel: MobilePanelKind) => {
     setMobilePanel((previous) => (previous === panel ? null : panel));
   };
 
   const handleSelectSort = (value: SortMode) => {
-    setSort(value);
+    onSortChange(value);
     try {
       window.localStorage.setItem(SORT_STORAGE_KEY, value);
     } catch {
@@ -135,7 +190,7 @@ export function BetList({
   };
 
   const handleToggleActiveOnly = () => {
-    setActiveOnly((previous) => {
+    onActiveOnlyChange((previous) => {
       const next = !previous;
       try {
         window.localStorage.setItem(ACTIVE_ONLY_STORAGE_KEY, String(next));
@@ -185,7 +240,7 @@ export function BetList({
           positioning to the bar instead of the viewport. */}
       {mobilePanel !== null && (
         <div
-          className="fixed inset-0 z-20 lg:hidden"
+          className="fixed inset-0 z-40 lg:hidden"
           aria-hidden="true"
           onClick={() => setMobilePanel(null)}
         />
@@ -268,10 +323,12 @@ export function BetList({
           <div
             data-testid="bet-list-mobile-toolbar"
             className={cn(
-              "sticky top-0 z-30 mb-2.5 lg:hidden transition-[transform,opacity] duration-200 ease-out will-change-transform",
+              "sticky top-0 mb-2.5 lg:hidden transition-[transform,opacity] duration-200 ease-out",
+              mobilePanel !== null ? "z-50" : "z-30",
               actionsHidden
-                ? "-translate-y-full opacity-0 pointer-events-none"
-                : "translate-y-0 opacity-100",
+                ? "-translate-y-full opacity-0"
+                : "opacity-100",
+              !actionsHidden && mobilePanel === null && "will-change-transform",
             )}
           >
             <div className="flex items-start gap-2 bg-transparent pb-2 pt-2">
@@ -425,13 +482,7 @@ export function BetList({
             </div>
           </div>
 
-          <DailyJackpotCard
-            snapshot={jackpot.snapshot}
-            loading={jackpot.loading}
-            buying={jackpot.buying}
-            balance={jackpot.balance}
-            onBuy={jackpot.buyTicket}
-          />
+          {topBanner}
 
           {liveBets.length > 0 && (
             <div className="mb-4">

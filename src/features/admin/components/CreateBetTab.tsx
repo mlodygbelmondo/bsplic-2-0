@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 import { Bet, Category, BetOption } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import { toast } from 'sonner';
 import type { EditableBetType } from '../constants';
 import { getErrorMessage, toInputDateTime, getTomorrowAt2359 } from '../helpers';
 import {
-  replaceBetAkoExclusions,
+  createBetWithAkoExclusions,
   type BetAkoExclusionDraft,
 } from '../api/akoExclusions';
 import { AkoExclusionsEditor } from './AkoExclusionsEditor';
@@ -132,37 +131,24 @@ export default function CreateBetTab() {
       odds: Number(option.oddsRaw),
     }));
 
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      toast.error('Tytuł jest wymagany');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.from('bets').insert([{
-        title,
-        category_id: categoryId || null,
-        bet_type: betType,
-        options: normalizedOptions as unknown as Json,
-        ends_at: new Date(endsAt).toISOString(),
-        is_live: isLive,
-        is_bsplicboost: isBsplicboost,
-      }]).select('id').single();
-      if (error) throw error;
-
-      const createdBetId = (data as { id?: string } | null)?.id;
-      if (!createdBetId) {
-        throw new Error('Zakład utworzony bez identyfikatora');
-      }
-
-      if (akoExclusions.length > 0) {
-        try {
-          await replaceBetAkoExclusions(createdBetId, akoExclusions);
-        } catch (exclusionError: unknown) {
-          toast.error(
-            `Zakład utworzony, ale nie zapisano wykluczeń AKO. Otwórz edycję zakładu i spróbuj ponownie. ${getErrorMessage(
-              exclusionError,
-              '',
-            )}`.trim(),
-          );
-          return;
-        }
-      }
+      await createBetWithAkoExclusions({
+        title: trimmedTitle,
+        categoryId: categoryId || null,
+        betType,
+        options: normalizedOptions,
+        endsAt: new Date(endsAt).toISOString(),
+        isLive,
+        isBsplicboost,
+        exclusions: akoExclusions,
+      });
 
       toast.success('Zakład utworzony!');
       setTitle('');

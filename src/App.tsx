@@ -22,6 +22,8 @@ const loadCasinoLayout = () => import("./pages/CasinoLayout");
 const loadCasinoHub = () => import("./pages/CasinoHub");
 const loadCasinoRoulettePage = () => import("./pages/CasinoRoulettePage");
 const loadCasinoBlackjackPage = () => import("./pages/CasinoBlackjackPage");
+const loadJackpotDrawPage = () =>
+  import("@/features/jackpot/pages/JackpotDrawPage");
 
 const ProfilePage = lazy(loadProfilePage);
 const RankingsPage = lazy(loadRankingsPage);
@@ -37,6 +39,10 @@ const CasinoRouletteDevPage = lazy(
   () => import("./pages/CasinoRouletteDevPage"),
 );
 const CasinoBlackjackPage = lazy(loadCasinoBlackjackPage);
+const JackpotDrawPage = lazy(loadJackpotDrawPage);
+const JackpotDevFlowPage = import.meta.env.DEV
+  ? lazy(() => import("@/features/jackpot/pages/JackpotDevFlowPage"))
+  : null;
 const BonusCampaignSurface = lazy(() =>
   import("@/features/bonus-campaigns/components/bonus-campaign-surface").then(
     (module) => ({ default: module.BonusCampaignSurface }),
@@ -226,6 +232,17 @@ const App = () => (
                   <Route path="blackjack" element={<CasinoBlackjackPage />} />
                 </Route>
 
+                <Route
+                  path="/jackpot/draw/:roundId"
+                  element={
+                    <AuthenticatedRoute>
+                      <JackpotDrawPage />
+                    </AuthenticatedRoute>
+                  }
+                />
+                {JackpotDevFlowPage && (
+                  <Route path="/dev/jackpot" element={<JackpotDevFlowPage />} />
+                )}
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="*" element={<NotFound />} />

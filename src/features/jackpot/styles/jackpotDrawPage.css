@@ -1,0 +1,1325 @@
+/* Jackpot draw replay styles matched to the supplied June 2026 references. */
+
+  .jackpot-draw-page {
+    min-height: var(--app-viewport-height);
+    overflow-x: hidden;
+    color: hsl(0 0% 96%);
+    background:
+      radial-gradient(70rem 34rem at 8% 10%, hsl(2 84% 28% / 0.42), transparent 62%),
+      radial-gradient(54rem 36rem at 91% 6%, hsl(0 93% 21% / 0.32), transparent 64%),
+      linear-gradient(180deg, hsl(0 0% 0% / 0.58), hsl(0 0% 0% / 0.78)),
+      url("/casino/roulette-background.webp") center / cover fixed;
+  }
+  .jackpot-replay-shell,
+  .jackpot-result-shell {
+    position: relative;
+    width: min(92rem, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: calc(0.9rem + var(--safe-area-top)) 0
+      calc(0.9rem + var(--safe-area-bottom));
+  }
+  .jackpot-replay-shell {
+    width: min(86rem, calc(100% - 1.5rem));
+    margin-top: 0.7rem;
+    border: 1px solid hsl(0 0% 100% / 0.14);
+    border-radius: 1rem;
+    padding-inline: clamp(0.85rem, 1.55vw, 1.35rem);
+    background:
+      linear-gradient(180deg, hsl(0 0% 8% / 0.78), hsl(0 0% 2% / 0.86)),
+      radial-gradient(38rem 18rem at 92% 0%, hsl(0 86% 32% / 0.28), transparent 70%);
+    box-shadow:
+      0 22px 70px hsl(0 0% 0% / 0.58),
+      inset 0 1px 0 hsl(0 0% 100% / 0.08);
+    backdrop-filter: blur(12px);
+  }
+  .jackpot-draw-topbar {
+    display: flex;
+    min-height: 2.45rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    color: hsl(0 0% 66%);
+    font-size: 0.74rem;
+    font-weight: 760;
+  }
+  .jackpot-draw-topbar--result {
+    margin-bottom: 0.85rem;
+  }
+  .jackpot-draw-icon-back {
+    display: inline-flex;
+    width: 2.3rem;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid hsl(0 0% 100% / 0.12);
+    border-radius: 999px;
+    color: hsl(43 100% 84%);
+    background: hsl(0 0% 0% / 0.36);
+    transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+  }
+  .jackpot-draw-icon-back:hover,
+  .jackpot-draw-icon-back:focus-visible {
+    border-color: hsl(43 100% 60% / 0.42);
+    background: hsl(0 0% 100% / 0.08);
+    transform: translateX(-1px);
+  }
+  .jackpot-draw-hero {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    align-items: end;
+    padding: 0.35rem 0 0.7rem;
+  }
+  .jackpot-draw-hero h1 {
+    margin-top: 0;
+    max-width: 22ch;
+    color: hsl(0 0% 98%);
+    font-size: clamp(1.35rem, 1.8vw, 1.7rem);
+    font-weight: 850;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+  .jackpot-draw-hero p {
+    margin-top: 0.38rem;
+    max-width: 31rem;
+    color: hsl(0 0% 76%);
+    font-size: clamp(0.78rem, 0.95vw, 0.88rem);
+    font-weight: 560;
+    line-height: 1.35;
+  }
+  .jackpot-draw-hero strong {
+    color: hsl(0 0% 98%);
+  }
+  .jackpot-draw-hero__meta {
+    display: grid;
+    grid-template-columns: 1.15fr 1.25fr 0.9fr 0.9fr;
+    gap: 0.45rem;
+  }
+  .jackpot-draw-hero--summary .jackpot-draw-hero__meta {
+    grid-template-columns: minmax(10rem, 1.15fr) minmax(10rem, 1.2fr) minmax(8rem, 0.85fr) minmax(8rem, 0.85fr);
+  }
+  .jackpot-draw-hero__meta > div {
+    position: relative;
+    display: grid;
+    min-height: 3.9rem;
+    align-content: center;
+    justify-items: center;
+    overflow: hidden;
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    border-radius: 0.58rem;
+    padding: 0.58rem 0.65rem;
+    text-align: center;
+    background: linear-gradient(180deg, hsl(0 0% 7% / 0.88), hsl(0 0% 3% / 0.88));
+  }
+  .jackpot-draw-hero__meta > div::after {
+    content: "";
+    position: absolute;
+    right: -3.5rem;
+    bottom: -3.6rem;
+    width: 8rem;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background: hsl(0 92% 48% / 0.14);
+    filter: blur(10px);
+  }
+  .jackpot-draw-hero__meta span:not(.sr-only),
+  .jackpot-draw-hero__meta small {
+    display: block;
+    color: hsl(0 0% 67%);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .jackpot-draw-hero__meta strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: hsl(0 0% 98%);
+    font-size: clamp(0.9rem, 1.25vw, 1.08rem);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-draw-hero__meta small {
+    margin-top: 0.18rem;
+    color: hsl(0 0% 77%);
+    font-size: 0.68rem;
+    text-transform: none;
+  }
+  .jackpot-draw-user-tickets {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: -0.18rem 0 0.68rem;
+    border: 1px solid hsl(42 100% 60% / 0.28);
+    border-radius: 999px;
+    padding: 0.36rem 0.68rem;
+    color: hsl(0 0% 75%);
+    background: hsl(0 0% 4% / 0.66);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.06);
+    backdrop-filter: blur(12px);
+  }
+  .jackpot-draw-user-tickets span {
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .jackpot-draw-user-tickets strong {
+    color: hsl(42 100% 62%);
+    font-size: 0.78rem;
+    font-weight: 860;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-replay-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+    gap: 0.95rem;
+    align-items: stretch;
+  }
+  .jackpot-draw-stage {
+    position: relative;
+    display: grid;
+    min-height: clamp(23rem, 47vh, 29rem);
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid hsl(34 70% 42% / 0.16);
+    border-radius: 0.82rem;
+    background:
+      radial-gradient(38rem 14rem at 50% 60%, hsl(35 100% 54% / 0.2), transparent 72%),
+      radial-gradient(24rem 10rem at 50% 42%, hsl(36 100% 56% / 0.12), transparent 72%),
+      linear-gradient(180deg, hsl(0 0% 4% / 0.76), hsl(0 0% 1% / 0.92));
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.08),
+      inset 0 -28px 48px hsl(31 96% 22% / 0.16);
+  }
+  .jackpot-stage-title {
+    position: absolute;
+    top: 1.05rem;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: hsl(39 100% 66%);
+    font-size: clamp(0.64rem, 0.88vw, 0.78rem);
+    font-weight: 780;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .jackpot-stage-title span {
+    color: hsl(39 100% 58%);
+    font-size: 0.75rem;
+  }
+  .jackpot-draw-stage--revealed .jackpot-stage-title {
+    opacity: 0;
+  }
+  .jackpot-stage-asset {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    z-index: 1;
+    width: min(90%, 52rem);
+    max-height: 72%;
+    object-fit: contain;
+    filter: drop-shadow(0 34px 35px hsl(0 0% 0% / 0.62));
+    transform: translate(-50%, -50%);
+    animation: jackpot-stage-float 6s ease-in-out infinite;
+  }
+  .jackpot-draw-stage--drawing .jackpot-stage-asset {
+    animation:
+      jackpot-stage-float 1.8s ease-in-out infinite,
+      jackpot-stage-shake 220ms linear infinite;
+  }
+  .jackpot-draw-stage--revealed .jackpot-stage-asset {
+    opacity: 0.28;
+    animation: none;
+    filter:
+      blur(0.6px)
+      saturate(0.84)
+      drop-shadow(0 34px 35px hsl(0 0% 0% / 0.58));
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  .jackpot-draw-actions {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 6;
+    display: flex;
+    justify-content: center;
+    gap: 0.65rem;
+  }
+  .jackpot-draw-primary,
+  .jackpot-draw-progress,
+  .jackpot-draw-claimed {
+    display: inline-flex;
+    min-height: 2.65rem;
+    min-width: min(14.5rem, 100%);
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border: 0;
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.9rem;
+    font-size: clamp(0.78rem, 0.98vw, 0.88rem);
+    font-weight: 800;
+  }
+  .jackpot-draw-claimed {
+    margin-bottom: clamp(1rem, 2.4vh, 1.45rem);
+  }
+  .jackpot-draw-primary {
+    color: hsl(0 0% 100%);
+    background: linear-gradient(180deg, hsl(354 100% 57%), hsl(353 91% 45%));
+    box-shadow:
+      0 18px 36px hsl(353 95% 43% / 0.3),
+      inset 0 1px 0 hsl(0 0% 100% / 0.2);
+  }
+  .jackpot-draw-primary:hover,
+  .jackpot-draw-primary:focus-visible {
+    transform: translateY(-1px);
+    filter: brightness(1.07);
+  }
+  .jackpot-draw-progress,
+  .jackpot-draw-claimed {
+    color: hsl(43 100% 88%);
+    border: 1px solid hsl(43 100% 60% / 0.28);
+    background: hsl(0 0% 7% / 0.78);
+  }
+  .jackpot-ticket-flight {
+    --jackpot-ticket-flight-start: -64vw;
+    --jackpot-ticket-flight-entry: -12vw;
+    --jackpot-ticket-flight-center: 2vw;
+    --jackpot-ticket-flight-exit: 18vw;
+    --jackpot-ticket-flight-end: 64vw;
+
+    position: absolute;
+    inset: 2.85rem 1rem 4.6rem;
+    z-index: 5;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+  .jackpot-ticket-flight__header {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid hsl(38 100% 60% / 0.22);
+    border-radius: 999px;
+    padding: 0.32rem 0.62rem;
+    color: hsl(0 0% 78%);
+    background: hsl(0 0% 3% / 0.62);
+    font-size: 0.68rem;
+    font-weight: 720;
+    backdrop-filter: blur(10px);
+  }
+  .jackpot-ticket-flight__header span,
+  .jackpot-ticket-flight__header strong {
+    line-height: 1;
+  }
+  .jackpot-ticket-flight__header strong {
+    color: hsl(39 100% 62%);
+    font-weight: 800;
+  }
+  .jackpot-ticket-flight__track {
+    position: relative;
+    min-height: 12.5rem;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    list-style: none;
+  }
+  .jackpot-flight-ticket {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: grid;
+    width: clamp(7.6rem, 10.4vw, 9.4rem);
+    aspect-ratio: 1.54;
+    place-items: center;
+    gap: 0.12rem;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    color: hsl(28 38% 12%);
+    background: transparent;
+    box-shadow: none;
+    font-variant-numeric: tabular-nums;
+    transform: translate3d(-64vw, calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
+      rotate(-14deg)
+      scale(0.82);
+    animation: jackpot-ticket-flight 3.3s cubic-bezier(0.22, 0.78, 0.18, 1) infinite;
+    animation-delay: var(--ticket-delay, calc(var(--ticket-index) * -0.22s));
+    will-change: transform, opacity;
+  }
+  .jackpot-flight-ticket::before {
+    content: none;
+  }
+  .jackpot-flight-ticket__asset {
+    position: absolute;
+    inset: -24% -14%;
+    width: 128%;
+    height: 148%;
+    object-fit: contain;
+    filter: drop-shadow(0 0.7rem 1.1rem hsl(0 0% 0% / 0.34));
+    pointer-events: none;
+  }
+  .jackpot-flight-ticket__number {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 1;
+    min-width: 4.5rem;
+    color: hsl(25 52% 15%);
+    font-size: clamp(1rem, 1.35vw, 1.2rem);
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 0 1px 0 hsl(45 100% 82% / 0.58);
+    transform: translate(-50%, -50%);
+  }
+  .jackpot-stage-reveal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 9;
+    display: grid;
+    width: min(34rem, calc(100% - 1.3rem));
+    justify-items: center;
+    gap: 0.42rem;
+    border: 0;
+    border-radius: 0;
+    padding: clamp(0.7rem, 1.7vw, 1rem) 0 clamp(0.7rem, 1.7vw, 1rem);
+    color: hsl(0 0% 98%);
+    text-align: center;
+    background: transparent;
+    box-shadow: none;
+    transform: translate(-50%, -50%);
+    backdrop-filter: none;
+  }
+  .jackpot-stage-reveal__status {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.26rem 0.58rem;
+    color: hsl(43 100% 66%);
+    background: hsl(43 100% 45% / 0.12);
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .jackpot-stage-reveal__ticket-wrap {
+    position: relative;
+    display: grid;
+    width: min(25.5rem, 90%);
+    aspect-ratio: 1.88;
+    place-items: center;
+    animation: jackpot-winning-ticket-pop 700ms cubic-bezier(0.18, 0.85, 0.2, 1.18) both;
+  }
+  .jackpot-stage-reveal__ticket-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter:
+      drop-shadow(0 1.4rem 1.8rem hsl(0 0% 0% / 0.62))
+      drop-shadow(0 0 1.7rem hsl(39 100% 55% / 0.34));
+  }
+  .jackpot-stage-reveal__ticket-copy {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 0.22rem;
+    transform: translateY(0.1rem);
+  }
+  .jackpot-stage-reveal__label {
+    color: hsl(27 38% 17% / 0.74);
+    font-size: 0.62rem;
+    font-weight: 760;
+    text-transform: uppercase;
+  }
+  .jackpot-stage-reveal__ticket {
+    color: hsl(25 52% 15%);
+    font-size: clamp(1.35rem, 2.5vw, 2.18rem);
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 0 hsl(46 100% 78% / 0.72);
+  }
+  .jackpot-stage-reveal h2 {
+    margin-bottom: 0.34rem;
+    color: hsl(0 0% 98%);
+    font-size: clamp(1.05rem, 1.7vw, 1.36rem);
+    font-weight: 850;
+    line-height: 1.08;
+    text-shadow: 0 0.4rem 1.2rem hsl(0 0% 0% / 0.6);
+  }
+  .jackpot-stage-reveal h2 span,
+  .jackpot-stage-reveal p strong {
+    color: hsl(43 100% 62%);
+  }
+  .jackpot-stage-reveal p {
+    color: hsl(0 0% 74%);
+    font-size: 0.78rem;
+    font-weight: 720;
+  }
+  .jackpot-stage-claim {
+    display: inline-flex;
+    min-height: 2.5rem;
+    min-width: min(13rem, 100%);
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.28rem;
+    border: 0;
+    border-radius: 0.55rem;
+    color: hsl(24 14% 8%);
+    background: linear-gradient(180deg, hsl(43 100% 60%), hsl(32 100% 50%));
+    font-size: 0.78rem;
+    font-weight: 850;
+  }
+  .jackpot-draw-result {
+    position: absolute;
+    z-index: 7;
+    display: grid;
+    width: min(28rem, calc(100% - 2rem));
+    justify-items: center;
+    gap: 0.45rem;
+    border: 1px solid hsl(43 100% 60% / 0.32);
+    border-radius: 1rem;
+    padding: 1.4rem;
+    text-align: center;
+    background: hsl(0 0% 2% / 0.72);
+    backdrop-filter: blur(12px);
+  }
+  .jackpot-draw-result__icon {
+    display: inline-flex;
+    width: 3.7rem;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    color: hsl(24 12% 10%);
+    background: hsl(43 100% 58%);
+  }
+  .jackpot-draw-result__label {
+    color: hsl(43 100% 82%);
+    font-size: 0.78rem;
+    font-weight: 950;
+    text-transform: uppercase;
+  }
+  .jackpot-draw-result h2 {
+    color: hsl(0 0% 100%);
+    font-size: 2rem;
+    font-weight: 950;
+    line-height: 1.05;
+  }
+  .jackpot-draw-result__ticket {
+    color: hsl(0 0% 78%);
+    font-size: 0.95rem;
+    font-weight: 760;
+  }
+  .jackpot-draw-roster,
+  .jackpot-claim-card,
+  .jackpot-info-card {
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, hsl(0 0% 7% / 0.92), hsl(0 0% 4% / 0.94));
+    box-shadow: 0 22px 54px hsl(0 0% 0% / 0.42);
+    backdrop-filter: blur(14px);
+  }
+  .jackpot-draw-roster {
+    display: flex;
+    min-height: 0;
+    max-height: clamp(23rem, 49vh, 30rem);
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0.95rem;
+  }
+  .jackpot-draw-roster--expanded {
+    max-height: clamp(25rem, 58vh, 34rem);
+  }
+  .jackpot-draw-roster header,
+  .jackpot-claim-card header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: hsl(0 0% 96%);
+    font-size: 0.72rem;
+    font-weight: 780;
+    text-transform: uppercase;
+  }
+  .jackpot-draw-roster h2,
+  .jackpot-claim-card h2,
+  .jackpot-info-card h2 {
+    color: hsl(0 0% 96%);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+  .jackpot-draw-roster__columns,
+  .jackpot-roster-row {
+    display: grid;
+    grid-template-columns: 1.25rem 2rem minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+  }
+  .jackpot-draw-roster__columns {
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin: 0.8rem 0 0.42rem;
+    padding: 0 0.1rem;
+    color: hsl(0 0% 56%);
+    font-size: 0.64rem;
+    font-weight: 700;
+  }
+  .jackpot-draw-roster__list {
+    display: grid;
+    gap: 0.18rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+  }
+  .jackpot-roster-row {
+    min-height: 2.65rem;
+    border-bottom: 1px solid hsl(0 0% 100% / 0.07);
+    color: hsl(0 0% 72%);
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .jackpot-roster-row strong {
+    overflow: hidden;
+    color: hsl(0 0% 94%);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .jackpot-result-avatar {
+    display: inline-flex;
+    width: 2rem;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid hsl(43 100% 60% / 0.28);
+    border-radius: 999px;
+    color: hsl(0 0% 100%);
+    background: linear-gradient(135deg, hsl(356 88% 40%), hsl(39 100% 38%));
+    font-size: 0.64rem;
+    font-weight: 800;
+  }
+  .jackpot-result-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .jackpot-ticket-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+  .jackpot-ticket-list span {
+    display: inline-flex;
+    min-width: 1.95rem;
+    min-height: 1.58rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.34rem;
+    color: hsl(35 100% 70%);
+    background: hsl(34 83% 26% / 0.22);
+    font-size: 0.72rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-roster-more {
+    display: inline-flex;
+    min-height: 2.35rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    margin-top: 0.65rem;
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    border-radius: 0.5rem;
+    color: hsl(0 0% 74%);
+    background: hsl(0 0% 3% / 0.58);
+    font-size: 0.74rem;
+    font-weight: 720;
+  }
+  .jackpot-result-shell {
+    width: min(111rem, calc(100% - 2rem));
+  }
+  .jackpot-result-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 31rem);
+    gap: 1.6rem;
+    align-items: start;
+  }
+  .jackpot-result-main,
+  .jackpot-result-sidebar {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .jackpot-result-hero {
+    position: relative;
+    isolation: isolate;
+    min-height: 38rem;
+    overflow: hidden;
+    border: 1px solid hsl(0 0% 100% / 0.13);
+    border-radius: 0.75rem;
+    background:
+      linear-gradient(180deg, hsl(0 0% 0% / 0.16), hsl(0 0% 0% / 0.72)),
+      radial-gradient(40rem 19rem at 50% 40%, hsl(36 100% 50% / 0.24), transparent 70%),
+      linear-gradient(120deg, hsl(358 73% 10% / 0.96), hsl(0 0% 2% / 0.96));
+    box-shadow:
+      0 22px 70px hsl(0 0% 0% / 0.5),
+      inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  }
+  .jackpot-result-hero__wheel {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: 3.9rem;
+    z-index: -1;
+    width: 76%;
+    max-height: 21rem;
+    object-fit: contain;
+    opacity: 0.26;
+    filter:
+      blur(0.6px)
+      drop-shadow(0 24px 36px hsl(0 0% 0% / 0.8));
+    transform: perspective(700px) rotateX(66deg);
+  }
+  .jackpot-result-hero__confetti {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(28deg, transparent 42%, hsl(0 92% 50% / 0.9) 43% 55%, transparent 56%),
+      linear-gradient(-24deg, transparent 42%, hsl(4 92% 38% / 0.8) 43% 55%, transparent 56%);
+    background-position:
+      8% 20%,
+      84% 13%;
+    background-repeat: no-repeat;
+    background-size:
+      9rem 7rem,
+      8rem 6rem;
+    opacity: 0.28;
+    animation: jackpot-confetti-sway 13s ease-in-out infinite;
+  }
+  .jackpot-result-hero__status {
+    position: absolute;
+    left: 1.55rem;
+    top: 1.55rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid hsl(35 100% 58% / 0.52);
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.95rem;
+    color: hsl(38 100% 64%);
+    background: hsl(32 90% 18% / 0.46);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .jackpot-result-hero__copy {
+    position: absolute;
+    inset: 5.2rem 1.5rem auto;
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    text-align: center;
+  }
+  .jackpot-result-hero__copy h1 {
+    color: hsl(0 0% 98%);
+    font-size: clamp(1.6rem, 2.2vw, 2rem);
+    font-weight: 850;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+  .jackpot-result-hero__copy h1 span {
+    color: hsl(37 100% 58%);
+  }
+  .jackpot-result-ticket {
+    border: 1px solid hsl(38 100% 59% / 0.55);
+    border-radius: 0.55rem;
+    padding: 0.6rem 1.2rem;
+    color: hsl(37 100% 61%);
+    background: hsl(35 100% 44% / 0.12);
+    font-size: clamp(0.98rem, 1.45vw, 1.15rem);
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-result-hero__copy p {
+    color: hsl(0 0% 78%);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+  .jackpot-result-hero__copy > strong {
+    color: hsl(38 100% 61%);
+    font-size: clamp(1.9rem, 3.1vw, 2.6rem);
+    font-weight: 900;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-result-stats {
+    position: absolute;
+    left: 3.15rem;
+    right: 3.15rem;
+    bottom: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.6rem;
+  }
+  .jackpot-result-stats div {
+    min-height: 6.9rem;
+    border: 1px solid hsl(0 0% 100% / 0.12);
+    border-radius: 0.75rem;
+    padding: 1.3rem;
+    text-align: center;
+    background: hsl(0 0% 4% / 0.62);
+    backdrop-filter: blur(14px);
+  }
+  .jackpot-result-stats span:not(.sr-only) {
+    display: block;
+    color: hsl(0 0% 67%);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .jackpot-result-stats strong {
+    display: block;
+    margin-top: 0.6rem;
+    color: hsl(0 0% 97%);
+    font-size: clamp(0.92rem, 1.35vw, 1.12rem);
+    font-weight: 820;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-result-table-card {
+    overflow: hidden;
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    border-radius: 0.55rem;
+    background: hsl(0 0% 4% / 0.82);
+  }
+  .jackpot-result-tabs {
+    display: flex;
+    gap: 1.6rem;
+    border-bottom: 1px solid hsl(0 0% 100% / 0.08);
+    padding: 1.1rem 1.8rem 0;
+  }
+  .jackpot-result-tabs button {
+    position: relative;
+    min-height: 3.35rem;
+    color: hsl(0 0% 70%);
+    font-size: 0.82rem;
+    font-weight: 760;
+  }
+  .jackpot-result-tabs .is-active {
+    color: hsl(37 100% 58%);
+  }
+  .jackpot-result-tabs .is-active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    background: hsl(37 100% 58%);
+  }
+  .jackpot-result-table {
+    display: grid;
+  }
+  .jackpot-result-table__head,
+  .jackpot-result-row {
+    display: grid;
+    grid-template-columns: 3.8rem minmax(13rem, 1.2fr) minmax(12rem, 1fr) minmax(10rem, 0.8fr);
+    align-items: center;
+    gap: 1rem;
+    min-height: 4.9rem;
+    padding: 0 2rem;
+    border-bottom: 1px solid hsl(0 0% 100% / 0.07);
+  }
+  .jackpot-result-table__head {
+    min-height: 3.55rem;
+    color: hsl(0 0% 56%);
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .jackpot-result-row {
+    color: hsl(0 0% 70%);
+    font-size: 0.84rem;
+    font-weight: 720;
+  }
+  .jackpot-result-row--current {
+    color: hsl(0 0% 95%);
+    background: linear-gradient(90deg, hsl(357 83% 22% / 0.88), hsl(357 82% 16% / 0.76));
+  }
+  .jackpot-result-user {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .jackpot-result-user strong {
+    overflow: hidden;
+    color: hsl(0 0% 95%);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .jackpot-result-user em {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 0.45rem;
+    padding: 0.25rem 0.45rem;
+    color: hsl(39 100% 58%);
+    background: hsl(39 100% 45% / 0.12);
+    font-size: 0.72rem;
+    font-style: normal;
+    font-weight: 780;
+    text-transform: uppercase;
+  }
+  .jackpot-result-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: hsl(39 100% 58%);
+    font-size: 0.82rem;
+    font-weight: 780;
+  }
+  .jackpot-result-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+  .jackpot-claim-card {
+    overflow: hidden;
+  }
+  .jackpot-claim-card header {
+    min-height: 5.35rem;
+    border-bottom: 1px solid hsl(0 0% 100% / 0.08);
+    padding: 0 1.55rem;
+  }
+  .jackpot-claim-card__body {
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    padding: 4.1rem 1.9rem 2rem;
+    text-align: center;
+  }
+  .jackpot-claim-icon {
+    display: inline-flex;
+    width: 11rem;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid hsl(37 100% 53% / 0.8);
+    border-radius: 999px;
+    color: hsl(37 100% 55%);
+    background:
+      radial-gradient(circle, hsl(37 100% 53% / 0.18), transparent 62%),
+      hsl(0 0% 4% / 0.72);
+    box-shadow:
+      0 0 48px hsl(37 100% 52% / 0.34),
+      inset 0 0 22px hsl(37 100% 54% / 0.12);
+    animation: jackpot-gift-pulse 2.8s ease-in-out infinite;
+  }
+  .jackpot-claim-card__body h2 {
+    color: hsl(37 100% 55%);
+    font-size: 1.1rem;
+  }
+  .jackpot-claim-card__body p {
+    max-width: 24rem;
+    color: hsl(0 0% 72%);
+    font-size: 0.84rem;
+    font-weight: 620;
+    line-height: 1.45;
+  }
+  .jackpot-claim-button {
+    display: inline-flex;
+    width: 100%;
+    min-height: 4rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    border-radius: 0.55rem;
+    color: hsl(24 14% 8%);
+    background: linear-gradient(180deg, hsl(43 100% 60%), hsl(32 100% 50%));
+    font-size: 0.94rem;
+    font-weight: 800;
+  }
+  .jackpot-security-note {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.9rem;
+    margin: 0 1.9rem 2rem;
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    border-radius: 0.55rem;
+    padding: 1rem;
+    color: hsl(0 0% 68%);
+    background: hsl(0 0% 7% / 0.64);
+  }
+  .jackpot-security-note strong {
+    color: hsl(0 0% 94%);
+    font-size: 0.84rem;
+    font-weight: 780;
+  }
+  .jackpot-security-note p {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 580;
+    line-height: 1.38;
+  }
+  .jackpot-info-card {
+    padding: 1.6rem;
+  }
+  .jackpot-info-card dl {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 1.6rem;
+  }
+  .jackpot-info-card dl div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+    color: hsl(0 0% 64%);
+  }
+  .jackpot-info-card dt {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .jackpot-info-card dd {
+    color: hsl(0 0% 78%);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .jackpot-info-card dl div:last-child dd {
+    color: hsl(37 100% 58%);
+  }
+  .jackpot-draw-loading,
+  .jackpot-draw-empty {
+    display: flex;
+    min-height: 18rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    color: hsl(43 100% 88%);
+    font-size: 0.86rem;
+    font-weight: 720;
+  }
+
+
+  @keyframes jackpot-ticket-flight {
+    0% {
+      opacity: 0;
+      transform: translate3d(var(--jackpot-ticket-flight-start), calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
+        rotate(-18deg)
+        scale(0.76);
+    }
+    10% {
+      opacity: 0.88;
+    }
+    34% {
+      opacity: 1;
+      transform: translate3d(var(--jackpot-ticket-flight-entry), calc(-50% + var(--ticket-lane-tight, 0rem)), 0)
+        rotate(8deg)
+        scale(1.05);
+    }
+    51% {
+      opacity: 1;
+      transform: translate3d(var(--jackpot-ticket-flight-center), calc(-50% + var(--ticket-lane-invert, 0rem)), 0)
+        rotate(-5deg)
+        scale(1.14);
+    }
+    68% {
+      opacity: 0.98;
+      transform: translate3d(var(--jackpot-ticket-flight-exit), calc(-50% + var(--ticket-lane-tight, 0rem)), 0)
+        rotate(5deg)
+        scale(0.98);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(var(--jackpot-ticket-flight-end), calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
+        rotate(18deg)
+        scale(0.78);
+    }
+  }
+
+  @keyframes jackpot-stage-float {
+    0%,
+    100% {
+      transform: translate(-50%, -50%);
+    }
+    50% {
+      transform: translate(-50%, calc(-50% - 0.7rem));
+    }
+  }
+  @keyframes jackpot-winning-ticket-pop {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 1.4rem, 0) scale(0.58) rotate(-7deg);
+      filter: brightness(1.18);
+    }
+    58% {
+      opacity: 1;
+      transform: translate3d(0, -0.35rem, 0) scale(1.08) rotate(2deg);
+      filter: brightness(1.08);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+      filter: brightness(1);
+    }
+  }
+  @keyframes jackpot-stage-shake {
+    0%,
+    100% {
+      filter: drop-shadow(0 34px 35px hsl(0 0% 0% / 0.6));
+    }
+    50% {
+      filter:
+        drop-shadow(0 34px 35px hsl(0 0% 0% / 0.6))
+        drop-shadow(0 0 20px hsl(39 100% 55% / 0.52));
+    }
+  }
+  @keyframes jackpot-gift-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.035);
+    }
+  }
+  @keyframes jackpot-confetti-sway {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(0.8rem);
+    }
+  }
+
+  @media (max-width: 1180px) {
+    .jackpot-replay-layout,
+    .jackpot-result-layout {
+      grid-template-columns: 1fr;
+    }
+    .jackpot-result-sidebar {
+      position: static;
+    }
+    .jackpot-draw-roster {
+      max-height: 18rem;
+      min-height: auto;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .jackpot-draw-hero {
+      grid-template-columns: 1fr;
+    }
+    .jackpot-draw-hero__meta,
+    .jackpot-result-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .jackpot-draw-hero--summary .jackpot-draw-hero__meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .jackpot-draw-user-tickets {
+      width: 100%;
+      margin: -0.08rem 0 0.62rem;
+      padding: 0.42rem 0.58rem;
+    }
+    .jackpot-result-stats {
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      margin: 24rem 1rem 1rem;
+      gap: 0.7rem;
+    }
+    .jackpot-result-hero {
+      min-height: auto;
+    }
+    .jackpot-result-hero__copy {
+      position: relative;
+      inset: auto;
+      padding: 5.4rem 1rem 0;
+    }
+    .jackpot-result-table__head,
+    .jackpot-result-row {
+      grid-template-columns: 2.2rem minmax(10rem, 1fr);
+    }
+    .jackpot-result-table__head span:nth-child(n + 3),
+    .jackpot-result-row > .jackpot-ticket-list,
+    .jackpot-result-row > .jackpot-result-status {
+      grid-column: 2;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .jackpot-replay-shell,
+    .jackpot-result-shell {
+      width: min(100% - 0.75rem, 111rem);
+      padding-inline: 0.8rem;
+    }
+    .jackpot-draw-topbar {
+      min-height: 2.2rem;
+    }
+    .jackpot-draw-icon-back {
+      width: 2.1rem;
+    }
+    .jackpot-draw-hero h1 {
+      font-size: 1.35rem;
+    }
+    .jackpot-draw-hero p {
+      font-size: 0.78rem;
+      line-height: 1.3;
+    }
+    .jackpot-draw-hero__meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.36rem;
+    }
+    .jackpot-draw-hero--summary .jackpot-draw-hero__meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .jackpot-draw-hero__meta > div {
+      min-height: 3.15rem;
+      padding: 0.44rem;
+    }
+    .jackpot-draw-stage {
+      min-height: 18rem;
+    }
+    .jackpot-stage-title {
+      top: 0.9rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+    }
+    .jackpot-draw-primary,
+    .jackpot-draw-progress,
+    .jackpot-draw-claimed {
+      width: 100%;
+      min-width: 0;
+      min-height: 2.7rem;
+    }
+    .jackpot-ticket-flight {
+      --jackpot-ticket-flight-start: -64vw;
+      --jackpot-ticket-flight-entry: -12vw;
+      --jackpot-ticket-flight-center: 0vw;
+      --jackpot-ticket-flight-exit: 12vw;
+      --jackpot-ticket-flight-end: 64vw;
+
+      inset: 2.55rem 0.65rem 4.35rem;
+      gap: 0.45rem;
+    }
+    .jackpot-ticket-flight__track {
+      min-height: 7.7rem;
+    }
+    .jackpot-ticket-flight__header {
+      max-width: 100%;
+      font-size: 0.68rem;
+    }
+    .jackpot-flight-ticket {
+      width: 6rem;
+      min-height: 0;
+      padding: 0;
+    }
+    .jackpot-flight-ticket__number {
+      font-size: 0.96rem;
+    }
+    .jackpot-stage-reveal {
+      top: 50%;
+      width: calc(100% - 1.4rem);
+      gap: 0.36rem;
+    }
+    .jackpot-stage-reveal__ticket-wrap {
+      width: min(18.5rem, 94%);
+    }
+    .jackpot-stage-reveal__ticket {
+      font-size: 1.42rem;
+    }
+    .jackpot-stage-reveal h2 {
+      font-size: 1rem;
+    }
+    .jackpot-stage-reveal p {
+      font-size: 0.72rem;
+    }
+    .jackpot-stage-claim {
+      min-height: 2.35rem;
+      width: 100%;
+    }
+    .jackpot-draw-roster {
+      max-height: 16.25rem;
+      padding: 0.85rem;
+    }
+    .jackpot-draw-roster--expanded {
+      max-height: min(22rem, 42vh);
+    }
+    .jackpot-roster-more {
+      min-height: 2.2rem;
+      margin-top: 0.45rem;
+    }
+    .jackpot-roster-row {
+      grid-template-columns: 1.15rem 1.85rem minmax(0, 1fr) auto;
+      gap: 0.38rem;
+    }
+    .jackpot-roster-row .jackpot-ticket-list {
+      grid-column: auto;
+      justify-content: flex-end;
+    }
+    .jackpot-ticket-list span {
+      min-width: 1.62rem;
+      min-height: 1.36rem;
+      font-size: 0.64rem;
+    }
+    .jackpot-result-stats {
+      grid-template-columns: 1fr;
+      margin-top: 20rem;
+    }
+    .jackpot-result-hero__copy h1 {
+      font-size: 1.45rem;
+    }
+    .jackpot-claim-icon {
+      width: 8.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jackpot-stage-asset,
+    .jackpot-draw-stage--drawing .jackpot-stage-asset,
+    .jackpot-flight-ticket,
+    .jackpot-claim-icon,
+    .jackpot-result-hero__confetti {
+      animation: none;
+    }
+    .jackpot-ticket-flight__track {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: 0.5rem;
+      overflow: visible;
+    }
+    .jackpot-flight-ticket {
+      position: relative;
+      left: auto;
+      top: auto;
+      opacity: 1;
+      transform: none;
+    }
+    .jackpot-draw-primary {
+      transition: background-color 120ms ease, filter 120ms ease;
+    }
+    .jackpot-draw-primary:hover,
+    .jackpot-draw-primary:focus-visible {
+      transform: none;
+    }
+  }
