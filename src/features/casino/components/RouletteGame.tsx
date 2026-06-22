@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import confetti from 'canvas-confetti';
 import { motion } from 'framer-motion';
 import { Volume2, VolumeX } from 'lucide-react';
@@ -63,6 +63,13 @@ interface LastSettledBets {
   winningNumber: number | null;
   winningColor: RouletteColor | null;
 }
+
+const ROULETTE_MOBILE_CONTENT_STYLE = {
+  '--roulette-mobile-content-bottom-padding':
+    'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom) + 4.75rem)',
+} as CSSProperties & {
+  '--roulette-mobile-content-bottom-padding': string;
+};
 
 export function RouletteGame({
   userId,
@@ -376,7 +383,11 @@ export function RouletteGame({
   ]);
 
   return (
-    <div className="w-full max-w-full min-w-0 space-y-5 pb-16 md:pb-0">
+    <div
+      data-testid="roulette-game-root"
+      style={ROULETTE_MOBILE_CONTENT_STYLE}
+      className="w-full max-w-full min-w-0 space-y-5 pb-[var(--roulette-mobile-content-bottom-padding)] md:pb-0"
+    >
       <WinBanner
         visible={showWinBanner}
         amount={totalWin}

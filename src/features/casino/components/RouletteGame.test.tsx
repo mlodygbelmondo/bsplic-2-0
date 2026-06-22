@@ -557,6 +557,26 @@ describe('RouletteGame', () => {
     );
   });
 
+  it('reserves bottom scroll space for the mobile stake overlay and bottom nav', () => {
+    useIsMobileMock.mockReturnValue(true);
+    useRouletteTableMock.mockReturnValue(baseTableMock);
+
+    render(
+      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
+    );
+
+    const root = screen.getByTestId('roulette-game-root');
+
+    expect(root).toHaveClass(
+      'pb-[var(--roulette-mobile-content-bottom-padding)]',
+      'md:pb-0',
+    );
+    expect(root).toHaveStyle({
+      '--roulette-mobile-content-bottom-padding':
+        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom) + 4.75rem)',
+    });
+  });
+
   it('keeps desktop stake presets on equal fixed widths', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
