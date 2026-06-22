@@ -124,6 +124,62 @@ describe("BetList tabs", () => {
     });
   });
 
+  it("closes mobile dropdowns from outside taps without a click-capturing backdrop", async () => {
+    render(
+      <BetList
+        selectedCategory={null}
+        categories={[
+          {
+            id: "sport",
+            name: "Sport",
+            emoji: "⚽",
+            color: "#16a34a",
+            sort_order: 1,
+            created_at: "2026-06-22T00:00:00.000Z",
+          },
+        ]}
+        categoryMap={{}}
+        onSelectCategory={vi.fn()}
+      />,
+    );
+
+    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
+    const sortTrigger = within(mobileToolbar).getByRole("button", {
+      expanded: false,
+      name: "Najnowsze",
+    });
+
+    fireEvent.click(sortTrigger);
+
+    await waitFor(() => {
+      expect(sortTrigger).toHaveAttribute("aria-expanded", "true");
+    });
+    expect(document.querySelector(".fixed.inset-0")).toBeNull();
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(sortTrigger).toHaveAttribute("aria-expanded", "false");
+    });
+
+    const categoryTrigger = within(mobileToolbar).getByRole("button", {
+      expanded: false,
+      name: /Wszystkie/,
+    });
+
+    fireEvent.click(categoryTrigger);
+
+    await waitFor(() => {
+      expect(categoryTrigger).toHaveAttribute("aria-expanded", "true");
+    });
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(categoryTrigger).toHaveAttribute("aria-expanded", "false");
+    });
+  });
+
   it("hides the desktop action toolbar with transform on downward scroll", () => {
     render(
       <BetList

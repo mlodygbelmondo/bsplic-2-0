@@ -153,6 +153,7 @@ export function BetListView({
   const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
     bets;
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
+  const mobileToolbarRef = useRef<HTMLDivElement | null>(null);
   const [actionsHidden, setActionsHidden] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
@@ -233,18 +234,37 @@ export function BetListView({
     return () => observer.disconnect();
   }, [hasMore, loadMore, loading]);
 
+  useEffect(() => {
+    if (mobilePanel === null) {
+      return;
+    }
+
+    const handleOutsidePress = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      if (mobileToolbarRef.current?.contains(target)) {
+        return;
+      }
+      setMobilePanel(null);
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePress);
+    document.addEventListener("mousedown", handleOutsidePress);
+    document.addEventListener("touchstart", handleOutsidePress, {
+      passive: true,
+    });
+
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePress);
+      document.removeEventListener("mousedown", handleOutsidePress);
+      document.removeEventListener("touchstart", handleOutsidePress);
+    };
+  }, [mobilePanel]);
+
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
-      {/* Backdrop closing the mobile dropdowns. Lives outside the filter bar
-          because the bar is transformed, which would re-anchor fixed
-          positioning to the bar instead of the viewport. */}
-      {mobilePanel !== null && (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          aria-hidden="true"
-          onClick={() => setMobilePanel(null)}
-        />
-      )}
       {loading ? (
         <SectionLoader label="Wczytywanie zakładów..." className="flex-1" />
       ) : (
@@ -321,6 +341,7 @@ export function BetListView({
           {/* Mobile: sticky inside the scroll container, so hiding it with a
               transform does not change the scroll container height mid-gesture. */}
           <div
+            ref={mobileToolbarRef}
             data-testid="bet-list-mobile-toolbar"
             className={cn(
               "sticky top-0 mb-2.5 lg:hidden transition-[transform,opacity] duration-200 ease-out",
