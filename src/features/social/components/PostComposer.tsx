@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
 import { MentionSuggestions } from '@/features/social/components/MentionSuggestions';
@@ -34,13 +35,43 @@ interface PostComposerProps {
 }
 
 const MAX_LENGTH = 500;
+const COMPACT_COMPOSER_BREAKPOINT = 640;
+
+function useIsCompactComposerViewport() {
+  const [isCompactViewport, setIsCompactViewport] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < COMPACT_COMPOSER_BREAKPOINT,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia(
+      `(max-width: ${COMPACT_COMPOSER_BREAKPOINT - 1}px)`,
+    );
+    const updateViewport = () => {
+      setIsCompactViewport(window.innerWidth < COMPACT_COMPOSER_BREAKPOINT);
+    };
+
+    mediaQuery.addEventListener('change', updateViewport);
+    updateViewport();
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateViewport);
+    };
+  }, []);
+
+  return isCompactViewport;
+}
 
 export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposerProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [caretPosition, setCaretPosition] = useState(0);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
+  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const isCompactViewport = useIsCompactComposerViewport();
 
   const { activeMention, suggestions, loading } = useMentionAutocomplete({
     value: content,
@@ -49,6 +80,9 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
   });
 
   const trimmed = content.trim();
+  const expanded =
+    focused || trimmed.length > 0 || !!attachedImage || !!activeMention || submitting;
+  const compact = isCompactViewport && !expanded;
   const canSubmit =
     (trimmed.length > 0 || !!attachedImage) &&
     trimmed.length <= MAX_LENGTH &&
@@ -69,6 +103,7 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
         URL.revokeObjectURL(attachedImage.previewUrl);
       }
       setAttachedImage(null);
+      setFocused(false);
     } finally {
       setSubmitting(false);
     }
@@ -128,13 +163,25 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
   };
 
   return (
-    <div className="app-surface rounded-xl p-4">
+    <motion.div
+      layout
+      data-testid="post-composer"
+      data-state={compact ? 'compact' : 'expanded'}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }
+      }
+      className="app-surface social-edge-surface overflow-hidden rounded-none p-2 sm:rounded-xl sm:p-4"
+    >
       <textarea
         ref={textareaRef}
-        className="w-full resize-none bg-transparent border border-border rounded-lg p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        rows={3}
+        className="w-full resize-none bg-transparent border border-border rounded-lg px-3 py-2 text-sm transition-[min-height,padding] duration-200 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 sm:p-3"
+        rows={compact ? 1 : 3}
         placeholder="Co nowego?"
         value={content}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => {
           setContent(e.target.value);
           setCaretPosition(e.target.selectionStart ?? e.target.value.length);
@@ -188,6 +235,6 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
           Opublikuj
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 }

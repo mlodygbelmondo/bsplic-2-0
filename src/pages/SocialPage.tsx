@@ -658,14 +658,22 @@ export default function SocialPage() {
         }}
         className="flex-1 min-h-0 overflow-y-auto pb-[var(--mobile-bottom-nav-scroll-padding)] lg:pb-0"
       >
-        <div className="max-w-3xl mx-auto p-4">
-          <h1 className="text-2xl font-bold mb-4">Social</h1>
+        <div
+          data-testid="social-feed-content"
+          className="w-full max-w-3xl mx-auto px-0 pt-2 pb-3 sm:px-4 sm:py-4"
+        >
+          <h1 className="sr-only sm:not-sr-only sm:text-2xl sm:font-bold sm:mb-4">
+            Social
+          </h1>
 
-          <div className="app-subsurface mb-4 inline-flex items-center gap-1 rounded-lg p-1">
+          <div
+            data-testid="social-filter-bar"
+            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-3 flex w-full items-center gap-1 overflow-x-auto rounded-none border-x-0 px-2 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
+          >
             <button
               type="button"
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'all'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -677,7 +685,7 @@ export default function SocialPage() {
             <button
               type="button"
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'coupon'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -689,7 +697,7 @@ export default function SocialPage() {
             <button
               type="button"
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'post'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -701,7 +709,7 @@ export default function SocialPage() {
             <button
               type="button"
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'casino'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -714,7 +722,7 @@ export default function SocialPage() {
 
           {/* Post composer for logged-in users */}
           {user && (
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <PostComposer
                 onSubmit={handleCreatePost}
                 currentUserId={user.id}
@@ -725,7 +733,7 @@ export default function SocialPage() {
           {loading ? (
             <SectionLoader label="Wczytywanie aktywności..." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {filteredFeedItems.length === 0 && !hasMore ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p className="text-lg font-medium">

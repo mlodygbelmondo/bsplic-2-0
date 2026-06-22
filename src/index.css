@@ -736,6 +736,26 @@
   .light .app-subsurface.app-subsurface {
     background: hsl(var(--muted) / 0.6);
   }
+  @media (max-width: 639px) {
+    .social-edge-surface.app-surface {
+      border-left-width: 0;
+      border-right-width: 0;
+      background: hsl(var(--card) / 0.98);
+      box-shadow: none;
+    }
+
+    .social-edge-surface.app-surface:hover {
+      box-shadow: none;
+    }
+
+    .social-edge-filter.app-subsurface {
+      border-left-width: 0;
+      border-right-width: 0;
+      background: hsl(var(--background) / 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  }
   .player-card-hero {
     position: relative;
     overflow: hidden;

@@ -233,6 +233,39 @@ describe('SocialPage', () => {
     );
   });
 
+  it('uses an edge-to-edge mobile feed shell while restoring desktop spacing from sm up', async () => {
+    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
+    const { container } = renderSocialPage();
+
+    expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+
+    const feedContent = container.querySelector(
+      "[data-testid='social-feed-content']",
+    );
+    expect(feedContent).toHaveClass(
+      'w-full',
+      'max-w-3xl',
+      'mx-auto',
+      'px-0',
+      'pt-2',
+      'sm:px-4',
+      'sm:py-4',
+    );
+
+    expect(screen.getByRole('heading', { name: 'Social' })).toHaveClass(
+      'sr-only',
+      'sm:not-sr-only',
+    );
+
+    expect(container.querySelector("[data-testid='social-filter-bar']")).toHaveClass(
+      'sticky',
+      'top-0',
+      'z-20',
+      'rounded-none',
+      'sm:rounded-lg',
+    );
+  });
+
   it('shows empty state when feed is empty', async () => {
     fetchSocialFeedMock.mockResolvedValue([]);
     renderSocialPage();
@@ -245,6 +278,11 @@ describe('SocialPage', () => {
     const postContent = await screen.findByText('Cześć, to mój pierwszy post!');
     expect(postContent).toBeInTheDocument();
     expect(postContent.closest('.app-surface')).not.toBeNull();
+    expect(postContent.closest("[data-testid='social-feed-card']")).toHaveClass(
+      'social-edge-surface',
+      'rounded-none',
+      'sm:rounded-xl',
+    );
     expect(screen.getByText('Poster')).toBeInTheDocument();
     // No copy-coupon button for posts
     expect(

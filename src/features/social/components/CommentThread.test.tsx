@@ -125,6 +125,9 @@ describe('CommentThread', () => {
 
     expect(screen.getByText('Komentarz główny')).toBeInTheDocument();
     expect(screen.getByText('Odpowiedź')).toBeInTheDocument();
+    expect(
+      screen.getByText('Odpowiedź').closest('[data-comment-depth="1"]'),
+    ).toHaveClass('ml-2', 'pl-2', 'sm:ml-4', 'sm:pl-3');
   });
 
   it('renders comment avatar image when avatar_url exists', () => {

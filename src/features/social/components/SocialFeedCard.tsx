@@ -127,15 +127,16 @@ export const SocialFeedCard = memo(function SocialFeedCard({
 
   return (
     <div
+      data-testid="social-feed-card"
       id={`social-item-${item.item_type}-${item.id}`}
       onClick={handleOpenItem}
       className={cn(
-        'app-surface rounded-xl overflow-hidden transition-shadow',
+        'app-surface social-edge-surface rounded-none overflow-hidden transition-shadow sm:rounded-xl',
         onOpenItem && 'cursor-pointer hover:shadow-lg',
         highlighted && 'ring-2 ring-primary/50 shadow-lg',
       )}
     >
-      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+      <div className="flex items-center justify-between px-3 pt-3 pb-1 sm:px-4">
         <Link
           to={`/profile/${item.user_id}`}
           className="flex items-center gap-2 group"
@@ -183,7 +184,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       </div>
 
       {item.item_type === 'post' && (
-        <div className="px-4 py-2">
+        <div className="px-3 py-2 sm:px-4">
           <SocialContentBlock
             content={item.content}
             imageAlt="Zdjęcie w poście"
@@ -200,7 +201,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       )}
       {item.item_type === 'casino' && <CasinoContent item={item} />}
 
-      <div className="px-4 pb-3 space-y-2" data-prevent-card-navigation>
+      <div className="px-3 pb-3 space-y-2 sm:px-4" data-prevent-card-navigation>
         <ReactionBar
           reactions={item.reactions as ReactionCounts | null}
           myReaction={item.my_reaction as ReactionType | null}
@@ -254,8 +255,8 @@ function CasinoContent({ item }: CasinoContentProps) {
         : 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
 
   return (
-    <div className="px-4 py-2">
-      <div className="app-subsurface flex items-center justify-between gap-3 rounded-lg p-3 text-sm">
+    <div className="px-3 py-2 sm:px-4">
+      <div className="app-subsurface flex items-center justify-between gap-3 rounded-lg p-2.5 text-sm sm:p-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
@@ -340,7 +341,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
     <>
       <button
         type="button"
-        className="flex items-center justify-between px-4 py-2 w-full text-sm text-left"
+        className="flex items-center justify-between px-3 py-2 w-full text-sm text-left sm:px-4"
         onClick={() => ako && onToggle()}
       >
         <div className="min-w-0 flex-1">
@@ -396,7 +397,7 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       </button>
 
       {ako && expanded && (
-        <div className="border-t border-border px-4 pb-3 pt-2 space-y-1.5">
+        <div className="border-t border-border px-3 pb-3 pt-2 space-y-1.5 sm:px-4">
           {item.legs!.map((leg) => (
             <div
               key={leg.id}

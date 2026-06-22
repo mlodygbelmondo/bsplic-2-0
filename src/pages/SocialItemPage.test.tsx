@@ -122,11 +122,25 @@ describe('SocialItemPage', () => {
   });
 
   it('loads a dedicated social item and opens comments immediately', async () => {
-    renderSocialItemPage();
+    const { container } = renderSocialItemPage();
 
     expect(await screen.findByText('Dedykowany wpis')).toBeInTheDocument();
     expect(await screen.findByText('Komentarz widoczny od razu')).toBeInTheDocument();
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
+    expect(container.querySelector("[data-testid='social-item-content']")).toHaveClass(
+      'w-full',
+      'max-w-3xl',
+      'mx-auto',
+      'px-0',
+      'pt-2',
+      'sm:px-4',
+      'sm:py-4',
+    );
+    expect(container.querySelector("[data-testid='social-feed-card']")).toHaveClass(
+      'social-edge-surface',
+      'rounded-none',
+      'sm:rounded-xl',
+    );
 
     await waitFor(() => {
       expect(fetchSocialFeedItemMock).toHaveBeenCalledWith(

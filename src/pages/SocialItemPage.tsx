@@ -357,10 +357,13 @@ export default function SocialItemPage() {
     <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-4">
+        <div
+          data-testid="social-item-content"
+          className="w-full max-w-3xl mx-auto px-0 pt-2 pb-[var(--mobile-bottom-nav-scroll-padding)] sm:px-4 sm:py-4"
+        >
           <Link
             to="/social"
-            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="mb-3 inline-flex items-center gap-1 px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:mb-4 sm:px-0"
           >
             <ChevronLeft className="h-4 w-4" />
             Social
@@ -395,7 +398,7 @@ export default function SocialItemPage() {
               onOpenCommentReactors={handleOpenCommentReactors}
             />
           ) : (
-            <div className="rounded-xl border border-border bg-card p-8 text-center">
+            <div className="mx-3 rounded-xl border border-border bg-card p-8 text-center sm:mx-0">
               <p className="text-lg font-semibold">Nie znaleziono wpisu</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Ten wpis mógł zostać usunięty albo nie masz do niego dostępu.

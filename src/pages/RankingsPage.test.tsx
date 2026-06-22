@@ -87,7 +87,7 @@ describe("RankingsPage", () => {
   it("switches rankings between sportsbook and casino leaderboards", async () => {
     const { container } = renderWithProviders(<RankingsPage />);
 
-    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
     expect(container.querySelector(".app-surface")).toBeInTheDocument();
     expect(rpcMock).toHaveBeenCalledWith("get_user_rankings");
 
@@ -97,8 +97,39 @@ describe("RankingsPage", () => {
       expect(rpcMock).toHaveBeenCalledWith("get_casino_rankings");
     });
 
-    expect(await screen.findByText("CasinoKing")).toBeInTheDocument();
-    expect(screen.queryByText("Tester")).not.toBeInTheDocument();
+    expect((await screen.findAllByText("CasinoKing")).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("Tester")).toHaveLength(0);
+  });
+
+  it("renders a mobile ranking list while preserving the desktop table from sm up", async () => {
+    const { container } = renderWithProviders(<RankingsPage />);
+
+    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
+
+    expect(container.querySelector("[data-testid='rankings-mobile-list']")).toHaveClass(
+      "sm:hidden",
+    );
+    expect(container.querySelector("[data-testid='rankings-mobile-row']")).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)_auto]",
+    );
+    expect(container.querySelector("[data-testid='rankings-desktop-table']")).toHaveClass(
+      "hidden",
+      "sm:block",
+    );
+  });
+
+  it("keeps the desktop table shell around the loading state", () => {
+    rpcMock.mockReturnValue(new Promise(() => {}));
+
+    const { container } = renderWithProviders(<RankingsPage />);
+
+    const desktopTable = container.querySelector("[data-testid='rankings-desktop-table']");
+
+    expect(desktopTable).toHaveClass("hidden", "sm:block");
+    expect(desktopTable).toHaveTextContent("#");
+    expect(desktopTable).toHaveTextContent("Profit");
+    expect(screen.getAllByText("Wczytywanie rankingu...").length).toBeGreaterThan(0);
   });
 
   it("shows a retry action when rankings fail to load", async () => {
@@ -117,22 +148,26 @@ describe("RankingsPage", () => {
       ],
     });
 
-    renderWithProviders(<RankingsPage />);
+    const { container } = renderWithProviders(<RankingsPage />);
 
     expect(
-      await screen.findByText("Nie udało się wczytać rankingu"),
-    ).toBeInTheDocument();
+      (await screen.findAllByText("Nie udało się wczytać rankingu")).length,
+    ).toBeGreaterThan(0);
+    expect(container.querySelector("[data-testid='rankings-desktop-table']")).toHaveClass(
+      "hidden",
+      "sm:block",
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Spróbuj ponownie" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Spróbuj ponownie" })[0]);
 
-    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
     expect(rpcMock).toHaveBeenCalledTimes(2);
   });
 
   it("hides mobile bottom nav on deliberate downward scroll", async () => {
     const { container } = renderWithProviders(<RankingsPage />);
 
-    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
     expect(navbarMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ mobileBottomNavHidden: false }),
     );
@@ -155,7 +190,7 @@ describe("RankingsPage", () => {
   it("reserves bottom scroll space for the mobile nav", async () => {
     const { container } = renderWithProviders(<RankingsPage />);
 
-    expect(await screen.findByText("Tester")).toBeInTheDocument();
+    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
     expect(
       container.querySelector("[data-testid='rankings-scroll-container']"),
     ).toHaveClass("pb-[var(--mobile-bottom-nav-scroll-padding)]");

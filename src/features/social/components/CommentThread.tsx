@@ -93,7 +93,7 @@ export function CommentThread({
       </button>
 
       {!collapsed && (
-        <div className="space-y-2 pl-1">
+        <div className="space-y-2 pl-0 sm:pl-1">
           {/* Comment list */}
           {tree.map((node) => (
               <CommentNodeView
@@ -168,7 +168,13 @@ function CommentNodeView({
   };
 
   return (
-    <div className={cn('space-y-1', depth > 0 && 'ml-4 border-l border-border pl-3')}>
+    <div
+      data-comment-depth={depth}
+      className={cn(
+        'space-y-1',
+        depth > 0 && 'ml-2 border-l border-border pl-2 sm:ml-4 sm:pl-3',
+      )}
+    >
       <div className="flex items-start gap-2">
         <div className="h-6 w-6 shrink-0 mt-0.5 rounded-full bg-primary/10 overflow-hidden">
           {hasAvatar ? (

@@ -16,6 +16,11 @@ vi.mock('@/features/social/images', () => ({
 describe('PostComposer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
     searchMentionUsersMock.mockResolvedValue([]);
     compressImageFileMock.mockResolvedValue({
       blob: new Blob(['img'], { type: 'image/jpeg' }),
@@ -35,6 +40,51 @@ describe('PostComposer', () => {
     render(<PostComposer onSubmit={vi.fn()} />);
 
     expect(screen.getByLabelText('Treść posta').closest('.app-surface')).not.toBeNull();
+  });
+
+  it('starts compact on mobile and expands on focus without hiding active content', () => {
+    render(<PostComposer onSubmit={vi.fn()} />);
+
+    const composer = screen.getByTestId('post-composer');
+    const textarea = screen.getByLabelText('Treść posta');
+
+    expect(composer).toHaveAttribute('data-state', 'compact');
+    expect(textarea).toHaveAttribute('rows', '1');
+
+    fireEvent.focus(textarea);
+
+    expect(composer).toHaveAttribute('data-state', 'expanded');
+    expect(textarea).toHaveAttribute('rows', '3');
+
+    fireEvent.blur(textarea);
+
+    expect(composer).toHaveAttribute('data-state', 'compact');
+    expect(textarea).toHaveAttribute('rows', '1');
+
+    fireEvent.focus(textarea);
+    fireEvent.change(textarea, { target: { value: 'Aktywny draft' } });
+    fireEvent.blur(textarea);
+
+    expect(composer).toHaveAttribute('data-state', 'expanded');
+    expect(textarea).toHaveAttribute('rows', '3');
+  });
+
+  it('keeps the desktop composer at the original three rows', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1024,
+    });
+
+    render(<PostComposer onSubmit={vi.fn()} />);
+
+    const textarea = screen.getByLabelText('Treść posta');
+
+    expect(textarea).toHaveAttribute('rows', '3');
+
+    fireEvent.blur(textarea);
+
+    expect(textarea).toHaveAttribute('rows', '3');
   });
 
   it('disables submit when content is empty', () => {
