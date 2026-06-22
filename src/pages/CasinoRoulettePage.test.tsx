@@ -27,6 +27,21 @@ describe('CasinoRoulettePage', () => {
       '--casino-bg-desktop': "url('/casino/roulette-background.webp')",
       '--casino-bg-mobile': "url('/casino/roulette-mobile-background.webp')",
     });
-    expect(container.querySelector('[data-testid="casino-roulette-shell"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="casino-roulette-shell"]'),
+    ).toBeTruthy();
+  });
+
+  it('keeps the mobile roulette content close to the top chrome', () => {
+    useAuthMock.mockReturnValue({
+      user: { id: 'user-1' },
+      profile: { balance: 100 },
+      refreshProfile: vi.fn(),
+    });
+
+    const { container } = render(<CasinoRoulettePage />);
+    const content = container.querySelector('.max-w-\\[1800px\\]');
+
+    expect(content).toHaveClass('pt-3', 'md:p-6');
   });
 });
