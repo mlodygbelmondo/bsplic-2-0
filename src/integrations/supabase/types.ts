@@ -631,6 +631,7 @@ export type Database = {
           source_day: string
           source_pool_id: string | null
           source_type: string
+          ticket_id: string | null
         }
         Insert: {
           amount: number
@@ -641,6 +642,7 @@ export type Database = {
           source_day: string
           source_pool_id?: string | null
           source_type: string
+          ticket_id?: string | null
         }
         Update: {
           amount?: number
@@ -651,6 +653,7 @@ export type Database = {
           source_day?: string
           source_pool_id?: string | null
           source_type?: string
+          ticket_id?: string | null
         }
         Relationships: [
           {
@@ -672,6 +675,13 @@ export type Database = {
             columns: ["source_pool_id"]
             isOneToOne: false
             referencedRelation: "daily_jackpot_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_jackpot_funding_entries_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "daily_jackpot_tickets"
             referencedColumns: ["id"]
           },
         ]

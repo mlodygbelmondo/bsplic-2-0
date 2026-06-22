@@ -70,22 +70,53 @@ describe('daily jackpot migration security invariants', () => {
     );
   });
 
-  it('keeps jackpot tickets out of pool funding and prices them at 100 zł', () => {
+  it('funds jackpot from 20 percent of lost coupons and ticket purchases', () => {
     const fundingMaintenanceMigration =
       migrationSqlByFile.get(
         '20260622011000_harden_jackpot_funding_maintenance_contract.sql',
       ) ?? '';
     const ticketContractMigration =
       migrationSqlByFile.get('20260619030000_harden_daily_jackpot_ticket_contract.sql') ?? '';
+    const fundingBody = getFunctionBody(
+      'private.sync_daily_jackpot_funding\\(p_pool_date DATE\\)',
+    );
+    const purchaseBody = getFunctionBody(
+      'public.buy_daily_jackpot_ticket\\(p_pool_id UUID\\)',
+    );
 
     expect(fundingMaintenanceMigration).toContain("WHERE source_type = 'ticket_fee'");
-    expect(fundingMaintenanceMigration).toContain(
-      "CHECK (source_type IN ('lost_coupon', 'rollover'))",
+    expect(migrationSql).toContain(
+      "CHECK (source_type IN ('lost_coupon', 'rollover', 'ticket_purchase'))",
     );
+    expect(migrationSql).toContain('daily_jackpot_funding_ticket_purchase_unique');
+    expect(fundingBody).toContain('ROUND(c.stake * 0.20, 2)');
+    expect(purchaseBody).toContain("v_ticket_funding_source_type TEXT := 'ticket_purchase'");
+    expect(purchaseBody).toContain('v_ticket_id');
+    expect(purchaseBody).toContain('ROUND(v_pool.ticket_price, 2)');
     expect(ticketContractMigration).toContain(
       'ALTER COLUMN ticket_price SET DEFAULT 100',
     );
     expect(migrationSql).toContain("'ticket_price', 100");
+  });
+
+  it('allows the first ticket purchase to seed a zero-prize collecting pool', () => {
+    const body = getFunctionBody(
+      'public.buy_daily_jackpot_ticket\\(p_pool_id UUID\\)',
+    );
+
+    expect(body).not.toContain('v_pool.prize_amount <= 0');
+    expect(body).toContain("v_ticket_funding_source_type TEXT := 'ticket_purchase'");
+  });
+
+  it('excludes refunded ticket purchase funding from insufficient-player rollover', () => {
+    const body = getFunctionBody(
+      'private.finalize_daily_jackpot_pool\\(\\s*p_pool_date DATE,\\s*p_snapshot_user_id UUID DEFAULT NULL\\s*\\)',
+    );
+
+    expect(body).toContain('v_rollover_amount');
+    expect(body).toContain("source_type <> 'ticket_purchase'");
+    expect(body).toContain('ROUND(v_rollover_amount, 2)');
+    expect(body).not.toContain('ROUND(v_pool.prize_amount, 2)');
   });
 
   it('publishes the per-player ticket limit in jackpot snapshots', () => {

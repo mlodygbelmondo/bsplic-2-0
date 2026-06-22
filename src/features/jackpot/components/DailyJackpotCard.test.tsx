@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { DailyJackpotSnapshot } from '../types';
@@ -71,6 +71,34 @@ describe('DailyJackpotCard', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('renders a zero-prize collecting pool so the first ticket can seed it', () => {
+    const onBuy = vi.fn();
+
+    render(
+      <DailyJackpotCard
+        snapshot={{
+          ...snapshot,
+          prizeAmount: 0,
+          ticketCount: 0,
+          participantCount: 0,
+        }}
+        loading={false}
+        buying={false}
+        balance={150}
+        onBuy={onBuy}
+      />,
+    );
+
+    expect(
+      screen.getByRole('region', { name: 'Jackpot Dnia' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('0 zł')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
+
+    expect(onBuy).toHaveBeenCalledTimes(1);
+  });
+
   it('renders collecting state and buys a ticket', () => {
     const onBuy = vi.fn();
 
@@ -117,6 +145,43 @@ describe('DailyJackpotCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
 
     expect(onBuy).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a short funding explanation from the pool label info icon', () => {
+    const { container } = render(
+      <DailyJackpotCard
+        snapshot={snapshot}
+        loading={false}
+        buying={false}
+        balance={150}
+        onBuy={vi.fn()}
+      />,
+    );
+
+    const amountHeading = container.querySelector(
+      '.daily-jackpot-card__amount-heading',
+    );
+
+    expect(amountHeading).not.toBeNull();
+    expect(amountHeading).toHaveTextContent('Pula');
+
+    fireEvent.click(
+      within(amountHeading as HTMLElement).getByRole('button', {
+        name: 'Skąd bierze się Jackpot?',
+      }),
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: 'Skąd bierze się Jackpot?' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /20% stawek przegranych kuponów z poprzedniego dnia/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/kupionych ticketów w aktualnym losowaniu/i),
+    ).toBeInTheDocument();
   });
 
   it('keeps the mobile jackpot card compact with horizontal stat tiles', () => {

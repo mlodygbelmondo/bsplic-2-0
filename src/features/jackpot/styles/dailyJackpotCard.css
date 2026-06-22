@@ -66,6 +66,11 @@
     z-index: 2;
     max-width: min(42rem, 56%);
   }
+  .daily-jackpot-card__amount-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+  }
   .daily-jackpot-card__amount-label {
     display: inline-block;
     margin-top: clamp(0.2rem, 0.9vw, 0.45rem);
@@ -75,6 +80,34 @@
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0;
+  }
+  .daily-jackpot-card__info-trigger {
+    display: inline-flex;
+    width: 1.26rem;
+    height: 1.26rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid hsl(43 100% 62% / 0.64);
+    border-radius: 999px;
+    color: hsl(43 100% 72%);
+    background: hsl(0 0% 2% / 0.58);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.12);
+    transition:
+      border-color 140ms ease,
+      color 140ms ease,
+      background-color 140ms ease,
+      transform 140ms ease;
+  }
+  .daily-jackpot-card__info-trigger:hover,
+  .daily-jackpot-card__info-trigger:focus-visible {
+    border-color: hsl(43 100% 68% / 0.9);
+    color: hsl(43 100% 84%);
+    background: hsl(0 0% 100% / 0.12);
+    transform: translateY(-1px);
+  }
+  .daily-jackpot-card__info-trigger:focus-visible {
+    outline: 2px solid hsl(43 100% 64% / 0.72);
+    outline-offset: 2px;
   }
   .daily-jackpot-card__amount {
     position: relative;
@@ -281,6 +314,10 @@
     .daily-jackpot-card__amount-label {
       font-size: 0.56rem;
     }
+    .daily-jackpot-card__info-trigger {
+      width: 1.1rem;
+      height: 1.1rem;
+    }
     .daily-jackpot-card__amount {
       margin-top: 0.18rem;
       font-size: 2rem;
@@ -414,7 +451,9 @@
       transition: background-color 120ms ease, filter 120ms ease;
     }
     .daily-jackpot-card__button--hot:hover,
-    .daily-jackpot-card__button--hot:focus-visible {
+    .daily-jackpot-card__button--hot:focus-visible,
+    .daily-jackpot-card__info-trigger:hover,
+    .daily-jackpot-card__info-trigger:focus-visible {
       transform: none;
     }
   }

@@ -2,12 +2,23 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Clock3,
+  Info,
   Loader2,
   Ticket,
   Users,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 import {
@@ -102,8 +113,7 @@ export function DailyJackpotCard({
     return null;
   }
 
-  const hasPrize = snapshot.prizeAmount > 0;
-  if (!snapshot.poolId || !hasPrize) {
+  if (!snapshot.poolId) {
     return null;
   }
 
@@ -222,7 +232,38 @@ export function DailyJackpotCard({
       <div className="daily-jackpot-card__embers" aria-hidden="true" />
 
       <div className="daily-jackpot-card__copy">
-        <span className="daily-jackpot-card__amount-label">Pula</span>
+        <div className="daily-jackpot-card__amount-heading">
+          <span className="daily-jackpot-card__amount-label">Pula</span>
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="daily-jackpot-card__info-trigger"
+                aria-label="Skąd bierze się Jackpot?"
+              >
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md border-red-500/40 bg-zinc-950 text-white shadow-2xl">
+              <DialogHeader>
+                <DialogTitle>Skąd bierze się Jackpot?</DialogTitle>
+                <DialogDescription className="text-sm leading-6 text-zinc-200">
+                  Pula Jackpotu Dnia rośnie z 20% stawek przegranych kuponów z
+                  poprzedniego dnia oraz z kupionych ticketów w aktualnym
+                  losowaniu. Im większy ruch w grze, tym większa pula do
+                  zgarnięcia.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary">
+                    Zamknij
+                  </Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
         <p className="daily-jackpot-card__amount">
           {formatJackpotHeroAmount(snapshot.prizeAmount)}
           <span className="sr-only">
