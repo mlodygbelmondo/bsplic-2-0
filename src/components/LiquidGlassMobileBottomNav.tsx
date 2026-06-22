@@ -76,11 +76,11 @@ export function LiquidGlassMobileBottomNav({
     <nav
       aria-label="Nawigacja aplikacji"
       className={cn(
-        "lg:hidden fixed inset-x-0 bottom-0 z-50 pointer-events-none px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] transition-transform duration-200 ease-out will-change-transform opacity-100",
-        hidden ? "translate-y-full" : "translate-y-0",
+        "lg:hidden fixed inset-x-0 bottom-0 z-50 pointer-events-none px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] transition-[transform,opacity] duration-200 ease-out will-change-transform",
+        hidden ? "translate-y-full opacity-0" : "translate-y-0 opacity-100",
       )}
     >
-      <div className="pointer-events-none relative mx-auto h-[72px] w-full max-w-[430px]">
+      <div className="pointer-events-auto relative mx-auto h-[72px] w-full max-w-[430px]">
         <LiquidGlass
           displacementScale={46}
           blurAmount={0.035}
@@ -91,61 +91,62 @@ export function LiquidGlassMobileBottomNav({
           padding="0px"
           overLight={false}
           mode="standard"
-          className="pointer-events-none w-full"
+          className="w-full"
           style={LIQUID_GLASS_MOBILE_NAV_STYLE}
         >
           <div
-            aria-hidden="true"
             className={cn(
-              "h-[72px] w-[calc(100vw-1rem)] max-w-[430px] overflow-hidden rounded-[1.75rem] border ring-1 backdrop-blur-2xl",
+              "grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-5 overflow-hidden rounded-[1.75rem] border px-1.5 py-1.5 ring-1 backdrop-blur-2xl",
               getLiquidGlassMobileNavShellClassName(theme, tone),
               getLiquidGlassMobileNavBorderClassName(theme, tone),
             )}
-          />
-        </LiquidGlass>
+          >
+            {MOBILE_NAV_ITEMS.map(({ to, label, icon: Icon, isActive }) => {
+              const active = isActive(pathname);
 
-        <div
-          data-testid="mobile-bottom-nav-items"
-          className="pointer-events-auto absolute inset-0 grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-5 items-center px-1.5 py-1.5"
-        >
-          {MOBILE_NAV_ITEMS.map(({ to, label, icon: Icon, isActive }) => {
-            const active = isActive(pathname);
-
-            return (
-              <Link
-                key={label}
-                to={to}
-                aria-label={label}
-                aria-current={active ? "page" : undefined}
-                data-active={active ? "true" : undefined}
-                tabIndex={hidden ? -1 : undefined}
-                className={cn(
-                  LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME,
-                  active
-                    ? cn(
-                        "font-bold",
-                        getLiquidGlassMobileNavActiveItemClassName(theme, tone),
-                      )
-                    : getLiquidGlassMobileNavInactiveItemClassName(theme, tone),
-                )}
-              >
-                <Icon
-                  className="h-5 w-5 shrink-0"
-                  strokeWidth={active ? 2.4 : 2}
-                />
-                <span
+              return (
+                <Link
+                  key={label}
+                  to={to}
+                  aria-label={label}
+                  aria-current={active ? "page" : undefined}
+                  data-active={active ? "true" : undefined}
+                  tabIndex={hidden ? -1 : undefined}
                   className={cn(
-                    "box-border max-w-full truncate text-center leading-[1.15]",
-                    getLiquidGlassMobileNavLabelClassName(theme, tone, active),
-                    active && "font-bold",
+                    LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME,
+                    active
+                      ? cn(
+                          "font-bold",
+                          getLiquidGlassMobileNavActiveItemClassName(theme, tone),
+                        )
+                      : getLiquidGlassMobileNavInactiveItemClassName(theme, tone),
                   )}
                 >
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+                  <Icon
+                    className="h-5 w-5 shrink-0"
+                    strokeWidth={active ? 2.4 : 2}
+                  />
+                  <span
+                    className={cn(
+                      "w-full truncate pb-0.5 text-center leading-[1.15]",
+                      active && "font-bold",
+                    )}
+                  >
+                    <span
+                      className={getLiquidGlassMobileNavLabelClassName(
+                        theme,
+                        tone,
+                        active,
+                      )}
+                    >
+                      {label}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </LiquidGlass>
       </div>
     </nav>
   );

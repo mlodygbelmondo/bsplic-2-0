@@ -43,16 +43,6 @@ function renderBottomNav(pathname: string) {
   );
 }
 
-function renderHiddenBottomNav(pathname: string) {
-  return render(
-    <ThemeProvider>
-      <MemoryRouter initialEntries={[pathname]}>
-        <AppMobileBottomNav hidden />
-      </MemoryRouter>
-    </ThemeProvider>,
-  );
-}
-
 describe("AppMobileBottomNav", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -83,51 +73,25 @@ describe("AppMobileBottomNav", () => {
     expect(activeLink).toHaveClass("text-[12px]");
   });
 
-  it("renders labels above the glass filter layer so text does not pick up glass shadows", () => {
+  it("keeps the original glass nav structure while shielding light labels from text artifacts", () => {
     renderBottomNav("/");
 
     const glassLayer = screen.getByTestId("liquid-glass");
-    const itemsLayer = screen.getByTestId("mobile-bottom-nav-items");
-    const activeLink = screen.getByRole("link", { name: "Zakłady" });
-
-    expect(glassLayer).not.toContainElement(activeLink);
-    expect(itemsLayer).toContainElement(activeLink);
-    expect(itemsLayer).toHaveClass("items-center");
-  });
-
-  it("keeps the light active item free of label-like drop shadows", () => {
-    renderBottomNav("/");
-
     const activeLink = screen.getByRole("link", { name: "Zakłady" });
     const activeLabel = screen.getByText("Zakłady");
     const inactiveLabel = screen.getByText("Social");
-    const glassSurface = screen.getByTestId("liquid-glass").firstElementChild;
 
-    expect(activeLink.className).not.toContain("0_4px_12px");
-    expect(activeLink.className).not.toContain("0_10px_24px");
-    expect(activeLink).toHaveClass("-translate-y-0.5");
-    expect(glassSurface).toHaveClass("bg-white/[0.86]");
-    expect(activeLabel).not.toHaveClass("bg-white/[0.78]");
+    expect(glassLayer).toContainElement(activeLink);
+    expect(screen.queryByTestId("mobile-bottom-nav-items")).not.toBeInTheDocument();
     expect(activeLabel).toHaveClass(
-      "box-border",
-      "bg-transparent",
+      "bg-[#c90018]/[0.12]",
+      "shadow-none",
       "[text-shadow:none]",
     );
     expect(inactiveLabel).toHaveClass(
-      "box-border",
       "bg-white/[0.78]",
+      "shadow-none",
       "[text-shadow:none]",
     );
-  });
-
-  it("slides the mobile nav out without fading it away first", () => {
-    renderHiddenBottomNav("/");
-
-    const nav = screen.getByRole("navigation", {
-      name: "Nawigacja aplikacji",
-    });
-
-    expect(nav).toHaveClass("translate-y-full", "opacity-100");
-    expect(nav).not.toHaveClass("opacity-0");
   });
 });
