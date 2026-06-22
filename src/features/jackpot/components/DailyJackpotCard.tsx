@@ -241,14 +241,14 @@ export function DailyJackpotCard({
                 className="daily-jackpot-card__info-trigger"
                 aria-label="Skąd bierze się Jackpot?"
               >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                <Info className="h-3 w-3" aria-hidden="true" />
               </button>
             </DialogTrigger>
             <DialogContent className="max-w-md border-red-500/40 bg-zinc-950 text-white shadow-2xl">
               <DialogHeader>
                 <DialogTitle>Skąd bierze się Jackpot?</DialogTitle>
                 <DialogDescription className="text-sm leading-6 text-zinc-200">
-                  Pula Jackpotu Dnia rośnie z 20% stawek przegranych kuponów z
+                  Pula Jackpotu bierze się z 20% stawek przegranych kuponów z
                   poprzedniego dnia oraz z kupionych ticketów w aktualnym
                   losowaniu. Im większy ruch w grze, tym większa pula do
                   zgarnięcia.

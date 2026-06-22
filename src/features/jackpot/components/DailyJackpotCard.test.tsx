@@ -164,6 +164,11 @@ describe('DailyJackpotCard', () => {
 
     expect(amountHeading).not.toBeNull();
     expect(amountHeading).toHaveTextContent('Pula');
+    expect(
+      within(amountHeading as HTMLElement)
+        .getByRole('button', { name: 'Skąd bierze się Jackpot?' })
+        .querySelector('svg'),
+    ).toHaveClass('h-3', 'w-3');
 
     fireEvent.click(
       within(amountHeading as HTMLElement).getByRole('button', {
@@ -175,9 +180,7 @@ describe('DailyJackpotCard', () => {
       screen.getByRole('dialog', { name: 'Skąd bierze się Jackpot?' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /20% stawek przegranych kuponów z poprzedniego dnia/i,
-      ),
+      screen.getByText(/Pula Jackpotu bierze się z 20% stawek przegranych kuponów z poprzedniego dnia/i),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/kupionych ticketów w aktualnym losowaniu/i),
@@ -189,6 +192,9 @@ describe('DailyJackpotCard', () => {
 
     expect(css).toMatch(
       /\.daily-jackpot-card__amount-heading\s*\{[^}]*align-items:\s*center;[^}]*gap:\s*0\.5rem;/,
+    );
+    expect(css).toMatch(
+      /\.daily-jackpot-card__amount-label\s*\{[^}]*margin-top:\s*0;/,
     );
     expect(css).toMatch(
       /\.daily-jackpot-card__info-trigger\s*\{[^}]*border:\s*1px solid hsl\(0 0% 82% \/ 0\.34\);[^}]*color:\s*hsl\(0 0% 86%\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/,

@@ -73,7 +73,7 @@
   }
   .daily-jackpot-card__amount-label {
     display: inline-block;
-    margin-top: clamp(0.2rem, 0.9vw, 0.45rem);
+    margin-top: 0;
     color: hsl(0 0% 82%);
     font-size: clamp(0.64rem, 0.82vw, 0.72rem);
     font-weight: 700;
