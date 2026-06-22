@@ -111,6 +111,14 @@
   }
   .daily-jackpot-card__state strong {
     font-variant-numeric: tabular-nums;
+    font-weight: inherit;
+  }
+  .daily-jackpot-card__state svg,
+  .daily-jackpot-card__state-label,
+  .daily-jackpot-card__state-dot,
+  .daily-jackpot-card__state strong {
+    flex-shrink: 0;
+    line-height: 1;
   }
   .daily-jackpot-card__art {
     position: absolute;

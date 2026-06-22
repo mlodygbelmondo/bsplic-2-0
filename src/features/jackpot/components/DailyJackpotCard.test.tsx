@@ -122,9 +122,19 @@ describe('DailyJackpotCard', () => {
   it('keeps the mobile jackpot card compact with horizontal stat tiles', () => {
     const mobileCss = getMediaCss('(max-width: 820px)');
     const smallMobileCss = getMediaCss('(max-width: 560px)');
+    const css = readJackpotCss();
 
     expect(mobileCss).toMatch(/\.daily-jackpot-card\s*\{[^}]*min-height:\s*12\.1rem;/);
     expect(mobileCss).toMatch(/\.daily-jackpot-card\s*\{[^}]*max-height:\s*12\.1rem;/);
+    expect(css).toMatch(
+      /\.daily-jackpot-card__state\s*\{[^}]*align-items:\s*center;/,
+    );
+    expect(css).toMatch(
+      /\.daily-jackpot-card__state strong\s*\{[^}]*font-weight:\s*inherit;/,
+    );
+    expect(css).toMatch(
+      /\.daily-jackpot-card__state svg,\s*\.daily-jackpot-card__state-label,\s*\.daily-jackpot-card__state-dot,\s*\.daily-jackpot-card__state strong\s*\{[^}]*line-height:\s*1;/,
+    );
     expect(mobileCss).toMatch(
       /\.daily-jackpot-card__state\s*\{[^}]*top:\s*0\.92rem;[^}]*right:\s*0\.82rem;/,
     );
