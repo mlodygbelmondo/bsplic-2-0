@@ -279,6 +279,54 @@ describe('daily jackpot migration security invariants', () => {
     );
   });
 
+  it('ships a post-deploy repair migration for the reveal draw RPC contract', () => {
+    const repairMigration = Array.from(migrationSqlByFile.entries()).find(
+      ([file]) => file.endsWith('_restore_daily_jackpot_reveal_rpc.sql'),
+    )?.[1] ?? '';
+
+    expect(repairMigration).toContain(
+      'CREATE OR REPLACE FUNCTION public.reveal_daily_jackpot_draw(p_pool_id UUID)',
+    );
+    expect(repairMigration).toContain(
+      'REVOKE EXECUTE ON FUNCTION public.mark_daily_jackpot_result_viewed(UUID) FROM PUBLIC, anon, authenticated',
+    );
+    expect(repairMigration).toContain(
+      'GRANT EXECUTE ON FUNCTION public.reveal_daily_jackpot_draw(UUID) TO authenticated',
+    );
+    expect(repairMigration).toContain("NOTIFY pgrst, 'reload schema'");
+  });
+
+  it('advances the home jackpot state after a participant viewed the finished draw', () => {
+    const handoffMigration = Array.from(migrationSqlByFile.entries()).find(
+      ([file]) => file.endsWith('_advance_daily_jackpot_after_viewed_draw.sql'),
+    )?.[1] ?? '';
+    const stateBody = getFunctionBody('public.get_daily_jackpot_state\\(\\)');
+    const revealBody = getFunctionBody(
+      'public.reveal_daily_jackpot_draw\\(p_pool_id UUID\\)',
+    );
+
+    expect(handoffMigration).toContain(
+      'CREATE TABLE IF NOT EXISTS public.daily_jackpot_draw_views',
+    );
+    expect(handoffMigration).toContain('PRIMARY KEY (pool_id, user_id)');
+    expect(handoffMigration).toContain(
+      'ALTER TABLE public.daily_jackpot_draw_views ENABLE ROW LEVEL SECURITY',
+    );
+    expect(handoffMigration).toContain(
+      'REVOKE ALL ON TABLE public.daily_jackpot_draw_views FROM PUBLIC, anon, authenticated',
+    );
+    expect(revealBody).toContain(
+      'INSERT INTO public.daily_jackpot_draw_views',
+    );
+    expect(revealBody).toContain('v_current_user_ticket_count > 0');
+    expect(stateBody).toContain('v_pending_draw_pool_id');
+    expect(stateBody).toContain('public.daily_jackpot_draw_views viewed');
+    expect(stateBody).toContain('v_visible_pool_date := v_today + 1');
+    expect(stateBody).toContain(
+      'v_pool_id := private.sync_daily_jackpot_funding(v_visible_pool_date)',
+    );
+  });
+
   it('claims jackpot rewards transactionally and idempotently', () => {
     const body = getFunctionBody(
       'private.credit_daily_jackpot_reward\\(\\s*p_pool_id UUID,\\s*p_credit_mode TEXT\\s*\\)',
@@ -333,7 +381,7 @@ describe('daily jackpot migration security invariants', () => {
     );
   });
 
-  it('only allows buying tickets for the current Warsaw pool date', () => {
+  it('allows buying the next visible jackpot pool after today is terminal', () => {
     const body = getFunctionBody(
       'public.buy_daily_jackpot_ticket\\(p_pool_id UUID\\)',
     );
@@ -341,7 +389,12 @@ describe('daily jackpot migration security invariants', () => {
     expect(body).toContain(
       "v_current_pool_date DATE := (timezone('Europe/Warsaw', NOW()))::DATE",
     );
-    expect(body).toContain('IF v_pool.pool_date <> v_current_pool_date THEN');
+    expect(body).toContain('v_allowed_pool_date DATE := v_current_pool_date');
+    expect(body).toContain("status IN ('drawn', 'rolled_over', 'cancelled')");
+    expect(body).toContain(
+      'v_allowed_pool_date := v_current_pool_date + 1',
+    );
+    expect(body).toContain('IF v_pool.pool_date <> v_allowed_pool_date THEN');
   });
 
   it('moves corrected lost coupons to the current terminal transition timestamp', () => {
