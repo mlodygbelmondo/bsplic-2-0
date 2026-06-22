@@ -14,7 +14,7 @@ export function ReactionBar({ reactions, myReaction, onToggle, onOpenReactors, d
   const reactionsTotal = totalReactions(reactions);
 
   return (
-    <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Reakcje">
+    <div className="social-reaction-bar flex items-center gap-1 flex-wrap" role="group" aria-label="Reakcje">
       {/* Existing reactions */}
       {sorted.map(({ type, emoji, count }) => (
         <button

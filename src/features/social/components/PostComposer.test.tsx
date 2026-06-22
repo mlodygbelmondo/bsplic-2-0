@@ -19,7 +19,7 @@ describe('PostComposer', () => {
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
-      value: 390,
+      value: 1024,
     });
     searchMentionUsersMock.mockResolvedValue([]);
     compressImageFileMock.mockResolvedValue({
@@ -42,31 +42,57 @@ describe('PostComposer', () => {
     expect(screen.getByLabelText('Treść posta').closest('.app-surface')).not.toBeNull();
   });
 
-  it('starts compact on mobile and expands on focus without hiding active content', () => {
+  it('opens the mobile editor in a sheet instead of expanding inline', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+
     render(<PostComposer onSubmit={vi.fn()} />);
 
     const composer = screen.getByTestId('post-composer');
+    const trigger = screen.getByRole('button', { name: 'Utwórz post' });
+
+    expect(composer).toHaveAttribute('data-state', 'trigger');
+    expect(screen.queryByLabelText('Treść posta')).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+
+    expect(composer).toHaveAttribute('data-state', 'open');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
     const textarea = screen.getByLabelText('Treść posta');
 
-    expect(composer).toHaveAttribute('data-state', 'compact');
-    expect(textarea).toHaveAttribute('rows', '1');
+    expect(textarea).toHaveAttribute('rows', '5');
+    expect(textarea).toHaveClass('text-base');
+    expect(textarea).not.toHaveClass('text-sm');
+  });
 
-    fireEvent.focus(textarea);
+  it('keeps a mobile draft when the sheet closes before publishing', async () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
 
-    expect(composer).toHaveAttribute('data-state', 'expanded');
-    expect(textarea).toHaveAttribute('rows', '3');
+    render(<PostComposer onSubmit={vi.fn()} />);
 
-    fireEvent.blur(textarea);
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz post' }));
 
-    expect(composer).toHaveAttribute('data-state', 'compact');
-    expect(textarea).toHaveAttribute('rows', '1');
+    const textarea = await screen.findByLabelText('Treść posta');
+    fireEvent.change(textarea, { target: { value: 'Niedokończony draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
-    fireEvent.focus(textarea);
-    fireEvent.change(textarea, { target: { value: 'Aktywny draft' } });
-    fireEvent.blur(textarea);
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
 
-    expect(composer).toHaveAttribute('data-state', 'expanded');
-    expect(textarea).toHaveAttribute('rows', '3');
+    fireEvent.click(screen.getByRole('button', { name: 'Utwórz post' }));
+
+    expect(await screen.findByLabelText('Treść posta')).toHaveValue(
+      'Niedokończony draft',
+    );
   });
 
   it('keeps the desktop composer at the original three rows', () => {
@@ -81,6 +107,7 @@ describe('PostComposer', () => {
     const textarea = screen.getByLabelText('Treść posta');
 
     expect(textarea).toHaveAttribute('rows', '3');
+    expect(textarea).toHaveClass('text-sm');
 
     fireEvent.blur(textarea);
 

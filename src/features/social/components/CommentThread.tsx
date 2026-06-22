@@ -176,7 +176,7 @@ function CommentNodeView({
       )}
     >
       <div className="flex items-start gap-2">
-        <div className="h-6 w-6 shrink-0 mt-0.5 rounded-full bg-primary/10 overflow-hidden">
+        <div className="h-7 w-7 shrink-0 mt-0.5 rounded-full bg-primary/10 overflow-hidden sm:h-6 sm:w-6">
           {hasAvatar ? (
             <img
               src={node.avatar_url ?? undefined}
@@ -192,17 +192,19 @@ function CommentNodeView({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-semibold">{node.username}</span>
-            <span className="text-[10px] text-muted-foreground">
-              {formatTimeAgo(node.created_at)}
-            </span>
-          </div>
-          <div className="mt-0.5">
-            <SocialContentBlock
-              content={node.image_path ? `${node.content}\n[[img:${node.image_path}]]` : node.content}
-              imageAlt="Zdjęcie w komentarzu"
-            />
+          <div className="social-comment-bubble rounded-2xl bg-muted px-3 py-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs font-semibold">{node.username}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {formatTimeAgo(node.created_at)}
+              </span>
+            </div>
+            <div className="mt-0.5">
+              <SocialContentBlock
+                content={node.image_path ? `${node.content}\n[[img:${node.image_path}]]` : node.content}
+                imageAlt="Zdjęcie w komentarzu"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 mt-1">
@@ -360,7 +362,7 @@ function CommentInput({ onSubmit, disabled, placeholder, onCancel, currentUserId
         <input
           ref={inputRef}
           type="text"
-          className="flex-1 bg-transparent border border-border rounded-lg px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="flex-1 bg-transparent border border-border rounded-full px-3 py-2 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 sm:rounded-lg sm:py-1.5 sm:text-sm"
           placeholder={placeholder ?? 'Napisz komentarz...'}
           value={content}
           onChange={(e) => {

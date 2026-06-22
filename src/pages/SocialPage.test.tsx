@@ -243,14 +243,16 @@ describe('SocialPage', () => {
       "[data-testid='social-feed-content']",
     );
     expect(feedContent).toHaveClass(
+      'social-facebook-feed',
       'w-full',
       'max-w-3xl',
       'mx-auto',
       'px-0',
-      'pt-2',
+      'pt-0',
       'sm:px-4',
       'sm:py-4',
     );
+    expect(container.querySelector('.social-mobile-page')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Social' })).toHaveClass(
       'sr-only',
@@ -279,6 +281,7 @@ describe('SocialPage', () => {
     expect(postContent).toBeInTheDocument();
     expect(postContent.closest('.app-surface')).not.toBeNull();
     expect(postContent.closest("[data-testid='social-feed-card']")).toHaveClass(
+      'social-facebook-card',
       'social-edge-surface',
       'rounded-none',
       'sm:rounded-xl',

@@ -131,17 +131,17 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       id={`social-item-${item.item_type}-${item.id}`}
       onClick={handleOpenItem}
       className={cn(
-        'app-surface social-edge-surface rounded-none overflow-hidden transition-shadow sm:rounded-xl',
+        'app-surface social-edge-surface social-facebook-card rounded-none overflow-hidden transition-shadow sm:rounded-xl',
         onOpenItem && 'cursor-pointer hover:shadow-lg',
         highlighted && 'ring-2 ring-primary/50 shadow-lg',
       )}
     >
-      <div className="flex items-center justify-between px-3 pt-3 pb-1 sm:px-4">
+      <div className="flex items-start justify-between gap-3 px-3 pt-3 pb-2 sm:px-4">
         <Link
           to={`/profile/${item.user_id}`}
-          className="flex items-center gap-2 group"
+          className="group flex min-w-0 items-center gap-2.5"
         >
-          <div className="h-7 w-7 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors overflow-hidden shrink-0">
+          <div className="h-10 w-10 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors overflow-hidden shrink-0 sm:h-7 sm:w-7">
             {hasAvatar ? (
               <img
                 src={item.avatar_url ?? undefined}
@@ -151,19 +151,21 @@ export const SocialFeedCard = memo(function SocialFeedCard({
                 onError={() => setAvatarFailed(true)}
               />
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-[11px] font-bold text-primary">
+              <div className="h-full w-full flex items-center justify-center text-sm font-bold text-primary sm:text-[11px]">
                 {item.username.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
-          <span className="text-sm font-semibold group-hover:text-primary transition-colors">
-            {item.username}
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-semibold leading-tight group-hover:text-primary transition-colors sm:text-sm">
+              {item.username}
+            </span>
+            <span className="block text-xs leading-tight text-muted-foreground sm:text-[11px]">
+              {formatSocialTimeAgo(item.created_at)}
+            </span>
           </span>
         </Link>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground">
-            {formatSocialTimeAgo(item.created_at)}
-          </span>
+        <div className="flex shrink-0 items-center gap-2">
           {item.item_type === 'coupon' && (
             <button
               type="button"
@@ -184,7 +186,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       </div>
 
       {item.item_type === 'post' && (
-        <div className="px-3 py-2 sm:px-4">
+        <div className="px-3 pb-2 pt-1 sm:px-4">
           <SocialContentBlock
             content={item.content}
             imageAlt="Zdjęcie w poście"
@@ -201,7 +203,10 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       )}
       {item.item_type === 'casino' && <CasinoContent item={item} />}
 
-      <div className="px-3 pb-3 space-y-2 sm:px-4" data-prevent-card-navigation>
+      <div
+        className="social-card-engagement space-y-2 px-3 pb-3 pt-1 sm:px-4"
+        data-prevent-card-navigation
+      >
         <ReactionBar
           reactions={item.reactions as ReactionCounts | null}
           myReaction={item.my_reaction as ReactionType | null}

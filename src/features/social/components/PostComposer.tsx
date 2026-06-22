@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Send, Loader2 } from 'lucide-react';
 import { MentionSuggestions } from '@/features/social/components/MentionSuggestions';
 import { useMentionAutocomplete } from '@/features/social/hooks/useMentionAutocomplete';
 import { applyMention } from '@/features/social/mentions';
 import { compressImageFile } from '@/features/social/images';
 import { SocialImagePreview } from '@/features/social/components/SocialImagePreview';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface AttachedImage {
@@ -32,6 +39,13 @@ interface PostComposerProps {
   onSubmit: (content: string, imageBlob?: Blob) => Promise<void>;
   disabled?: boolean;
   currentUserId?: string;
+  currentUsername?: string;
+  currentUserAvatarUrl?: string | null;
+}
+
+interface ComposerDraftState {
+  content: string;
+  attachedImage: AttachedImage | null;
 }
 
 const MAX_LENGTH = 500;
@@ -63,15 +77,126 @@ function useIsCompactComposerViewport() {
   return isCompactViewport;
 }
 
-export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposerProps) {
-  const [content, setContent] = useState('');
+export function PostComposer({
+  onSubmit,
+  disabled,
+  currentUserId,
+  currentUsername,
+  currentUserAvatarUrl,
+}: PostComposerProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [draft, setDraft] = useState<ComposerDraftState>({
+    content: '',
+    attachedImage: null,
+  });
+  const isCompactViewport = useIsCompactComposerViewport();
+
+  if (isCompactViewport) {
+    return (
+      <div
+        data-testid="post-composer"
+        data-state={mobileOpen ? 'open' : 'trigger'}
+        className="social-compose-entry"
+      >
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Utwórz post"
+              disabled={disabled}
+              className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors disabled:opacity-60"
+            >
+              <ComposerAvatar
+                username={currentUsername}
+                avatarUrl={currentUserAvatarUrl}
+                className="h-10 w-10"
+              />
+              <span className="min-w-0 flex-1 rounded-full bg-muted px-4 py-2.5 text-[15px] font-medium leading-none text-muted-foreground">
+                Co nowego?
+              </span>
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="bottom"
+            className="social-composer-sheet max-h-[calc(var(--app-viewport-height,100svh)-0.75rem)] overflow-hidden rounded-t-[20px] border-border bg-background p-0 shadow-2xl sm:hidden"
+          >
+            <SheetHeader className="border-b border-border px-4 pb-3 pt-4 text-center">
+              <SheetTitle className="text-base font-bold">
+                Utwórz post
+              </SheetTitle>
+            </SheetHeader>
+            <ComposerEditor
+              onSubmit={onSubmit}
+              disabled={disabled}
+              currentUserId={currentUserId}
+              currentUsername={currentUsername}
+              currentUserAvatarUrl={currentUserAvatarUrl}
+              variant="sheet"
+              draft={draft}
+              onDraftChange={setDraft}
+              autoFocus
+              onSubmitted={() => {
+                setDraft({ content: '', attachedImage: null });
+                setMobileOpen(false);
+              }}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
+
+  return (
+    <ComposerEditor
+      onSubmit={onSubmit}
+      disabled={disabled}
+      currentUserId={currentUserId}
+      currentUsername={currentUsername}
+      currentUserAvatarUrl={currentUserAvatarUrl}
+      variant="desktop"
+      rootTestId="post-composer"
+      draft={draft}
+      onDraftChange={setDraft}
+      onSubmitted={() => setDraft({ content: '', attachedImage: null })}
+    />
+  );
+}
+
+interface ComposerEditorProps extends PostComposerProps {
+  variant: 'desktop' | 'sheet';
+  draft: ComposerDraftState;
+  onDraftChange: (draft: ComposerDraftState) => void;
+  autoFocus?: boolean;
+  onSubmitted?: () => void;
+  rootTestId?: string;
+}
+
+function ComposerEditor({
+  onSubmit,
+  disabled,
+  currentUserId,
+  currentUsername,
+  currentUserAvatarUrl,
+  variant,
+  draft,
+  onDraftChange,
+  autoFocus = false,
+  onSubmitted,
+  rootTestId,
+}: ComposerEditorProps) {
   const [submitting, setSubmitting] = useState(false);
   const [caretPosition, setCaretPosition] = useState(0);
-  const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
-  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const shouldReduceMotion = useReducedMotion();
-  const isCompactViewport = useIsCompactComposerViewport();
+  const isSheet = variant === 'sheet';
+  const { content, attachedImage } = draft;
+
+  const setContent = (content: string) => {
+    onDraftChange({ ...draft, content });
+  };
+
+  const setAttachedImage = (attachedImage: AttachedImage | null) => {
+    onDraftChange({ ...draft, attachedImage });
+  };
 
   const { activeMention, suggestions, loading } = useMentionAutocomplete({
     value: content,
@@ -80,9 +205,6 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
   });
 
   const trimmed = content.trim();
-  const expanded =
-    focused || trimmed.length > 0 || !!attachedImage || !!activeMention || submitting;
-  const compact = isCompactViewport && !expanded;
   const canSubmit =
     (trimmed.length > 0 || !!attachedImage) &&
     trimmed.length <= MAX_LENGTH &&
@@ -98,16 +220,22 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
       } else {
         await onSubmit(trimmed);
       }
-      setContent('');
       if (attachedImage) {
         URL.revokeObjectURL(attachedImage.previewUrl);
       }
-      setAttachedImage(null);
-      setFocused(false);
+      onSubmitted?.();
     } finally {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const timeout = window.setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 120);
+    return () => window.clearTimeout(timeout);
+  }, [autoFocus]);
 
   useEffect(() => {
     return () => {
@@ -163,25 +291,43 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
   };
 
   return (
-    <motion.div
-      layout
-      data-testid="post-composer"
-      data-state={compact ? 'compact' : 'expanded'}
-      transition={
-        shouldReduceMotion
-          ? { duration: 0 }
-          : { layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }
-      }
-      className="app-surface social-edge-surface overflow-hidden rounded-none p-2 sm:rounded-xl sm:p-4"
+    <div
+      data-testid={rootTestId}
+      data-state="expanded"
+      className={cn(
+        isSheet
+          ? 'space-y-3 overflow-y-auto px-4 pb-[calc(1rem+var(--safe-area-bottom))] pt-4'
+          : 'app-surface social-edge-surface overflow-hidden rounded-xl p-4',
+      )}
     >
+      {isSheet && (
+        <div className="flex items-center gap-3">
+          <ComposerAvatar
+            username={currentUsername}
+            avatarUrl={currentUserAvatarUrl}
+            className="h-10 w-10"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {currentUsername || 'Ty'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Post w feedzie
+            </p>
+          </div>
+        </div>
+      )}
       <textarea
         ref={textareaRef}
-        className="w-full resize-none bg-transparent border border-border rounded-lg px-3 py-2 text-sm transition-[min-height,padding] duration-200 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 sm:p-3"
-        rows={compact ? 1 : 3}
+        className={cn(
+          'w-full resize-none placeholder:text-muted-foreground focus:outline-none',
+          isSheet
+            ? 'min-h-[10rem] rounded-2xl border-0 bg-muted px-4 py-3 text-base leading-6 focus:ring-0'
+            : 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm transition-[min-height,padding] duration-200 focus:ring-2 focus:ring-primary/30 sm:p-3',
+        )}
+        rows={isSheet ? 5 : 3}
         placeholder="Co nowego?"
         value={content}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
         onChange={(e) => {
           setContent(e.target.value);
           setCaretPosition(e.target.selectionStart ?? e.target.value.length);
@@ -213,7 +359,7 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
           />
         </div>
       )}
-      <div className="flex items-center justify-between mt-2">
+      <div className={cn('flex items-center justify-between', isSheet ? 'pt-1' : 'mt-2')}>
         <span
           className={`text-xs ${
             trimmed.length > MAX_LENGTH ? 'text-destructive' : 'text-muted-foreground'
@@ -223,6 +369,7 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
         </span>
         <Button
           size="sm"
+          className={cn(isSheet && 'rounded-full px-4')}
           onClick={handleSubmit}
           disabled={!canSubmit}
           aria-label="Opublikuj post"
@@ -235,6 +382,40 @@ export function PostComposer({ onSubmit, disabled, currentUserId }: PostComposer
           Opublikuj
         </Button>
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+interface ComposerAvatarProps {
+  username?: string;
+  avatarUrl?: string | null;
+  className?: string;
+}
+
+function ComposerAvatar({ username, avatarUrl, className }: ComposerAvatarProps) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const hasAvatar = Boolean(avatarUrl) && !avatarFailed;
+  const fallback = (username || 'T').charAt(0).toUpperCase();
+
+  return (
+    <span
+      className={cn(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary',
+        className,
+      )}
+      aria-hidden="true"
+    >
+      {hasAvatar ? (
+        <img
+          src={avatarUrl ?? undefined}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setAvatarFailed(true)}
+        />
+      ) : (
+        fallback
+      )}
+    </span>
   );
 }

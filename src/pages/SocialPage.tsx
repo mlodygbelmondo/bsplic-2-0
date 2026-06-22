@@ -101,7 +101,7 @@ export default function SocialPage() {
   const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileChromeStateRef = useRef<ScrollChromeState>();
   const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
@@ -637,7 +637,7 @@ export default function SocialPage() {
   // ── Render ─────────────────────────────────────────────────
 
   return (
-    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
+    <div className="social-mobile-page h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar mobileBottomNavHidden={mobileChromeHidden} />
       <div
         data-testid="social-scroll-container"
@@ -660,7 +660,7 @@ export default function SocialPage() {
       >
         <div
           data-testid="social-feed-content"
-          className="w-full max-w-3xl mx-auto px-0 pt-2 pb-3 sm:px-4 sm:py-4"
+          className="social-facebook-feed w-full max-w-3xl mx-auto px-0 pt-0 pb-3 sm:px-4 sm:py-4"
         >
           <h1 className="sr-only sm:not-sr-only sm:text-2xl sm:font-bold sm:mb-4">
             Social
@@ -668,7 +668,7 @@ export default function SocialPage() {
 
           <div
             data-testid="social-filter-bar"
-            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-3 flex w-full items-center gap-1 overflow-x-auto rounded-none border-x-0 px-2 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
+            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-2 flex w-full items-center gap-1 overflow-x-auto rounded-none border-x-0 px-3 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
           >
             <button
               type="button"
@@ -722,10 +722,12 @@ export default function SocialPage() {
 
           {/* Post composer for logged-in users */}
           {user && (
-            <div className="mb-3 sm:mb-4">
+            <div className="mb-2 sm:mb-4">
               <PostComposer
                 onSubmit={handleCreatePost}
                 currentUserId={user.id}
+                currentUsername={profile?.username ?? undefined}
+                currentUserAvatarUrl={profile?.avatar_url}
               />
             </div>
           )}
