@@ -36,9 +36,10 @@ export function CasinoLobby({
   return (
     <div className="w-full max-w-full min-w-0 space-y-5 text-white">
       <motion.div
+        data-testid="casino-roulette-hero"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl sm:p-8"
+        className="relative hidden overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-xl sm:p-8 md:block"
       >
         {/* Decorative glow */}
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />

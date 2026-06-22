@@ -38,4 +38,19 @@ describe('CasinoLobby', () => {
     expect(screen.getByText('00:08')).toBeInTheDocument();
     expect(screen.getByText('#1597')).toBeInTheDocument();
   });
+
+  it('hides the top hero container on mobile while keeping it on desktop', () => {
+    render(
+      <CasinoLobby
+        userId="user-1"
+        balance={100}
+        refreshProfile={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('casino-roulette-hero')).toHaveClass(
+      'hidden',
+      'md:block',
+    );
+  });
 });
