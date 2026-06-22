@@ -55,7 +55,7 @@ export function getLiquidGlassMobileNavActiveItemClassName(
     return "text-[#ffe14a] bg-white/[0.13] shadow-[0_0_0_1px_rgba(255,255,255,0.16),0_10px_24px_rgba(255,225,74,0.16),inset_0_1px_0_rgba(255,255,255,0.24)]";
   }
 
-  return "text-[#c90018] bg-[#c90018]/[0.10] shadow-[0_0_0_1px_rgba(201,0,24,0.12),inset_0_1px_0_rgba(255,255,255,0.92)]";
+  return "text-[#c90018] bg-[#c90018]/[0.10] -translate-y-0.5 shadow-[0_0_0_1px_rgba(201,0,24,0.12),inset_0_1px_0_rgba(255,255,255,0.92)]";
 }
 
 export function getLiquidGlassMobileNavInactiveItemClassName(

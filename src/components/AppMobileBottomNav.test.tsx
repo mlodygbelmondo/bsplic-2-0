@@ -105,6 +105,7 @@ describe("AppMobileBottomNav", () => {
 
     expect(activeLink.className).not.toContain("0_4px_12px");
     expect(activeLink.className).not.toContain("0_10px_24px");
+    expect(activeLink).toHaveClass("-translate-y-0.5");
     expect(glassSurface).toHaveClass("bg-white/[0.86]");
     expect(activeLabel).not.toHaveClass("bg-white/[0.78]");
     expect(activeLabel).toHaveClass(
