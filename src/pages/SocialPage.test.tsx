@@ -337,6 +337,44 @@ describe('SocialPage', () => {
         name: 'Otwórz relację Typsterka',
       }),
     ).toBeInTheDocument();
+    expect(
+      within(stories).queryByRole('link', { name: 'Profil Poster' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('falls back to profile links when there are no active stories', async () => {
+    fetchSocialFeedMock.mockResolvedValue([
+      makePostFeedItem({
+        id: 'post-profile-1',
+        user_id: 'user-profile-1',
+        username: 'Poster',
+        avatar_url: 'https://cdn.example/poster.jpg',
+      }),
+      makeCouponFeedItem({
+        id: 'coupon-profile-2',
+        user_id: 'user-profile-2',
+        username: 'Typsterka',
+        avatar_url: null,
+      }),
+    ]);
+    fetchActiveSocialStoriesMock.mockResolvedValue([]);
+
+    renderSocialPage();
+
+    expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
+
+    const stories = screen.getByTestId('social-stories-strip');
+    expect(
+      within(stories).getByRole('link', { name: 'Profil Poster' }),
+    ).toHaveAttribute('href', '/profile/user-profile-1');
+    expect(
+      within(stories).getByRole('link', { name: 'Profil Typsterka' }),
+    ).toHaveAttribute('href', '/profile/user-profile-2');
+    expect(
+      within(stories).queryByRole('button', {
+        name: 'Otwórz relację Poster',
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('opens an active story in a full-screen viewer', async () => {

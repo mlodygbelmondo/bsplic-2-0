@@ -778,23 +778,54 @@
     }
 
     .social-mobile-page .social-edge-filter.app-subsurface {
-      border-top-width: 0;
-      border-bottom: 1px solid hsl(var(--border));
-      background: hsl(var(--card));
-      box-shadow: 0 1px 0 hsl(0 0% 0% / 0.04);
+      border: 0;
+      background: hsl(var(--card)) !important;
+      box-shadow: none;
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
+      scrollbar-width: none;
     }
 
-    .social-mobile-page .social-edge-filter button {
+    .social-mobile-page .social-edge-filter::-webkit-scrollbar {
+      display: none;
+    }
+
+    .social-mobile-page .social-edge-filter .social-filter-button {
+      position: relative;
+      min-height: 3.15rem;
+      padding-inline: 1.2rem;
+      border-radius: 0.65rem;
+      background: transparent;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.98rem;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .social-mobile-page .social-edge-filter .social-filter-button:hover {
+      background: hsl(var(--muted) / 0.72);
+      color: hsl(var(--foreground));
+    }
+
+    .social-mobile-page .social-edge-filter .social-filter-button[data-active="true"] {
+      background: transparent;
+      color: hsl(var(--primary));
+    }
+
+    .social-mobile-page .social-edge-filter .social-filter-button[data-active="true"]::after {
+      content: "";
+      position: absolute;
+      right: 1.05rem;
+      bottom: 0.25rem;
+      left: 1.05rem;
+      height: 0.22rem;
       border-radius: 999px;
+      background: hsl(var(--primary));
     }
 
     .social-mobile-page .social-compose-entry,
     .social-mobile-page .social-facebook-card.app-surface {
       border: 0;
-      border-top: 1px solid hsl(var(--border));
-      border-bottom: 1px solid hsl(var(--border));
       background: hsl(var(--card));
       box-shadow: none;
       color: hsl(var(--foreground));
@@ -809,8 +840,7 @@
     }
 
     .social-mobile-page .social-facebook-stories {
-      border-top: 1px solid hsl(var(--border));
-      border-bottom: 1px solid hsl(var(--border));
+      border: 0;
       background: hsl(var(--card));
       scrollbar-width: none;
     }
@@ -937,7 +967,7 @@
     }
 
     .social-mobile-page .social-card-engagement {
-      border-top: 1px solid hsl(var(--border) / 0.8);
+      border-top: 0;
     }
 
     .social-mobile-page .social-post-icon-button {
@@ -1028,8 +1058,8 @@
     .social-mobile-page .social-mobile-action-row {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      border-top: 1px solid hsl(var(--border));
-      border-bottom: 1px solid hsl(var(--border) / 0.55);
+      border-top: 0;
+      border-bottom: 0;
     }
 
     .social-mobile-page .social-mobile-action-button {

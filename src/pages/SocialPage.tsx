@@ -18,7 +18,10 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostComposer } from '@/features/social/components/PostComposer';
 import { SocialFeedCard } from '@/features/social/components/SocialFeedCard';
-import { SocialStories } from '@/features/social/components/SocialStories';
+import {
+  SocialStories,
+  type SocialStoryProfile,
+} from '@/features/social/components/SocialStories';
 import { buildSocialContent } from '@/features/social/content';
 import { respondAsEniu } from '@/features/social/api/eniuBot';
 import { mentionsEniu } from '@/features/social/eniuBot';
@@ -158,6 +161,24 @@ export default function SocialPage() {
     if (feedFilter === 'all') return feedItems;
     return feedItems.filter((item) => item.item_type === feedFilter);
   }, [feedItems, feedFilter]);
+  const socialStoryProfiles = useMemo<SocialStoryProfile[]>(() => {
+    const seen = new Set<string>();
+    const profiles: SocialStoryProfile[] = [];
+
+    for (const item of feedItems) {
+      if (seen.has(item.user_id)) continue;
+      seen.add(item.user_id);
+      profiles.push({
+        userId: item.user_id,
+        username: item.username,
+        avatarUrl: item.avatar_url,
+      });
+
+      if (profiles.length >= 8) break;
+    }
+
+    return profiles;
+  }, [feedItems]);
   const isFilteredEmpty =
     feedFilter !== 'all' && feedItems.length > 0 && filteredFeedItems.length === 0;
   const emptyStateTitle = isFilteredEmpty
@@ -706,12 +727,13 @@ export default function SocialPage() {
 
           <div
             data-testid="social-filter-bar"
-            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-2 flex w-full items-center gap-1 overflow-x-auto rounded-none border-x-0 px-3 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
+            className="app-subsurface social-edge-filter sticky top-0 z-20 mb-0 flex w-full items-center gap-2 overflow-x-auto rounded-none border-0 bg-card px-3 py-2 sm:static sm:mb-4 sm:inline-flex sm:w-auto sm:rounded-lg sm:border sm:p-1"
           >
             <button
               type="button"
+              data-active={feedFilter === 'all'}
               className={cn(
-                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'all'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -722,8 +744,9 @@ export default function SocialPage() {
             </button>
             <button
               type="button"
+              data-active={feedFilter === 'coupon'}
               className={cn(
-                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'coupon'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -734,8 +757,9 @@ export default function SocialPage() {
             </button>
             <button
               type="button"
+              data-active={feedFilter === 'post'}
               className={cn(
-                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'post'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -746,8 +770,9 @@ export default function SocialPage() {
             </button>
             <button
               type="button"
+              data-active={feedFilter === 'casino'}
               className={cn(
-                'shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
+                'social-filter-button shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors',
                 feedFilter === 'casino'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -760,7 +785,7 @@ export default function SocialPage() {
 
           {/* Post composer for logged-in users */}
           {user && (
-            <div className="mb-2 sm:mb-4">
+            <div className="mb-0 sm:mb-4">
               <PostComposer
                 onSubmit={handleCreatePost}
                 currentUserId={user.id}
@@ -773,6 +798,7 @@ export default function SocialPage() {
           {user && (
             <SocialStories
               stories={stories}
+              profileFallbacks={socialStoryProfiles}
               currentUsername={profile?.username ?? 'Ty'}
               currentAvatarUrl={profile?.avatar_url ?? null}
               onCreateStory={handleCreateStory}

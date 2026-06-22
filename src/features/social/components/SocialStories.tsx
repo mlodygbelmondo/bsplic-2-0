@@ -8,6 +8,8 @@ import {
   Send,
   X,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +29,6 @@ import { parseSocialContent } from '@/features/social/content';
 import { compressImageFile, getSocialImageUrl } from '@/features/social/images';
 import { cn } from '@/lib/utils';
 import type { SocialStory } from '@/types/database';
-import { toast } from 'sonner';
 
 interface AttachedStoryImage {
   blob: Blob;
@@ -37,10 +38,17 @@ interface AttachedStoryImage {
 
 interface SocialStoriesProps {
   stories: SocialStory[];
+  profileFallbacks: SocialStoryProfile[];
   currentUsername: string;
   currentAvatarUrl: string | null;
   onCreateStory: (content: string, imageBlob?: Blob) => Promise<void>;
   disabled?: boolean;
+}
+
+export interface SocialStoryProfile {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
 }
 
 const STORY_TEXT_MAX_LENGTH = 500;
@@ -87,6 +95,7 @@ function formatStoryTimeLeft(expiresAt: string) {
 
 export function SocialStories({
   stories,
+  profileFallbacks,
   currentUsername,
   currentAvatarUrl,
   onCreateStory,
@@ -194,6 +203,36 @@ export function SocialStories({
             />
           </button>
         ))}
+
+        {activeStories.length === 0 &&
+          profileFallbacks.map((profile) => (
+            <Link
+              key={profile.userId}
+              to={`/profile/${profile.userId}`}
+              className="social-story-tile social-story-profile"
+              aria-label={`Profil ${profile.username}`}
+            >
+              <span className="social-story-image">
+                <StoryImage
+                  username={profile.username}
+                  avatarUrl={profile.avatarUrl}
+                  className="h-full w-full"
+                />
+              </span>
+              <span className="social-story-avatar-ring">
+                <StoryImage
+                  username={profile.username}
+                  avatarUrl={profile.avatarUrl}
+                  className="h-full w-full"
+                />
+              </span>
+              <span
+                className="social-story-label"
+                data-label={profile.username}
+                aria-hidden="true"
+              />
+            </Link>
+          ))}
       </div>
 
       <StoryComposerSheet
