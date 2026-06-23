@@ -99,6 +99,19 @@
         flex-direction: column;
         align-items: center;
         gap: 14px;
+        animation: splash-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      @keyframes splash-enter {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(10px);
+          filter: blur(10px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+          filter: blur(0);
+        }
       }
       .splash-wordmark {
         font-family:
@@ -116,10 +129,39 @@
         letter-spacing: -0.03em;
         line-height: 1;
         white-space: nowrap;
-        color: #ffffff;
-        text-shadow:
-          0 10px 34px hsl(355 100% 50% / 0.34),
-          0 2px 12px rgb(0 0 0 / 0.45);
+        background: linear-gradient(
+          110deg,
+          #ffffff 35%,
+          hsl(46 98% 64%) 48%,
+          hsl(355 100% 62%) 52%,
+          #ffffff 65%
+        );
+        background-size: 250% 100%;
+        background-position: 100% 0;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        animation: splash-shimmer 2.4s ease-in-out 0.5s infinite;
+      }
+      /* 100% and 0% both land in the gradient's solid-white regions, so the
+         color band sweeps fully across the text and never parks on it. */
+      @keyframes splash-shimmer {
+        0% {
+          background-position: 100% 0;
+        }
+        55%,
+        100% {
+          background-position: 0% 0;
+        }
+      }
+      @keyframes splash-fade-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
       }
       .splash-track {
         width: 148px;
@@ -128,6 +170,7 @@
         border-radius: 999px;
         overflow: hidden;
         background: hsl(0 0% 100% / 0.12);
+        animation: splash-fade-in 0.8s ease 0.5s both;
       }
       .splash-bar {
         height: 100%;
