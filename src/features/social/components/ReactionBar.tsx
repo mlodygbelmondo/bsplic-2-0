@@ -1,5 +1,24 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+} from 'react';
+import { ThumbsUp } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
-import { REACTION_EMOJIS, REACTION_TYPES, sortedReactions, totalReactions, type ReactionType, type ReactionCounts } from '../reactions';
+import {
+  REACTION_EMOJIS,
+  REACTION_LABELS,
+  REACTION_TYPES,
+  sortedReactions,
+  totalReactions,
+  type ReactionCounts,
+  type ReactionType,
+} from '../reactions';
+
+const LONG_PRESS_MS = 500;
+const PICKER_CLOSE_MS = 140;
 
 interface ReactionBarProps {
   reactions: ReactionCounts | null;
@@ -7,89 +26,212 @@ interface ReactionBarProps {
   onToggle: (emoji: ReactionType) => void;
   onOpenReactors?: () => void;
   disabled?: boolean;
+  className?: string;
+  actionClassName?: string;
+  showSummary?: boolean;
+  showActionIcon?: boolean;
 }
 
-export function ReactionBar({ reactions, myReaction, onToggle, onOpenReactors, disabled }: ReactionBarProps) {
+export function ReactionBar({
+  reactions,
+  myReaction,
+  onToggle,
+  onOpenReactors,
+  disabled,
+  className,
+  actionClassName,
+  showSummary = true,
+  showActionIcon = false,
+}: ReactionBarProps) {
   const sorted = sortedReactions(reactions);
   const reactionsTotal = totalReactions(reactions);
+  const visibleReactions = sorted.slice(0, 3);
 
   return (
-    <div className="social-reaction-bar flex items-center gap-1 flex-wrap" role="group" aria-label="Reakcje">
-      {/* Existing reactions */}
-      {sorted.map(({ type, emoji, count }) => (
-        <button
-          key={type}
-          type="button"
-          onClick={() => onToggle(type)}
-          disabled={disabled}
-          className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition-colors border',
-            myReaction === type
-              ? 'bg-primary/10 border-primary/30 text-primary font-semibold'
-              : 'bg-muted/50 border-transparent text-muted-foreground hover:bg-muted',
-            disabled && 'opacity-50 cursor-not-allowed',
-          )}
-          aria-label={`${emoji} ${count}`}
-          aria-pressed={myReaction === type}
-        >
-          <span>{emoji}</span>
-          <span>{count}</span>
-        </button>
-      ))}
-
-      {/* Add reaction picker (show emojis not yet present or that have 0 count) */}
-      <ReactionPicker
-        existingTypes={sorted.map((r) => r.type)}
-        myReaction={myReaction}
-        onToggle={onToggle}
-        disabled={disabled}
-      />
-
-      {onOpenReactors && reactionsTotal > 0 && (
+    <div
+      className={cn(
+        'social-reaction-bar flex items-center gap-1.5 flex-wrap',
+        className,
+      )}
+      role="group"
+      aria-label="Reakcje"
+    >
+      {showSummary && reactionsTotal > 0 && (
         <button
           type="button"
           onClick={onOpenReactors}
-          disabled={disabled}
-          className="ml-1 text-xs font-medium text-primary hover:underline disabled:no-underline"
+          disabled={disabled || !onOpenReactors}
+          className="social-reaction-summary-button inline-flex items-center gap-1 rounded-full text-xs font-medium text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-55"
+          aria-label={`Wyświetl reakcje (${reactionsTotal})`}
         >
-          Wyświetl reakcje
+          <span className="social-reaction-summary-stack" aria-hidden="true">
+            {visibleReactions.map(({ type, emoji }) => (
+              <span key={type}>{emoji}</span>
+            ))}
+          </span>
+          <span>{reactionsTotal}</span>
         </button>
       )}
+
+      <ReactionActionButton
+        myReaction={myReaction}
+        onToggle={onToggle}
+        disabled={disabled}
+        className={actionClassName}
+        showIcon={showActionIcon}
+      />
     </div>
   );
 }
 
-interface ReactionPickerProps {
-  existingTypes: ReactionType[];
+interface ReactionActionButtonProps {
   myReaction: ReactionType | null;
   onToggle: (emoji: ReactionType) => void;
   disabled?: boolean;
+  className?: string;
+  showIcon?: boolean;
 }
 
-function ReactionPicker({ existingTypes, myReaction, onToggle, disabled }: ReactionPickerProps) {
-  const missingTypes = REACTION_TYPES.filter((t) => !existingTypes.includes(t));
+function ReactionActionButton({
+  myReaction,
+  onToggle,
+  disabled,
+  className,
+  showIcon,
+}: ReactionActionButtonProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const longPressTimeoutRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const suppressNextClickRef = useRef(false);
+  const selectedReaction = myReaction ?? 'like';
+  const label = REACTION_LABELS[selectedReaction];
 
-  // If all reaction types are already shown, no need for a picker
-  if (missingTypes.length === 0) return null;
+  useEffect(() => {
+    return () => {
+      clearLongPressTimeout();
+      clearCloseTimeout();
+    };
+  }, []);
+
+  const clearLongPressTimeout = () => {
+    if (longPressTimeoutRef.current === null) return;
+    window.clearTimeout(longPressTimeoutRef.current);
+    longPressTimeoutRef.current = null;
+  };
+
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current === null) return;
+    window.clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = null;
+  };
+
+  const openPicker = () => {
+    if (disabled) return;
+    clearCloseTimeout();
+    setPickerOpen(true);
+  };
+
+  const closePickerSoon = () => {
+    clearCloseTimeout();
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setPickerOpen(false);
+    }, PICKER_CLOSE_MS);
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    if (disabled || event.pointerType === 'mouse') return;
+    clearLongPressTimeout();
+    longPressTimeoutRef.current = window.setTimeout(() => {
+      suppressNextClickRef.current = true;
+      setPickerOpen(true);
+    }, LONG_PRESS_MS);
+  };
+
+  const handlePointerEnd = () => {
+    clearLongPressTimeout();
+  };
+
+  const handleActionClick = () => {
+    if (disabled) return;
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+
+    onToggle(selectedReaction);
+  };
+
+  const handlePickerSelect = (reaction: ReactionType) => {
+    if (disabled) return;
+    suppressNextClickRef.current = false;
+    setPickerOpen(false);
+    onToggle(reaction);
+  };
 
   return (
-    <div className="inline-flex items-center gap-0.5 ml-1">
-      {missingTypes.map((type) => (
-        <button
-          key={type}
-          type="button"
-          onClick={() => onToggle(type)}
-          disabled={disabled}
-          className={cn(
-            'rounded-full w-6 h-6 flex items-center justify-center text-sm transition-colors hover:bg-muted',
-            myReaction === type && 'ring-2 ring-primary/30',
-            disabled && 'opacity-50 cursor-not-allowed',
-          )}
-          aria-label={REACTION_EMOJIS[type]}
+    <span
+      className="social-reaction-action-wrap relative inline-flex"
+      onMouseEnter={openPicker}
+      onMouseLeave={closePickerSoon}
+    >
+      <button
+        type="button"
+        className={cn(
+          'social-reaction-action-button inline-flex h-7 items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55',
+          myReaction && 'text-primary',
+          className,
+        )}
+        onClick={handleActionClick}
+        onMouseEnter={openPicker}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+        disabled={disabled}
+        aria-label={label}
+        aria-pressed={myReaction !== null}
+        aria-haspopup="menu"
+        aria-expanded={pickerOpen}
+      >
+        {showIcon ? (
+          myReaction ? (
+            <span aria-hidden="true">{REACTION_EMOJIS[myReaction]}</span>
+          ) : (
+            <ThumbsUp className="h-4 w-4" aria-hidden="true" />
+          )
+        ) : (
+          myReaction && (
+            <span aria-hidden="true">{REACTION_EMOJIS[myReaction]}</span>
+          )
+        )}
+        <span>{label}</span>
+      </button>
+
+      {pickerOpen && (
+        <div
+          className="social-reaction-picker"
+          role="menu"
+          aria-label="Wybierz reakcję"
+          onMouseEnter={openPicker}
+          onMouseLeave={closePickerSoon}
         >
-          {REACTION_EMOJIS[type]}
-        </button>
-      ))}
-    </div>
+          {REACTION_TYPES.map((reaction) => (
+            <button
+              key={reaction}
+              type="button"
+              role="menuitem"
+              className={cn(
+                'social-reaction-picker-option',
+                myReaction === reaction && 'is-selected',
+              )}
+              onClick={() => handlePickerSelect(reaction)}
+              aria-label={REACTION_LABELS[reaction]}
+            >
+              <span aria-hidden="true">{REACTION_EMOJIS[reaction]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }

@@ -9,7 +9,6 @@ import {
   MessageCircle,
   MoreHorizontal,
   Share2,
-  ThumbsUp,
   X,
 } from 'lucide-react';
 
@@ -288,8 +287,8 @@ export const SocialFeedCard = memo(function SocialFeedCard({
           commentCount={item.comment_count ?? comments.length}
           disabled={!isLoggedIn}
           onOpenReactors={() => onOpenItemReactors(item)}
-          onLike={() => {
-            void onToggleReaction(item.id, item.item_type, 'like');
+          onReact={(emoji) => {
+            void onToggleReaction(item.id, item.item_type, emoji);
           }}
           onComment={handleMobileCommentClick}
           onShare={() => {
@@ -344,7 +343,7 @@ interface MobileFacebookEngagementProps {
   commentCount: number;
   disabled: boolean;
   onOpenReactors: () => void;
-  onLike: () => void;
+  onReact: (emoji: ReactionType) => void;
   onComment: () => void;
   onShare: () => void;
 }
@@ -355,7 +354,7 @@ function MobileFacebookEngagement({
   commentCount,
   disabled,
   onOpenReactors,
-  onLike,
+  onReact,
   onComment,
   onShare,
 }: MobileFacebookEngagementProps) {
@@ -398,22 +397,16 @@ function MobileFacebookEngagement({
         data-testid="social-mobile-action-row"
         className="social-mobile-action-row sm:hidden"
       >
-        <button
-          type="button"
-          className={cn(
-            'social-mobile-action-button',
-            myReaction === 'like' && 'text-primary',
-          )}
-          onClick={onLike}
+        <ReactionBar
+          reactions={null}
+          myReaction={myReaction}
+          onToggle={onReact}
           disabled={disabled}
-          aria-pressed={myReaction === 'like'}
-        >
-          <ThumbsUp
-            className="h-4 w-4"
-            fill={myReaction === 'like' ? 'currentColor' : 'none'}
-          />
-          <span>Lubię to</span>
-        </button>
+          showSummary={false}
+          showActionIcon
+          className="social-mobile-reaction-control"
+          actionClassName="social-mobile-action-button"
+        />
         <button
           type="button"
           className="social-mobile-action-button"

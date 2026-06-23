@@ -62,10 +62,10 @@ describe('SocialFeedCard', () => {
 
     const actionRow = screen.getByTestId('social-mobile-action-row');
     expect(actionRow).toHaveClass('sm:hidden');
-    expect(screen.getByRole('button', { name: 'Lubię to' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Komentarz' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Udostępnij' })).toBeInTheDocument();
-    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(within(actionRow).getByRole('button', { name: 'Lubię to' })).toBeInTheDocument();
+    expect(within(actionRow).getByRole('button', { name: 'Komentarz' })).toBeInTheDocument();
+    expect(within(actionRow).getByRole('button', { name: 'Udostępnij' })).toBeInTheDocument();
+    expect(within(actionRow.parentElement!).getByText('9')).toBeInTheDocument();
     expect(within(actionRow.parentElement!).getByText('3 komentarze')).toBeInTheDocument();
 
     expect(container.querySelector('.social-desktop-reaction-bar')).toHaveClass(
@@ -74,19 +74,38 @@ describe('SocialFeedCard', () => {
     );
   });
 
-  it('opens the comment input from the mobile comment action', () => {
+  it('toggles the comment input from the engagement comment action', () => {
     const { props } = renderCard();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Komentarz' }));
+    fireEvent.click(
+      within(screen.getByTestId('social-mobile-action-row')).getByRole(
+        'button',
+        { name: 'Komentarz' },
+      ),
+    );
 
     expect(props.onFirstExpandComments).toHaveBeenCalledWith('post-1', 'post');
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
+
+    fireEvent.click(
+      within(screen.getByTestId('social-mobile-action-row')).getByRole(
+        'button',
+        { name: 'Komentarz' },
+      ),
+    );
+
+    expect(screen.queryByLabelText('Napisz komentarz...')).not.toBeInTheDocument();
   });
 
   it('toggles a like from the mobile Like action', () => {
     const { props } = renderCard();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lubię to' }));
+    fireEvent.click(
+      within(screen.getByTestId('social-mobile-action-row')).getByRole(
+        'button',
+        { name: 'Lubię to' },
+      ),
+    );
 
     expect(props.onToggleReaction).toHaveBeenCalledWith('post-1', 'post', 'like');
   });

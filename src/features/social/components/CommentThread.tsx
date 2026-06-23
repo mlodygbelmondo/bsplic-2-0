@@ -81,12 +81,16 @@ export function CommentThread({
     }
 
     lastExpandSignalRef.current = expandSignal;
-    setCollapsed(false);
-    setShowInput(true);
-
-    if (!commentsLoaded) {
-      onFirstExpand?.();
-    }
+    setCollapsed((currentCollapsed) => {
+      const nextCollapsed = !currentCollapsed;
+      if (!nextCollapsed) {
+        setShowInput(true);
+        if (!commentsLoaded) {
+          onFirstExpand?.();
+        }
+      }
+      return nextCollapsed;
+    });
   }, [commentsLoaded, expandSignal, onFirstExpand]);
 
   return (
@@ -240,28 +244,16 @@ function CommentNodeView({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mt-1">
-            <div className="hidden sm:block">
-              <ReactionBar
-                reactions={node.reactions as ReactionCounts | null}
-                myReaction={node.my_reaction as ReactionType | null}
-                onToggle={(emoji) => onToggleReaction(node.id, emoji)}
-                onOpenReactors={() => onOpenCommentReactors?.(node.id)}
-                disabled={disabled}
-              />
-            </div>
-            <button
-              type="button"
-              className={cn(
-                'social-comment-mobile-action text-[11px] font-semibold text-muted-foreground transition-colors hover:text-primary sm:hidden',
-                node.my_reaction === 'like' && 'text-primary',
-              )}
-              onClick={() => onToggleReaction(node.id, 'like')}
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            <ReactionBar
+              reactions={node.reactions as ReactionCounts | null}
+              myReaction={node.my_reaction as ReactionType | null}
+              onToggle={(emoji) => onToggleReaction(node.id, emoji)}
+              onOpenReactors={() => onOpenCommentReactors?.(node.id)}
               disabled={disabled}
-              aria-pressed={node.my_reaction === 'like'}
-            >
-              Lubię to
-            </button>
+              className="social-comment-reaction-bar"
+              actionClassName="social-comment-reaction-action"
+            />
             {canReply && (
               <button
                 type="button"

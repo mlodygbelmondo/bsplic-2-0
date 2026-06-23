@@ -114,7 +114,7 @@ describe('CommentThread', () => {
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
   });
 
-  it('can be expanded from a mobile post action without showing the inline toggle on mobile', () => {
+  it('can be toggled from a post action without showing the inline toggle on mobile', () => {
     const onFirstExpand = vi.fn();
     const { rerender } = render(
       <CommentThread
@@ -147,6 +147,21 @@ describe('CommentThread', () => {
     );
 
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
+    expect(onFirstExpand).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <CommentThread
+        {...defaultProps}
+        comments={[]}
+        initialCount={2}
+        commentsLoaded={false}
+        onFirstExpand={onFirstExpand}
+        expandSignal={2}
+        hideToggleOnMobile
+      />,
+    );
+
+    expect(screen.queryByLabelText('Napisz komentarz...')).not.toBeInTheDocument();
     expect(onFirstExpand).toHaveBeenCalledTimes(1);
   });
 
@@ -294,7 +309,7 @@ describe('CommentThread', () => {
       />
     );
     fireEvent.click(screen.getByLabelText(/Pokaż komentarze/));
-    fireEvent.click(screen.getByLabelText('👍 2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lubię to' }));
 
     expect(onToggleReaction).toHaveBeenCalledWith('c1', 'like');
   });
@@ -312,7 +327,9 @@ describe('CommentThread', () => {
     );
 
     fireEvent.click(screen.getByLabelText(/Pokaż komentarze/));
-    fireEvent.click(screen.getByRole('button', { name: 'Wyświetl reakcje' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Wyświetl reakcje (2)' }),
+    );
 
     expect(onOpenCommentReactors).toHaveBeenCalledWith('c1');
   });

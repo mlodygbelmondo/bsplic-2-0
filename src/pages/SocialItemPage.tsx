@@ -354,12 +354,12 @@ export default function SocialItemPage() {
     item?.item_type === 'coupon' && item.legs !== null && item.legs.length > 1;
 
   return (
-    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
+    <div className="social-mobile-page h-safe-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div
           data-testid="social-item-content"
-          className="w-full max-w-3xl mx-auto px-0 pt-2 pb-[var(--mobile-bottom-nav-scroll-padding)] sm:px-4 sm:py-4"
+          className="social-facebook-feed w-full max-w-3xl mx-auto px-0 pt-2 pb-[var(--mobile-bottom-nav-scroll-padding)] sm:px-4 sm:py-4"
         >
           <Link
             to="/social"

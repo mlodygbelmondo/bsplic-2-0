@@ -128,6 +128,7 @@ describe('SocialItemPage', () => {
     expect(await screen.findByText('Komentarz widoczny od razu')).toBeInTheDocument();
     expect(screen.getByLabelText('Napisz komentarz...')).toBeInTheDocument();
     expect(container.querySelector("[data-testid='social-item-content']")).toHaveClass(
+      'social-facebook-feed',
       'w-full',
       'max-w-3xl',
       'mx-auto',
@@ -136,6 +137,7 @@ describe('SocialItemPage', () => {
       'sm:px-4',
       'sm:py-4',
     );
+    expect(container.querySelector('.social-mobile-page')).toBeInTheDocument();
     expect(container.querySelector("[data-testid='social-feed-card']")).toHaveClass(
       'social-edge-surface',
       'rounded-none',

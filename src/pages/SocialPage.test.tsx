@@ -315,7 +315,7 @@ describe('SocialPage', () => {
     );
   });
 
-  it('renders a mobile Facebook-style stories strip below the composer', async () => {
+  it('renders a Facebook-style stories strip below the composer on mobile and desktop', async () => {
     fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
     fetchActiveSocialStoriesMock.mockResolvedValue([
       makeSocialStory(),
@@ -332,7 +332,8 @@ describe('SocialPage', () => {
     expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
 
     const stories = screen.getByTestId('social-stories-strip');
-    expect(stories).toHaveClass('social-facebook-stories', 'sm:hidden');
+    expect(stories).toHaveClass('social-facebook-stories');
+    expect(stories).not.toHaveClass('sm:hidden');
     expect(
       within(stories).getByRole('button', { name: 'Utwórz relację' }),
     ).toBeInTheDocument();
@@ -757,10 +758,10 @@ describe('SocialPage', () => {
 
     renderSocialPage();
 
-    const openReactorsButton = await screen.findByRole('button', {
-      name: 'Wyświetl reakcje',
+    const openReactorsButtons = await screen.findAllByRole('button', {
+      name: 'Wyświetl reakcje (2)',
     });
-    fireEvent.click(openReactorsButton);
+    fireEvent.click(openReactorsButtons[0]);
 
     await waitFor(() => {
       expect(fetchReactorsMock).toHaveBeenCalledWith({
@@ -1144,8 +1145,9 @@ describe('SocialPage', () => {
     ]);
     renderSocialPage();
 
-    // ReactionBar should show the count
-    expect(await screen.findByText('3')).toBeInTheDocument();
+    expect(
+      await screen.findAllByRole('button', { name: 'Wyświetl reakcje (4)' }),
+    ).not.toHaveLength(0);
   });
 
   it('toggles post reaction without reloading whole feed', async () => {
@@ -1160,7 +1162,9 @@ describe('SocialPage', () => {
 
     renderSocialPage();
 
-    const reactionButton = await screen.findByLabelText('👍 3');
+    const reactionButton = (await screen.findAllByRole('button', {
+      name: 'Lubię to',
+    }))[0];
     fireEvent.click(reactionButton);
 
     await waitFor(() => {
@@ -1173,7 +1177,9 @@ describe('SocialPage', () => {
     });
 
     expect(fetchSocialFeedMock).toHaveBeenCalledTimes(1);
-    expect(await screen.findByLabelText('👍 2')).toBeInTheDocument();
+    expect(
+      await screen.findAllByRole('button', { name: 'Wyświetl reakcje (2)' }),
+    ).not.toHaveLength(0);
   });
 
   it('toggles casino reaction through the server feed target', async () => {
@@ -1187,8 +1193,11 @@ describe('SocialPage', () => {
 
     renderSocialPage();
 
-    const reactionButton = await screen.findByLabelText('🔥 2');
-    fireEvent.click(reactionButton);
+    const reactionButton = (await screen.findAllByRole('button', {
+      name: 'Lubię to',
+    }))[0];
+    fireEvent.mouseEnter(reactionButton);
+    fireEvent.click(await screen.findByLabelText('Ogień'));
 
     await waitFor(() => {
       expect(toggleReactionMock).toHaveBeenCalledWith({
@@ -1201,7 +1210,9 @@ describe('SocialPage', () => {
     });
 
     expect(fetchSocialFeedMock).toHaveBeenCalledTimes(1);
-    expect(await screen.findByLabelText('🔥 3')).toBeInTheDocument();
+    expect(
+      await screen.findAllByRole('button', { name: 'Wyświetl reakcje (3)' }),
+    ).not.toHaveLength(0);
   });
 
   // ── AKO coupon toggle ────────────────────────────────────

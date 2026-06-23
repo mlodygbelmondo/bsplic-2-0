@@ -152,7 +152,7 @@ export function SocialStories({
     <>
       <div
         data-testid="social-stories-strip"
-        className="social-facebook-stories mb-2 flex gap-2 overflow-x-auto px-2 pb-2 sm:hidden"
+        className="social-facebook-stories mb-2 flex gap-2 overflow-x-auto px-2 pb-2"
       >
         <button
           type="button"
@@ -367,7 +367,7 @@ function StoryComposerSheet({
     >
       <SheetContent
         side="bottom"
-        className="social-story-composer-sheet max-h-[calc(var(--app-viewport-height,100svh)-0.75rem)] overflow-hidden rounded-t-[20px] border-border bg-background p-0 shadow-2xl sm:hidden"
+        className="social-story-composer-sheet max-h-[calc(var(--app-viewport-height,100svh)-0.75rem)] overflow-hidden rounded-t-[20px] border-border bg-background p-0 shadow-2xl sm:left-1/2 sm:right-auto sm:w-[min(34rem,calc(100vw-2rem))] sm:-translate-x-1/2 sm:rounded-t-2xl sm:border"
       >
         <SheetHeader className="border-b border-border px-4 pb-3 pt-4 text-center">
           <SheetTitle className="text-base font-bold">
