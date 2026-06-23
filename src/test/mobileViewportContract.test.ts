@@ -40,6 +40,36 @@ describe('mobile viewport contract', () => {
     expect(indexHtml).toContain("classList.add('standalone')");
   });
 
+  it('keeps the inline PWA splash wordmark readable without gradient text clipping support', async () => {
+    const indexHtml = await readProjectFile('index.html');
+
+    const wordmarkRule = indexHtml.match(
+      /\.splash-wordmark\s*{(?<body>[\s\S]*?)\n\s*}/,
+    )?.groups?.body;
+
+    expect(wordmarkRule).toBeDefined();
+    expect(wordmarkRule).toContain('color: #ffffff');
+    expect(wordmarkRule).not.toContain('color: transparent');
+    expect(wordmarkRule).not.toContain('-webkit-text-fill-color: transparent');
+  });
+
+  it('keeps critical PWA splash content visible on the first paint', async () => {
+    const indexHtml = await readProjectFile('index.html');
+
+    const centerRule = indexHtml.match(
+      /\.splash-center\s*{(?<body>[\s\S]*?)\n\s*}/,
+    )?.groups?.body;
+    const trackRule = indexHtml.match(
+      /\.splash-track\s*{(?<body>[\s\S]*?)\n\s*}/,
+    )?.groups?.body;
+
+    expect(centerRule).toBeDefined();
+    expect(centerRule).not.toContain('splash-enter');
+    expect(trackRule).toBeDefined();
+    expect(trackRule).not.toContain('splash-fade-in');
+    expect(indexHtml).not.toContain('filter: blur(10px)');
+  });
+
   it('paints the whole iOS PWA viewport behind the app shell', async () => {
     const css = await readProjectFile('src/index.css');
 
