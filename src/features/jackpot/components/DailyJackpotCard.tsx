@@ -135,7 +135,10 @@ export function DailyJackpotCard({
       : null;
   const ticketLimitReached = userTicketCount >= snapshot.maxTicketsPerPlayer;
   const hasEnoughBalance = balance >= snapshot.ticketPrice;
-  const canOpenDraw = snapshot.status === 'drawn' && Boolean(snapshot.poolId);
+  const canOpenDraw =
+    Boolean(snapshot.poolId) &&
+    (snapshot.status === 'drawn' ||
+      (snapshot.status === 'rolled_over' && snapshot.currentUserHasTicket));
   const canBuy =
     snapshot.status === 'collecting' &&
     !ticketLimitReached &&
@@ -184,6 +187,10 @@ export function DailyJackpotCard({
 
   const buttonLabel = (() => {
     if (actionIsDraw) {
+      if (snapshot.status === 'rolled_over') {
+        return 'Zobacz rozliczenie';
+      }
+
       return snapshot.currentUserHasTicket
         ? 'Przejdź do losowania'
         : 'Obejrzyj losowanie';

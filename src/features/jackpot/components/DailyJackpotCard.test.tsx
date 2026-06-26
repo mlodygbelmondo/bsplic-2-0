@@ -283,6 +283,39 @@ describe('DailyJackpotCard', () => {
     expect(onOpenDraw).toHaveBeenCalledWith('pool-1');
   });
 
+  it('opens the rollover settlement for a participated round without enough players', () => {
+    const onOpenDraw = vi.fn();
+
+    render(
+      <DailyJackpotCard
+        snapshot={{
+          ...snapshot,
+          status: 'rolled_over',
+          currentUserHasTicket: true,
+          currentUserTicketCount: 1,
+          currentUserTicketNumber: 12,
+          currentUserTicketNumbers: [12],
+        }}
+        loading={false}
+        buying={false}
+        balance={150}
+        onBuy={vi.fn()}
+        onOpenDraw={onOpenDraw}
+      />,
+    );
+
+    expect(screen.getByText('Pula przechodzi dalej')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Za mało uczestników. Ticket zwrócony, pula przechodzi na jutro.',
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zobacz rozliczenie/i }));
+
+    expect(onOpenDraw).toHaveBeenCalledWith('pool-1');
+  });
+
   it('allows buying a second ticket when the player has one ticket', () => {
     const onBuy = vi.fn();
 

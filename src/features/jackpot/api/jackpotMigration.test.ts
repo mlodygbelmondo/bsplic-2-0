@@ -261,6 +261,19 @@ describe('daily jackpot migration security invariants', () => {
     expect(migrationSql).not.toContain('Wygrał jackpot');
   });
 
+  it('notifies participants when a jackpot rolls over without enough players', () => {
+    const body = getFunctionBody(
+      'private.finalize_daily_jackpot_pool\\(\\s*p_pool_date DATE,\\s*p_snapshot_user_id UUID DEFAULT NULL\\s*\\)',
+    );
+
+    expect(body).toContain("'rolled_over'");
+    expect(body).toContain('FOR v_participant_user_id IN');
+    expect(body).toContain('public.create_user_notification');
+    expect(body).toContain('Pula jackpotu przeszła dalej');
+    expect(body).toContain("'event', 'rolled_over'");
+    expect(migrationSql).toContain('Backfill rollover notifications');
+  });
+
   it('exposes a replay RPC with participants and reward claim state', () => {
     const body = getFunctionBody(
       'public.get_daily_jackpot_draw\\(p_pool_id UUID\\)',
@@ -272,13 +285,28 @@ describe('daily jackpot migration security invariants', () => {
     expect(body).toContain('jsonb_agg');
   });
 
-  it('keeps rolled-over jackpot pools out of the draw replay route', () => {
+  it('exposes rolled-over participant settlements through the draw route', () => {
+    const body = getFunctionBody(
+      'public.get_daily_jackpot_draw\\(p_pool_id UUID\\)',
+    );
+    const stateBody = getFunctionBody('public.get_daily_jackpot_state\\(\\)');
+
+    expect(body).toContain("v_pool.status NOT IN ('drawn', 'rolled_over')");
+    expect(body).toContain("IF v_pool.status = 'rolled_over'");
+    expect(body).toContain('INSERT INTO public.daily_jackpot_draw_views');
+    expect(stateBody).toContain("p.status IN ('drawn', 'rolled_over')");
+    expect(stateBody).toContain('v_pending_draw_pool_id');
+  });
+
+  it('keeps rolled-over settlement details participant-only', () => {
     const body = getFunctionBody(
       'public.get_daily_jackpot_draw\\(p_pool_id UUID\\)',
     );
 
-    expect(body).toContain("IF v_pool.status <> 'drawn' THEN");
-    expect(body).not.toContain("'rolled_over'");
+    expect(body).toMatch(
+      /v_pool\.status\s*=\s*'rolled_over'\s+AND\s+v_current_user_ticket_count\s*=\s*0/i,
+    );
+    expect(body).toContain('Rozliczenie tej puli jest dostępne tylko dla uczestników');
   });
 
   it('keeps winner details behind the reveal RPC and claim behind viewed state', () => {
