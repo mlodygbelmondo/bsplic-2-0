@@ -82,6 +82,7 @@ describe('global season reset migration', () => {
     expect(resetMigration).toMatch(/current_streak\s*=\s*0/i);
     expect(resetMigration).toMatch(/longest_streak\s*=\s*0/i);
     expect(resetMigration).toMatch(/last_bet_date\s*=\s*NULL/i);
+    expect(executeBody).toMatch(/UPDATE\s+public\.profiles[\s\S]+WHERE\s+id\s+IS\s+NOT\s+NULL/i);
     expect(resetMigration).toMatch(/UPDATE\s+public\.placed_bets[\s\S]+result\s*=\s*'refund'/i);
     expect(resetMigration).toMatch(/UPDATE\s+public\.coupons[\s\S]+status\s*=\s*'refund'/i);
     expect(executeBody).toMatch(/payout\s*=\s*ROUND\(rc\.stake,\s*2\)/i);
