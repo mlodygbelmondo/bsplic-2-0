@@ -56,9 +56,26 @@ describe('daily jackpot migration security invariants', () => {
       'private.sync_daily_jackpot_funding\\(p_pool_date DATE\\)',
     );
 
+    expect(body).toContain('private.get_active_season_started_at()');
     expect(body).toContain('DELETE FROM public.daily_jackpot_funding_entries');
     expect(body).toContain("f.source_type = 'lost_coupon'");
     expect(body).toContain('NOT EXISTS');
+    expect(body).toContain('COALESCE(c.settled_at, c.created_at) >= v_season_started_at');
+  });
+
+  it('ships a cleanup for cancelled active-season jackpot pools after global reset', () => {
+    const cleanupMigration = Array.from(migrationSqlByFile.entries()).find(
+      ([file]) => file.endsWith('_cleanup_cancelled_active_jackpot.sql'),
+    )?.[1] ?? '';
+
+    expect(cleanupMigration).toContain('v_today DATE := (timezone(\'Europe/Warsaw\', NOW()))::DATE');
+    expect(cleanupMigration).toContain('DELETE FROM public.daily_jackpot_funding_entries');
+    expect(cleanupMigration).toContain('DELETE FROM public.daily_jackpot_tickets');
+    expect(cleanupMigration).toContain('DELETE FROM public.daily_jackpot_events');
+    expect(cleanupMigration).toContain("status = 'collecting'");
+    expect(cleanupMigration).toContain('prize_amount = 0');
+    expect(cleanupMigration).toContain("status = 'cancelled'");
+    expect(cleanupMigration).toContain('draw_scheduled_at > NOW()');
   });
 
   it('uses range-friendly indexes for lost coupon funding sync', () => {
