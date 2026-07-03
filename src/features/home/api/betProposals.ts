@@ -28,9 +28,6 @@ export async function createBetProposal({
     title,
     category_id: categoryId,
     bet_type: betType,
-    proposal_source: 'human',
-    agent_metadata: {},
-    agent_duplicate_key: null,
     options: options as unknown as Json,
     ends_at: new Date(endsAt).toISOString(),
   });
