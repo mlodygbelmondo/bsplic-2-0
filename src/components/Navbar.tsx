@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   LogOut,
   Menu,
   Moon,
   Plus,
+  Send,
   ShieldCheck,
   Sun,
   UserRound,
@@ -32,6 +33,9 @@ const NotificationsBell = lazy(() =>
 );
 const NavbarMobileMenu = lazy(() => import("./NavbarMobileMenu"));
 const NavbarTopupDialog = lazy(() => import("./NavbarTopupDialog"));
+const MoneyTransferDialog = lazy(
+  () => import("@/features/transfers/components/MoneyTransferDialog"),
+);
 
 interface NavbarProps {
   onOpenProposeModal?: () => void;
@@ -46,7 +50,11 @@ export function Navbar({
     useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [topupOpen, setTopupOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferInitialTab, setTransferInitialTab] =
+    useState<"send" | "history">("send");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDesktopNav, setIsDesktopNav] = useState(false);
 
@@ -89,6 +97,36 @@ export function Navbar({
       document.body.classList.remove("mobile-bottom-nav-hidden");
     };
   }, [mobileFloatingStackLowered]);
+
+  useEffect(() => {
+    const walletView = new URLSearchParams(location.search).get("wallet");
+    if (walletView !== "history" || !profile) return;
+
+    setTransferInitialTab("history");
+    setTransferOpen(true);
+  }, [location.search, profile]);
+
+  const openTransferDialog = (initialTab: "send" | "history" = "send") => {
+    setTransferInitialTab(initialTab);
+    setTransferOpen(true);
+  };
+
+  const handleTransferOpenChange = (nextOpen: boolean) => {
+    setTransferOpen(nextOpen);
+    if (nextOpen) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("wallet") !== "history") return;
+
+    searchParams.delete("wallet");
+    navigate(
+      {
+        pathname: location.pathname,
+        search: searchParams.toString() ? `?${searchParams.toString()}` : "",
+      },
+      { replace: true },
+    );
+  };
 
   const openTopupDialog = () => {
     if (!topupAvailable) {
@@ -245,6 +283,12 @@ export function Navbar({
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => openTransferDialog("send")}
+                    className="cursor-pointer"
+                  >
+                    <Send className="mr-2 h-4 w-4" /> Wyślij pieniądze
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={toggleTheme}
                     className="cursor-pointer"
                   >
@@ -307,6 +351,7 @@ export function Navbar({
                   profile={profile}
                   canTopup={canTopup}
                   onOpenTopup={() => setTopupOpen(true)}
+                  onOpenTransfer={() => openTransferDialog("send")}
                   onOpenProposeModal={onOpenProposeModal}
                   signOut={signOut}
                 />
@@ -328,6 +373,18 @@ export function Navbar({
             open={topupOpen}
             onOpenChange={setTopupOpen}
             userId={user?.id}
+            profile={profile}
+            refreshProfile={refreshProfile}
+          />
+        </Suspense>
+      )}
+
+      {transferOpen && profile && (
+        <Suspense fallback={null}>
+          <MoneyTransferDialog
+            open={transferOpen}
+            onOpenChange={handleTransferOpenChange}
+            initialTab={transferInitialTab}
             profile={profile}
             refreshProfile={refreshProfile}
           />

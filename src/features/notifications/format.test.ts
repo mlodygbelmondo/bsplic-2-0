@@ -24,6 +24,7 @@ describe('notifications format helpers', () => {
     expect(formatNotificationTypeLabel('coupon_won')).toBe('Wygrany kupon');
     expect(formatNotificationTypeLabel('comment_post')).toBe('Komentarz do posta');
     expect(formatNotificationTypeLabel('jackpot_draw_ready')).toBe('Losowanie jackpotu');
+    expect(formatNotificationTypeLabel('money_transfer')).toBe('Transfer środków');
   });
 
   it('returns social fallback link when link_path is missing', () => {

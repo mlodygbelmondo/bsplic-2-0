@@ -13,6 +13,8 @@ export function formatNotificationTypeLabel(type: NotificationType): string {
       return 'Komentarz do posta';
     case 'jackpot_draw_ready':
       return 'Losowanie jackpotu';
+    case 'money_transfer':
+      return 'Transfer środków';
     default:
       return 'Powiadomienie';
   }

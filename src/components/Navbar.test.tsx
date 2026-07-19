@@ -61,6 +61,11 @@ vi.mock("@/features/notifications/components/NotificationsBell", () => ({
     notificationsBellMock(props),
 }));
 
+vi.mock("@/features/transfers/components/MoneyTransferDialog", () => ({
+  default: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog" aria-label="Transfer pieniędzy" /> : null,
+}));
+
 // Import the mocked function so we can control its return value per test
 import { canClaimTopup } from "@/features/social/polishDay";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -398,6 +403,17 @@ describe("Navbar", () => {
     renderNavbar();
     fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
     expect(await screen.findByText("Tryb ciemny")).toBeInTheDocument();
+  });
+
+  it("opens money transfers from the user dropdown menu", async () => {
+    renderNavbar();
+
+    fireEvent.keyDown(screen.getByTitle("Menu użytkownika"), { key: "Enter" });
+    fireEvent.click(await screen.findByText("Wyślij pieniądze"));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Transfer pieniędzy" }),
+    ).toBeInTheDocument();
   });
 
   it("does not expose the temporary dark palette picker in the desktop menu", async () => {

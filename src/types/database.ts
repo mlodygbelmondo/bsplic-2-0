@@ -210,7 +210,8 @@ export type NotificationType =
   | 'mention_comment'
   | 'coupon_won'
   | 'comment_post'
-  | 'jackpot_draw_ready';
+  | 'jackpot_draw_ready'
+  | 'money_transfer';
 
 export interface SocialFeedItem {
   id: string;

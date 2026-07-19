@@ -1037,6 +1037,63 @@ export type Database = {
           },
         ]
       }
+      money_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          idempotency_key: string
+          message: string | null
+          recipient_balance_after: number
+          recipient_id: string | null
+          recipient_username_snapshot: string
+          sender_balance_after: number
+          sender_id: string | null
+          sender_username_snapshot: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          message?: string | null
+          recipient_balance_after: number
+          recipient_id?: string | null
+          recipient_username_snapshot: string
+          sender_balance_after: number
+          sender_id?: string | null
+          sender_username_snapshot: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          message?: string | null
+          recipient_balance_after?: number
+          recipient_id?: string | null
+          recipient_username_snapshot?: string
+          sender_balance_after?: number
+          sender_id?: string | null
+          sender_username_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "money_transfers_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "money_transfers_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       placed_bets: {
         Row: {
           bet_id: string
@@ -1196,6 +1253,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_money_transfer: {
+        Args: {
+          p_amount: number
+          p_idempotency_key: string
+          p_message: string
+          p_recipient_id: string
+        }
+        Returns: Json
+      }
       agent_accept_bet_proposals: {
         Args: {
           p_is_bsplicboost?: boolean
@@ -1256,6 +1322,20 @@ export type Database = {
       get_public_profile: {
         Args: { p_user_id: string }
         Returns: Json
+      }
+      get_money_transfer_history: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          amount: number
+          counterparty_avatar_url: string | null
+          counterparty_deleted: boolean
+          counterparty_id: string | null
+          counterparty_username: string
+          created_at: string
+          direction: string
+          id: string
+          message: string | null
+        }[]
       }
       get_public_badges: {
         Args: { p_user_id: string }
@@ -1388,6 +1468,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      search_money_transfer_recipients: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          avatar_url: string | null
+          id: string
+          username: string
+        }[]
       }
       play_roulette_round: {
         Args: {
@@ -1815,6 +1903,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      notification_type:
+        | "mention_post"
+        | "mention_comment"
+        | "coupon_won"
+        | "comment_post"
+        | "money_transfer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1943,6 +2037,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      notification_type: [
+        "mention_post",
+        "mention_comment",
+        "coupon_won",
+        "comment_post",
+        "money_transfer",
+      ],
     },
   },
 } as const

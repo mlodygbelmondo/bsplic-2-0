@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Lightbulb, LogOut, Moon, Plus, Sun } from "lucide-react";
+import { Lightbulb, LogOut, Moon, Plus, Send, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -22,6 +22,7 @@ interface NavbarMobileMenuProps {
   profile: Profile | null;
   canTopup: () => boolean;
   onOpenTopup: () => void;
+  onOpenTransfer: () => void;
   onOpenProposeModal?: () => void;
   signOut: () => Promise<void>;
 }
@@ -34,6 +35,7 @@ export default function NavbarMobileMenu({
   profile,
   canTopup,
   onOpenTopup,
+  onOpenTransfer,
   onOpenProposeModal,
   signOut,
 }: NavbarMobileMenuProps) {
@@ -52,6 +54,11 @@ export default function NavbarMobileMenu({
   const handleSignOut = () => {
     onOpenChange(false);
     void signOut();
+  };
+
+  const handleOpenTransfer = () => {
+    onOpenChange(false);
+    onOpenTransfer();
   };
 
   const handleOpenProposeModal = () => {
@@ -106,6 +113,14 @@ export default function NavbarMobileMenu({
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Doładuj 100 zł
+                </button>
+
+                <button
+                  onClick={handleOpenTransfer}
+                  className="w-full flex items-center justify-center gap-1 border border-primary/20 bg-background hover:bg-primary/5 text-foreground px-3 py-2 rounded-md text-[12px] font-bold transition-colors"
+                >
+                  <Send className="h-3.5 w-3.5 text-primary" />
+                  Wyślij pieniądze
                 </button>
 
                 <SheetClose asChild>
