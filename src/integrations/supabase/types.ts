@@ -1045,9 +1045,11 @@ export type Database = {
           idempotency_key: string
           message: string | null
           recipient_balance_after: number
+          recipient_avatar_snapshot: string | null
           recipient_id: string | null
           recipient_username_snapshot: string
           sender_balance_after: number
+          sender_avatar_snapshot: string | null
           sender_id: string | null
           sender_username_snapshot: string
         }
@@ -1058,9 +1060,11 @@ export type Database = {
           idempotency_key: string
           message?: string | null
           recipient_balance_after: number
+          recipient_avatar_snapshot?: string | null
           recipient_id?: string | null
           recipient_username_snapshot: string
           sender_balance_after: number
+          sender_avatar_snapshot?: string | null
           sender_id?: string | null
           sender_username_snapshot: string
         }
@@ -1071,9 +1075,11 @@ export type Database = {
           idempotency_key?: string
           message?: string | null
           recipient_balance_after?: number
+          recipient_avatar_snapshot?: string | null
           recipient_id?: string | null
           recipient_username_snapshot?: string
           sender_balance_after?: number
+          sender_avatar_snapshot?: string | null
           sender_id?: string | null
           sender_username_snapshot?: string
         }

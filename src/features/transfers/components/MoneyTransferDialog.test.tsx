@@ -164,6 +164,28 @@ describe('MoneyTransferDialog', () => {
     );
   });
 
+  it('reports success when only the post-transfer profile refresh fails', async () => {
+    refreshProfileMock.mockRejectedValueOnce(new Error('refresh failed'));
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText('Odbiorca'), {
+      target: { value: 'Odb' },
+    });
+    fireEvent.click(await screen.findByText('@Odbiorca'));
+    fireEvent.change(screen.getByLabelText('Kwota'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Dalej' }));
+    fireEvent.click(screen.getByRole('button', { name: /Wyślij 10,00 zł/ }));
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        'Wysłano 10,00 zł do @Odbiorca. Odśwież stronę, aby zaktualizować saldo.',
+      );
+    });
+    expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+
   it('does not let a new account continue before the fourteen-day threshold', () => {
     render(
       <MoneyTransferDialog

@@ -22,6 +22,8 @@ CREATE TABLE public.money_transfers (
   recipient_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   sender_username_snapshot TEXT NOT NULL,
   recipient_username_snapshot TEXT NOT NULL,
+  sender_avatar_snapshot TEXT,
+  recipient_avatar_snapshot TEXT,
   amount NUMERIC NOT NULL,
   message TEXT,
   sender_balance_after NUMERIC NOT NULL,
@@ -30,11 +32,19 @@ CREATE TABLE public.money_transfers (
   CONSTRAINT money_transfers_different_accounts
     CHECK (sender_id IS NULL OR recipient_id IS NULL OR sender_id <> recipient_id),
   CONSTRAINT money_transfers_minimum_amount
-    CHECK (amount >= 1 AND amount <> 'NaN'::NUMERIC),
+    CHECK (
+      amount >= 1
+      AND amount::TEXT NOT IN ('NaN', 'Infinity', '-Infinity')
+    ),
   CONSTRAINT money_transfers_cent_precision
     CHECK (amount = ROUND(amount, 2)),
   CONSTRAINT money_transfers_message_length
     CHECK (message IS NULL OR CHAR_LENGTH(message) <= 2000),
+  CONSTRAINT money_transfers_finite_balance_snapshots
+    CHECK (
+      sender_balance_after::TEXT NOT IN ('NaN', 'Infinity', '-Infinity')
+      AND recipient_balance_after::TEXT NOT IN ('NaN', 'Infinity', '-Infinity')
+    ),
   CONSTRAINT money_transfers_sender_idempotency
     UNIQUE (sender_id, idempotency_key)
 );
@@ -124,6 +134,8 @@ DECLARE
   v_sender_id UUID := auth.uid();
   v_sender_username TEXT;
   v_recipient_username TEXT;
+  v_sender_avatar TEXT;
+  v_recipient_avatar TEXT;
   v_sender_balance NUMERIC;
   v_recipient_balance NUMERIC;
   v_sender_created_at TIMESTAMPTZ;
@@ -143,7 +155,7 @@ BEGIN
   END IF;
 
   IF p_amount IS NULL
-    OR p_amount = 'NaN'::NUMERIC
+    OR p_amount::TEXT IN ('NaN', 'Infinity', '-Infinity')
     OR p_amount < 1
     OR p_amount <> ROUND(p_amount, 2)
   THEN
@@ -161,8 +173,8 @@ BEGIN
   ORDER BY profile.id
   FOR UPDATE;
 
-  SELECT profile.username, profile.balance
-  INTO v_sender_username, v_sender_balance
+  SELECT profile.username, profile.balance, profile.avatar_url
+  INTO v_sender_username, v_sender_balance, v_sender_avatar
   FROM public.profiles profile
   WHERE profile.id = v_sender_id;
 
@@ -170,8 +182,8 @@ BEGIN
     RAISE EXCEPTION 'Nie znaleziono konta nadawcy';
   END IF;
 
-  SELECT profile.username, profile.balance
-  INTO v_recipient_username, v_recipient_balance
+  SELECT profile.username, profile.balance, profile.avatar_url
+  INTO v_recipient_username, v_recipient_balance, v_recipient_avatar
   FROM public.profiles profile
   WHERE profile.id = p_recipient_id;
 
@@ -224,6 +236,12 @@ BEGIN
     RAISE EXCEPTION 'Transfery są niedostępne dla jednego z tych kont';
   END IF;
 
+  IF v_sender_balance::TEXT IN ('NaN', 'Infinity', '-Infinity')
+    OR v_recipient_balance::TEXT IN ('NaN', 'Infinity', '-Infinity')
+  THEN
+    RAISE EXCEPTION 'Nieprawidłowe saldo konta';
+  END IF;
+
   IF (
     SELECT COUNT(*)
     FROM public.money_transfers transfer
@@ -251,6 +269,8 @@ BEGIN
     recipient_id,
     sender_username_snapshot,
     recipient_username_snapshot,
+    sender_avatar_snapshot,
+    recipient_avatar_snapshot,
     amount,
     message,
     sender_balance_after,
@@ -261,6 +281,8 @@ BEGIN
     p_recipient_id,
     v_sender_username,
     v_recipient_username,
+    v_sender_avatar,
+    v_recipient_avatar,
     p_amount,
     v_message,
     v_sender_balance - p_amount,
@@ -336,7 +358,10 @@ BEGIN
       WHEN transfer.sender_id = v_user_id THEN transfer.recipient_username_snapshot
       ELSE transfer.sender_username_snapshot
     END,
-    counterparty.avatar_url,
+    CASE
+      WHEN transfer.sender_id = v_user_id THEN transfer.recipient_avatar_snapshot
+      ELSE transfer.sender_avatar_snapshot
+    END,
     counterparty.id IS NULL,
     transfer.amount,
     transfer.message,

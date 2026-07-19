@@ -69,8 +69,21 @@ describe('money transfer migrations', () => {
     expect(transferMigration).toMatch(/ROUND\(p_amount,\s*2\)/i);
     expect(transferMigration).toMatch(/CHAR_LENGTH\(v_message\)\s*>\s*2000/i);
     expect(transferMigration).toMatch(
+      /p_amount::TEXT\s+IN\s*\('NaN',\s*'Infinity',\s*'-Infinity'\)/i,
+    );
+    expect(transferMigration).toMatch(
+      /v_sender_balance::TEXT\s+IN\s*\('NaN',\s*'Infinity',\s*'-Infinity'\)/i,
+    );
+    expect(transferMigration).toMatch(
       /created_at\s*>\s*NOW\(\)\s*-\s*INTERVAL\s+'1 hour'[\s\S]*\)\s*>=\s*5/i,
     );
+  });
+
+  it('keeps username and avatar snapshots for durable private history', () => {
+    expect(transferMigration).toMatch(/sender_username_snapshot\s+TEXT\s+NOT\s+NULL/i);
+    expect(transferMigration).toMatch(/recipient_username_snapshot\s+TEXT\s+NOT\s+NULL/i);
+    expect(transferMigration).toMatch(/sender_avatar_snapshot\s+TEXT/i);
+    expect(transferMigration).toMatch(/recipient_avatar_snapshot\s+TEXT/i);
   });
 
   it('blocks restricted and agent accounts in search and transfer execution', () => {
