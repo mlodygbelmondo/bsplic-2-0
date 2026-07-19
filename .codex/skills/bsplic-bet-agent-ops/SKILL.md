@@ -11,7 +11,11 @@ description: "Reference instructions for BSPLIC sportsbook agent operations in /
 - Load agent secrets from `/home/piotr/.codex-secrets/bsplic-agent.env`.
 - Never print `BSPLIC_AGENT_TOKEN`, Supabase keys, or raw env file contents.
 - Never use a Supabase service-role key for this workflow.
-- Always browse for current schedules, odds, or final results; sports/esports data is time-sensitive.
+- Always browse for current schedules, bookmaker odds, or final results; sports/esports data is time-sensitive.
+- Treat the price for every option as a live-data requirement: use only decimal odds displayed by an identifiable bookmaker or an odds-comparison service that names the bookmaker and update time.
+- Never derive, estimate, round into existence, or label as bookmaker odds a price based on rankings, team form, prediction percentages, implied probabilities, or personal judgement.
+- If a current two-sided price cannot be verified for every offered outcome, do not create or publish that market. Report it as skipped with the missing source or outcome.
+- Record the bookmaker, source URL, observed-at time in UTC, and the exact displayed price for every market in `agent_metadata`. Preserve the quoted bookmaker price; do not apply an unrequested margin or price adjustment.
 - Cite sources in user-facing proposal and settlement reports.
 - Default to pending proposals. Publish proposals or create live bets directly only when the user explicitly asks for that exact action.
 - Never call `agent_settle_bet` until the user explicitly approves exact settlement recommendations in the current conversation.
@@ -64,11 +68,28 @@ Check `recentBets`, `activeBets`, `pendingProposals`, `recentAcceptedProposals`,
 ## Draft Proposals
 
 1. Fetch context.
-2. Browse current/upcoming events and cite sources.
-3. Skip duplicates against recent bets, active bets, pending proposals, and recent accepted proposals.
-4. Build deterministic `agent_duplicate_key` values.
-5. Call `agent_create_bet_proposals`.
-6. Report `created`, `skipped`, `errors`, confidence, and sources.
+2. Browse the current/upcoming event from an official or trusted schedule source.
+3. Fetch a current moneyline price for every option from a bookmaker or named odds-comparison feed. Capture the source URL, bookmaker, UTC observation time, market type, and exact decimal odds.
+4. Reject the candidate if the source is stale, the bookmaker is not identifiable, a required outcome has no price, the market type is not an exact match, or the displayed price is not decimal. Do not substitute a model estimate.
+5. Skip duplicates against recent bets, active bets, pending proposals, and recent accepted proposals.
+6. Build deterministic `agent_duplicate_key` values.
+7. Put a complete `agent_metadata.odds_source` object on every proposal, for example:
+
+```json
+{
+  "bookmaker": "ExampleBookmaker",
+  "url": "https://example.com/event",
+  "observed_at": "2026-07-20T12:34:56Z",
+  "market": "match winner",
+  "prices": {
+    "Team A": 1.72,
+    "Team B": 2.08
+  }
+}
+```
+
+8. Call `agent_create_bet_proposals` only with the captured prices unchanged.
+9. Report `created`, `skipped`, `errors`, bookmaker, observation time, and sources. Explicitly state that no market was priced from a model.
 
 ## Accept Agent Proposals
 
