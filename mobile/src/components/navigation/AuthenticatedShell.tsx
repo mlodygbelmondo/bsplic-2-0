@@ -56,7 +56,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
     const { error } = await supabase.rpc('secure_daily_topup', { p_user_id: user.id });
     setTopupLoading(false);
     if (error) { Alert.alert('Nie udało się doładować', error.message); return; }
-    await refreshProfile(); Alert.alert('Gotowe', 'Doładowano portfel o 100 zł. Wróć jutro po więcej!');
+    void refreshProfile().catch(() => undefined); Alert.alert('Gotowe', 'Doładowano portfel o 100 zł. Wróć jutro po więcej!');
   };
 
   const navigate = (item: MobileNavItem) => router.navigate(item.href);

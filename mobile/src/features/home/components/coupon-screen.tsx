@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -14,6 +14,8 @@ import {
 import { placeCouponSecure } from '@/features/home/api/coupons';
 import { useAuth } from '@/providers/auth-provider';
 import { useCoupon } from '@/providers/coupon-provider';
+import { useNetwork } from '@/providers/network-provider';
+import { fetchAkoExclusionsForBets, findAkoConflict, formatAkoConflict, type AkoExclusion } from '@/features/coupons/ako-exclusions';
 
 type CouponMode = 'single' | 'ako';
 
@@ -42,10 +44,14 @@ function hasValidPrecision(value: string) {
 export function CouponScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const { items, totalOdds, clearCoupon, removeItem } = useCoupon();
+  const { canPerformWrites } = useNetwork();
+  const [akoExclusions, setAkoExclusions] = useState<AkoExclusion[]>([]);
   const [mode, setMode] = useState<CouponMode>(items.length > 1 ? 'ako' : 'single');
   const [akoStake, setAkoStake] = useState('');
   const [singleStakes, setSingleStakes] = useState<Record<string, string>>({});
   const [placing, setPlacing] = useState(false);
+  useEffect(() => { void fetchAkoExclusionsForBets(items.map(item => item.bet.id)).then(setAkoExclusions).catch(() => setAkoExclusions([])); }, [items]);
+  const akoConflict = useMemo(() => findAkoConflict(items.map(item => ({ betId: item.bet.id, title: item.bet.title })), akoExclusions), [akoExclusions, items]);
 
   const totalStake = useMemo(() => {
     if (mode === 'ako') return parseStake(akoStake);
@@ -65,6 +71,7 @@ export function CouponScreen() {
   }, [items, mode, singleStakes, totalOdds, totalStake]);
 
   const place = async () => {
+    if (!canPerformWrites) { Alert.alert('Brak internetu', 'Kupony nie są kolejkowane offline. Połącz się i spróbuj ponownie.'); return; }
     if (!user || !profile) {
       Alert.alert('Sesja wygasła', 'Zaloguj się ponownie.');
       return;
@@ -73,6 +80,7 @@ export function CouponScreen() {
       Alert.alert('Pusty kupon', 'Dodaj co najmniej jeden zakład.');
       return;
     }
+    if (mode === 'ako' && akoConflict) { Alert.alert('Niedozwolone połączenie AKO', formatAkoConflict(akoConflict)); return; }
 
     const stakeInputs =
       mode === 'ako'
@@ -126,13 +134,13 @@ export function CouponScreen() {
       }
 
       clearCoupon();
-      await refreshProfile();
+      void refreshProfile().catch(() => undefined);
       Alert.alert('Gotowe', 'Kupon został postawiony.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
       placedSingleIds.forEach(removeItem);
-      await refreshProfile();
+      void refreshProfile().catch(() => undefined);
       Alert.alert(
         'Nie udało się postawić kuponu',
         error instanceof Error ? error.message : 'Spróbuj ponownie.',
@@ -259,6 +267,8 @@ export function CouponScreen() {
           />
         ) : null}
 
+        {mode === 'ako' && akoConflict && <View style={{ borderRadius: 12, backgroundColor: '#6d172b', padding: 12 }}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{formatAkoConflict(akoConflict)}</Text></View>}
+
         {items.length > 0 ? (
           <View style={{ gap: 8, borderRadius: 16, backgroundColor: '#250711', padding: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -282,7 +292,7 @@ export function CouponScreen() {
         {items.length > 0 ? (
           <Pressable
             accessibilityRole="button"
-            disabled={placing}
+            disabled={placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict))}
             onPress={() => void place()}
             style={({ pressed }) => ({
               minHeight: 56,
@@ -290,7 +300,7 @@ export function CouponScreen() {
               justifyContent: 'center',
               borderRadius: 16,
               backgroundColor: colors.primary,
-              opacity: placing || pressed ? 0.72 : 1,
+              opacity: placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict)) || pressed ? 0.5 : 1,
             })}>
             {placing ? (
               <ActivityIndicator color="#fff" />

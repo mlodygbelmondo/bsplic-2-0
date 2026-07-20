@@ -5,11 +5,13 @@ import { ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView,
 
 import { AppButton, AppCard, AppInput } from '@/components/ui';
 import { useAuth } from '@/providers/auth-provider';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 const LAST_EMAIL_KEY = 'bsplic.auth.last-email';
 
 export function LoginScreen() {
   const { signIn, resetPassword } = useAuth();
+  const { tokens } = useAppTheme();
   const [forgot, setForgot] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,13 +42,13 @@ export function LoginScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 22 }} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: 'center', marginBottom: 28 }}><Text style={{ color: '#fff', fontSize: 38, fontWeight: '900', fontStyle: 'italic', letterSpacing: -1.4 }}>BSPLIC 2.0</Text></View>
         <AppCard style={{ gap: 16, padding: 22 }}>
-          <View style={{ gap: 7 }}><Text style={{ fontSize: 23, fontWeight: '900', color: '#21141a', textAlign: 'center' }}>{forgot ? 'Nie pamiętasz hasła?' : 'Zaloguj się'}</Text>{forgot && <Text style={{ color: '#71636a', textAlign: 'center', fontSize: 13 }}>Wpisz e-mail, a wyślemy Ci bezpieczny link do ustawienia nowego hasła.</Text>}</View>
+          <View style={{ gap: 7 }}><Text style={{ fontSize: 23, fontWeight: '900', color: tokens.colors.foreground, textAlign: 'center' }}>{forgot ? 'Nie pamiętasz hasła?' : 'Zaloguj się'}</Text>{forgot && <Text style={{ color: tokens.colors.mutedForeground, textAlign: 'center', fontSize: 13 }}>Wpisz e-mail, a wyślemy Ci bezpieczny link do ustawienia nowego hasła.</Text>}</View>
           <AppInput label="E-mail" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" value={email} onChangeText={setEmail} returnKeyType={forgot ? 'done' : 'next'} />
           {!forgot && <AppInput label="Hasło" secureTextEntry textContentType="password" autoComplete="current-password" value={password} onChangeText={setPassword} onSubmitEditing={() => void submit()} returnKeyType="done" />}
           {error && <Text selectable style={{ color: '#d91f42', fontSize: 13, textAlign: 'center' }}>{error}</Text>}
           {message && <Text selectable style={{ color: '#198754', fontSize: 13, textAlign: 'center' }}>{message}</Text>}
           <AppButton loading={loading} onPress={() => void submit()} fullWidth>{forgot ? 'Wyślij link' : 'Zaloguj się'}</AppButton>
-          <Pressable accessibilityRole="button" onPress={() => { setForgot(value => !value); setError(null); setMessage(null); }} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#cf0038', fontWeight: '800' }}>{forgot ? 'Wróć do logowania' : 'Nie pamiętam hasła'}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => { setForgot(value => !value); setError(null); setMessage(null); }} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: tokens.colors.primary, fontWeight: '800' }}>{forgot ? 'Wróć do logowania' : 'Nie pamiętam hasła'}</Text></Pressable>
         </AppCard>
       </ScrollView>
     </KeyboardAvoidingView>

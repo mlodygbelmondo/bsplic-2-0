@@ -54,13 +54,22 @@ export function TransferSheet({ visible, onClose }: { visible: boolean; onClose(
     if (!canPerformWrites) { Alert.alert('Brak internetu', 'Transfery nie są kolejkowane offline.'); return; }
     if (!recipient || !Number.isFinite(numericAmount) || numericAmount <= 0) { Alert.alert('Sprawdź dane', 'Wybierz odbiorcę i poprawną kwotę.'); return; }
     setLoading(true);
+    const idempotencyKey = idempotencyKeyRef.current ?? randomUUID();
+    idempotencyKeyRef.current = idempotencyKey;
+    let result: Awaited<ReturnType<typeof createMoneyTransfer>>;
     try {
-      const idempotencyKey = idempotencyKeyRef.current ?? randomUUID();
-      idempotencyKeyRef.current = idempotencyKey;
-      const result = await createMoneyTransfer({ recipientId: recipient.id, amount: numericAmount, message: message.trim(), idempotencyKey });
-      idempotencyKeyRef.current = null; updateProfileBalance(result.balance_after); await refreshProfile(); setAmount(''); setMessage(''); setQuery(''); setRecipient(null); setHistory(await fetchMoneyTransferHistory(30)); Alert.alert('Gotowe', `Wysłano ${result.amount.toFixed(2)} zł do ${result.recipient_username}.`);
-    } catch (cause) { Alert.alert('Nie udało się wysłać', cause instanceof Error ? cause.message : 'Spróbuj ponownie.'); }
-    finally { setLoading(false); }
+      result = await createMoneyTransfer({ recipientId: recipient.id, amount: numericAmount, message: message.trim(), idempotencyKey });
+    } catch (cause) {
+      setLoading(false);
+      Alert.alert('Nie udało się wysłać', cause instanceof Error ? cause.message : 'Spróbuj ponownie.');
+      return;
+    }
+    idempotencyKeyRef.current = null;
+    updateProfileBalance(result.balance_after);
+    setAmount(''); setMessage(''); setQuery(''); setRecipient(null); setLoading(false);
+    Alert.alert('Gotowe', `Wysłano ${result.amount.toFixed(2)} zł do ${result.recipient_username}.`);
+    void refreshProfile().catch(() => undefined);
+    void fetchMoneyTransferHistory(30).then(setHistory).catch(() => undefined);
   };
   return <AppModal visible={visible} title="Portfel i transfery" onClose={onClose}><View style={{ gap: 12 }}>
     <AppInput label="Odbiorca" placeholder="Wpisz co najmniej 2 znaki" value={query} onChangeText={value => { idempotencyKeyRef.current = null; setQuery(value); setRecipient(null); }} />
