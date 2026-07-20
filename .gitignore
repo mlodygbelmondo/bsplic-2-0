@@ -41,6 +41,11 @@ supabase/.temp/
 *.sw?
 
 .ai*
+!.ai/
+.ai/*
+!.ai/docs/
+.ai/docs/*
+!.ai/docs/expo-migration-contract.md
 docs/design-references/
 docs/roulette-inspiration/
 design-reference/

@@ -5,6 +5,7 @@
 - This file is the operating guide for coding agents working in this repository.
 - Follow existing project patterns first, then apply the conventions below.
 - Keep changes focused; avoid broad refactors unless explicitly requested.
+- Expo migration work must follow `.ai/docs/expo-migration-contract.md` as the authoritative scope and acceptance reference.
 
 ## Rule Files Status
 
