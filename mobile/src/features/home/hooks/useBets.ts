@@ -161,6 +161,7 @@ export function useBets(
   selectedCategory: string | null,
   sort: SortMode,
   includeInProgress = false,
+  enabled = true,
 ) {
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,6 +224,7 @@ export function useBets(
   );
 
   useEffect(() => {
+    if (!enabled) return;
     let mounted = true;
 
     const load = async () => {
@@ -249,9 +251,10 @@ export function useBets(
     return () => {
       mounted = false;
     };
-  }, [loadBetsPage, selectedCategory, sort, includeInProgress, refreshKey]);
+  }, [enabled, loadBetsPage, selectedCategory, sort, includeInProgress, refreshKey]);
 
   useEffect(() => {
+    if (!enabled) return;
     let mounted = true;
 
     const flushPayloadQueue = () => {
@@ -303,7 +306,7 @@ export function useBets(
       }
       unsubscribe();
     };
-  }, []);
+  }, [enabled]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) {

@@ -26,6 +26,7 @@ interface UseRouletteTableArgs {
   username?: string;
   avatarUrl?: string | null;
   refreshProfile: () => Promise<void>;
+  enabled?: boolean;
 }
 
 interface PlaceBetInput {
@@ -39,6 +40,7 @@ export function useRouletteTable({
   username = 'Ty',
   avatarUrl = null,
   refreshProfile,
+  enabled = true,
 }: UseRouletteTableArgs) {
   const [currentRound, setCurrentRound] = useState<RouletteTableRound | null>(
     null,
@@ -115,6 +117,7 @@ export function useRouletteTable({
   );
 
   useEffect(() => {
+    if (!enabled) return;
     void syncSnapshot(true);
 
     const unsubscribe = subscribeToRouletteRounds(() => {
@@ -124,16 +127,18 @@ export function useRouletteTable({
     return () => {
       unsubscribe();
     };
-  }, [syncSnapshot]);
+  }, [enabled, syncSnapshot]);
 
   useEffect(() => {
+    if (!enabled) return;
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') void syncSnapshot();
     });
     return () => subscription.remove();
-  }, [syncSnapshot]);
+  }, [enabled, syncSnapshot]);
 
   useEffect(() => {
+    if (!enabled) return;
     // An idle table still polls (slowly) so a round started by another player
     // shows up even when realtime drops the event.
     const nextSyncTimer = setTimeout(() => {
@@ -158,9 +163,10 @@ export function useRouletteTable({
     return () => {
       clearTimeout(nextSyncTimer);
     };
-  }, [currentRound, syncSnapshot]);
+  }, [currentRound, enabled, syncSnapshot]);
 
   useEffect(() => {
+    if (!enabled) return;
     const updateCountdown = () => {
       if (!currentRound) {
         lastCountdownSecondRef.current = null;
@@ -191,7 +197,7 @@ export function useRouletteTable({
     return () => {
       clearInterval(timer);
     };
-  }, [currentRound]);
+  }, [currentRound, enabled]);
 
   const placeBetForRound = useCallback(
     async ({ betType, betValue, stake }: PlaceBetInput) => {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { supabase } from '@/integrations/supabase/client';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/providers/auth-provider';
 
 type RankingType = 'sportsbook' | 'casino';
@@ -25,18 +26,6 @@ interface RankEntry {
   lost_bets: number;
   balance: number;
 }
-
-const colors = {
-  background: '#090005',
-  card: '#1a050d',
-  border: '#5b1a2e',
-  foreground: '#fff2f5',
-  muted: '#d9a8b6',
-  primary: '#ff0a54',
-  yellow: '#ffe14a',
-  success: '#36c987',
-  danger: '#f55b68',
-};
 
 async function fetchRankings(type: RankingType): Promise<RankEntry[]> {
   const { data, error } = await supabase.rpc(
@@ -64,8 +53,9 @@ function Segment<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const { tokens } = useAppTheme();
   return (
-    <View style={{ flexDirection: 'row', gap: 6, borderRadius: 14, backgroundColor: colors.card, padding: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6, borderRadius: 14, backgroundColor: tokens.colors.card, padding: 4 }}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -80,10 +70,10 @@ function Segment<T extends string>({
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 11,
-              backgroundColor: selected ? colors.primary : 'transparent',
+              backgroundColor: selected ? tokens.colors.primary : 'transparent',
               paddingHorizontal: 10,
             }}>
-            <Text style={{ color: selected ? '#fff' : colors.muted, fontSize: 12, fontWeight: '800' }}>
+            <Text style={{ color: selected ? tokens.colors.primaryForeground : tokens.colors.mutedForeground, fontSize: 12, fontWeight: '800' }}>
               {option.label}
             </Text>
           </Pressable>
@@ -94,6 +84,7 @@ function Segment<T extends string>({
 }
 
 export function RankingsScreen() {
+  const { tokens } = useAppTheme();
   const { user } = useAuth();
   const [type, setType] = useState<RankingType>('sportsbook');
   const [sort, setSort] = useState<SortKey>('total_profit');
@@ -108,7 +99,7 @@ export function RankingsScreen() {
 
   return (
     <FlatList
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: tokens.colors.background }}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 112 }}
       data={rankings}
@@ -117,7 +108,7 @@ export function RankingsScreen() {
       onRefresh={() => void refetch()}
       ListHeaderComponent={
         <View style={{ gap: 12, paddingVertical: 12 }}>
-          <Text selectable style={{ color: colors.foreground, fontSize: 26, fontWeight: '900' }}>
+          <Text selectable style={{ color: tokens.colors.foreground, fontSize: 26, fontWeight: '900' }}>
             Rankingi
           </Text>
           <Segment
@@ -141,18 +132,18 @@ export function RankingsScreen() {
       }
       ListEmptyComponent={
         isLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ padding: 50 }} />
+          <ActivityIndicator color={tokens.colors.primary} style={{ padding: 50 }} />
         ) : error ? (
           <View style={{ alignItems: 'center', gap: 10, padding: 40 }}>
-            <Text selectable style={{ color: colors.foreground, fontWeight: '800' }}>
+            <Text selectable style={{ color: tokens.colors.foreground, fontWeight: '800' }}>
               Nie udało się wczytać rankingu
             </Text>
             <Pressable onPress={() => void refetch()} style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Text style={{ color: colors.primary, fontWeight: '800' }}>Spróbuj ponownie</Text>
+              <Text style={{ color: tokens.colors.primary, fontWeight: '800' }}>Spróbuj ponownie</Text>
             </Pressable>
           </View>
         ) : (
-          <Text style={{ color: colors.muted, padding: 40, textAlign: 'center' }}>
+          <Text style={{ color: tokens.colors.mutedForeground, padding: 40, textAlign: 'center' }}>
             {type === 'sportsbook'
               ? 'Nikt jeszcze nie postawił zakładu.'
               : 'Nikt jeszcze nie zagrał w kasynie.'}
@@ -183,24 +174,24 @@ export function RankingsScreen() {
                 borderRadius: 16,
                 borderCurve: 'continuous',
                 borderWidth: 1,
-                borderColor: isMe ? '#ff0a5477' : colors.border,
-                backgroundColor: isMe ? '#ff0a5417' : colors.card,
+                borderColor: isMe ? tokens.colors.primary : tokens.colors.border,
+                backgroundColor: isMe ? tokens.colors.secondary : tokens.colors.card,
                 paddingHorizontal: 14,
                 opacity: pressed ? 0.76 : 1,
               })}>
-              <Text style={{ width: 34, textAlign: 'center', color: colors.foreground, fontSize: 18, fontWeight: '900' }}>
+              <Text style={{ width: 34, textAlign: 'center', color: tokens.colors.foreground, fontSize: 18, fontWeight: '900' }}>
                 {medal}
               </Text>
               <View style={{ flex: 1, gap: 4 }}>
-                <Text numberOfLines={1} style={{ color: colors.foreground, fontWeight: '800' }}>
+                <Text numberOfLines={1} style={{ color: tokens.colors.foreground, fontWeight: '800' }}>
                   {item.username}{isMe ? ' (ty)' : ''}
                 </Text>
-                <Text style={{ color: colors.muted, fontSize: 11 }}>
+                <Text style={{ color: tokens.colors.mutedForeground, fontSize: 11 }}>
                   Profit {item.total_profit >= 0 ? '+' : ''}{item.total_profit.toFixed(2)} zł · WR {item.win_rate.toFixed(1)}% · {item.total_bets} zakł.
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                <Text style={{ color: colors.muted, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+                <Text style={{ color: tokens.colors.mutedForeground, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
                   {sort === 'total_profit' ? 'Profit' : sort === 'win_rate' ? 'Win rate' : 'Zakłady'}
                 </Text>
                 <Text
@@ -208,12 +199,12 @@ export function RankingsScreen() {
                   style={{
                     color:
                       sort !== 'total_profit'
-                        ? colors.foreground
+                        ? tokens.colors.foreground
                         : item.total_profit > 0
-                          ? colors.success
+                          ? tokens.colors.success
                           : item.total_profit < 0
-                            ? colors.danger
-                            : colors.foreground,
+                            ? tokens.colors.destructive
+                            : tokens.colors.foreground,
                     fontWeight: '900',
                     fontVariant: ['tabular-nums'],
                   }}>

@@ -10,6 +10,7 @@ import { AppLoader } from '@/components/feedback/AppLoader';
 import { StateNotice } from '@/components/feedback/StateNotice';
 import { fetchBetsByIds } from '@/features/home/api/bets';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useRouteActive } from '@/hooks/use-route-active';
 import { useAuth } from '@/providers/auth-provider';
 import { useCoupon } from '@/providers/coupon-provider';
 import { useNetwork } from '@/providers/network-provider';
@@ -42,6 +43,7 @@ const itemKey = (type: FeedItemType, id: string) => `${type}:${id}`;
 const targetFor = (type: FeedItemType, id: string) => type === 'post' ? { postId: id } : type === 'coupon' ? { couponId: id } : { casinoShareId: id };
 
 export function SocialScreen() {
+  const routeActive = useRouteActive();
   const { tokens } = useAppTheme();
   const { user, profile } = useAuth();
   const network = useNetwork();
@@ -115,13 +117,14 @@ export function SocialScreen() {
     }
   }, [hasMore, items.length, loading, loadingMore, network.isOnline, refreshing, user?.id]);
 
-  useEffect(() => { void loadFeed(); void loadStories().catch(() => undefined); }, [loadFeed, loadStories]);
+  useEffect(() => { if (routeActive) { void loadFeed(); void loadStories().catch(() => undefined); } }, [loadFeed, loadStories, routeActive]);
   useEffect(() => {
+    if (!routeActive) return;
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active' && network.isOnline === true) void loadFeed(true);
     });
     return () => subscription.remove();
-  }, [loadFeed, network.isOnline]);
+  }, [loadFeed, network.isOnline, routeActive]);
 
   const refreshItem = useCallback(async (type: FeedItemType, id: string, allowInsert: boolean) => {
     const next = await fetchSocialFeedItem(type, id, user?.id);
@@ -152,7 +155,7 @@ export function SocialScreen() {
     }
   }, [network.isOnline, user?.id]);
 
-  useSocialRealtime({ enabled: network.isOnline === true, feedItems: items, commentsLoaded, refreshItem, refreshComments: loadComments });
+  useSocialRealtime({ enabled: routeActive && network.isOnline === true, feedItems: items, commentsLoaded, refreshItem, refreshComments: loadComments });
 
   const createContent = async (kind: 'post' | 'story', text: string, image: PreparedSocialImage | null) => {
     if (!user || !network.canPerformWrites) throw new Error('Publikowanie wymaga połączenia z internetem.');

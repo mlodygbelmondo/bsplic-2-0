@@ -19,9 +19,9 @@ Ten plik jest trwałą referencją wykonania migracji. Statusy odnoszą się do 
 
 | # | Obszar | Status | Stan i brakujący dowód |
 |---|---|---|---|
-| 1 | Shell, maintenance, connectivity, themes, providers, role gates | partial | Zaimplementowane; build i statyczne kontrole przechodzą. Brak pełnego przejścia obu motywów na symulatorze. |
+| 1 | Shell, maintenance, connectivity, themes, providers, role gates | partial | Zaimplementowane; główne powierzchnie używają tokenów light/dark, a ciężkie subskrypcje są focus-gated. Brak pełnego przejścia obu motywów na symulatorze. |
 | 2 | Login, recovery, refresh, logout | partial | Email/hasło, odzyskiwanie i bezpieczna sesja są wdrożone; dodano retry/logout po błędzie profilu. Brak końcowego testu na zalogowanym symulatorze. |
-| 3 | Sportsbook home | partial | Kategorie, filtry, sortowanie, paginacja, realtime, zaznaczanie opcji i cache są wdrożone. Brak manualnego porównania z PWA. |
+| 3 | Sportsbook home | partial | Kategorie, filtry, sortowanie, paginacja, focus-gated realtime, zaznaczanie opcji, cache i natywny formularz propozycji są wdrożone. Brak manualnego porównania z PWA. |
 | 4 | Coupon | partial | Persistencja, single/AKO, exclusions, walidacja, bezpieczne RPC, saldo i kopiowanie social są wdrożone. Brak manualnego zakładu na koncie QA w finalnym buildzie. |
 | 5 | Wallet | partial | Saldo, daily top-up, transfer z UUID idempotency, historia i właściwa granica sukcesu są wdrożone. Brak końcowej próby produkcyjnej. |
 | 6 | Profile | partial | Profil własny/publiczny, statystyki, historie, badges, share oraz avatar z aparatu/galerii, kompresją i ArrayBuffer są wdrożone. Brak manualnego uploadu. |
@@ -29,12 +29,12 @@ Ten plik jest trwałą referencją wykonania migracji. Statusy odnoszą się do 
 | 8 | Social | partial | Feed, posty, stories, obrazy, mentions/Eniu, komentarze/wątki, reakcje/reactors, filtry, linki, kopiowanie kuponu, share i realtime są wdrożone. Brak końcowego przejścia produkcyjnego. |
 | 9 | YouTube/Spotify | partial | Bezpieczny inline WebView i external fallback są wdrożone. Brak ręcznej próby obu providerów. |
 | 10 | Casino lobby | partial | Lobby i nawigacja są wdrożone. Brak screenshot comparison. |
-| 11 | Roulette | partial | Snapshot serwera, realtime, countdown, obstawianie, uczestnicy, historia, resume, audio/haptics/share są wdrożone. Prezentacja koła jest uproszczona względem PWA i nie przeszła manualnego QA. |
-| 12 | Blackjack | partial | Serwerowe hit/stand/double/split/insurance, karty, audio/haptics/share są wdrożone. Staged reveal i celebracja wymagają dalszego wizualnego dopracowania oraz QA. |
-| 13 | Jackpot | partial | Karta, zakup, polling, deep link, draw, resume i claim są wdrożone. Brak przejścia realnej rundy na symulatorze. |
+| 11 | Roulette | partial | Snapshot serwera, focus-gated realtime/countdown, obstawianie, uczestnicy, historia, animowane koło z reduced motion, audio/haptics oraz share system/Social są wdrożone. Brak manualnego QA animacji. |
+| 12 | Blackjack | partial | Serwerowe hit/stand/double/split/insurance, etapowe odkrywanie krupiera, karty, reduced motion, audio/haptics/share i celebracja są wdrożone. Brak wizualnego QA finału. |
+| 13 | Jackpot | partial | Karta, focus-gated polling, zakup, deep link, draw, resync po foreground, claim są wdrożone. Brak przejścia realnej rundy na symulatorze. |
 | 14 | Bonuses and feature polls | partial | Natywne overlaye i operacje są wdrożone. Brak manualnego QA. |
 | 15 | In-app notifications | partial | Realtime, unread, nawigacja, preferencja dźwięku, audio/haptics są wdrożone; push celowo pominięty. Brak manualnego QA. |
-| 16 | Admin/moderator | partial | Dashboard, bets/create/settle/refund/corrections/AKO, proposals, categories, Eniu, bonus i polls są wdrożone z role gates. Brak końcowego przejścia kontem admina. |
+| 16 | Admin/moderator | partial | Dashboard, bets/create/settle/refund/corrections/AKO, proposals, categories, Eniu, bonus i polls są wdrożone z role gates oraz centralną blokadą operacji offline. Brak końcowego przejścia kontem admina. |
 
 Nie ma pozycji `not started`. Status `partial` wynika głównie z braku końcowego uwierzytelnionego walkthrough oraz — w dwóch grach casino — z uproszczonej prezentacji ruchu. Nie wolno zmieniać tych statusów na `complete` bez zebrania wskazanego dowodu.
 
@@ -42,7 +42,7 @@ Nie ma pozycji `not started`. Status `partial` wynika głównie z braku końcowe
 
 - `mobile: npx tsc --noEmit` — pass.
 - `mobile: npm run lint` — pass, 0 błędów; 5 ostrzeżeń Fast Refresh w providerach.
-- `mobile: npx expo-doctor` — wcześniej 20/20; końcowa ponowna próba narzędzia zawisła bez wyniku i została przerwana.
+- `mobile: npx expo-doctor` — wcześniej 20/20; końcowa próba offline wykonała 18/20, a dwie kontrole wymagające Expo API nie mogły rozwiązać `exp.host` (nie jest to błąd projektu).
 - `mobile: npx expo export --platform ios` — pass, 3700 modułów, Hermes bundle około 7 MB.
 - `mobile: npx expo export --platform android` — pass, 3780 modułów, Hermes bundle około 7,2 MB.
 - Root: `npm run lint` — pass z istniejącymi ostrzeżeniami.
@@ -58,6 +58,11 @@ Nie ma pozycji `not started`. Status `partial` wynika głównie z braku końcowe
 - `d629389` — lifecycle i operacje finansowe.
 - `65f4110` — bezpieczeństwo wagering/transfer, identity i AKO.
 - `7945329` — recovery auth, natywny upload avatarów i realtime social.
+- `e6c0cc4` — trwały handoff oraz końcowe edge case auth/realtime.
+
+## Niezależny review
+
+Pierwszy przegląd znalazł błędy auth recovery, uploadu avatarów, kluczy realtime social, lifecycle ukrytych tras, motywów, offline admina, atomowości SecureStore i brak formularza propozycji. Wszystkie zostały naprawione. Druga runda dodatkowo wykorzystała przygotowane mechanizmy prezentacji casino: koło ruletki, staged reveal blackjacka, publikację wygranej do Socialu i foreground resync Jackpotu. Końcowy re-review nie znalazł żadnych actionable P1/P2. Powierzchnie nadal pozostają `partial`, dopóki nie powstanie wiarygodny manualny dowód na iOS.
 
 ## Wymagane działania zewnętrzne
 

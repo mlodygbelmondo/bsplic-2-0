@@ -5,6 +5,7 @@ import { BadgePlus, Bot, LayoutDashboard, Lightbulb, ListChecks, PlusCircle, Tag
 import { AppCard, AppText, AccessiblePressable } from '@/components/ui';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/providers/auth-provider';
+import { useNetwork } from '@/providers/network-provider';
 import type { AdminTab } from '../constants';
 import { BonusCampaignsPanel } from './BonusCampaignsPanel';
 import { CategoriesPanel } from './CategoriesPanel';
@@ -31,10 +32,14 @@ type ScreenTab = (typeof TABS)[number]['key'];
 export function AdminScreen() {
   const { tokens } = useAppTheme();
   const { isAdmin, isModerator, loading } = useAuth();
+  const { canPerformWrites, isOnline } = useNetwork();
   const [tab, setTab] = useState<ScreenTab>(isAdmin ? 'manage' : 'proposals');
   if (loading) return null;
   if (!isAdmin && !isModerator) {
     return <View style={[styles.denied, { backgroundColor: tokens.colors.background }]}><AppCard style={styles.deniedCard}><AppText variant="title">Brak dostępu</AppText><AppText tone="muted">Panel jest dostępny wyłącznie dla administratorów i moderatorów.</AppText></AppCard></View>;
+  }
+  if (!canPerformWrites) {
+    return <View style={[styles.denied, { backgroundColor: tokens.colors.background }]}><AppCard style={styles.deniedCard}><AppText variant="title">{isOnline === null ? 'Sprawdzamy połączenie…' : 'Panel admina jest offline'}</AppText><AppText tone="muted">{isOnline === null ? 'Panel uaktywni się, gdy potwierdzimy bezpieczne połączenie z serwerem.' : 'Operacje administracyjne nie są kolejkowane. Połącz się z internetem, aby bezpiecznie zarządzać aplikacją.'}</AppText></AppCard></View>;
   }
   const tabs = isAdmin ? TABS : TABS.filter((item) => item.key === 'proposals');
   const active = tabs.some((item) => item.key === tab) ? tab : 'proposals';

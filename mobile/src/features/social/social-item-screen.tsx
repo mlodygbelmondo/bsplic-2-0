@@ -6,6 +6,7 @@ import { AppLoader } from '@/components/feedback/AppLoader';
 import { StateNotice } from '@/components/feedback/StateNotice';
 import { fetchBetsByIds } from '@/features/home/api/bets';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useRouteActive } from '@/hooks/use-route-active';
 import { useAuth } from '@/providers/auth-provider';
 import { useCoupon } from '@/providers/coupon-provider';
 import { useNetwork } from '@/providers/network-provider';
@@ -31,6 +32,7 @@ interface SocialItemScreenProps {
 const targetFor = (type: FeedItemType, id: string) => type === 'post' ? { postId: id } : type === 'coupon' ? { couponId: id } : { casinoShareId: id };
 
 export function SocialItemScreen(props: SocialItemScreenProps = {}) {
+  const routeActive = useRouteActive();
   const params = useLocalSearchParams<{ itemType?: string | string[]; itemId?: string | string[] }>();
   const typeValue = props.itemType ?? (Array.isArray(params.itemType) ? params.itemType[0] : params.itemType);
   const id = props.itemId ?? (Array.isArray(params.itemId) ? params.itemId[0] : params.itemId);
@@ -80,17 +82,17 @@ export function SocialItemScreen(props: SocialItemScreenProps = {}) {
     finally { setCommentsLoading(false); }
   }, [id, network.isOnline, type, user?.id]);
 
-  useEffect(() => { void loadItem(); }, [loadItem]);
+  useEffect(() => { if (routeActive) void loadItem(); }, [loadItem, routeActive]);
   const loadedItemId = item?.id;
   useEffect(() => {
-    if (loadedItemId && network.isOnline !== false) void loadComments();
-  }, [loadComments, loadedItemId, network.isOnline]);
+    if (routeActive && loadedItemId && network.isOnline !== false) void loadComments();
+  }, [loadComments, loadedItemId, network.isOnline, routeActive]);
   const refreshRealtimeItem = useCallback(async (nextType: FeedItemType, nextId: string) => {
     const next = await fetchSocialFeedItem(nextType, nextId, user?.id);
     setItem(next);
   }, [user?.id]);
   const refreshRealtimeComments = useCallback(() => loadComments(), [loadComments]);
-  useSocialRealtime({ enabled: !!item && network.isOnline === true, feedItems: item ? [item] : [], commentsLoaded: item ? { [`${item.item_type}:${item.id}`]: commentsLoaded } : {}, refreshItem: refreshRealtimeItem, refreshComments: refreshRealtimeComments });
+  useSocialRealtime({ enabled: routeActive && !!item && network.isOnline === true, feedItems: item ? [item] : [], commentsLoaded: item ? { [`${item.item_type}:${item.id}`]: commentsLoaded } : {}, refreshItem: refreshRealtimeItem, refreshComments: refreshRealtimeComments });
 
   const reactItem = async (emoji: ReactionEmoji) => {
     if (!item || !user || !network.canPerformWrites) return;

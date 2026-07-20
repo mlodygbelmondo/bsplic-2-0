@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Share, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { AppAvatar, AppBadge, AppButton, AppCard } from '@/components/ui';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/auth-provider';
 import type {
@@ -37,12 +38,6 @@ interface CachedProfileScreen {
 }
 
 const profileCacheKey = (id: string) => `bsplic.profile.screen.v1.${id}`;
-
-const palette = {
-  background: '#090005', card: '#1a050d', inset: '#280917', border: '#5b1a2e',
-  foreground: '#fff2f5', muted: '#d9a8b6', primary: '#ff0a54', success: '#36c987',
-  danger: '#f55b68', yellow: '#ffe14a',
-};
 
 const BADGES: Record<string, { name: string; description: string; source: number }> = {
   debiutant: { name: 'Debiutant', description: 'Pierwszy postawiony zakład', source: require('../../../../assets/images/badges/debiutant.png') },
@@ -76,14 +71,25 @@ function toStats(row: { total_bets: number; won_bets: number; lost_bets: number;
 function Segment<T extends string>({ values, value, onChange }: {
   values: Array<[T, string]>; value: T; onChange: (next: T) => void;
 }) {
+  const { tokens } = useAppTheme();
   return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-    {values.map(([key, label]) => <Pressable key={key} onPress={() => onChange(key)} style={{ minHeight: 38, justifyContent: 'center', borderRadius: 999, paddingHorizontal: 14, backgroundColor: value === key ? palette.primary : palette.inset }}>
-      <Text style={{ color: value === key ? '#fff' : palette.muted, fontSize: 12, fontWeight: '800' }}>{label}</Text>
+    {values.map(([key, label]) => <Pressable key={key} onPress={() => onChange(key)} style={{ minHeight: 38, justifyContent: 'center', borderRadius: 999, paddingHorizontal: 14, backgroundColor: value === key ? tokens.colors.primary : tokens.colors.secondary }}>
+      <Text style={{ color: value === key ? tokens.colors.primaryForeground : tokens.colors.mutedForeground, fontSize: 12, fontWeight: '800' }}>{label}</Text>
     </Pressable>)}
   </ScrollView>;
 }
 
 export function ProfileScreen({ userRef }: { userRef?: string }) {
+  const { tokens } = useAppTheme();
+  const palette = {
+    background: tokens.colors.background,
+    card: tokens.colors.card,
+    inset: tokens.colors.secondary,
+    border: tokens.colors.border,
+    foreground: tokens.colors.foreground,
+    muted: tokens.colors.mutedForeground,
+    primary: tokens.colors.primary,
+  };
   const { user, profile, refreshProfile } = useAuth();
   const [targetId, setTargetId] = useState<string | null>(null);
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);

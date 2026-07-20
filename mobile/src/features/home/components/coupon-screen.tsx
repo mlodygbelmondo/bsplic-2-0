@@ -12,22 +12,13 @@ import {
 } from 'react-native';
 
 import { placeCouponSecure } from '@/features/home/api/coupons';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useCoupon } from '@/providers/coupon-provider';
 import { useNetwork } from '@/providers/network-provider';
 import { fetchAkoExclusionsForBets, findAkoConflict, formatAkoConflict, type AkoExclusion } from '@/features/coupons/ako-exclusions';
 
 type CouponMode = 'single' | 'ako';
-
-const colors = {
-  background: '#090005',
-  card: '#1a050d',
-  border: '#5b1a2e',
-  foreground: '#fff2f5',
-  muted: '#d9a8b6',
-  primary: '#ff0a54',
-  yellow: '#ffe14a',
-};
 
 function parseStake(value: string) {
   const normalized = value.replace(',', '.');
@@ -42,6 +33,19 @@ function hasValidPrecision(value: string) {
 }
 
 export function CouponScreen() {
+  const { tokens } = useAppTheme();
+  const colors = {
+    background: tokens.colors.background,
+    card: tokens.colors.card,
+    cardStrong: tokens.colors.cardStrong,
+    border: tokens.colors.border,
+    foreground: tokens.colors.foreground,
+    muted: tokens.colors.mutedForeground,
+    primary: tokens.colors.primary,
+    primaryForeground: tokens.colors.primaryForeground,
+    yellow: tokens.colors.selectedYellow,
+    danger: tokens.colors.destructive,
+  };
   const { user, profile, refreshProfile } = useAuth();
   const { items, totalOdds, clearCoupon, removeItem } = useCoupon();
   const { canPerformWrites } = useNetwork();
@@ -175,7 +179,7 @@ export function CouponScreen() {
                 backgroundColor: mode === candidate ? colors.primary : colors.card,
                 opacity: candidate === 'ako' && items.length < 2 ? 0.4 : 1,
               }}>
-              <Text style={{ color: colors.foreground, fontWeight: '900' }}>
+              <Text style={{ color: mode === candidate ? colors.primaryForeground : colors.foreground, fontWeight: '900' }}>
                 {candidate === 'single' ? 'Single' : 'AKO'}
               </Text>
             </Pressable>
@@ -267,10 +271,10 @@ export function CouponScreen() {
           />
         ) : null}
 
-        {mode === 'ako' && akoConflict && <View style={{ borderRadius: 12, backgroundColor: '#6d172b', padding: 12 }}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{formatAkoConflict(akoConflict)}</Text></View>}
+        {mode === 'ako' && akoConflict && <View style={{ borderRadius: 12, backgroundColor: colors.danger, padding: 12 }}><Text style={{ color: colors.primaryForeground, fontSize: 12, fontWeight: '700' }}>{formatAkoConflict(akoConflict)}</Text></View>}
 
         {items.length > 0 ? (
-          <View style={{ gap: 8, borderRadius: 16, backgroundColor: '#250711', padding: 16 }}>
+          <View style={{ gap: 8, borderRadius: 16, backgroundColor: colors.cardStrong, padding: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ color: colors.muted }}>Łączna stawka</Text>
               <Text selectable style={{ color: colors.foreground, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
@@ -303,9 +307,9 @@ export function CouponScreen() {
               opacity: placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict)) || pressed ? 0.5 : 1,
             })}>
             {placing ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
+              <Text style={{ color: colors.primaryForeground, fontSize: 16, fontWeight: '900' }}>
                 Postaw kupon
               </Text>
             )}

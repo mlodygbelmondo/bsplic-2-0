@@ -5,23 +5,29 @@ import { AppButton, AppCard, AppInput } from '@/components/ui';
 import { getRouletteBetTypeLabel, getRouletteBetValueOptions, getRouletteColor, getRoulettePayoutMultiplier, getRoulettePhaseLabel } from '@/features/casino/lib/roulette';
 import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
 import { useCasinoFeedback } from '@/features/casino/hooks/use-casino-feedback';
+import { RouletteWheel } from '@/features/casino/components/roulette-wheel';
+import { useRouteActive } from '@/hooks/use-route-active';
 import { useAuth } from '@/providers/auth-provider';
 import { useNetwork } from '@/providers/network-provider';
+import { createCasinoShare } from '@/features/social/api/social';
 import type { RouletteBetType } from '@/types/database';
 
 const c = { bg: '#09090b', card: 'rgba(17,15,22,0.94)', inset: '#1d1923', border: '#3d3448', text: '#fff', muted: '#b8adbE', gold: '#ffe14a', red: '#d71d3b', green: '#168f52' };
 const types: RouletteBetType[] = ['straight', 'color', 'parity', 'range'];
 
 export function RouletteScreen() {
+  const routeActive = useRouteActive();
   const { user, profile, refreshProfile } = useAuth();
   const { canPerformWrites } = useNetwork();
   const feedback = useCasinoFeedback();
   const lastResultRef = useRef<string | null>(null);
-  const table = useRouletteTable({ userId: user!.id, username: profile?.username, avatarUrl: profile?.avatar_url, refreshProfile });
+  const table = useRouletteTable({ userId: user!.id, username: profile?.username, avatarUrl: profile?.avatar_url, refreshProfile, enabled: routeActive });
   const [betType, setBetType] = useState<RouletteBetType>('color');
   const [betValue, setBetValue] = useState('red');
   const [stake, setStake] = useState('10');
+  const [sharingToSocial, setSharingToSocial] = useState(false);
   const values = useMemo(() => getRouletteBetValueOptions(betType), [betType]);
+  const shareableWin = useMemo(() => table.recentWins.find((win) => win.user_id === user!.id) ?? null, [table.recentWins, user]);
   useEffect(() => {
     const result = table.latestSettledRound;
     if (!result || result.id === lastResultRef.current) return;
@@ -36,12 +42,22 @@ export function RouletteScreen() {
     try { feedback.chip(); await table.placeBet({ betType, betValue, stake: amount }); }
     catch (cause) { Alert.alert('Nie przyjęto zakładu', cause instanceof Error ? cause.message : 'Spróbuj ponownie.'); }
   };
+  const shareToSocial = async () => {
+    if (!shareableWin || !canPerformWrites) { Alert.alert('Brak internetu', 'Publikowanie w Socialu wymaga połączenia.'); return; }
+    const round = table.recentSpins.find((item) => item.round_number === shareableWin.round_number);
+    setSharingToSocial(true);
+    try {
+      await createCasinoShare({ userId: user!.id, betId: shareableWin.id, content: `Moja wygrana w ruletce: ${shareableWin.payout.toFixed(2)} zł 🎯`, betType: shareableWin.bet_type, betValue: shareableWin.bet_value, stake: shareableWin.stake, payout: shareableWin.payout, roundNumber: shareableWin.round_number, winningNumber: round?.winning_number ?? null, winningColor: round?.winning_color ?? null });
+      Alert.alert('Opublikowano', 'Wynik jest już widoczny w Socialu.');
+    } catch (cause) { Alert.alert('Nie udało się opublikować', cause instanceof Error ? cause.message : 'Spróbuj ponownie.'); }
+    finally { setSharingToSocial(false); }
+  };
   return <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: 12, padding: 12, paddingBottom: 116 }}>
     <View style={{ alignItems: 'center', gap: 5, paddingVertical: 8 }}><Text style={{ color: c.gold, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>KASYNO NA ŻYWO</Text><Text style={{ color: c.text, fontSize: 28, fontWeight: '900' }}>Ruletka</Text><Text style={{ color: c.muted }}>{table.currentRound ? `Runda #${table.currentRound.round_number}` : 'Stół główny'} · {getRoulettePhaseLabel(table.phase)}</Text><Text style={{ color: c.gold, fontSize: 32, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{table.countdownLabel}</Text></View>
     <AppCard style={{ backgroundColor: c.card, borderColor: c.border, alignItems: 'center', gap: 14 }}>
-      <View style={{ width: 210, height: 210, borderRadius: 105, borderWidth: 16, borderColor: '#a77719', alignItems: 'center', justifyContent: 'center', backgroundColor: '#25130b' }}><View style={{ width: 152, height: 152, borderRadius: 76, borderWidth: 10, borderColor: table.phase === 'spinning' ? c.gold : '#5f441a', alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' }}><Text style={{ color: table.latestSettledRound?.winning_color === 'red' ? '#ff4966' : table.latestSettledRound?.winning_color === 'green' ? '#42d98b' : '#fff', fontSize: 48, fontWeight: '900' }}>{table.phase === 'spinning' ? '●' : table.latestSettledRound?.winning_number ?? '?'}</Text><Text style={{ color: c.muted, fontSize: 10 }}>{table.phase === 'spinning' ? 'LOSOWANIE' : 'OSTATNI WYNIK'}</Text></View></View>
+      <RouletteWheel phase={table.phase} winningNumber={table.latestSettledRound?.winning_number ?? null} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>{table.recentSpins.slice(0, 12).map(round => <View key={round.id} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: round.winning_color === 'red' ? c.red : round.winning_color === 'green' ? c.green : '#151318', borderWidth: 1, borderColor: '#ffffff33' }}><Text style={{ color: '#fff', fontWeight: '900' }}>{round.winning_number}</Text></View>)}</ScrollView>
-      {table.latestSettledRound && <AppButton variant="ghost" onPress={() => void Share.share({ message: `Ruletka BSPLIC: w rundzie #${table.latestSettledRound?.round_number} wypadło ${table.latestSettledRound?.winning_number}. https://bsplic.vercel.app/casino/roulette` })}>Udostępnij wynik</AppButton>}
+      {table.latestSettledRound && <View style={{ width: '100%', gap: 7 }}><AppButton variant="ghost" onPress={() => void Share.share({ message: `Ruletka BSPLIC: w rundzie #${table.latestSettledRound?.round_number} wypadło ${table.latestSettledRound?.winning_number}. https://bsplic.vercel.app/casino/roulette` })}>Udostępnij systemowo</AppButton>{shareableWin && <AppButton variant="secondary" loading={sharingToSocial} disabled={!canPerformWrites} onPress={() => void shareToSocial()}>Opublikuj wygraną w Socialu</AppButton>}</View>}
     </AppCard>
     {table.tableMessage && <Text style={{ color: '#ff6b7f', textAlign: 'center' }}>{table.tableMessage}</Text>}
     <AppCard style={{ backgroundColor: c.card, borderColor: c.border, gap: 12 }}>

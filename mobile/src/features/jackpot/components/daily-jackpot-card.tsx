@@ -8,16 +8,17 @@ import { useAuth } from '@/providers/auth-provider';
 import { useNetwork } from '@/providers/network-provider';
 import type { DailyJackpotSnapshot } from '@/features/jackpot/types';
 
-export function DailyJackpotCard() {
+export function DailyJackpotCard({ enabled = true }: { enabled?: boolean }) {
   const { profile, refreshProfile } = useAuth(); const { canPerformWrites } = useNetwork();
   const [snapshot, setSnapshot] = useState<DailyJackpotSnapshot | null>(null); const [loading, setLoading] = useState(false);
   const load = useCallback(() => void getDailyJackpotState().then(setSnapshot).catch(() => setSnapshot(null)), []);
   useEffect(() => {
+    if (!enabled) return;
     load();
     const timer = setInterval(load, 15_000);
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') load(); });
     return () => { clearInterval(timer); subscription.remove(); };
-  }, [load]);
+  }, [enabled, load]);
   if (!snapshot?.poolId) return null;
   const canDraw = snapshot.status === 'drawn' || snapshot.status === 'rolled_over';
   const limit = snapshot.currentUserTicketCount >= snapshot.maxTicketsPerPlayer;
