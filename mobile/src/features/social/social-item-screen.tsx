@@ -90,7 +90,7 @@ export function SocialItemScreen(props: SocialItemScreenProps = {}) {
     setItem(next);
   }, [user?.id]);
   const refreshRealtimeComments = useCallback(() => loadComments(), [loadComments]);
-  useSocialRealtime({ enabled: !!item && network.isOnline === true, feedItems: item ? [item] : [], commentsLoaded: item ? { [item.id]: commentsLoaded } : {}, refreshItem: refreshRealtimeItem, refreshComments: refreshRealtimeComments });
+  useSocialRealtime({ enabled: !!item && network.isOnline === true, feedItems: item ? [item] : [], commentsLoaded: item ? { [`${item.item_type}:${item.id}`]: commentsLoaded } : {}, refreshItem: refreshRealtimeItem, refreshComments: refreshRealtimeComments });
 
   const reactItem = async (emoji: ReactionEmoji) => {
     if (!item || !user || !network.canPerformWrites) return;

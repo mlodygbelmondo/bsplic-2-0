@@ -245,7 +245,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async (): Promise<void> => {
     const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) throw signOutError;
+    if (signOutError) {
+      const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (localSignOutError) throw localSignOutError;
+    }
     clearProfileState();
   }, [clearProfileState]);
 
