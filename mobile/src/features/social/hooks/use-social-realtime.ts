@@ -38,7 +38,7 @@ export function useSocialRealtime({ enabled, feedItems, commentsLoaded, refreshI
         const isInsert = row.operation === 'INSERT' && ['social_posts', 'casino_social_shares', 'coupons'].includes(source);
         const isLoaded = itemsRef.current.some((item) => item.id === id && item.item_type === type);
         if (isLoaded || isInsert) void refreshItem(type, id, isInsert);
-        if (commentsRef.current[id] && ['social_comments', 'social_reactions'].includes(source)) void refreshComments(id, type);
+        if (commentsRef.current[`${type}:${id}`] && ['social_comments', 'social_reactions'].includes(source)) void refreshComments(id, type);
       },
     ).subscribe();
     return () => { void supabase.removeChannel(channel); };

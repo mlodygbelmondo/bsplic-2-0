@@ -2,6 +2,7 @@
 import 'expo-sqlite/localStorage/install';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
+import { fetch } from 'expo/fetch';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Share, Alert, Pressable, ScrollView, Text, View } from 'react-native';
@@ -153,18 +154,23 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
     await Share.share({ message: `Profil ${displayName} w BSPLIC: https://bsplic.vercel.app/profile/${ref}`, url: `https://bsplic.vercel.app/profile/${ref}` });
   };
 
-  const changeAvatar = async () => {
+  const pickAvatar = async (source: 'camera' | 'library') => {
     if (!own || !user) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { Alert.alert('Brak dostępu', 'Zezwól aplikacji na dostęp do zdjęć.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 });
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Brak dostępu', source === 'camera' ? 'Zezwól aplikacji na dostęp do aparatu.' : 'Zezwól aplikacji na dostęp do zdjęć.'); return; }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 };
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
     if (result.canceled) return;
     setUploading(true);
     try {
       const edited = await ImageManipulator.manipulateAsync(result.assets[0].uri, [{ resize: { width: 640, height: 640 } }], { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG });
-      const blob = await (await fetch(edited.uri)).blob();
+      const body = await (await fetch(edited.uri)).arrayBuffer();
       const path = `${user.id}/${Date.now()}-avatar.jpg`;
-      const { error: uploadError } = await supabase.storage.from('profile-avatars').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
+      const { error: uploadError } = await supabase.storage.from('profile-avatars').upload(path, body, { contentType: 'image/jpeg', cacheControl: '31536000' });
       if (uploadError) throw uploadError;
       const avatarUrl = supabase.storage.from('profile-avatars').getPublicUrl(path).data.publicUrl;
       const { error: updateError } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
@@ -173,6 +179,12 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
     } catch (cause) { Alert.alert('Nie udało się zmienić zdjęcia', cause instanceof Error ? cause.message : 'Spróbuj ponownie.'); }
     finally { setUploading(false); }
   };
+
+  const changeAvatar = () => Alert.alert('Zmień zdjęcie', 'Wybierz źródło zdjęcia profilowego.', [
+    { text: 'Anuluj', style: 'cancel' },
+    { text: 'Aparat', onPress: () => void pickAvatar('camera') },
+    { text: 'Galeria', onPress: () => void pickAvatar('library') },
+  ]);
 
   if (loading) return <View style={{ flex: 1, backgroundColor: palette.background, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: palette.muted }}>Wczytywanie profilu…</Text></View>;
   if (error || !shownProfile) return <View style={{ flex: 1, backgroundColor: palette.background, padding: 24, justifyContent: 'center', gap: 16 }}><Text style={{ color: palette.foreground, textAlign: 'center', fontWeight: '800' }}>{error ?? 'Nie znaleziono profilu'}</Text><AppButton onPress={() => void load()}>Spróbuj ponownie</AppButton></View>;
@@ -184,7 +196,7 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
         <View style={{ flex: 1, gap: 3 }}><Text style={{ color: palette.foreground, fontSize: 24, fontWeight: '900' }}>{displayName}</Text><Text style={{ color: palette.muted, fontSize: 12 }}>Dołączył: {new Date(shownProfile.created_at).toLocaleDateString('pl-PL')}{own ? '' : ' · profil publiczny'}</Text></View>
         {own && <View style={{ alignItems: 'flex-end' }}><Text style={{ color: palette.muted, fontSize: 11 }}>Saldo</Text><Text style={{ color: palette.primary, fontWeight: '900' }}>{Number(profile?.balance ?? 0).toFixed(2)} zł</Text></View>}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}><AppButton variant="secondary" onPress={() => void shareProfile()} style={{ flex: 1 }}>Udostępnij</AppButton>{own && <AppButton loading={uploading} onPress={() => void changeAvatar()} style={{ flex: 1 }}>Zmień zdjęcie</AppButton>}</View>
+      <View style={{ flexDirection: 'row', gap: 8 }}><AppButton variant="secondary" onPress={() => void shareProfile()} style={{ flex: 1 }}>Udostępnij</AppButton>{own && <AppButton loading={uploading} onPress={changeAvatar} style={{ flex: 1 }}>Zmień zdjęcie</AppButton>}</View>
     </AppCard>
 
     <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 14 }}>
