@@ -59,6 +59,7 @@ Nie ma pozycji `not started`. Status `partial` wynika głównie z braku końcowe
 - `65f4110` — bezpieczeństwo wagering/transfer, identity i AKO.
 - `7945329` — recovery auth, natywny upload avatarów i realtime social.
 - `e6c0cc4` — trwały handoff oraz końcowe edge case auth/realtime.
+- `a65432c` — parytet motywów, lifecycle, propozycje, casino i atomowy storage.
 
 ## Niezależny review
 
