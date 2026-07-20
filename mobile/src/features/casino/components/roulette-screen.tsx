@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, ScrollView, Share, Text, View } from 'react-native';
 
 import { AppButton, AppCard, AppInput } from '@/components/ui';
 import { getRouletteBetTypeLabel, getRouletteBetValueOptions, getRouletteColor, getRoulettePayoutMultiplier, getRoulettePhaseLabel } from '@/features/casino/lib/roulette';
 import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
+import { useCasinoFeedback } from '@/features/casino/hooks/use-casino-feedback';
 import { useAuth } from '@/providers/auth-provider';
 import { useNetwork } from '@/providers/network-provider';
 import type { RouletteBetType } from '@/types/database';
@@ -14,17 +15,25 @@ const types: RouletteBetType[] = ['straight', 'color', 'parity', 'range'];
 export function RouletteScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const { canPerformWrites } = useNetwork();
+  const feedback = useCasinoFeedback();
+  const lastResultRef = useRef<string | null>(null);
   const table = useRouletteTable({ userId: user!.id, username: profile?.username, avatarUrl: profile?.avatar_url, refreshProfile });
   const [betType, setBetType] = useState<RouletteBetType>('color');
   const [betValue, setBetValue] = useState('red');
   const [stake, setStake] = useState('10');
   const values = useMemo(() => getRouletteBetValueOptions(betType), [betType]);
+  useEffect(() => {
+    const result = table.latestSettledRound;
+    if (!result || result.id === lastResultRef.current) return;
+    if (lastResultRef.current) feedback.result(table.activeBets.some(bet => bet.round_id === result.id && bet.is_win === true));
+    lastResultRef.current = result.id;
+  }, [feedback, table.activeBets, table.latestSettledRound]);
   const place = async () => {
     const amount = Number(stake.replace(',', '.'));
     if (!canPerformWrites) { Alert.alert('Brak internetu', 'Zakłady kasynowe nie są kolejkowane offline.'); return; }
     if (table.phase !== 'waiting') { Alert.alert('Zakłady zamknięte', 'Poczekaj na następną rundę.'); return; }
     if (!Number.isFinite(amount) || amount <= 0 || amount > Number(profile?.balance ?? 0)) { Alert.alert('Nieprawidłowa stawka', 'Sprawdź stawkę i saldo.'); return; }
-    try { await table.placeBet({ betType, betValue, stake: amount }); }
+    try { feedback.chip(); await table.placeBet({ betType, betValue, stake: amount }); }
     catch (cause) { Alert.alert('Nie przyjęto zakładu', cause instanceof Error ? cause.message : 'Spróbuj ponownie.'); }
   };
   return <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: 12, padding: 12, paddingBottom: 116 }}>
@@ -32,6 +41,7 @@ export function RouletteScreen() {
     <AppCard style={{ backgroundColor: c.card, borderColor: c.border, alignItems: 'center', gap: 14 }}>
       <View style={{ width: 210, height: 210, borderRadius: 105, borderWidth: 16, borderColor: '#a77719', alignItems: 'center', justifyContent: 'center', backgroundColor: '#25130b' }}><View style={{ width: 152, height: 152, borderRadius: 76, borderWidth: 10, borderColor: table.phase === 'spinning' ? c.gold : '#5f441a', alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' }}><Text style={{ color: table.latestSettledRound?.winning_color === 'red' ? '#ff4966' : table.latestSettledRound?.winning_color === 'green' ? '#42d98b' : '#fff', fontSize: 48, fontWeight: '900' }}>{table.phase === 'spinning' ? '●' : table.latestSettledRound?.winning_number ?? '?'}</Text><Text style={{ color: c.muted, fontSize: 10 }}>{table.phase === 'spinning' ? 'LOSOWANIE' : 'OSTATNI WYNIK'}</Text></View></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>{table.recentSpins.slice(0, 12).map(round => <View key={round.id} style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: round.winning_color === 'red' ? c.red : round.winning_color === 'green' ? c.green : '#151318', borderWidth: 1, borderColor: '#ffffff33' }}><Text style={{ color: '#fff', fontWeight: '900' }}>{round.winning_number}</Text></View>)}</ScrollView>
+      {table.latestSettledRound && <AppButton variant="ghost" onPress={() => void Share.share({ message: `Ruletka BSPLIC: w rundzie #${table.latestSettledRound?.round_number} wypadło ${table.latestSettledRound?.winning_number}. https://bsplic.vercel.app/casino/roulette` })}>Udostępnij wynik</AppButton>}
     </AppCard>
     {table.tableMessage && <Text style={{ color: '#ff6b7f', textAlign: 'center' }}>{table.tableMessage}</Text>}
     <AppCard style={{ backgroundColor: c.card, borderColor: c.border, gap: 12 }}>

@@ -12,6 +12,7 @@ import { fetchUnreadNotificationsCount } from '@/features/notifications/api/noti
 import { EngagementSurfaces } from '@/features/engagement/components/engagement-surfaces';
 import { MaintenanceScreen } from '@/components/feedback/MaintenanceScreen';
 import { useMaintenanceMode } from '@/hooks/use-maintenance-mode';
+import { useNotificationSound } from '@/features/notifications/hooks/use-notification-sound';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/auth-provider';
 import { useNetwork } from '@/providers/network-provider';
@@ -34,6 +35,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const [unread, setUnread] = useState(0);
   const [topupLoading, setTopupLoading] = useState(false);
   const { maintenance, checking: checkingMaintenance, refresh: refreshMaintenance } = useMaintenanceMode();
+  const notificationSound = useNotificationSound();
   const topupAvailable = canClaimTopup(profile?.last_topup_at);
   const isDetail = pathname.startsWith('/profile') || pathname.startsWith('/admin') || pathname.startsWith('/social/') || pathname.startsWith('/jackpot/') || pathname === '/coupon';
   const casinoTone = pathname.startsWith('/casino/');
@@ -42,9 +44,9 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
     if (!user) return;
     const update = () => void fetchUnreadNotificationsCount(user.id).then(setUnread).catch(() => undefined);
     update();
-    const channel = supabase.channel(`mobile-notifications:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, update).subscribe();
+    const channel = supabase.channel(`mobile-notifications:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, payload => { update(); if (payload.eventType === 'INSERT') notificationSound.play(); }).subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [user]);
+  }, [notificationSound, user]);
 
   const avatarSource = useMemo(() => profile?.avatar_url ? { uri: profile.avatar_url } : undefined, [profile?.avatar_url]);
   const topup = async () => {
@@ -65,7 +67,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
     <View style={{ flex: 1 }}>{children}</View>
     <AdaptiveGlassBottomNav activeKey={activeKeyForPath(pathname)} onSelect={navigate} hidden={isDetail} tone={casinoTone ? 'casino' : 'default'} />
     <AppUserMenu visible={menuOpen} onClose={() => setMenuOpen(false)} username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} canTopup={topupAvailable && !topupLoading} isAdmin={isAdmin || isModerator} onTopup={() => void topup()} onTransfer={() => setTransferOpen(true)} onProfile={() => router.push('/profile')} onNotifications={() => setNotificationsOpen(true)} onAdmin={() => router.push('/admin')} onLogout={() => signOut()} />
-    <NotificationsSheet visible={notificationsOpen} onClose={() => setNotificationsOpen(false)} onCountChange={setUnread} />
+    <NotificationsSheet visible={notificationsOpen} onClose={() => setNotificationsOpen(false)} onCountChange={setUnread} soundMuted={notificationSound.muted} onToggleSound={notificationSound.toggle} />
     <TransferSheet visible={transferOpen} onClose={() => setTransferOpen(false)} />
     <EngagementSurfaces />
   </View>;

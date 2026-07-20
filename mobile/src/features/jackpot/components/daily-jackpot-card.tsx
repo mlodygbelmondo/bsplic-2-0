@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, AppState, Pressable, Text, View } from 'react-native';
 
 import { buyDailyJackpotTicket, getDailyJackpotState } from '@/features/jackpot/api/jackpot';
 import { formatJackpotAmount, getDrawTimeLabel } from '@/features/jackpot/lib/jackpotFormat';
@@ -12,7 +12,12 @@ export function DailyJackpotCard() {
   const { profile, refreshProfile } = useAuth(); const { canPerformWrites } = useNetwork();
   const [snapshot, setSnapshot] = useState<DailyJackpotSnapshot | null>(null); const [loading, setLoading] = useState(false);
   const load = useCallback(() => void getDailyJackpotState().then(setSnapshot).catch(() => setSnapshot(null)), []);
-  useEffect(load, [load]);
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 15_000);
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active') load(); });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, [load]);
   if (!snapshot?.poolId) return null;
   const canDraw = snapshot.status === 'drawn' || snapshot.status === 'rolled_over';
   const limit = snapshot.currentUserTicketCount >= snapshot.maxTicketsPerPlayer;

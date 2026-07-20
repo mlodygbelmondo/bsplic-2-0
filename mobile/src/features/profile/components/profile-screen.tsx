@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Metro resolves bundled badge assets through static require calls. */
+import 'expo-sqlite/localStorage/install';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -25,6 +26,16 @@ interface Stats {
   winRate: number;
   totalProfit: number;
 }
+
+interface CachedProfileScreen {
+  publicProfile: PublicProfile | null;
+  stats: Stats | null;
+  badges: Badge[];
+  coupons: CouponHistoryEntry[];
+  casino: CasinoHistoryEntry[];
+}
+
+const profileCacheKey = (id: string) => `bsplic.profile.screen.v1.${id}`;
 
 const palette = {
   background: '#090005', card: '#1a050d', inset: '#280917', border: '#5b1a2e',
@@ -87,8 +98,8 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
+    let resolved = userRef ?? user?.id ?? null;
     try {
-      let resolved = userRef ?? user?.id ?? null;
       if (resolved && !/^[0-9a-f-]{36}$/i.test(resolved)) {
         const { data, error: resolveError } = await supabase.from('profiles').select('id').ilike('username', resolved).limit(1).maybeSingle();
         if (resolveError) throw resolveError;
@@ -107,18 +118,27 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
       if (statsResult.error) throw statsResult.error;
       if (couponsResult.error) throw couponsResult.error;
       if (casinoResult.error) throw casinoResult.error;
-      setBadges((badgeResult.data as unknown as Badge[] | null) ?? []);
-      setCoupons((couponsResult.data as unknown as CouponHistoryEntry[] | null) ?? []);
-      setCasino(((casinoResult.data as unknown as CasinoHistoryEntry[] | null) ?? []).map(entry => ({ ...entry, stake: Number(entry.stake), payout: Number(entry.payout) })));
+      const nextBadges = (badgeResult.data as unknown as Badge[] | null) ?? [];
+      const nextCoupons = (couponsResult.data as unknown as CouponHistoryEntry[] | null) ?? [];
+      const nextCasino = ((casinoResult.data as unknown as CasinoHistoryEntry[] | null) ?? []).map(entry => ({ ...entry, stake: Number(entry.stake), payout: Number(entry.payout) }));
+      let nextPublicProfile: PublicProfile | null = null;
+      let nextStats: Stats | null = null;
       if (own) {
         const row = (statsResult.data as unknown as Array<Parameters<typeof toStats>[0]> | null)?.[0];
-        setPublicProfile(null); setStats(row ? toStats(row) : null);
+        nextStats = row ? toStats(row) : null;
       } else {
         const row = statsResult.data as unknown as PublicProfile | null;
-        setPublicProfile(row); setStats(row ? toStats(row) : null);
+        nextPublicProfile = row; nextStats = row ? toStats(row) : null;
       }
+      setBadges(nextBadges); setCoupons(nextCoupons); setCasino(nextCasino); setPublicProfile(nextPublicProfile); setStats(nextStats);
+      try { localStorage.setItem(profileCacheKey(resolved), JSON.stringify({ publicProfile: nextPublicProfile, stats: nextStats, badges: nextBadges, coupons: nextCoupons, casino: nextCasino } satisfies CachedProfileScreen)); } catch { /* current in-memory profile remains available */ }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Nie udało się wczytać profilu');
+      let cached: CachedProfileScreen | null = null;
+      if (resolved) {
+        try { cached = JSON.parse(localStorage.getItem(profileCacheKey(resolved)) ?? 'null') as CachedProfileScreen | null; } catch { cached = null; }
+      }
+      if (cached) { setBadges(cached.badges); setCoupons(cached.coupons); setCasino(cached.casino); setPublicProfile(cached.publicProfile); setStats(cached.stats); }
+      setError(cached ? null : cause instanceof Error ? cause.message : 'Nie udało się wczytać profilu');
     } finally { setLoading(false); }
   }, [user?.id, userRef]);
 

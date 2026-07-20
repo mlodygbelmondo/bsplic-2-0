@@ -1,3 +1,4 @@
+import 'expo-sqlite/localStorage/install';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
@@ -15,6 +16,22 @@ export type { SortMode } from "@/features/home/hooks/sortBets";
 type BetRow = Database["public"]["Tables"]["bets"]["Row"];
 
 const REALTIME_BATCH_MS = 150;
+const BETS_CACHE_PREFIX = 'bsplic.home.bets.v1.';
+
+function betsCacheKey(selectedCategory: string | null, sort: SortMode, includeInProgress: boolean) {
+  return `${BETS_CACHE_PREFIX}${selectedCategory ?? 'all'}.${sort}.${includeInProgress ? 'all-active' : 'open'}`;
+}
+
+function readCachedBets(key: string): Bet[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
+    return Array.isArray(value) ? value as Bet[] : [];
+  } catch { return []; }
+}
+
+function cacheBets(key: string, bets: Bet[]) {
+  try { localStorage.setItem(key, JSON.stringify(bets.slice(0, 100))); } catch { /* in-memory state remains available */ }
+}
 
 function getBetId(input: unknown): string | null {
   if (!input || typeof input !== "object") {
@@ -149,6 +166,7 @@ export function useBets(
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const pendingPayloadsRef = useRef<RealtimePostgresChangesPayload<BetRow>[]>(
     [],
@@ -178,6 +196,7 @@ export function useBets(
       shouldApply?: () => boolean;
     }) => {
       const criteria = criteriaRef.current;
+      const cacheKey = betsCacheKey(criteria.selectedCategory, criteria.sort, criteria.includeInProgress);
       const limit = Math.max(minimumWindowSize, ACTIVE_BETS_PAGE_SIZE) + 1;
       const data = await fetchActiveBets(
         criteria.selectedCategory,
@@ -193,9 +212,12 @@ export function useBets(
       }
 
       setHasMore(data.length === limit);
-      setBets((previous) =>
-        append ? [...previous, ...visiblePage] : visiblePage,
-      );
+      setError(null);
+      setBets((previous) => {
+        const next = append ? [...previous, ...visiblePage] : visiblePage;
+        cacheBets(cacheKey, next);
+        return next;
+      });
     },
     [],
   );
@@ -211,6 +233,10 @@ export function useBets(
           append: false,
           shouldApply: () => mounted,
         });
+      } catch (cause) {
+        const cached = readCachedBets(betsCacheKey(selectedCategory, sort, includeInProgress));
+        if (mounted && cached.length > 0) setBets(cached);
+        if (mounted) setError(cause instanceof Error ? cause.message : 'Nie udało się wczytać zakładów');
       } finally {
         if (mounted) {
           setLoading(false);
@@ -318,6 +344,7 @@ export function useBets(
     loading,
     loadingMore,
     hasMore,
+    error,
     loadMore,
     refresh: () => setRefreshKey((current) => current + 1),
     liveBets,

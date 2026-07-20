@@ -1,3 +1,4 @@
+import 'expo-sqlite/localStorage/install';
 import {
   createContext,
   type ReactNode,
@@ -38,6 +39,23 @@ export interface AuthContextValue {
 }
 
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 6_000;
+const PROFILE_CACHE_PREFIX = 'bsplic.auth.profile.v1.';
+
+interface CachedProfileState {
+  profile: Profile;
+  roles: string[];
+}
+
+function readCachedProfile(userId: string): CachedProfileState | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${PROFILE_CACHE_PREFIX}${userId}`) ?? 'null') as CachedProfileState | null;
+    return parsed?.profile?.id === userId && Array.isArray(parsed.roles) ? parsed : null;
+  } catch { return null; }
+}
+
+function cacheProfile(userId: string, profile: Profile, roles: string[]) {
+  try { localStorage.setItem(`${PROFILE_CACHE_PREFIX}${userId}`, JSON.stringify({ profile, roles } satisfies CachedProfileState)); } catch { /* keep the current in-memory profile */ }
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -87,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileResult.data);
         setIsAdmin(roles.includes('admin'));
         setIsModerator(roles.includes('moderator'));
+        cacheProfile(userId, profileResult.data, roles);
         setError(null);
       })
       .catch((profileError: unknown) => {
@@ -97,9 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Profile fetch error:', normalizedError);
 
         if (profileRequestIdRef.current === requestId) {
-          setProfile(null);
-          setIsAdmin(false);
-          setIsModerator(false);
+          const cached = readCachedProfile(userId);
+          setProfile(cached?.profile ?? null);
+          setIsAdmin(cached?.roles.includes('admin') ?? false);
+          setIsModerator(cached?.roles.includes('moderator') ?? false);
           setError(normalizedError);
         }
 

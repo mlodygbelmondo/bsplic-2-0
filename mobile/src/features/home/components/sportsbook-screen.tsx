@@ -242,6 +242,7 @@ export function SportsbookScreen() {
     sortedBets,
     loading,
     loadingMore,
+    error,
     hasMore,
     loadMore,
     refresh,
@@ -306,6 +307,8 @@ export function SportsbookScreen() {
             </View>
 
             <DailyJackpotCard />
+
+            {error && <View style={{ marginHorizontal: 12, borderRadius: 12, backgroundColor: '#5b1a2e88', padding: 10 }}><Text style={{ color: palette.foreground, fontSize: 12, textAlign: 'center' }}>Pokazujemy ostatnio zapisane dane. {error}</Text></View>}
 
             <ScrollView
               horizontal

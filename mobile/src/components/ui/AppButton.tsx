@@ -52,7 +52,7 @@ export function AppButton({
         fullWidth && styles.fullWidth,
         (disabled || loading) && styles.disabled,
         pressed && !disabled && !loading && styles.pressed,
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style({ pressed, hovered: false }) : style,
       ]}
     >
       <View style={styles.content}>
