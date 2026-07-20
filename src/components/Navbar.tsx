@@ -46,8 +46,15 @@ export function Navbar({
   onOpenProposeModal,
   mobileBottomNavHidden = false,
 }: NavbarProps = {}) {
-  const { user, profile, isAdmin, isModerator, signOut, refreshProfile } =
-    useAuth();
+  const {
+    user,
+    profile,
+    isAdmin,
+    isModerator,
+    signOut,
+    refreshProfile,
+    updateProfileBalance,
+  } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -387,6 +394,7 @@ export function Navbar({
             initialTab={transferInitialTab}
             profile={profile}
             refreshProfile={refreshProfile}
+            updateProfileBalance={updateProfileBalance}
           />
         </Suspense>
       )}

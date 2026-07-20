@@ -127,6 +127,7 @@
 
 ## Supabase and Data Access
 
+- Before running Supabase CLI operations for this repository, select the correct stored profile with `sbsw bsplic`.
 - Supabase client lives in `src/integrations/supabase/client.ts`.
 - Treat `src/integrations/supabase/client.ts` as generated/bootstrap code.
 - Prefer typed query handling and explicit error checks.

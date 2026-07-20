@@ -7,6 +7,7 @@ const searchRecipientsMock = vi.fn();
 const createTransferMock = vi.fn();
 const fetchHistoryMock = vi.fn();
 const refreshProfileMock = vi.fn();
+const updateProfileBalanceMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -43,6 +44,7 @@ function renderDialog(initialTab: 'send' | 'history' = 'send') {
       initialTab={initialTab}
       profile={profile}
       refreshProfile={refreshProfileMock}
+      updateProfileBalance={updateProfileBalanceMock}
     />,
   );
 }
@@ -65,6 +67,7 @@ describe('MoneyTransferDialog', () => {
     });
     fetchHistoryMock.mockResolvedValue([]);
     refreshProfileMock.mockResolvedValue(undefined);
+    updateProfileBalanceMock.mockReset();
   });
 
   it('requires review and sends one idempotent transfer to a selected username', async () => {
@@ -101,6 +104,7 @@ describe('MoneyTransferDialog', () => {
         idempotencyKey: '11111111-1111-4111-8111-111111111111',
       });
       expect(refreshProfileMock).toHaveBeenCalledTimes(1);
+      expect(updateProfileBalanceMock).toHaveBeenCalledWith(100);
       expect(toastSuccessMock).toHaveBeenCalledWith(
         'Wysłano 25,50 zł do @Odbiorca',
       );
@@ -164,7 +168,10 @@ describe('MoneyTransferDialog', () => {
     );
   });
 
-  it('reports success when only the post-transfer profile refresh fails', async () => {
+  it('keeps the successful transfer result when the background profile refresh fails', async () => {
+    const consoleErrorMock = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     refreshProfileMock.mockRejectedValueOnce(new Error('refresh failed'));
     renderDialog();
 
@@ -180,10 +187,46 @@ describe('MoneyTransferDialog', () => {
 
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith(
-        'Wysłano 10,00 zł do @Odbiorca. Odśwież stronę, aby zaktualizować saldo.',
+        'Wysłano 10,00 zł do @Odbiorca',
       );
+      expect(updateProfileBalanceMock).toHaveBeenCalledWith(100);
     });
     expect(toastErrorMock).not.toHaveBeenCalled();
+    expect(consoleErrorMock).toHaveBeenCalledWith(
+      'Post-transfer profile refresh failed:',
+      expect.any(Error),
+    );
+    consoleErrorMock.mockRestore();
+  });
+
+  it('finishes a successful transfer without waiting for the profile refresh', async () => {
+    let resolveRefresh: (() => void) | undefined;
+    refreshProfileMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText('Odbiorca'), {
+      target: { value: 'Odb' },
+    });
+    fireEvent.click(await screen.findByText('@Odbiorca'));
+    fireEvent.change(screen.getByLabelText('Kwota'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Dalej' }));
+    fireEvent.click(screen.getByRole('button', { name: /Wyślij 10,00 zł/ }));
+
+    await waitFor(() => expect(createTransferMock).toHaveBeenCalledTimes(1));
+    const completedBeforeRefresh =
+      toastSuccessMock.mock.calls.length === 1 &&
+      fetchHistoryMock.mock.calls.length === 1;
+
+    resolveRefresh?.();
+    await waitFor(() => expect(fetchHistoryMock).toHaveBeenCalledTimes(1));
+    expect(completedBeforeRefresh).toBe(true);
   });
 
   it('does not let a new account continue before the fourteen-day threshold', () => {
@@ -193,6 +236,7 @@ describe('MoneyTransferDialog', () => {
         onOpenChange={vi.fn()}
         profile={{ ...profile, created_at: new Date().toISOString() }}
         refreshProfile={refreshProfileMock}
+        updateProfileBalance={updateProfileBalanceMock}
       />,
     );
 

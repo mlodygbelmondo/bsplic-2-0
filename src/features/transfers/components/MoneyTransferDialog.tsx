@@ -22,6 +22,7 @@ interface MoneyTransferDialogProps {
   initialTab?: WalletTab;
   profile: Profile;
   refreshProfile: () => Promise<void>;
+  updateProfileBalance: (balance: number) => void;
 }
 
 export default function MoneyTransferDialog({
@@ -30,6 +31,7 @@ export default function MoneyTransferDialog({
   initialTab = 'send',
   profile,
   refreshProfile,
+  updateProfileBalance,
 }: MoneyTransferDialogProps) {
   const [tab, setTab] = useState<WalletTab>(initialTab);
   const [submitting, setSubmitting] = useState(false);
@@ -72,16 +74,23 @@ export default function MoneyTransferDialog({
             </TabsList>
           </div>
 
-          <TabsContent value="send" className="m-0 px-5 pb-5 pt-4">
+          <TabsContent
+            value="send"
+            className="m-0 h-[min(430px,calc(100dvh-13rem))] overflow-y-auto px-5 pb-5 pt-4"
+          >
             <MoneyTransferSend
               profile={profile}
               refreshProfile={refreshProfile}
+              updateProfileBalance={updateProfileBalance}
               onCompleted={() => setTab('history')}
               onSubmittingChange={setSubmitting}
             />
           </TabsContent>
 
-          <TabsContent value="history" className="m-0 px-5 pb-5 pt-4">
+          <TabsContent
+            value="history"
+            className="m-0 h-[min(430px,calc(100dvh-13rem))] overflow-y-auto px-5 pb-5 pt-4"
+          >
             <MoneyTransferHistory />
           </TabsContent>
         </Tabs>

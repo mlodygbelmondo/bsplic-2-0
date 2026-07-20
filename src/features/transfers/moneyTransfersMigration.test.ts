@@ -16,6 +16,13 @@ const transferMigration = readFileSync(
   ),
   'utf8',
 );
+const optimizedRecipientSearchMigration = readFileSync(
+  join(
+    process.cwd(),
+    'supabase/migrations/20260720100000_optimize_money_transfer_recipient_search.sql',
+  ),
+  'utf8',
+);
 
 describe('money transfer migrations', () => {
   it('adds a dedicated notification type before the transfer RPC is created', () => {
@@ -100,6 +107,21 @@ describe('money transfer migrations', () => {
     );
     expect(transferMigration).toMatch(
       /WHERE\s+transfer\.sender_id\s*=\s*v_user_id\s+OR\s+transfer\.recipient_id\s*=\s*v_user_id/i,
+    );
+  });
+
+  it('uses an indexed literal substring for recipient search', () => {
+    expect(optimizedRecipientSearchMigration).toMatch(
+      /CREATE\s+INDEX[\s\S]*USING\s+gin\s*\(\s*LOWER\(username\)\s+extensions\.gin_trgm_ops\s*\)/i,
+    );
+    expect(optimizedRecipientSearchMigration).toMatch(
+      /LOWER\(profile\.username\)\s+LIKE\s*'%'\s*\|\|\s*v_pattern\s*\|\|\s*'%'\s+ESCAPE\s*'\\'/i,
+    );
+    expect(optimizedRecipientSearchMigration).toMatch(
+      /REPLACE\(REPLACE\(LOWER\(v_query\),\s*'\\',\s*'\\\\'\),\s*'%',\s*'\\%'\)/i,
+    );
+    expect(optimizedRecipientSearchMigration).toMatch(
+      /REPLACE\([\s\S]*'_',\s*'\\_'/i,
     );
   });
 });

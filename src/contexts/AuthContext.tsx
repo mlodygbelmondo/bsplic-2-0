@@ -26,6 +26,7 @@ interface AuthContextType {
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfileBalance: (balance: number) => void;
   resetPassword: (email: string) => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<void>;
 }
@@ -101,6 +102,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
   };
+
+  const updateProfileBalance = useCallback((balance: number) => {
+    setProfile((currentProfile) =>
+      currentProfile ? { ...currentProfile, balance } : currentProfile,
+    );
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -212,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         refreshProfile,
+        updateProfileBalance,
         resetPassword,
         signInWithMagicLink,
       }}

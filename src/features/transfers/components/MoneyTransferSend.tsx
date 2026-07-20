@@ -29,6 +29,7 @@ import type { Profile } from '@/types/database';
 interface MoneyTransferSendProps {
   profile: Profile;
   refreshProfile: () => Promise<void>;
+  updateProfileBalance: (balance: number) => void;
   onCompleted: () => void;
   onSubmittingChange: (submitting: boolean) => void;
 }
@@ -40,6 +41,7 @@ function makeIdempotencyKey(): string {
 export function MoneyTransferSend({
   profile,
   refreshProfile,
+  updateProfileBalance,
   onCompleted,
   onSubmittingChange,
 }: MoneyTransferSendProps) {
@@ -135,26 +137,21 @@ export function MoneyTransferSend({
     setSubmitting(true);
     onSubmittingChange(true);
     try {
-      await createMoneyTransfer({
+      const transfer = await createMoneyTransfer({
         recipientId: selectedRecipient.id,
         amount,
         message,
         idempotencyKey,
       });
 
-      let profileRefreshed = true;
-      try {
-        await refreshProfile();
-      } catch {
-        profileRefreshed = false;
-      }
-
+      updateProfileBalance(transfer.balance_after);
       toast.success(
-        profileRefreshed
-          ? `Wysłano ${formatMoney(amount)} zł do @${selectedRecipient.username}`
-          : `Wysłano ${formatMoney(amount)} zł do @${selectedRecipient.username}. Odśwież stronę, aby zaktualizować saldo.`,
+        `Wysłano ${formatMoney(amount)} zł do @${selectedRecipient.username}`,
       );
       onCompleted();
+      void refreshProfile().catch((error) => {
+        console.error('Post-transfer profile refresh failed:', error);
+      });
     } catch (error) {
       toast.error(getErrorMessage(error, 'Nie udało się wykonać transferu'));
     } finally {

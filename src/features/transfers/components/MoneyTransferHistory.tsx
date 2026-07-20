@@ -84,7 +84,7 @@ export function MoneyTransferHistory() {
   }
 
   return (
-    <div className="max-h-[430px] space-y-2 overflow-y-auto pr-1">
+    <div className="space-y-2 pr-1">
       {history.map((entry) => {
         const sent = entry.direction === 'sent';
         return (

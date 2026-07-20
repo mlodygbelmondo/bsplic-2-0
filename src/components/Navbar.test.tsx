@@ -15,6 +15,7 @@ import { Navbar } from "./Navbar";
 
 const signOutMock = vi.fn();
 const refreshProfileMock = vi.fn();
+const updateProfileBalanceMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const rpcMock = vi.fn();
@@ -32,6 +33,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     isModerator: mockIsModerator,
     signOut: signOutMock,
     refreshProfile: refreshProfileMock,
+    updateProfileBalance: updateProfileBalanceMock,
   }),
 }));
 
