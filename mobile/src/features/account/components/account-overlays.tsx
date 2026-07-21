@@ -25,14 +25,29 @@ export function NotificationsSheet({ visible, onClose, onCountChange, soundMuted
     finally { setLoading(false); }
   }, [onCountChange, user]);
   useEffect(() => { if (visible) void load(); }, [load, visible]);
-  const open = async (item: UserNotification) => {
-    if (user && !item.is_read) { await markNotificationRead(user.id, item.id); setItems(current => current.map(row => row.id === item.id ? { ...row, is_read: true } : row)); onCountChange(Math.max(0, items.filter(row => !row.is_read).length - 1)); }
-    onClose(); if (item.link_path) router.push(item.link_path as never);
+  const open = (item: UserNotification) => {
+    if (user && !item.is_read) {
+      setItems(current => current.map(row => row.id === item.id ? { ...row, is_read: true } : row));
+      onCountChange(Math.max(0, items.filter(row => !row.is_read).length - 1));
+      void markNotificationRead(user.id, item.id).catch(() => undefined);
+    }
+    onClose();
+    if (item.link_path) router.push(item.link_path as never);
+  };
+  const markAllRead = async () => {
+    if (!user) return;
+    try {
+      await markAllNotificationsRead(user.id);
+      setItems(current => current.map(item => ({ ...item, is_read: true })));
+      onCountChange(0);
+    } catch {
+      Alert.alert('Powiadomienia', 'Nie udało się oznaczyć wszystkich jako przeczytane. Spróbuj ponownie.');
+    }
   };
   return <AppModal visible={visible} title="Powiadomienia" onClose={onClose}><View style={{ gap: 10 }}>
     <AppButton variant="outline" onPress={onToggleSound}>{soundMuted ? 'Włącz dźwięk powiadomień' : 'Wyłącz dźwięk powiadomień'}</AppButton>
-    {items.some(item => !item.is_read) && <AppButton variant="ghost" onPress={() => user && void markAllNotificationsRead(user.id).then(() => { setItems(current => current.map(item => ({ ...item, is_read: true }))); onCountChange(0); })}>Oznacz wszystkie jako przeczytane</AppButton>}
-    {loading ? <Text style={{ color: tokens.colors.mutedForeground, textAlign: 'center', padding: 20 }}>Wczytywanie…</Text> : items.length === 0 ? <Text style={{ color: tokens.colors.mutedForeground, textAlign: 'center', padding: 20 }}>Brak powiadomień</Text> : items.map(item => <Pressable key={item.id} onPress={() => void open(item)} style={{ gap: 4, borderWidth: 1, borderColor: item.is_read ? tokens.colors.border : tokens.colors.primary, borderRadius: 13, backgroundColor: tokens.colors.card, padding: 12 }}><Text style={{ color: tokens.colors.foreground, fontWeight: item.is_read ? '700' : '900' }}>{item.title}</Text>{item.body && <Text style={{ color: tokens.colors.mutedForeground, fontSize: 12 }}>{item.body}</Text>}<Text style={{ color: tokens.colors.mutedForeground, fontSize: 10 }}>{new Date(item.created_at).toLocaleString('pl-PL')}</Text></Pressable>)}
+    {items.some(item => !item.is_read) && <AppButton variant="ghost" onPress={() => void markAllRead()}>Oznacz wszystkie jako przeczytane</AppButton>}
+    {loading ? <Text style={{ color: tokens.colors.mutedForeground, textAlign: 'center', padding: 20 }}>Wczytywanie…</Text> : items.length === 0 ? <Text style={{ color: tokens.colors.mutedForeground, textAlign: 'center', padding: 20 }}>Brak powiadomień</Text> : items.map(item => <Pressable key={item.id} onPress={() => open(item)} style={{ gap: 4, borderWidth: 1, borderColor: item.is_read ? tokens.colors.border : tokens.colors.primary, borderRadius: 13, backgroundColor: tokens.colors.card, padding: 12 }}><Text style={{ color: tokens.colors.foreground, fontWeight: item.is_read ? '700' : '900' }}>{item.title}</Text>{item.body && <Text style={{ color: tokens.colors.mutedForeground, fontSize: 12 }}>{item.body}</Text>}<Text style={{ color: tokens.colors.mutedForeground, fontSize: 10 }}>{new Date(item.created_at).toLocaleString('pl-PL')}</Text></Pressable>)}
   </View></AppModal>;
 }
 

@@ -8,20 +8,22 @@ import {
 
 const CATEGORIES_QUERY_KEY = ["home", "categories"] as const;
 
-export function useCategories() {
+export function useCategories(active = true) {
   const queryClient = useQueryClient();
   const { data: categories = [], isLoading: loading } = useQuery({
     queryKey: CATEGORIES_QUERY_KEY,
     queryFn: fetchCategories,
+    enabled: active,
   });
 
   useEffect(() => {
+    if (!active) return;
     const unsubscribe = subscribeToCategoryChanges(() => {
       void queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
     });
 
     return unsubscribe;
-  }, [queryClient]);
+  }, [active, queryClient]);
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};

@@ -221,7 +221,7 @@ export function SportsbookScreen() {
   const [proposalOpen, setProposalOpen] = useState(false);
   const [filterPanel, setFilterPanel] = useState<'sort' | 'category' | null>(null);
   const { items, totalOdds } = useCoupon();
-  const { categories, categoryMap, loading: categoriesLoading } = useCategories();
+  const { categories, categoryMap, loading: categoriesLoading } = useCategories(routeActive);
   const {
     liveBets,
     sortedBets,

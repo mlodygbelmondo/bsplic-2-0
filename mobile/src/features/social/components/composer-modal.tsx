@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { Camera, ImagePlus, Send, Trash2 } from 'lucide-react-native';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -27,14 +27,30 @@ interface ComposerModalProps {
 
 export function ComposerModal({ visible, title, placeholder, draftScope, currentUserId, allowImage = true, initialText = '', onClose, onSubmit }: ComposerModalProps) {
   const { tokens } = useAppTheme();
-  const [text, setText] = useState(() => readSocialDraft(draftScope) || initialText);
+  const draftIdentity = `${currentUserId ?? ''}:${draftScope}`;
+  const draftIdentityRef = useRef(draftIdentity);
+  const skipNextDraftSaveRef = useRef(false);
+  const [text, setText] = useState(() => readSocialDraft(currentUserId, draftScope) || initialText);
   const [selection, setSelection] = useState({ start: text.length, end: text.length });
   const [image, setImage] = useState<PreparedSocialImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const { activeMention, suggestions, loading } = useMentionAutocomplete(text, selection.start, currentUserId);
 
-  useEffect(() => { saveSocialDraft(draftScope, text); }, [draftScope, text]);
+  useEffect(() => {
+    if (draftIdentityRef.current === draftIdentity) return;
+    draftIdentityRef.current = draftIdentity;
+    skipNextDraftSaveRef.current = true;
+    const next = readSocialDraft(currentUserId, draftScope) || initialText;
+    setText(next);
+    setSelection({ start: next.length, end: next.length });
+    setImage(null);
+  }, [currentUserId, draftIdentity, draftScope, initialText]);
+
+  useEffect(() => {
+    if (skipNextDraftSaveRef.current) { skipNextDraftSaveRef.current = false; return; }
+    saveSocialDraft(currentUserId, draftScope, text);
+  }, [currentUserId, draftScope, text]);
 
   const attach = (source: 'camera' | 'library') => {
     setImageBusy(true);
@@ -58,7 +74,7 @@ export function ComposerModal({ visible, title, placeholder, draftScope, current
       await onSubmit(normalized, image);
       setText('');
       setImage(null);
-      saveSocialDraft(draftScope, '');
+      saveSocialDraft(currentUserId, draftScope, '');
       onClose();
     } catch (error) {
       Alert.alert('Nie udało się opublikować', error instanceof Error ? error.message : 'Spróbuj ponownie.');

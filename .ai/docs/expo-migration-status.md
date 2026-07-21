@@ -19,24 +19,24 @@ Ten plik jest trwałą referencją wykonania migracji. Statusy odnoszą się do 
 
 | # | Obszar | Status | Stan i brakujący dowód |
 |---|---|---|---|
-| 1 | Shell, maintenance, connectivity, themes, providers, role gates | complete | Light/dark, header, menu, natywny dock, focus gating i powroty między trasami sprawdzone na symulatorze. |
-| 2 | Login, recovery, refresh, logout | complete | Login email/hasło, logout, ponowny login, sesja i ekran recovery sprawdzone; rejestracji celowo brak. |
-| 3 | Sportsbook home | complete | Side-by-side z PWA; przebudowano filtry, jackpot, karty, kursy i stany rozwinięte. Naprawiono crash realtime Social → Zakłady. |
-| 4 | Coupon | complete | Zaznaczenie/usunięcie opcji, single/AKO, stawka, podsumowanie i CTA sprawdzone bez postawienia realnego zakładu. |
+| 1 | Shell, maintenance, connectivity, themes, providers, role gates | partial | Light/dark, header, menu, natywny dock, focus gating i powroty sprawdzone. Produkcyjny maintenance i pełne odcięcie sieci nie były wymuszane; kod i UI tych stanów są obecne. |
+| 2 | Login, recovery, refresh, logout | partial | Login, invalid credentials, sesja i invalid recovery sprawdzone; brak aktywnego jednorazowego tokenu do bezpiecznego wykonania recovery success/expired. |
+| 3 | Sportsbook home | partial | Side-by-side z PWA; przebudowano filtry, jackpot, karty i kursy, a realtime bets/categories jest focus-gated. Brak reprezentatywnych closed/in-progress cards i pełnego error/empty renderu w danych QA. |
+| 4 | Coupon | partial | Zaznaczenie/usunięcie opcji, single/AKO, stawka, podsumowanie i CTA sprawdzone bez postawienia zakładu; nie wszystkie warianty exclusions/copied-social wystąpiły w danych QA. |
 | 5 | Wallet | complete | Saldo, top-up state, formularz transferu, historia i walidacja sprawdzone bez wysyłania pieniędzy. |
-| 6 | Profile | complete | Własny profil, karta gracza, statystyki, historie i akcje sprawdzone wizualnie; upload nie został wykonany na koncie QA. |
-| 7 | Rankings | complete | Tryby, metryki, wiersze i nawigacja sprawdzone side-by-side z PWA. |
-| 8 | Social | complete | Feed, filtry, kupony/posty/casino, komentarze, share i zwarta reakcja sprawdzone. PWA pokazywało stare stories z cache; świeży RPC zwrócił pustą listę, więc natywna lista jest zgodna z backendem. |
+| 6 | Profile | partial | Własny/publiczny profil, karta gracza, statystyki, historie i akcje sprawdzone wizualnie; upload oraz missing-user nie zostały wykonane na koncie QA. |
+| 7 | Rankings | partial | Tryby, metryki, wiersze i nawigacja sprawdzone side-by-side z PWA; wymuszone empty/error nie były dostępne w danych QA. |
+| 8 | Social | partial | Feed, filtry, kupony/posty/casino, komentarze, composer, mention i draft sprawdzone. Nie publikowano treści/reakcji tylko dla dowodu; brak aktywnego story i kart YouTube/Spotify ograniczył manualny zakres. |
 | 9 | YouTube/Spotify | partial | Inline WebView i external fallback są wdrożone; w danych QA nie było aktywnej zawartości obu providerów do ręcznej próby. |
 | 10 | Casino lobby | complete | Przebudowane na obrazowe, pionowe karty i porównane z mobilnym PWA. |
-| 11 | Roulette | complete | Koło i tło z PWA, stan stołu, gracze, spiny oraz otwarty panel stawki sprawdzone; nie wysłano zakładu. |
-| 12 | Blackjack | complete | Tło, stół początkowy, stawka, presety i CTA sprawdzone; akcje serwerowe pozostają za istniejącymi RPC, bez obciążania konta QA. |
+| 11 | Roulette | partial | Koło, pionowe tło, stan waiting, wygrane i open/closed panel stawki sprawdzone; nie wysłano zakładu, a dynamicznego cyklu spinning/settled nie wymuszano. |
+| 12 | Blackjack | partial | Pionowe tło i aktywna gra z hit/stand/double zostały sprawdzone; foreground anuluje reveal i pobiera świeży stan serwera. Nie wykonywano akcji ani nie wymuszano wszystkich stanów insurance/split/settled. |
 | 13 | Jackpot | partial | Karta i wejście do rozliczenia są zgodne wizualnie; realna runda draw/claim nie była dostępna w oknie QA. |
 | 14 | Bonuses and feature polls | partial | Natywne overlaye i operacje są wdrożone; backend nie zwrócił aktywnej kampanii/ankiety do wymuszenia powierzchni. |
-| 15 | In-app notifications | complete | Sheet, unread, preferencja dźwięku i lifecycle kanału realtime sprawdzone ręcznie. |
-| 16 | Admin/moderator | complete | Role gate, dashboard, taby i dane administratora sprawdzone na istniejącym koncie admin; nie wykonywano mutacji settle/refund/create. |
+| 15 | In-app notifications | complete | Sheet, unread, preferencja dźwięku, deep link i lifecycle kanału realtime sprawdzone ręcznie. |
+| 16 | Admin/moderator | partial | Denied oraz pełny admin, dashboard, wszystkie taby, walidacje, paginacje i bezpieczne confirmation modals sprawdzone. Brak konta moderatora i brak produkcyjnych mutacji settle/refund/create. |
 
-Nie ma pozycji `not started`. Pozostałe trzy pozycje `partial` są zależne od chwilowych danych backendu, a nie od brakującej trasy lub atrapy. Wszystkie dostępne powierzchnie zostały przejrzane w bezpiecznej, uwierzytelnionej sesji.
+Nie ma pozycji `not started`. Każdy obszar i wszystkie 44 powierzchnie z `expo-screen-audit.md` zostały sklasyfikowane. Status `partial` oznacza brak wiarygodnego dowodu dla co najmniej jednego warunkowego lub mutującego stanu, a nie brak trasy czy atrapę. Dostępne powierzchnie zostały przejrzane w bezpiecznej, uwierzytelnionej sesji; szczegółowy dowód i ograniczenia są w macierzy ekranów.
 
 ## Walidacja wykonana
 
@@ -45,6 +45,8 @@ Nie ma pozycji `not started`. Pozostałe trzy pozycje `partial` są zależne od 
 - `mobile: npx expo-doctor` — wcześniej 20/20; końcowa próba offline wykonała 18/20, a dwie kontrole wymagające Expo API nie mogły rozwiązać `exp.host` (nie jest to błąd projektu).
 - `mobile: npx expo export --platform ios` — pass, 3707 modułów, Hermes bundle około 7 MB.
 - `mobile: npx expo export --platform android` — pass, 3780 modułów, Hermes bundle około 7,2 MB.
+- Końcowa runda po audycie: iOS export — pass, 3710 modułów, Hermes 7,1 MB; Android export — pass, 3790 modułów, Hermes 7,3 MB.
+- Końcowa próba `npx expo-doctor` nie zwróciła wyniku i została przerwana po zawieszeniu na kontroli sieciowej; zachowano wcześniejszy wynik opisany wyżej, bez raportowania nowej próby jako pass.
 - Root: `npm run lint` — pass z istniejącymi ostrzeżeniami.
 - Root: `npm run build` — pass, włącznie z generacją PWA.
 - Root: pełny Vitest został zabity przez limit RAM (`exit 137`); przebieg single-worker wykonał liczne zestawy, ale nie zwrócił kompletnego finalnego podsumowania, więc nie jest raportowany jako pełny pass.
@@ -60,10 +62,15 @@ Nie ma pozycji `not started`. Pozostałe trzy pozycje `partial` są zależne od 
 - `7945329` — recovery auth, natywny upload avatarów i realtime social.
 - `e6c0cc4` — trwały handoff oraz końcowe edge case auth/realtime.
 - `a65432c` — parytet motywów, lifecycle, propozycje, casino i atomowy storage.
+- `e059eb0` — wizualne zbliżenie natywnego UI do mobilnego PWA.
+- `a784e70` — naprawy parytetu z pełnego audytu ekranów, w tym blackjack, ruletka i tła Jackpotu.
+- `0946043` — końcowe korekty auth, wallet, admina, theme/offline oraz kompletna macierz 44 powierzchni.
 
 ## Niezależny review
 
 Pierwszy przegląd znalazł błędy auth recovery, uploadu avatarów, kluczy realtime social, lifecycle ukrytych tras, motywów, offline admina, atomowości SecureStore i brak formularza propozycji. Wszystkie zostały naprawione. Druga runda dodatkowo wykorzystała przygotowane mechanizmy prezentacji casino: koło ruletki, staged reveal blackjacka, publikację wygranej do Socialu i foreground resync Jackpotu. Końcowy re-review nie znalazł żadnych actionable P1/P2. Powierzchnie nadal pozostają `partial`, dopóki nie powstanie wiarygodny manualny dowód na iOS.
+
+Po pełnym audycie 44 powierzchni dodatkowy niezależny review całego diffu wykrył P2 w lifecycle Blackjacka, izolacji draftów Social, limicie avatara, focus-gating realtime kategorii, recovery fallbacku, obsłudze błędów powiadomień i rzetelności statusów. Wszystkie zostały poprawione; ponowny review aktualnego worktree zakończył się werdyktem „brak dalszych actionable P0–P2”.
 
 ## Wymagane działania zewnętrzne
 

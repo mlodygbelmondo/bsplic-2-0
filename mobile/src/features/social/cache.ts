@@ -17,7 +17,10 @@ function readJson<T>(key: string, fallback: T): T {
 
 export const readCachedFeed = () => readJson<SocialFeedItem[]>(FEED_CACHE_KEY, []);
 export const readCachedStories = () => readJson<SocialStory[]>(STORY_CACHE_KEY, []);
-export const readSocialDraft = (scope: string) => readJson<string>(`${DRAFT_PREFIX}${scope}`, '');
+const socialDraftKey = (userId: string, scope: string) => `${DRAFT_PREFIX}${userId}.${scope}`;
+
+export const readSocialDraft = (userId: string | undefined, scope: string) =>
+  userId ? readJson<string>(socialDraftKey(userId, scope), '') : '';
 
 export function cacheSocialFeed(items: SocialFeedItem[]) {
   try { localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(items.slice(0, 100))); } catch { /* memory state remains available */ }
@@ -27,9 +30,11 @@ export function cacheSocialStories(items: SocialStory[]) {
   try { localStorage.setItem(STORY_CACHE_KEY, JSON.stringify(items)); } catch { /* memory state remains available */ }
 }
 
-export function saveSocialDraft(scope: string, value: string) {
+export function saveSocialDraft(userId: string | undefined, scope: string, value: string) {
+  if (!userId) return;
+  const key = socialDraftKey(userId, scope);
   try {
-    if (value) localStorage.setItem(`${DRAFT_PREFIX}${scope}`, JSON.stringify(value));
-    else localStorage.removeItem(`${DRAFT_PREFIX}${scope}`);
+    if (value) localStorage.setItem(key, JSON.stringify(value));
+    else localStorage.removeItem(key);
   } catch { /* drafts remain available in component state */ }
 }

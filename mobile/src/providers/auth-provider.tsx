@@ -62,7 +62,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const asError = (error: unknown, fallback: string): Error =>
   error instanceof Error ? error : new Error(fallback, { cause: error });
 
-export const PASSWORD_RESET_REDIRECT_URL = `${env.webUrl}/reset-password`;
+const PASSWORD_RESET_WEB_URL = `${env.webUrl}/reset-password`;
+const PASSWORD_RESET_SCHEME_URL = 'bsplic://reset-password';
+const PASSWORD_RESET_REDIRECT_URL = __DEV__
+  ? PASSWORD_RESET_SCHEME_URL
+  : PASSWORD_RESET_WEB_URL;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

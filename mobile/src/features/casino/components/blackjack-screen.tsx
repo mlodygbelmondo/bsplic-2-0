@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Alert,
+  AppState,
   Image,
   ImageBackground,
   Pressable,
@@ -144,6 +145,8 @@ export function BlackjackScreen() {
   const feedback = useCasinoFeedback();
   const mountedRef = useRef(true);
   const routeActiveRef = useRef(false);
+  const appActiveRef = useRef(AppState.currentState === 'active');
+  const loadSequenceRef = useRef(0);
   const revealSequenceRef = useRef(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [game, setGame] = useState<BlackjackGameState | null>(null);
@@ -153,36 +156,51 @@ export function BlackjackScreen() {
   const [tableLabel, setTableLabel] = useState('');
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequenceRef.current;
     setLoading(true);
     try {
       const [next, table] = await Promise.all([
         getCurrentBlackjackGame({ userId: user!.id }),
         getBlackjackTableInfo({ userId: user!.id }),
       ]);
+      if (!mountedRef.current || !routeActiveRef.current || loadSequenceRef.current !== sequence) return;
       setGame(next);
       setTableLabel(`${table.deckCount} talie  •  Pozostało ${table.cardsRemaining}/${table.deckCount * 52} kart  •  Shoe #${table.shoeNumber}`);
     } catch (cause) {
-      Alert.alert('Blackjack', cause instanceof Error ? cause.message : 'Nie udało się wczytać stołu.');
+      if (mountedRef.current && routeActiveRef.current && loadSequenceRef.current === sequence) {
+        Alert.alert('Blackjack', cause instanceof Error ? cause.message : 'Nie udało się wczytać stołu.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && routeActiveRef.current && loadSequenceRef.current === sequence) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    routeActiveRef.current = routeActive;
+    routeActiveRef.current = routeActive && appActiveRef.current;
+    loadSequenceRef.current += 1;
     revealSequenceRef.current += 1;
-    if (routeActive) void load();
+    if (routeActiveRef.current) void load();
   }, [load, routeActive]);
 
   useEffect(() => {
     mountedRef.current = true;
     void AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    const motionSubscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      appActiveRef.current = state === 'active';
+      routeActiveRef.current = routeActive && appActiveRef.current;
+      loadSequenceRef.current += 1;
+      revealSequenceRef.current += 1;
+      if (routeActiveRef.current) void load();
+    });
     return () => {
       mountedRef.current = false;
-      subscription.remove();
+      loadSequenceRef.current += 1;
+      revealSequenceRef.current += 1;
+      motionSubscription.remove();
+      appStateSubscription.remove();
     };
-  }, []);
+  }, [load, routeActive]);
 
   const settled = Boolean(game && ['won', 'lost', 'push'].includes(game.status));
   const activeHand = game?.playerHands[game.activeHandIndex];
@@ -219,8 +237,10 @@ export function BlackjackScreen() {
     setActing(true);
     try {
       const next = await operation();
-      if (routeActiveRef.current) feedback.card();
-      await presentGame(next, freshDeal);
+      if (routeActiveRef.current) {
+        feedback.card();
+        await presentGame(next, freshDeal);
+      }
       await refreshProfile();
     } catch (cause) {
       Alert.alert('Nie udało się wykonać akcji', cause instanceof Error ? cause.message : 'Spróbuj ponownie.');

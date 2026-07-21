@@ -38,6 +38,8 @@ interface CachedProfileScreen {
 }
 
 const profileCacheKey = (id: string) => `bsplic.profile.screen.v1.${id}`;
+const AVATAR_TARGET_BYTES = 135_000;
+const AVATAR_MAX_BYTES = 140_000;
 
 const BADGES: Record<string, { name: string; description: string; source: number }> = {
   debiutant: { name: 'Debiutant', description: 'Pierwszy postawiony zakład', source: require('../../../../assets/images/badges/debiutant.png') },
@@ -66,6 +68,29 @@ function toStats(row: { total_bets: number; won_bets: number; lost_bets: number;
     totalBets: Number(row.total_bets), wins: Number(row.won_bets), losses: Number(row.lost_bets),
     winRate: Number(row.win_rate), totalProfit: Number(row.total_profit),
   };
+}
+
+async function prepareAvatarBody(uri: string): Promise<ArrayBuffer> {
+  const attempts = [
+    { dimension: 640, quality: 0.78 },
+    { dimension: 560, quality: 0.68 },
+    { dimension: 480, quality: 0.58 },
+    { dimension: 400, quality: 0.48 },
+    { dimension: 320, quality: 0.38 },
+    { dimension: 256, quality: 0.3 },
+  ];
+
+  for (const [index, attempt] of attempts.entries()) {
+    const edited = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: attempt.dimension, height: attempt.dimension } }],
+      { compress: attempt.quality, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    const body = await (await fetch(edited.uri)).arrayBuffer();
+    if (body.byteLength <= AVATAR_TARGET_BYTES || (index === attempts.length - 1 && body.byteLength <= AVATAR_MAX_BYTES)) return body;
+  }
+
+  throw new Error('Nie udało się zmniejszyć zdjęcia poniżej limitu 140 KB. Wybierz prostsze zdjęcie.');
 }
 
 function Segment<T extends string>({ values, value, onChange }: {
@@ -178,8 +203,7 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
     if (result.canceled) return;
     setUploading(true);
     try {
-      const edited = await ImageManipulator.manipulateAsync(result.assets[0].uri, [{ resize: { width: 640, height: 640 } }], { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG });
-      const body = await (await fetch(edited.uri)).arrayBuffer();
+      const body = await prepareAvatarBody(result.assets[0].uri);
       const path = `${user.id}/${Date.now()}-avatar.jpg`;
       const { error: uploadError } = await supabase.storage.from('profile-avatars').upload(path, body, { contentType: 'image/jpeg', cacheControl: '31536000' });
       if (uploadError) throw uploadError;
