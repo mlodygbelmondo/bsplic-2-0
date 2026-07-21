@@ -7,6 +7,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -301,16 +302,16 @@ export function SportsbookScreen() {
               </View>
             </View>
 
-            {filterPanel === 'sort' ? <View style={{ gap: 6, paddingHorizontal: 12 }}>
+            {filterPanel === 'sort' ? <View style={{ position: 'absolute', top: 60, left: 12, width: '47%', zIndex: 40, gap: 6 }}>
               {SORT_OPTIONS.map(option => <FilterOption key={option.value} label={option.label} selected={sort === option.value} onPress={() => { selectSort(option.value); setFilterPanel(null); }} />)}
               <FilterOption label="●  Aktywne" selected={!includeInProgress} onPress={toggleInProgress} />
               <Pressable onPress={() => { setFilterPanel(null); setProposalOpen(true); }} style={{ height: 42, borderRadius: 999, justifyContent: 'center', backgroundColor: tokens.colors.primary, paddingHorizontal: 14 }}><Text style={{ color: tokens.colors.primaryForeground, fontSize: 13, fontWeight: '800' }}>💡 Zaproponuj zakład</Text></Pressable>
             </View> : null}
 
-            {filterPanel === 'category' ? <View style={{ gap: 6, paddingHorizontal: 12 }}>
+            {filterPanel === 'category' ? <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ position: 'absolute', top: 60, right: 12, width: '47%', maxHeight: 440, zIndex: 40 }} contentContainerStyle={{ gap: 6 }}>
               <FilterOption label="🌐 Wszystkie" selected={!selectedCategory} onPress={() => { selectCategory(null); setFilterPanel(null); }} />
               {categories.map(category => <FilterOption key={category.id} label={`${category.emoji} ${category.name}`} selected={selectedCategory === category.id} onPress={() => { selectCategory(category.id); setFilterPanel(null); }} />)}
-            </View> : null}
+            </ScrollView> : null}
 
             <DailyJackpotCard enabled={routeActive} />
 

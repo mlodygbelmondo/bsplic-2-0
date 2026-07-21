@@ -46,13 +46,13 @@ const BADGES: Record<string, { name: string; description: string; source: number
   goraca_passa: { name: 'Gorąca passa', description: '3 wygrane z rzędu', source: require('../../../../assets/images/badges/goraca_passa.png') },
   nie_do_zatrzymania: { name: 'Nie do zatrzymania', description: '5 wygranych z rzędu', source: require('../../../../assets/images/badges/nie_do_zatrzymania.png') },
   mistrz_serii: { name: 'Mistrz serii', description: '10 wygranych z rzędu', source: require('../../../../assets/images/badges/mistrz_serii.png') },
-  pierwszy_tysiac: { name: 'Pierwszy tysiąc', description: 'Łączne wygrane ponad 1000 zł', source: require('../../../../assets/images/badges/pierwszy_tysiac.png') },
-  wieloryb: { name: 'Wieloryb', description: 'Zakład na co najmniej 500 zł', source: require('../../../../assets/images/badges/wieloryb.png') },
+  pierwszy_tysiac: { name: 'Pierwszy tysiąc', description: 'Łączne wygrane powyżej 1000 zł', source: require('../../../../assets/images/badges/pierwszy_tysiac.png') },
+  wieloryb: { name: 'Wieloryb', description: 'Pojedynczy zakład na 500 zł lub więcej', source: require('../../../../assets/images/badges/wieloryb.png') },
   ryzykant: { name: 'Ryzykant', description: 'Kupon AKO z 5+ wydarzeniami', source: require('../../../../assets/images/badges/ryzykant.png') },
-  analityk: { name: 'Analityk', description: 'Win rate ponad 60%', source: require('../../../../assets/images/badges/analityk.png') },
+  analityk: { name: 'Analityk', description: 'Win rate powyżej 60% (min. 20 zakładów)', source: require('../../../../assets/images/badges/analityk.png') },
   staly_bywalec: { name: 'Stały bywalec', description: 'Seria 7 dni', source: require('../../../../assets/images/badges/staly_bywalec.png') },
   legenda: { name: 'Legenda', description: 'Seria 30 dni', source: require('../../../../assets/images/badges/legenda.png') },
-  pomyslodawca: { name: 'Pomysłodawca', description: 'Zaakceptowana propozycja', source: require('../../../../assets/images/badges/pomyslodawca.png') },
+  pomyslodawca: { name: 'Pomysłodawca', description: 'Pierwsza zaakceptowana propozycja', source: require('../../../../assets/images/badges/pomyslodawca.png') },
   wszechstronny: { name: 'Wszechstronny', description: 'Zakłady w 4+ kategoriach', source: require('../../../../assets/images/badges/wszechstronny.png') },
   multi_fan: { name: 'Multi-fan', description: '10 kuponów AKO', source: require('../../../../assets/images/badges/multi_fan.png') },
 };
@@ -211,8 +211,8 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
     </AppCard>
 
     <AppCard style={{ backgroundColor: '#2A1C10', borderColor: '#72552C', gap: 12, padding: 16 }}>
-      <View style={{ gap: 4 }}><Text allowFontScaling={false} style={{ color: '#D9C6A0', fontWeight: '700', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Karta gracza</Text><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 20, fontWeight: '900' }}>{playerLevel}</Text></View>
-      <View style={{ flexDirection: 'row', gap: 7 }}><View style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 11, fontWeight: '700' }}>Sportsbook</Text></View><Pressable accessibilityRole="button" onPress={() => void shareProfile()} style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 11, fontWeight: '700' }}>⌯ Udostępnij profil</Text></Pressable></View>
+      <View style={{ gap: 4 }}><Text allowFontScaling={false} style={{ color: '#D9C6A0', fontWeight: '700', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Karta gracza</Text><Text allowFontScaling={false} style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900' }}>{playerLevel}</Text></View>
+      <View style={{ flexDirection: 'row', gap: 7 }}><View style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>Sportsbook</Text></View><Pressable accessibilityRole="button" onPress={() => void shareProfile()} style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>⌯ Udostępnij profil</Text></Pressable></View>
       <ProfileStat label="Zysk" value={`${(stats?.totalProfit ?? 0) >= 0 ? '+' : ''}${(stats?.totalProfit ?? 0).toFixed(2)} zł`} color={(stats?.totalProfit ?? 0) >= 0 ? tokens.colors.success : tokens.colors.destructive} />
       <ProfileStat label="Win rate" value={`${(stats?.winRate ?? 0).toFixed(1)}%`} />
       <ProfileStat label="Seria" value={String(shownProfile.current_streak ?? 0)} />
@@ -226,6 +226,15 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
       {kind === 'casino' && (casino.length === 0 ? <Text style={{ color: palette.muted, paddingVertical: 18, textAlign: 'center' }}>Brak gier w kasynie</Text> : casino.map(entry => <View key={entry.id} style={{ gap: 5, borderRadius: 12, backgroundColor: palette.inset, padding: 12 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: palette.foreground, fontWeight: '800' }}>{entry.game_type === 'roulette' ? 'Ruletka' : 'Blackjack'} · {entry.bet_label}</Text><AppBadge label={statusLabels[entry.status]} tone={entry.status === 'won' ? 'success' : entry.status === 'lost' ? 'danger' : 'warning'} /></View><Text style={{ color: palette.muted, fontSize: 12 }}>Stawka {entry.stake.toFixed(2)} zł · wypłata {entry.payout.toFixed(2)} zł</Text></View>))}
     </AppCard>
 
-    <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 12 }}><Text style={{ color: palette.foreground, fontSize: 18, fontWeight: '900' }}>Odznaki ({badges.length})</Text>{badges.length === 0 ? <Text style={{ color: palette.muted }}>Brak zdobytych odznak.</Text> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{badges.map(badge => { const definition = BADGES[badge.badge_key]; if (!definition) return null; return <View key={badge.id} style={{ width: 92, alignItems: 'center', gap: 5 }}><Image source={definition.source} style={{ width: 58, height: 58 }} contentFit="contain" /><Text style={{ color: palette.foreground, fontSize: 11, fontWeight: '800', textAlign: 'center' }}>{definition.name}</Text><Text style={{ color: palette.muted, fontSize: 9, textAlign: 'center' }}>{definition.description}</Text></View>; })}</View>}</AppCard>
+    <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 12 }}>
+      <Text style={{ color: palette.foreground, fontSize: 18, fontWeight: '900' }}>Odznaki</Text>
+      <View style={{ gap: 10 }}>
+        {Object.entries(BADGES).map(([badgeKey, definition]) => {
+          const unlockedBadge = badges.find((badge) => badge.badge_key === badgeKey);
+          const unlockedLabel = unlockedBadge ? `Odblokowano: ${new Date(unlockedBadge.unlocked_at).toLocaleDateString('pl-PL')}` : 'Nieodblokowana';
+          return <View key={badgeKey} accessibilityLabel={`${definition.name}. ${unlockedLabel}`} style={{ minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, borderWidth: 1, borderColor: unlockedBadge ? `${tokens.colors.primary}40` : palette.border, backgroundColor: palette.inset, padding: 12 }}><View style={{ width: 64, height: 64, borderRadius: 10, borderWidth: 1, borderColor: unlockedBadge ? `${tokens.colors.primary}38` : palette.border, backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center' }}><Image source={definition.source} style={{ width: 56, height: 56, opacity: unlockedBadge ? 1 : 0.42 }} contentFit="contain" /></View><View style={{ flex: 1, gap: 4 }}><Text style={{ color: palette.foreground, fontSize: 13, fontWeight: '800' }}>{definition.name}</Text><Text style={{ color: palette.muted, fontSize: 11 }}>{definition.description}</Text><Text style={{ color: unlockedBadge ? tokens.colors.primary : palette.muted, fontSize: 10, fontWeight: '700' }}>{unlockedLabel}</Text></View></View>;
+        })}
+      </View>
+    </AppCard>
   </ScrollView>;
 }

@@ -22,7 +22,7 @@ import { cacheSocialFeed, cacheSocialStories, readCachedFeed, readCachedStories 
 import { ComposerModal } from './components/composer-modal';
 import { FeedCard } from './components/feed-card';
 import { ReactorsModal, type ReactionTarget } from './components/reactions';
-import { Stories } from './components/stories';
+import { Stories, type StoryProfile } from './components/stories';
 import { buildSocialContent, mentionsEniu } from './content';
 import { useSocialRealtime } from './hooks/use-social-realtime';
 import { uploadSocialImage, type PreparedSocialImage } from './images';
@@ -67,6 +67,19 @@ export function SocialScreen() {
 
   const writesDisabled = !user || !network.canPerformWrites;
   const visibleItems = useMemo(() => filter === 'all' ? items : items.filter((item) => item.item_type === filter), [filter, items]);
+  const storyProfiles = useMemo<StoryProfile[]>(() => {
+    const seen = new Set<string>();
+    const profiles: StoryProfile[] = [];
+
+    for (const item of items) {
+      if (seen.has(item.user_id)) continue;
+      seen.add(item.user_id);
+      profiles.push({ userId: item.user_id, username: item.username, avatarUrl: item.avatar_url ?? null });
+      if (profiles.length >= 8) break;
+    }
+
+    return profiles;
+  }, [items]);
 
   const loadStories = useCallback(async () => {
     if (!user || network.isOnline === false) return;
@@ -223,7 +236,7 @@ export function SocialScreen() {
         {FILTERS.map((entry) => <Pressable key={entry.value} accessibilityRole="button" accessibilityState={{ selected: filter === entry.value }} onPress={() => setFilter(entry.value)} style={[styles.filter, filter === entry.value && { backgroundColor: tokens.colors.primary }]}><AppText variant="caption" style={filter === entry.value ? { color: tokens.colors.primaryForeground, fontWeight: '700' } : undefined}>{entry.label}</AppText></Pressable>)}
       </View>
       {user ? <Pressable accessibilityRole="button" disabled={writesDisabled} onPress={() => setComposerOpen(true)} style={[styles.composeEntry, { backgroundColor: tokens.colors.card, borderColor: tokens.colors.border }]}><AppAvatar name={profile?.username ?? 'Ty'} source={profile?.avatar_url ? { uri: profile.avatar_url } : undefined} size={40} /><View style={[styles.composePrompt, { backgroundColor: tokens.colors.muted }]}><AppText tone="muted">Co nowego?</AppText></View><MessageSquarePlus size={22} color={tokens.colors.primary} /></Pressable> : null}
-      {user ? <Stories stories={stories} currentUserId={user.id} currentUsername={profile?.username ?? 'Ty'} currentAvatarUrl={profile?.avatar_url} writesDisabled={writesDisabled} onCreate={(text, image) => createContent('story', text, image)} /> : null}
+      {user ? <Stories stories={stories} profileFallbacks={storyProfiles} currentUserId={user.id} currentUsername={profile?.username ?? 'Ty'} currentAvatarUrl={profile?.avatar_url} writesDisabled={writesDisabled} onCreate={(text, image) => createContent('story', text, image)} /> : null}
     </View>
   );
 

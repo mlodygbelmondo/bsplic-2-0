@@ -17,12 +17,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/auth-provider';
 import { useNetwork } from '@/providers/network-provider';
 
-function activeKeyForPath(pathname: string): MobileNavKey {
+function activeKeyForPath(pathname: string): MobileNavKey | null {
   if (pathname.startsWith('/social')) return 'social';
   if (pathname.startsWith('/casino/roulette')) return 'roulette';
   if (pathname.startsWith('/casino/blackjack')) return 'blackjack';
   if (pathname.startsWith('/rankings')) return 'rankings';
-  return 'bets';
+  if (pathname.startsWith('/profile') || pathname.startsWith('/admin') || pathname.startsWith('/jackpot')) return null;
+  if (pathname.startsWith('/casino')) return null;
+  return pathname === '/' ? 'bets' : null;
 }
 
 let notificationsChannelSequence = 0;
@@ -39,7 +41,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const { maintenance, checking: checkingMaintenance, refresh: refreshMaintenance } = useMaintenanceMode();
   const notificationSound = useNotificationSound();
   const topupAvailable = canClaimTopup(profile?.last_topup_at);
-  const isDetail = pathname.startsWith('/profile') || pathname.startsWith('/admin') || pathname.startsWith('/social/') || pathname.startsWith('/jackpot/') || pathname === '/coupon';
+  const isDetail = pathname.startsWith('/admin') || pathname.startsWith('/jackpot/') || pathname === '/coupon';
   const casinoTone = pathname.startsWith('/casino/');
 
   useEffect(() => {
@@ -64,11 +66,11 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const navigate = (item: MobileNavItem) => router.navigate(item.href);
   if (maintenance) return <MaintenanceScreen checking={checkingMaintenance} onRetry={() => void refreshMaintenance()} />;
   return <View style={{ flex: 1, backgroundColor: casinoTone ? '#09090b' : '#090005' }}>
-    <AppHeader username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} unreadNotifications={unread} topupAvailable={topupAvailable} onPressBalance={() => topupAvailable ? void topup() : Alert.alert('Portfel', 'Dzisiejsze doładowanie zostało już wykorzystane.')} onPressNotifications={() => setNotificationsOpen(true)} onPressProfile={() => router.push('/profile')} onPressMenu={() => setMenuOpen(true)} />
+    <AppHeader username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} unreadNotifications={unread} topupAvailable={topupAvailable} onPressBrand={() => router.navigate('/')} onPressBalance={() => topupAvailable ? void topup() : Alert.alert('Portfel', 'Dzisiejsze doładowanie zostało już wykorzystane.')} onPressNotifications={() => setNotificationsOpen(true)} onPressProfile={() => router.push('/profile')} onPressMenu={() => setMenuOpen(true)} />
     {isOnline === false && <View style={{ backgroundColor: '#9d1d35', paddingVertical: 5, paddingHorizontal: 12 }}><Text style={{ color: '#fff', fontSize: 11, textAlign: 'center', fontWeight: '800' }}>Tryb offline — pokazujemy zapisane dane; operacje finansowe są wyłączone</Text></View>}
     <View style={{ flex: 1 }}>{children}</View>
     <AdaptiveGlassBottomNav activeKey={activeKeyForPath(pathname)} onSelect={navigate} hidden={isDetail} tone={casinoTone ? 'casino' : 'default'} />
-    <AppUserMenu visible={menuOpen} onClose={() => setMenuOpen(false)} username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} canTopup={topupAvailable && !topupLoading} isAdmin={isAdmin || isModerator} onTopup={() => void topup()} onTransfer={() => setTransferOpen(true)} onProfile={() => router.push('/profile')} onNotifications={() => setNotificationsOpen(true)} onAdmin={() => router.push('/admin')} onLogout={() => signOut()} />
+    <AppUserMenu visible={menuOpen} onClose={() => setMenuOpen(false)} username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} canTopup={topupAvailable && !topupLoading} isAdmin={isAdmin || isModerator} onTopup={() => void topup()} onTransfer={() => setTransferOpen(true)} onProfile={() => router.push('/profile')} onNotifications={() => setNotificationsOpen(true)} onCasino={() => router.push('/casino')} onAdmin={() => router.push('/admin')} onLogout={() => signOut()} />
     <NotificationsSheet visible={notificationsOpen} onClose={() => setNotificationsOpen(false)} onCountChange={setUnread} soundMuted={notificationSound.muted} onToggleSound={notificationSound.toggle} />
     <TransferSheet visible={transferOpen} onClose={() => setTransferOpen(false)} />
     <EngagementSurfaces />

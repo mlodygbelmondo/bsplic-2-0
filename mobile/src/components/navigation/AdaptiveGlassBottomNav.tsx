@@ -11,7 +11,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 export interface AdaptiveGlassBottomNavProps {
-  activeKey: MobileNavKey;
+  activeKey: MobileNavKey | null;
   onSelect(item: MobileNavItem): void;
   hidden?: boolean;
   scrollHidden?: boolean;

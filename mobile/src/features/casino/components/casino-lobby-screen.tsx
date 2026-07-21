@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 
 const games = [
   { title: 'Ruletka', subtitle: 'Klasyczna ruletka z mnożnikami. Obstawiaj kolory, parzyste lub swoje szczęśliwe numery.', href: '/casino/roulette' as const, image: require('../../../../assets/images/casino/roulette-button.webp') },
-  { title: 'Blackjack', subtitle: 'Zagraj przeciwko krupierowi. Dobieraj karty i zbliż się do punktu 21.', href: '/casino/blackjack' as const, image: require('../../../../assets/images/casino/blackjack-button.webp') },
+  { title: 'Blackjack', subtitle: 'Zagraj przeciwko krupierowi. Dobieraj karty, podwajaj stawki i zbierz 21 punktów.', href: '/casino/blackjack' as const, image: require('../../../../assets/images/casino/blackjack-button.webp') },
 ];
 
 export function CasinoLobbyScreen() {

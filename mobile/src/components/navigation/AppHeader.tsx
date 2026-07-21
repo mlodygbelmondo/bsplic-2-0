@@ -16,6 +16,7 @@ export interface AppHeaderProps extends ViewProps {
   onPressBalance?: () => void;
   onPressNotifications?: () => void;
   onPressProfile?: () => void;
+  onPressBrand?: () => void;
   onPressMenu: () => void;
 }
 
@@ -28,6 +29,7 @@ export function AppHeader({
   onPressBalance,
   onPressNotifications,
   onPressProfile,
+  onPressBrand,
   onPressMenu,
   style,
   ...props
@@ -46,7 +48,9 @@ export function AppHeader({
       ]}
     >
       <View style={styles.row}>
-        <AppText tone="inverse" style={styles.brand}>BSPLIC 2.0</AppText>
+        <AccessiblePressable accessibilityLabel="Przejdź do zakładów" onPress={onPressBrand} disabled={!onPressBrand} style={styles.brandButton}>
+          <AppText tone="inverse" style={styles.brand}>BSPLIC 2.0</AppText>
+        </AccessiblePressable>
         <View style={styles.actions}>
           {typeof balance === 'number' && onPressBalance ? (
             <AccessiblePressable
@@ -90,6 +94,7 @@ const styles = StyleSheet.create({
   header: { borderBottomWidth: StyleSheet.hairlineWidth },
   row: { height: 44, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { fontSize: 16, lineHeight: 20, fontWeight: '900', fontStyle: 'italic', letterSpacing: -0.4 },
+  brandButton: { minHeight: 44, justifyContent: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   wallet: { minHeight: 36, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.14)' },
   plus: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },

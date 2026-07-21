@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
+import { router, type Href } from 'expo-router';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -16,6 +17,7 @@ import { ComposerModal } from './composer-modal';
 
 interface StoriesProps {
   stories: SocialStory[];
+  profileFallbacks: StoryProfile[];
   currentUserId?: string;
   currentUsername: string;
   currentAvatarUrl?: string | null;
@@ -23,7 +25,13 @@ interface StoriesProps {
   onCreate(text: string, image: PreparedSocialImage | null): Promise<void>;
 }
 
-export function Stories({ stories, currentUserId, currentUsername, currentAvatarUrl, writesDisabled, onCreate }: StoriesProps) {
+export interface StoryProfile {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export function Stories({ stories, profileFallbacks, currentUserId, currentUsername, currentAvatarUrl, writesDisabled, onCreate }: StoriesProps) {
   const { tokens } = useAppTheme();
   const [now, setNow] = useState(Date.now());
   const [compose, setCompose] = useState(false);
@@ -62,6 +70,28 @@ export function Stories({ stories, currentUserId, currentUsername, currentAvatar
             </Pressable>
           );
         })}
+        {active.length === 0 ? profileFallbacks.map((profile) => (
+          <Pressable
+            key={profile.userId}
+            accessibilityRole="link"
+            accessibilityLabel={`Profil ${profile.username}`}
+            onPress={() => router.push(`/profile/${profile.userId}` as Href)}
+            style={[styles.tile, { backgroundColor: tokens.colors.card, borderColor: tokens.colors.border }]}
+          >
+            {profile.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFill} />
+            ) : (
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: `${tokens.colors.primary}1C` }]} />
+            )}
+            <AppAvatar
+              name={profile.username}
+              source={profile.avatarUrl ? { uri: profile.avatarUrl } : undefined}
+              size={34}
+              style={{ borderColor: tokens.colors.primary, borderWidth: 2 }}
+            />
+            <AppText variant="caption" numberOfLines={2} style={styles.storyLabel}>{profile.username}</AppText>
+          </Pressable>
+        )) : null}
       </ScrollView>
       <ComposerModal visible={compose} title="Utwórz relację" placeholder="Dodaj opis relacji…" draftScope="story" currentUserId={currentUserId} onClose={() => setCompose(false)} onSubmit={onCreate} />
       <AppModal visible={!!story} title={story?.username ?? 'Relacja'} onClose={() => setSelected(null)} presentation="center">

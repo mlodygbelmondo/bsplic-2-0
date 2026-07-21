@@ -1,4 +1,4 @@
-import { Bell, CreditCard, LogOut, Moon, Plus, Send, ShieldCheck, Sun, UserRound } from 'lucide-react-native';
+import { Bell, CreditCard, Dices, LogOut, Moon, Plus, Send, ShieldCheck, Sun, UserRound } from 'lucide-react-native';
 import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import { AppModal } from '@/components/ui/AppModal';
@@ -20,6 +20,7 @@ export interface AppUserMenuProps {
   onTransfer?: () => void;
   onProfile?: () => void;
   onNotifications?: () => void;
+  onCasino?: () => void;
   onAdmin?: () => void;
   onLogout: () => void | Promise<void>;
 }
@@ -36,6 +37,7 @@ export function AppUserMenu({
   onTransfer,
   onProfile,
   onNotifications,
+  onCasino,
   onAdmin,
   onLogout,
 }: AppUserMenuProps) {
@@ -86,6 +88,7 @@ export function AppUserMenu({
         {onNotifications ? (
           <MenuRow label="Powiadomienia" icon={Bell} onPress={() => runAndClose(onNotifications)} />
         ) : null}
+        {onCasino ? <MenuRow label="Kasyno" icon={Dices} onPress={() => runAndClose(onCasino)} /> : null}
         {onProfile ? <MenuRow label="Profil" icon={UserRound} onPress={() => runAndClose(onProfile)} /> : null}
         {isAdmin && onAdmin ? <MenuRow label="Admin" icon={ShieldCheck} onPress={() => runAndClose(onAdmin)} /> : null}
         <MenuRow
