@@ -37,7 +37,7 @@ const NetworkContext = createContext<NetworkContextValue | undefined>(
 const resolveOnline = (state: NetInfoState): boolean | null => {
   if (state.isConnected === false) return false;
   if (state.isInternetReachable === false) return false;
-  if (state.isConnected === true) return true;
+  if (state.isInternetReachable === true) return true;
   return null;
 };
 const resolveOfflineReason = (state: NetInfoState | null): OfflineReason => {

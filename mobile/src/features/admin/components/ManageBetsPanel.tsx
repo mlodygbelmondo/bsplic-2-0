@@ -16,6 +16,7 @@ import { AkoExclusionsField, BetFormFields, type BetFormValue } from './BetFormF
 type StatusFilter = 'all' | 'active' | 'resolved' | 'closed';
 type TypeFilter = 'all' | 'single' | '12' | '1x2' | 'multi';
 interface BetEditor extends BetFormValue { id: string; isActive: boolean; exclusions: BetAkoExclusionDraft[] }
+const PAGE_SIZE = 15;
 
 export function ManageBetsPanel() {
   const { tokens } = useAppTheme();
@@ -26,6 +27,7 @@ export function ManageBetsPanel() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [type, setType] = useState<TypeFilter>('all');
+  const [page, setPage] = useState(0);
   const [editor, setEditor] = useState<BetEditor | null>(null);
   const [resolveBet, setResolveBet] = useState<Bet | null>(null);
   const [winners, setWinners] = useState<string[]>([]);
@@ -57,6 +59,10 @@ export function ManageBetsPanel() {
     if (status === 'closed' && (bet.is_active || bet.winning_option)) return false;
     return true;
   }), [bets, search, status, type]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginated = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  useEffect(() => { setPage(0); }, [search, status, type]);
 
   const openEditor = async (bet: Bet) => {
     setBusy(bet.id);
@@ -127,8 +133,9 @@ export function ManageBetsPanel() {
       <AdminChoice<StatusFilter> label="Status" value={status} onChange={setStatus} options={[{ value: 'all', label: 'Wszystkie' }, { value: 'active', label: 'Aktywne' }, { value: 'resolved', label: 'Rozstrzygnięte' }, { value: 'closed', label: 'Zamknięte' }]} />
       <AdminChoice<TypeFilter> label="Typ" value={type} onChange={setType} options={[{ value: 'all', label: 'Wszystkie' }, { value: 'single', label: 'Single' }, { value: '12', label: '1/2' }, { value: '1x2', label: '1X2' }, { value: 'multi', label: 'Multi' }]} />
       <AppText variant="caption" tone="muted">{filtered.length} wyników</AppText>
+      {filtered.length > PAGE_SIZE ? <Pagination page={safePage} totalPages={totalPages} onChange={setPage} /> : null}
       <AdminState empty={filtered.length === 0} emptyTitle="Brak pasujących zakładów." />
-      {filtered.map((bet) => {
+      {paginated.map((bet) => {
         const resolved = Boolean(bet.winning_option);
         return (
           <AppCard key={bet.id} style={styles.betCard}>
@@ -142,6 +149,7 @@ export function ManageBetsPanel() {
           </AppCard>
         );
       })}
+      {filtered.length > PAGE_SIZE ? <Pagination page={safePage} totalPages={totalPages} onChange={setPage} /> : null}
 
       <AppModal visible={Boolean(editor)} title="Edytuj zakład" onClose={() => !busy && setEditor(null)}>
         {editor ? <View style={styles.modalStack}>
@@ -169,8 +177,13 @@ export function ManageBetsPanel() {
   );
 }
 
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange(page: number): void }) {
+  return <View style={styles.pagination}><AppButton variant="outline" disabled={page === 0} onPress={() => onChange(page - 1)}>Poprzednia</AppButton><AppText variant="caption" tone="muted">Strona {page + 1} z {totalPages}</AppText><AppButton variant="outline" disabled={page >= totalPages - 1} onPress={() => onChange(page + 1)}>Następna</AppButton></View>;
+}
+
 const styles = StyleSheet.create({
   stack: { gap: 14 }, betCard: { gap: 14 }, heading: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' }, flex: { flex: 1, gap: 3 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, modalStack: { gap: 15 },
+  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   winner: { minHeight: 50, paddingHorizontal: 14, borderWidth: 1, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

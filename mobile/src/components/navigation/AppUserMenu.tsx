@@ -1,5 +1,5 @@
 import { Bell, CreditCard, Dices, LogOut, Moon, Plus, Send, ShieldCheck, Sun, UserRound } from 'lucide-react-native';
-import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { InteractionManager, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import { AppModal } from '@/components/ui/AppModal';
 import { AccessiblePressable } from '@/components/ui/AccessiblePressable';
@@ -49,6 +49,11 @@ export function AppUserMenu({
     void action();
   };
 
+  const changeTheme = () => {
+    onClose();
+    InteractionManager.runAfterInteractions(toggleTheme);
+  };
+
   return (
     <AppModal visible={visible} title="Menu" onClose={onClose} presentation="sheet">
       {username ? (
@@ -94,7 +99,7 @@ export function AppUserMenu({
         <MenuRow
           label={theme === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}
           icon={theme === 'dark' ? Sun : Moon}
-          onPress={toggleTheme}
+          onPress={changeTheme}
         />
         <MenuRow label="Wyloguj się" icon={LogOut} onPress={() => runAndClose(onLogout)} danger />
       </View>

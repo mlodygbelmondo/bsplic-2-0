@@ -277,7 +277,7 @@ export function SportsbookScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: items.length ? 160 : 112 }}
         ListHeaderComponent={
-          <View style={{ gap: 10, paddingBottom: 10, zIndex: 20 }}>
+          <View style={{ gap: 10, paddingBottom: filterPanel === 'sort' ? 62 : 10, zIndex: 20 }}>
             <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 }}>
               <View style={{ flex: 1 }}>
                 <Pressable

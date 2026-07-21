@@ -2,11 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppCard, AppText } from '@/components/ui';
+import { BET_WINNING_OPTION_FORCED_LOSS, BET_WINNING_OPTION_REFUND } from '../constants';
 import { fetchAdminDashboardSummary, type DashboardStats, type RecentActivity } from '../dashboardApi';
-import { getErrorMessage } from '../helpers';
+import { getErrorMessage, parseWinningOptions } from '../helpers';
 import { AdminState } from './AdminPrimitives';
 
 const EMPTY: DashboardStats = { totalBets: 0, totalPool: 0, pendingProposals: 0, activeBets: 0, resolvedToday: 0, topCategory: null };
+
+function formatWinningOption(value: string) {
+  if (value === BET_WINNING_OPTION_FORCED_LOSS) return 'Przegrana wszystkich';
+  if (value === BET_WINNING_OPTION_REFUND) return 'Zwrot 1.00';
+  return parseWinningOptions(value).join(', ') || value;
+}
 
 export function DashboardPanel() {
   const [stats, setStats] = useState(EMPTY);
@@ -28,7 +35,7 @@ export function DashboardPanel() {
   ];
   return <View style={styles.stack}>
     <View style={styles.grid}>{cards.map(([label, value]) => <AppCard key={label} style={styles.stat}><AppText variant="caption" tone="muted">{label}</AppText><AppText variant="title" tone={label === 'Propozycje oczekujące' && stats.pendingProposals ? 'primary' : 'default'}>{value}</AppText></AppCard>)}</View>
-    <AppCard style={styles.stack}><AppText variant="subtitle">Ostatnia aktywność</AppText><AdminState empty={activity.length === 0} emptyTitle="Brak rozstrzygniętych zakładów." />{activity.map((item) => <View key={item.id} style={styles.activity}><View style={styles.flex}><AppText variant="label" numberOfLines={2}>{item.title}</AppText><AppText variant="caption" tone="muted">Wynik: {item.winningOption}</AppText></View><AppText variant="caption" tone="muted">{new Date(item.resolvedAt).toLocaleDateString('pl-PL')}</AppText></View>)}</AppCard>
+    <AppCard style={styles.stack}><AppText variant="subtitle">Ostatnia aktywność</AppText><AdminState empty={activity.length === 0} emptyTitle="Brak rozstrzygniętych zakładów." />{activity.map((item) => <View key={item.id} style={styles.activity}><View style={styles.flex}><AppText variant="label" numberOfLines={2}>{item.title}</AppText><AppText variant="caption" tone="muted">Wynik: {formatWinningOption(item.winningOption)}</AppText></View><AppText variant="caption" tone="muted">{new Date(item.resolvedAt).toLocaleDateString('pl-PL')}</AppText></View>)}</AppCard>
   </View>;
 }
 

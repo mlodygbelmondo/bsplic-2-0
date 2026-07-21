@@ -46,7 +46,7 @@ export function AdminScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: tokens.colors.background }]}>
       <View style={styles.header}><AppText variant="title">{isAdmin ? 'Panel Admina' : 'Panel Moderatora'}</AppText><AppText variant="caption" tone="muted">Pełne zarządzanie BSPLIC</AppText></View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroller} contentContainerStyle={styles.tabs}>
         {tabs.map(({ key, label, icon: Icon }) => {
           const selected = active === key;
           return <AccessiblePressable key={key} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => setTab(key)} style={[styles.tab, { backgroundColor: selected ? tokens.colors.primary : tokens.colors.card, borderColor: selected ? tokens.colors.primary : tokens.colors.border }]}><Icon size={16} color={selected ? tokens.colors.primaryForeground : tokens.colors.mutedForeground} /><AppText variant="label" style={{ color: selected ? tokens.colors.primaryForeground : tokens.colors.foreground }}>{label}</AppText></AccessiblePressable>;
@@ -68,6 +68,7 @@ export function AdminScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 }, header: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, gap: 2 },
-  tabs: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 }, tab: { minHeight: 44, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  tabScroller: { flexGrow: 0, maxHeight: 64 },
+  tabs: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 8 }, tab: { height: 44, borderWidth: 1, borderRadius: 14, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
   content: { padding: 16, paddingBottom: 120 }, denied: { flex: 1, justifyContent: 'center', padding: 24 }, deniedCard: { gap: 8 },
 });

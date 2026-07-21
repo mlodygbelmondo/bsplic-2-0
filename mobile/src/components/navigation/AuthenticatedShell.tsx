@@ -12,6 +12,7 @@ import { fetchUnreadNotificationsCount } from '@/features/notifications/api/noti
 import { EngagementSurfaces } from '@/features/engagement/components/engagement-surfaces';
 import { MaintenanceScreen } from '@/components/feedback/MaintenanceScreen';
 import { useMaintenanceMode } from '@/hooks/use-maintenance-mode';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useNotificationSound } from '@/features/notifications/hooks/use-notification-sound';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/providers/auth-provider';
@@ -33,6 +34,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, profile, isAdmin, isModerator, signOut, refreshProfile } = useAuth();
   const { isOnline, canPerformWrites } = useNetwork();
+  const { tokens } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -65,7 +67,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
 
   const navigate = (item: MobileNavItem) => router.navigate(item.href);
   if (maintenance) return <MaintenanceScreen checking={checkingMaintenance} onRetry={() => void refreshMaintenance()} />;
-  return <View style={{ flex: 1, backgroundColor: casinoTone ? '#09090b' : '#090005' }}>
+  return <View style={{ flex: 1, backgroundColor: casinoTone ? '#09090b' : tokens.colors.background }}>
     <AppHeader username={profile?.username} avatarSource={avatarSource} balance={profile ? Number(profile.balance) : undefined} unreadNotifications={unread} topupAvailable={topupAvailable} onPressBrand={() => router.navigate('/')} onPressBalance={() => topupAvailable ? void topup() : Alert.alert('Portfel', 'Dzisiejsze doładowanie zostało już wykorzystane.')} onPressNotifications={() => setNotificationsOpen(true)} onPressProfile={() => router.push('/profile')} onPressMenu={() => setMenuOpen(true)} />
     {isOnline === false && <View style={{ backgroundColor: '#9d1d35', paddingVertical: 5, paddingHorizontal: 12 }}><Text style={{ color: '#fff', fontSize: 11, textAlign: 'center', fontWeight: '800' }}>Tryb offline — pokazujemy zapisane dane; operacje finansowe są wyłączone</Text></View>}
     <View style={{ flex: 1 }}>{children}</View>

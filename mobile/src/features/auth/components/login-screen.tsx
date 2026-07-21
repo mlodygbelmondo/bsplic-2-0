@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from 'expo-sqlite/kv-store';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +16,7 @@ export function LoginScreen() {
   const [forgot, setForgot] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function LoginScreen() {
         await signIn(email, password);
         await AsyncStorage.setItem(LAST_EMAIL_KEY, email.trim());
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Wystąpił błąd'); }
+    } catch (cause) { setError(getAuthErrorMessage(cause)); }
     finally { setLoading(false); }
   };
 
@@ -51,7 +53,7 @@ export function LoginScreen() {
         <AppCard style={{ gap: 13, padding: 24, borderRadius: 17, backgroundColor: authCard, borderColor: tokens.dark ? '#3A1420' : '#FFFFFF' }}>
           <View style={{ gap: 7, marginBottom: 4 }}><Text style={{ fontSize: 21, lineHeight: 27, fontWeight: '800', color: authForeground, textAlign: 'center' }}>{forgot ? 'Nie pamiętasz hasła?' : 'Zaloguj się'}</Text>{forgot && <Text style={{ color: authMuted, textAlign: 'center', fontSize: 13, lineHeight: 18 }}>Wpisz e-mail, a wyślemy Ci bezpieczny link do ustawienia nowego hasła.</Text>}</View>
           <AppInput label="E-mail" placeholder="twoj@email.pl" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" value={email} onChangeText={setEmail} returnKeyType={forgot ? 'done' : 'next'} style={{ minHeight: 60, backgroundColor: authInput, borderColor: authInput }} />
-          {!forgot && <AppInput label="Hasło" placeholder="••••••••" secureTextEntry textContentType="password" autoComplete="current-password" value={password} onChangeText={setPassword} onSubmitEditing={() => void submit()} returnKeyType="done" style={{ minHeight: 60, backgroundColor: authInput, borderColor: authInput }} />}
+          {!forgot && <AppInput label="Hasło" placeholder="••••••••" secureTextEntry={!passwordVisible} textContentType="password" autoComplete="current-password" value={password} onChangeText={setPassword} onSubmitEditing={() => void submit()} returnKeyType="done" rightAccessory={<Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? 'Ukryj hasło' : 'Pokaż hasło'} onPress={() => setPasswordVisible(value => !value)} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>{passwordVisible ? <EyeOff color={authMuted} size={20} /> : <Eye color={authMuted} size={20} />}</Pressable>} style={{ minHeight: 60, backgroundColor: authInput, borderColor: authInput }} />}
           {error && <Text selectable style={{ color: '#d91f42', fontSize: 13, textAlign: 'center' }}>{error}</Text>}
           {message && <Text selectable style={{ color: '#198754', fontSize: 13, textAlign: 'center' }}>{message}</Text>}
           <AppButton loading={loading} onPress={() => void submit()} fullWidth>{forgot ? 'Wyślij link' : 'Zaloguj się'}</AppButton>
@@ -61,4 +63,13 @@ export function LoginScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   </View>;
+}
+
+function getAuthErrorMessage(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : '';
+  const normalized = message.toLocaleLowerCase('en-US');
+  if (normalized.includes('invalid login credentials')) return 'Nieprawidłowy e-mail lub hasło.';
+  if (normalized.includes('rate limit') || normalized.includes('too many')) return 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.';
+  if (normalized.includes('network') || normalized.includes('fetch')) return 'Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie.';
+  return message || 'Wystąpił błąd. Spróbuj ponownie.';
 }
