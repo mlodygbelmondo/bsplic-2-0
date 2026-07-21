@@ -298,14 +298,14 @@ export function CouponScreen() {
             accessibilityRole="button"
             disabled={placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict))}
             onPress={() => void place()}
-            style={({ pressed }) => ({
+            style={{
               minHeight: 56,
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 16,
               backgroundColor: colors.primary,
-              opacity: placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict)) || pressed ? 0.5 : 1,
-            })}>
+              opacity: placing || !canPerformWrites || (mode === 'ako' && Boolean(akoConflict)) ? 0.5 : 1,
+            }}>
             {placing ? (
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (

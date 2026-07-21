@@ -25,6 +25,8 @@ function activeKeyForPath(pathname: string): MobileNavKey {
   return 'bets';
 }
 
+let notificationsChannelSequence = 0;
+
 export function AuthenticatedShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, profile, isAdmin, isModerator, signOut, refreshProfile } = useAuth();
@@ -44,7 +46,7 @@ export function AuthenticatedShell({ children }: { children: ReactNode }) {
     if (!user) return;
     const update = () => void fetchUnreadNotificationsCount(user.id).then(setUnread).catch(() => undefined);
     update();
-    const channel = supabase.channel(`mobile-notifications:${user.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, payload => { update(); if (payload.eventType === 'INSERT') notificationSound.play(); }).subscribe();
+    const channel = supabase.channel(`mobile-notifications:${user.id}:${++notificationsChannelSequence}`).on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, payload => { update(); if (payload.eventType === 'INSERT') notificationSound.play(); }).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [notificationSound, user]);
 

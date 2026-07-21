@@ -7,7 +7,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
   View,
 } from 'react-native';
@@ -25,6 +24,11 @@ import { ProposeBetModal } from './propose-bet-modal';
 const CATEGORY_KEY = 'bsplic.home.category';
 const SORT_KEY = 'bsplic.home.sort';
 const ACTIVE_ONLY_KEY = 'bsplic.home.activeOnly';
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'newest', label: 'Najnowsze' },
+  { value: 'popular', label: 'Popularne' },
+  { value: 'ending_soon', label: 'Kończące się' },
+];
 
 function readValue(key: string) {
   try {
@@ -37,9 +41,11 @@ function readValue(key: string) {
 function BetOptionButton({
   bet,
   option,
+  optionCount,
 }: {
   bet: Bet;
   option: Bet['options'][number];
+  optionCount: number;
 }) {
   const { tokens } = useAppTheme();
   const { items, addItem, removeItem } = useCoupon();
@@ -68,40 +74,13 @@ function BetOptionButton({
       accessibilityState={{ selected }}
       accessibilityLabel={`${option.name}, kurs ${option.odds.toFixed(2)}`}
       onPress={handlePress}
-      style={({ pressed }) => ({
-        minHeight: 52,
-        flex: 1,
-        minWidth: 92,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 2,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        backgroundColor: selected ? tokens.colors.foreground : tokens.colors.odds,
-        opacity: pressed ? 0.78 : 1,
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}>
-      <Text
-        numberOfLines={1}
-        style={{
-          color: selected ? tokens.colors.background : tokens.colors.oddsForeground,
-          fontSize: 12,
-          fontWeight: '700',
-        }}>
-        {option.name}
-      </Text>
-      <Text
-        selectable
-        style={{
-          color: selected ? tokens.colors.odds : tokens.colors.oddsForeground,
-          fontSize: 16,
-          fontWeight: '900',
-          fontVariant: ['tabular-nums'],
-        }}>
-        {option.odds.toFixed(2)}
-      </Text>
+      style={{
+        width: optionCount === 1 ? '100%' : optionCount === 3 ? '31.6%' : '48.7%',
+      }}>
+      <View style={{ minHeight: 50, justifyContent: 'center', alignItems: 'center', gap: 2, borderRadius: 11, borderCurve: 'continuous', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: selected ? tokens.colors.foreground : '#FFE14A' }}>
+        <Text numberOfLines={1} style={{ color: selected ? '#FFE14A' : '#27220F', fontSize: 12, fontWeight: '700' }}>{option.name}</Text>
+        <Text selectable style={{ color: selected ? '#FFE14A' : '#171405', fontSize: 16, fontWeight: '900', fontStyle: 'italic', fontVariant: ['tabular-nums'] }}>{option.odds.toFixed(2)}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -110,20 +89,25 @@ function BetCard({ bet, category }: { bet: Bet; category?: Category }) {
   const { tokens } = useAppTheme();
   const closesAt = new Date(bet.ends_at);
   const closed = closesAt.getTime() <= Date.now();
+  const probabilityDenominator = bet.options.reduce((sum, option) => {
+    return Number.isFinite(option.odds) && option.odds > 0 ? sum + 1 / option.odds : sum;
+  }, 0);
 
   return (
     <View
       style={{
         marginHorizontal: 12,
-        marginBottom: 10,
-        gap: 12,
-        borderRadius: 18,
+        marginBottom: 9,
+        gap: 0,
+        borderRadius: 14,
         borderCurve: 'continuous',
         borderWidth: 1,
         borderColor: bet.is_live ? tokens.colors.primary : tokens.colors.border,
         backgroundColor: tokens.colors.card,
-        padding: 14,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
+        paddingHorizontal: 14,
+        paddingTop: 10,
+        paddingBottom: 11,
+        boxShadow: '0 5px 16px rgba(0,0,0,0.22)',
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {bet.is_live ? (
@@ -144,50 +128,52 @@ function BetCard({ bet, category }: { bet: Bet; category?: Category }) {
             BSPLICBOOST
           </Text>
         ) : null}
-        <Text
-          numberOfLines={1}
-          style={{ flex: 1, color: tokens.colors.mutedForeground, fontSize: 11 }}>
+        <Text numberOfLines={1} style={{ flex: 1, color: tokens.colors.mutedForeground, fontSize: 11, fontWeight: '600' }}>
           {category ? `${category.emoji} ${category.name}` : 'Zakład'}
         </Text>
-        <Text
-          selectable
-          style={{ color: tokens.colors.mutedForeground, fontSize: 10, fontVariant: ['tabular-nums'] }}>
-          {closed
-            ? 'Zamknięty'
-            : closesAt.toLocaleString('pl-PL', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+        <Text style={{ color: tokens.colors.mutedForeground, fontSize: 10, fontWeight: '600' }}>
+          ◉ {bet.bet_count}
         </Text>
       </View>
 
-      <Text
-        selectable
-        style={{ color: tokens.colors.foreground, fontSize: 16, fontWeight: '800' }}>
-        {bet.title}
-      </Text>
+      <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 11, gap: 4 }}>
+        <Text selectable style={{ color: tokens.colors.foreground, fontSize: 16, lineHeight: 20, fontWeight: '800', textAlign: 'center' }}>
+          {bet.title}
+        </Text>
+        <Text selectable style={{ color: tokens.colors.mutedForeground, fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] }}>
+          {closed ? 'Zamknięty' : closesAt.toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '')}
+        </Text>
+      </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {bet.options.map((option) => (
-          <BetOptionButton key={option.name} bet={bet} option={option} />
+          <BetOptionButton key={option.name} bet={bet} option={option} optionCount={bet.options.length} />
         ))}
       </View>
 
-      <Text style={{ color: tokens.colors.mutedForeground, fontSize: 10 }}>
-        {bet.bet_count} obstawień
-      </Text>
+      <View style={{ flexDirection: 'row', height: 3, gap: 2, marginTop: 8, overflow: 'hidden', borderRadius: 999 }}>
+        {bet.options.map((option, index) => (
+          <View
+            key={option.name}
+            style={{
+              flex: probabilityDenominator > 0 && option.odds > 0 ? 1 / option.odds / probabilityDenominator : 0,
+              minWidth: 2,
+              borderRadius: 999,
+              backgroundColor: index % 3 === 0 ? tokens.colors.primary : index % 3 === 1 ? tokens.colors.mutedForeground : '#22A06B',
+            }}
+          />
+        ))}
+      </View>
     </View>
   );
 }
 
-function CategoryPill({
-  category,
+function FilterOption({
+  label,
   selected,
   onPress,
 }: {
-  category: Category | null;
+  label: string;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -197,23 +183,22 @@ function CategoryPill({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={({ pressed }) => ({
-        minHeight: 42,
+      style={{
+        height: 42,
         justifyContent: 'center',
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: selected ? tokens.colors.primary : tokens.colors.border,
-        backgroundColor: selected ? tokens.colors.secondary : tokens.colors.card,
+        borderColor: selected ? tokens.colors.foreground : tokens.colors.border,
+        backgroundColor: selected ? tokens.colors.foreground : tokens.colors.card,
         paddingHorizontal: 14,
-        opacity: pressed ? 0.75 : 1,
-      })}>
+      }}>
       <Text
         style={{
-          color: selected ? tokens.colors.primary : tokens.colors.foreground,
+          color: selected ? tokens.colors.background : tokens.colors.foreground,
           fontSize: 13,
           fontWeight: selected ? '800' : '600',
         }}>
-        {category ? `${category.emoji} ${category.name}` : 'Wszystkie'}
+        {label}
       </Text>
     </Pressable>
   );
@@ -233,6 +218,7 @@ export function SportsbookScreen() {
     () => readValue(ACTIVE_ONLY_KEY) === 'false',
   );
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [filterPanel, setFilterPanel] = useState<'sort' | 'category' | null>(null);
   const { items, totalOdds } = useCoupon();
   const { categories, categoryMap, loading: categoriesLoading } = useCategories();
   const {
@@ -258,9 +244,7 @@ export function SportsbookScreen() {
     }
   };
 
-  const cycleSort = () => {
-    const next: SortMode =
-      sort === 'newest' ? 'ending_soon' : sort === 'ending_soon' ? 'popular' : 'newest';
+  const selectSort = (next: SortMode) => {
     setSort(next);
     try {
       localStorage.setItem(SORT_KEY, next);
@@ -292,89 +276,46 @@ export function SportsbookScreen() {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: items.length ? 160 : 112 }}
         ListHeaderComponent={
-          <View style={{ gap: 12, paddingBottom: 12 }}>
-            <View style={{ paddingHorizontal: 14, paddingTop: 10 }}>
-              <Text
-                selectable
-                style={{ color: tokens.colors.foreground, fontSize: 26, fontWeight: '900' }}>
-                Zakłady
-              </Text>
-              <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>
-                Luźne betowanko
-              </Text>
+          <View style={{ gap: 10, paddingBottom: 10, zIndex: 20 }}>
+            <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: filterPanel === 'sort' }}
+                  onPress={() => setFilterPanel(current => current === 'sort' ? null : 'sort')}
+                  style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text numberOfLines={1} style={{ color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{includeInProgress ? '' : '●  '}{SORT_OPTIONS.find(option => option.value === sort)?.label}</Text>
+                  <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
+                </Pressable>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: filterPanel === 'category' }}
+                  onPress={() => setFilterPanel(current => current === 'category' ? null : 'category')}
+                  style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text numberOfLines={1} style={{ flex: 1, color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{selectedCategory && categoryMap[selectedCategory] ? `${categoryMap[selectedCategory].emoji} ${categoryMap[selectedCategory].name}` : '🌐 Wszystkie'}</Text>
+                  <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
+                </Pressable>
+              </View>
             </View>
+
+            {filterPanel === 'sort' ? <View style={{ gap: 6, paddingHorizontal: 12 }}>
+              {SORT_OPTIONS.map(option => <FilterOption key={option.value} label={option.label} selected={sort === option.value} onPress={() => { selectSort(option.value); setFilterPanel(null); }} />)}
+              <FilterOption label="●  Aktywne" selected={!includeInProgress} onPress={toggleInProgress} />
+              <Pressable onPress={() => { setFilterPanel(null); setProposalOpen(true); }} style={{ height: 42, borderRadius: 999, justifyContent: 'center', backgroundColor: tokens.colors.primary, paddingHorizontal: 14 }}><Text style={{ color: tokens.colors.primaryForeground, fontSize: 13, fontWeight: '800' }}>💡 Zaproponuj zakład</Text></Pressable>
+            </View> : null}
+
+            {filterPanel === 'category' ? <View style={{ gap: 6, paddingHorizontal: 12 }}>
+              <FilterOption label="🌐 Wszystkie" selected={!selectedCategory} onPress={() => { selectCategory(null); setFilterPanel(null); }} />
+              {categories.map(category => <FilterOption key={category.id} label={`${category.emoji} ${category.name}`} selected={selectedCategory === category.id} onPress={() => { selectCategory(category.id); setFilterPanel(null); }} />)}
+            </View> : null}
 
             <DailyJackpotCard enabled={routeActive} />
 
             {error && <View style={{ marginHorizontal: 12, borderRadius: 12, backgroundColor: tokens.colors.secondary, padding: 10 }}><Text style={{ color: tokens.colors.foreground, fontSize: 12, textAlign: 'center' }}>Pokazujemy ostatnio zapisane dane. {error}</Text></View>}
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
-              <CategoryPill
-                category={null}
-                selected={!selectedCategory}
-                onPress={() => selectCategory(null)}
-              />
-              {categories.map((category) => (
-                <CategoryPill
-                  key={category.id}
-                  category={category}
-                  selected={selectedCategory === category.id}
-                  onPress={() => selectCategory(category.id)}
-                />
-              ))}
-            </ScrollView>
-
-            <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12 }}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={cycleSort}
-                style={{
-                  minHeight: 42,
-                  flex: 1,
-                  justifyContent: 'center',
-                  borderRadius: 12,
-                  backgroundColor: tokens.colors.cardStrong,
-                  paddingHorizontal: 12,
-                }}>
-                <Text style={{ color: tokens.colors.foreground, fontSize: 12, fontWeight: '700' }}>
-                  Sortowanie: {sort === 'newest' ? 'Najnowsze' : sort === 'ending_soon' ? 'Kończące się' : 'Popularne'}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityState={{ checked: includeInProgress }}
-                onPress={toggleInProgress}
-                style={{
-                  minHeight: 42,
-                  justifyContent: 'center',
-                  borderRadius: 12,
-                  backgroundColor: includeInProgress ? tokens.colors.secondary : tokens.colors.cardStrong,
-                  paddingHorizontal: 12,
-                }}>
-                <Text style={{ color: includeInProgress ? tokens.colors.primary : tokens.colors.foreground, fontSize: 12, fontWeight: '700' }}>
-                  W toku
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Zaproponuj zakład"
-                onPress={() => setProposalOpen(true)}
-                style={{
-                  minHeight: 42,
-                  justifyContent: 'center',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: tokens.colors.primary,
-                  paddingHorizontal: 12,
-                }}>
-                <Text style={{ color: tokens.colors.primary, fontSize: 12, fontWeight: '800' }}>
-                  + Propozycja
-                </Text>
-              </Pressable>
-            </View>
           </View>
         }
         ListEmptyComponent={
@@ -412,7 +353,7 @@ export function SportsbookScreen() {
           accessibilityRole="button"
           accessibilityLabel={`Otwórz kupon, ${items.length} pozycji`}
           onPress={() => router.push('/coupon')}
-          style={({ pressed }) => ({
+          style={{
             position: 'absolute',
             left: 14,
             right: 14,
@@ -425,9 +366,8 @@ export function SportsbookScreen() {
             borderCurve: 'continuous',
             backgroundColor: tokens.colors.primary,
             paddingHorizontal: 18,
-            opacity: pressed ? 0.82 : 1,
             boxShadow: '0 12px 30px rgba(255,10,84,0.34)',
-          })}>
+          }}>
           <Text style={{ color: tokens.colors.primaryForeground, fontSize: 15, fontWeight: '900' }}>
             Kupon · {items.length}
           </Text>

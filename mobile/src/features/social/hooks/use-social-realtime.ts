@@ -18,6 +18,8 @@ interface Props {
   refreshComments(id: string, type: FeedItemType): void | Promise<void>;
 }
 
+let socialChannelSequence = 0;
+
 export function useSocialRealtime({ enabled, feedItems, commentsLoaded, refreshItem, refreshComments }: Props) {
   const itemsRef = useRef(feedItems);
   const commentsRef = useRef(commentsLoaded);
@@ -26,7 +28,7 @@ export function useSocialRealtime({ enabled, feedItems, commentsLoaded, refreshI
 
   useEffect(() => {
     if (!enabled) return;
-    const channel = supabase.channel('mobile-social-feed-realtime').on(
+    const channel = supabase.channel(`mobile-social-feed-realtime:${++socialChannelSequence}`).on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'social_realtime_events' },
       (payload) => {

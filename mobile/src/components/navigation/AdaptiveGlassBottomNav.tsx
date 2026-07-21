@@ -2,12 +2,11 @@ import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { CircleDot, Club, House, MessageCircle, Trophy, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MOBILE_NAV_ITEMS, type MobileNavIconName, type MobileNavItem, type MobileNavKey } from '@/constants/mobile-navigation';
 import { useReducedMotion } from '@/components/feedback/use-reduced-motion';
-import { AccessiblePressable } from '@/components/ui/AccessiblePressable';
 import { AppText } from '@/components/ui/AppText';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -68,30 +67,30 @@ export function AdaptiveGlassBottomNav({
         const inactiveColor = usesDarkTone ? 'rgba(255,255,255,0.68)' : 'rgba(15,23,42,0.82)';
 
         return (
-          <AccessiblePressable
+          <Pressable
             key={item.key}
             accessibilityRole="tab"
             accessibilityLabel={item.label}
             accessibilityState={{ selected: active, disabled: hidden || scrollHidden }}
             disabled={hidden || scrollHidden}
             onPress={() => onSelect(item)}
-            style={({ pressed }) => [
+            style={[
               styles.item,
               active && {
                 backgroundColor: usesDarkTone ? 'rgba(255,255,255,0.11)' : 'rgba(201,0,24,0.10)',
                 borderColor: usesDarkTone ? 'rgba(255,255,255,0.16)' : 'rgba(201,0,24,0.12)',
               },
-              pressed && styles.pressed,
             ]}
           >
-            <Icon color={active ? activeColor : inactiveColor} size={20} strokeWidth={active ? 2.4 : 2} />
+            <Icon color={active ? activeColor : inactiveColor} size={18} strokeWidth={active ? 2.4 : 2} />
             <AppText
+              allowFontScaling={false}
               numberOfLines={1}
               style={[styles.label, { color: active ? activeColor : inactiveColor }, active && styles.activeLabel]}
             >
               {item.label}
             </AppText>
-          </AccessiblePressable>
+          </Pressable>
         );
       })}
     </View>
@@ -123,31 +122,28 @@ export function AdaptiveGlassBottomNav({
             colorScheme={usesDarkTone ? 'dark' : 'light'}
             tintColor={surfaceColor}
             style={styles.glass}
-          >
-            {content}
-          </GlassView>
+          />
         ) : (
           <BlurView
             tint={usesDarkTone ? 'systemMaterialDark' : 'systemMaterialLight'}
             intensity={Platform.OS === 'android' ? 44 : 74}
             blurMethod="dimezisBlurViewSdk31Plus"
             style={[styles.glass, { backgroundColor: surfaceColor }]}
-          >
-            {content}
-          </BlurView>
+          />
         )}
+        {content}
       </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  positioner: { position: 'absolute', left: 8, right: 8, zIndex: 50, alignItems: 'center' },
+  positioner: { position: 'absolute', left: 10, right: 10, zIndex: 50, alignItems: 'center' },
   shadow: {
     width: '100%',
     maxWidth: 430,
-    height: 72,
-    borderRadius: 28,
+    height: 64,
+    borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
     shadowOffset: { width: 0, height: -12 },
@@ -155,21 +151,20 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 16,
   },
-  glass: { flex: 1, borderRadius: 28, overflow: 'hidden' },
-  items: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6 },
+  glass: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 24, overflow: 'hidden' },
+  items: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, paddingVertical: 5 },
   item: {
     flex: 1,
     minWidth: 0,
-    height: 58,
-    borderRadius: 22,
+    height: 52,
+    borderRadius: 19,
     borderWidth: 1,
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
     paddingHorizontal: 2,
   },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
-  label: { width: '100%', textAlign: 'center', fontSize: 11, lineHeight: 14, fontWeight: '500' },
+  label: { width: '100%', textAlign: 'center', fontSize: 8, lineHeight: 10, fontWeight: '600', letterSpacing: -0.35 },
   activeLabel: { fontWeight: '800' },
 });

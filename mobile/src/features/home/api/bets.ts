@@ -7,6 +7,8 @@ import type { SortMode } from "@/features/home/hooks/sortBets";
 
 type BetRow = Database["public"]["Tables"]["bets"]["Row"];
 
+let betsChannelSequence = 0;
+
 export const ACTIVE_BETS_PAGE_SIZE = 80;
 
 export async function fetchActiveBets(
@@ -67,7 +69,7 @@ export function subscribeToBetsChanges(
   onChange: (payload: RealtimePostgresChangesPayload<BetRow>) => void,
 ) {
   const channel = supabase
-    .channel("bets-realtime")
+    .channel(`bets-realtime:${++betsChannelSequence}`)
     .on<BetRow>(
       "postgres_changes",
       { event: "*", schema: "public", table: "bets" },
@@ -76,6 +78,6 @@ export function subscribeToBetsChanges(
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    void supabase.removeChannel(channel);
   };
 }

@@ -313,7 +313,7 @@ function ChoicePill({
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         minHeight: 42,
         justifyContent: 'center',
         borderRadius: 999,
@@ -321,8 +321,8 @@ function ChoicePill({
         borderColor: selected ? tokens.colors.primary : tokens.colors.border,
         backgroundColor: selected ? tokens.colors.secondary : tokens.colors.card,
         paddingHorizontal: 14,
-        opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
-      })}>
+        opacity: disabled ? 0.5 : 1,
+      }}>
       <AppText variant="caption" style={{ color: selected ? tokens.colors.primary : tokens.colors.foreground }}>
         {label}
       </AppText>

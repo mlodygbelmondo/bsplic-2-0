@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ThumbsUp } from 'lucide-react-native';
 
 import { AppAvatar } from '@/components/ui/AppAvatar';
 import { AppModal } from '@/components/ui/AppModal';
@@ -24,6 +25,7 @@ interface ReactionBarProps {
 export function ReactionBar({ reactions, myReaction, disabled, compact, onToggle, onOpenReactors }: ReactionBarProps) {
   const { tokens } = useAppTheme();
   const sorted = sortedReactions(reactions);
+  const [pickerOpen, setPickerOpen] = useState(false);
   return (
     <View style={styles.wrap}>
       {totalReactions(reactions) > 0 ? (
@@ -32,7 +34,19 @@ export function ReactionBar({ reactions, myReaction, disabled, compact, onToggle
           <AppText variant="caption" tone="muted" style={{ fontVariant: ['tabular-nums'] }}>{totalReactions(reactions)}</AppText>
         </Pressable>
       ) : null}
-      <View style={styles.picker}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={myReaction ? `Usuń reakcję ${REACTION_LABELS[myReaction]}` : 'Lubię to'}
+        accessibilityHint="Przytrzymaj, aby wybrać inną reakcję"
+        disabled={disabled}
+        onPress={() => onToggle(myReaction ?? 'like')}
+        onLongPress={() => setPickerOpen((open) => !open)}
+        style={styles.likeButton}
+      >
+        <ThumbsUp size={16} color={myReaction ? tokens.colors.primary : tokens.colors.mutedForeground} fill={myReaction ? tokens.colors.primary : 'transparent'} />
+        <AppText variant="caption" tone={myReaction ? 'primary' : 'muted'}>{myReaction ? REACTION_LABELS[myReaction] : 'Lubię to'}</AppText>
+      </Pressable>
+      {pickerOpen ? <View style={[styles.picker, { backgroundColor: tokens.colors.card, borderColor: tokens.colors.border }]}>
         {(compact ? REACTION_TYPES.slice(0, 4) : REACTION_TYPES).map((type) => (
           <Pressable
             key={type}
@@ -40,13 +54,13 @@ export function ReactionBar({ reactions, myReaction, disabled, compact, onToggle
             accessibilityLabel={REACTION_LABELS[type]}
             accessibilityState={{ selected: myReaction === type, disabled }}
             disabled={disabled}
-            onPress={() => onToggle(type)}
+            onPress={() => { onToggle(type); setPickerOpen(false); }}
             style={[styles.reaction, myReaction === type && { backgroundColor: `${tokens.colors.primary}20`, borderColor: tokens.colors.primary }]}
           >
             <AppText style={styles.emoji}>{REACTION_EMOJIS[type]}</AppText>
           </Pressable>
         ))}
-      </View>
+      </View> : null}
     </View>
   );
 }
@@ -84,9 +98,10 @@ export function ReactorsModal({ visible, target, onClose }: { visible: boolean; 
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 6 },
+  wrap: { gap: 5 },
   summary: { minHeight: 28, flexDirection: 'row', gap: 5, alignItems: 'center' },
-  picker: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  likeButton: { minHeight: 38, flexDirection: 'row', gap: 7, alignItems: 'center', paddingRight: 8 },
+  picker: { position: 'absolute', left: 0, bottom: 40, zIndex: 10, flexDirection: 'row', gap: 3, borderWidth: StyleSheet.hairlineWidth, borderRadius: 24, padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.28)' },
   reaction: { width: 38, minHeight: 38, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   emoji: { fontSize: 19 },
   list: { gap: 12 },

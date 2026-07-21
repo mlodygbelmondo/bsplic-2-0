@@ -237,12 +237,14 @@ export async function advanceRouletteRoundIfDue(
   }
 }
 
+let rouletteChannelSequence = 0;
+
 export function subscribeToRouletteRounds(
   onChange: () => void,
   tableKey = DEFAULT_TABLE_KEY,
 ) {
   const channel = supabase
-    .channel(`casino-roulette-rounds-${tableKey}`)
+    .channel(`casino-roulette-rounds-${tableKey}:${++rouletteChannelSequence}`)
     .on(
       'postgres_changes',
       {
@@ -257,7 +259,7 @@ export function subscribeToRouletteRounds(
     .subscribe();
 
   return () => {
-    supabase.removeChannel(channel);
+    void supabase.removeChannel(channel);
   };
 }
 

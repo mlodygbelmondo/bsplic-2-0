@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -55,7 +56,7 @@ function Segment<T extends string>({
 }) {
   const { tokens } = useAppTheme();
   return (
-    <View style={{ flexDirection: 'row', gap: 6, borderRadius: 14, backgroundColor: tokens.colors.card, padding: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6, borderRadius: 12, backgroundColor: tokens.colors.card, padding: 4 }}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -65,15 +66,15 @@ function Segment<T extends string>({
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
             style={{
-              minHeight: 40,
+              minHeight: 32,
               flex: 1,
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 11,
+              borderRadius: 9,
               backgroundColor: selected ? tokens.colors.primary : 'transparent',
               paddingHorizontal: 10,
             }}>
-            <Text style={{ color: selected ? tokens.colors.primaryForeground : tokens.colors.mutedForeground, fontSize: 12, fontWeight: '800' }}>
+            <Text allowFontScaling={false} style={{ color: selected ? tokens.colors.primaryForeground : tokens.colors.mutedForeground, fontSize: 12, fontWeight: '800' }}>
               {option.label}
             </Text>
           </Pressable>
@@ -101,14 +102,14 @@ export function RankingsScreen() {
     <FlatList
       style={{ flex: 1, backgroundColor: tokens.colors.background }}
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 112 }}
+      contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 96 }}
       data={rankings}
       keyExtractor={(entry) => entry.id}
       refreshing={isRefetching}
       onRefresh={() => void refetch()}
       ListHeaderComponent={
-        <View style={{ gap: 12, paddingVertical: 12 }}>
-          <Text selectable style={{ color: tokens.colors.foreground, fontSize: 26, fontWeight: '900' }}>
+        <View style={{ gap: 9, paddingTop: 8, paddingBottom: 10 }}>
+          <Text selectable allowFontScaling={false} style={{ color: tokens.colors.foreground, fontSize: 20, fontWeight: '800' }}>
             Rankingi
           </Text>
           <Segment
@@ -150,7 +151,7 @@ export function RankingsScreen() {
           </Text>
         )
       }
-      ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+      ItemSeparatorComponent={() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.colors.border }} />}
       renderItem={({ item, index }) => {
         const rank = index + 1;
         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank);
@@ -166,37 +167,39 @@ export function RankingsScreen() {
           <Link href={`/profile/${item.id}`} asChild>
             <Pressable
               accessibilityRole="link"
-              style={({ pressed }) => ({
-                minHeight: 74,
+              style={{
+                minHeight: 66,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 12,
-                borderRadius: 16,
+                borderRadius: isMe ? 12 : 0,
                 borderCurve: 'continuous',
-                borderWidth: 1,
-                borderColor: isMe ? tokens.colors.primary : tokens.colors.border,
+                borderWidth: isMe ? 1 : 0,
+                borderColor: tokens.colors.primary,
                 backgroundColor: isMe ? tokens.colors.secondary : tokens.colors.card,
-                paddingHorizontal: 14,
-                opacity: pressed ? 0.76 : 1,
-              })}>
-              <Text style={{ width: 34, textAlign: 'center', color: tokens.colors.foreground, fontSize: 18, fontWeight: '900' }}>
+                paddingHorizontal: 8,
+                paddingVertical: 7,
+              }}>
+              <Text allowFontScaling={false} style={{ width: 28, textAlign: 'center', color: tokens.colors.foreground, fontSize: 16, fontWeight: '900' }}>
                 {medal}
               </Text>
               <View style={{ flex: 1, gap: 4 }}>
-                <Text numberOfLines={1} style={{ color: tokens.colors.foreground, fontWeight: '800' }}>
+                <Text allowFontScaling={false} numberOfLines={1} style={{ color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>
                   {item.username}{isMe ? ' (ty)' : ''}
                 </Text>
-                <Text style={{ color: tokens.colors.mutedForeground, fontSize: 11 }}>
+                <Text allowFontScaling={false} style={{ color: tokens.colors.mutedForeground, fontSize: 10 }}>
                   Profit {item.total_profit >= 0 ? '+' : ''}{item.total_profit.toFixed(2)} zł · WR {item.win_rate.toFixed(1)}% · {item.total_bets} zakł.
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                <Text style={{ color: tokens.colors.mutedForeground, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+                <Text allowFontScaling={false} style={{ color: tokens.colors.mutedForeground, fontSize: 9, fontWeight: '700', textTransform: 'uppercase' }}>
                   {sort === 'total_profit' ? 'Profit' : sort === 'win_rate' ? 'Win rate' : 'Zakłady'}
                 </Text>
                 <Text
                   selectable
+                  allowFontScaling={false}
                   style={{
+                    fontSize: 14,
                     color:
                       sort !== 'total_profit'
                         ? tokens.colors.foreground

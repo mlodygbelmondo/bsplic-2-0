@@ -79,6 +79,10 @@ function Segment<T extends string>({ values, value, onChange }: {
   </ScrollView>;
 }
 
+function ProfileStat({ label, value, color = '#FFFFFF', flex = false }: { label: string; value: string; color?: string; flex?: boolean }) {
+  return <View style={{ flex: flex ? 1 : undefined, minHeight: 74, justifyContent: 'center', gap: 7, borderRadius: 13, borderWidth: 1, borderColor: '#ffffff18', backgroundColor: '#09090988', paddingHorizontal: 13 }}><Text allowFontScaling={false} style={{ color: '#BFAF9D', fontSize: 9, fontWeight: '700', letterSpacing: 1.7, textTransform: 'uppercase' }}>{label}</Text><Text allowFontScaling={false} style={{ color, fontSize: 20, fontWeight: '900' }}>{value}</Text></View>;
+}
+
 export function ProfileScreen({ userRef }: { userRef?: string }) {
   const { tokens } = useAppTheme();
   const palette = {
@@ -153,6 +157,7 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
   const own = targetId === user?.id;
   const shownProfile = own ? profile : publicProfile;
   const displayName = shownProfile?.username ?? 'Gracz';
+  const playerLevel = stats && stats.totalProfit > 0 ? 'Na plusie' : (shownProfile?.current_streak ?? 0) >= 3 ? 'Na fali' : (stats?.totalBets ?? 0) >= 25 ? 'Weteran kuponów' : 'Nowy gracz';
   const filteredCoupons = useMemo(() => filter === 'all' ? coupons : coupons.filter(item => item.status === filter), [coupons, filter]);
 
   const shareProfile = async () => {
@@ -196,18 +201,22 @@ export function ProfileScreen({ userRef }: { userRef?: string }) {
   if (error || !shownProfile) return <View style={{ flex: 1, backgroundColor: palette.background, padding: 24, justifyContent: 'center', gap: 16 }}><Text style={{ color: palette.foreground, textAlign: 'center', fontWeight: '800' }}>{error ?? 'Nie znaleziono profilu'}</Text><AppButton onPress={() => void load()}>Spróbuj ponownie</AppButton></View>;
 
   return <ScrollView style={{ flex: 1, backgroundColor: palette.background }} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: 12, padding: 12, paddingBottom: 116 }} refreshControl={undefined}>
-    <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 14 }}>
+    <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 12, padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <AppAvatar name={displayName} size={64} source={shownProfile.avatar_url ? { uri: shownProfile.avatar_url } : undefined} />
-        <View style={{ flex: 1, gap: 3 }}><Text style={{ color: palette.foreground, fontSize: 24, fontWeight: '900' }}>{displayName}</Text><Text style={{ color: palette.muted, fontSize: 12 }}>Dołączył: {new Date(shownProfile.created_at).toLocaleDateString('pl-PL')}{own ? '' : ' · profil publiczny'}</Text></View>
-        {own && <View style={{ alignItems: 'flex-end' }}><Text style={{ color: palette.muted, fontSize: 11 }}>Saldo</Text><Text style={{ color: palette.primary, fontWeight: '900' }}>{Number(profile?.balance ?? 0).toFixed(2)} zł</Text></View>}
+        <AppAvatar name={displayName} size={58} source={shownProfile.avatar_url ? { uri: shownProfile.avatar_url } : undefined} />
+        <View style={{ flex: 1, gap: 2 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 21, fontWeight: '800' }}>{displayName}</Text><Text allowFontScaling={false} style={{ color: palette.muted, fontSize: 11 }}>Dołączył: {new Date(shownProfile.created_at).toLocaleDateString('pl-PL')}{own ? '' : ' · profil publiczny'}</Text></View>
+        {own && <View style={{ alignItems: 'flex-end', maxWidth: 92 }}><Text allowFontScaling={false} style={{ color: palette.muted, fontSize: 10 }}>Saldo</Text><Text allowFontScaling={false} style={{ color: palette.primary, fontSize: 18, fontWeight: '900', textAlign: 'right' }}>{Number(profile?.balance ?? 0).toFixed(2)} zł</Text></View>}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}><AppButton variant="secondary" onPress={() => void shareProfile()} style={{ flex: 1 }}>Udostępnij</AppButton>{own && <AppButton loading={uploading} onPress={changeAvatar} style={{ flex: 1 }}>Zmień zdjęcie</AppButton>}</View>
+      {own ? <Pressable accessibilityRole="button" disabled={uploading} onPress={changeAvatar} style={{ minHeight: 34, justifyContent: 'center', alignSelf: 'flex-start', borderRadius: 10, backgroundColor: palette.inset, paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 11, fontWeight: '700' }}>{uploading ? 'Wysyłanie…' : 'Wybierz zdjęcie profilowe'}</Text></Pressable> : null}
     </AppCard>
 
-    <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 14 }}>
-      <View><Text style={{ color: palette.primary, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' }}>{stats && stats.totalProfit > 0 ? 'Na plusie' : (shownProfile.current_streak ?? 0) >= 3 ? 'Na fali' : (stats?.totalBets ?? 0) >= 25 ? 'Weteran kuponów' : 'Nowy gracz'}</Text><Text style={{ color: palette.foreground, fontSize: 22, fontWeight: '900' }}>Karta gracza</Text></View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{[['Profit', `${(stats?.totalProfit ?? 0) >= 0 ? '+' : ''}${(stats?.totalProfit ?? 0).toFixed(2)} zł`], ['Win rate', `${(stats?.winRate ?? 0).toFixed(1)}%`], ['Kupony', String(stats?.totalBets ?? 0)], ['Seria', String(shownProfile.current_streak ?? 0)]].map(([label, value]) => <View key={label} style={{ alignItems: 'center', gap: 3 }}><Text style={{ color: palette.foreground, fontWeight: '900' }}>{value}</Text><Text style={{ color: palette.muted, fontSize: 10 }}>{label}</Text></View>)}</View>
+    <AppCard style={{ backgroundColor: '#2A1C10', borderColor: '#72552C', gap: 12, padding: 16 }}>
+      <View style={{ gap: 4 }}><Text allowFontScaling={false} style={{ color: '#D9C6A0', fontWeight: '700', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Karta gracza</Text><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 20, fontWeight: '900' }}>{playerLevel}</Text></View>
+      <View style={{ flexDirection: 'row', gap: 7 }}><View style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 11, fontWeight: '700' }}>Sportsbook</Text></View><Pressable accessibilityRole="button" onPress={() => void shareProfile()} style={{ minHeight: 30, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#ffffff28', backgroundColor: '#ffffff10', paddingHorizontal: 12 }}><Text allowFontScaling={false} style={{ color: palette.foreground, fontSize: 11, fontWeight: '700' }}>⌯ Udostępnij profil</Text></Pressable></View>
+      <ProfileStat label="Zysk" value={`${(stats?.totalProfit ?? 0) >= 0 ? '+' : ''}${(stats?.totalProfit ?? 0).toFixed(2)} zł`} color={(stats?.totalProfit ?? 0) >= 0 ? tokens.colors.success : tokens.colors.destructive} />
+      <ProfileStat label="Win rate" value={`${(stats?.winRate ?? 0).toFixed(1)}%`} />
+      <ProfileStat label="Seria" value={String(shownProfile.current_streak ?? 0)} />
+      <View style={{ flexDirection: 'row', gap: 8 }}><ProfileStat label="Kupony" value={String(stats?.totalBets ?? 0)} flex /><ProfileStat label="Wygrane" value={String(stats?.wins ?? 0)} flex /></View>
     </AppCard>
 
     <AppCard style={{ backgroundColor: palette.card, borderColor: palette.border, gap: 12 }}>
