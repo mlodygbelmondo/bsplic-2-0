@@ -65,6 +65,7 @@ Nie ma pozycji `not started`. Każdy obszar i wszystkie 44 powierzchnie z `expo-
 - `e059eb0` — wizualne zbliżenie natywnego UI do mobilnego PWA.
 - `a784e70` — naprawy parytetu z pełnego audytu ekranów, w tym blackjack, ruletka i tła Jackpotu.
 - `0946043` — końcowe korekty auth, wallet, admina, theme/offline oraz kompletna macierz 44 powierzchni.
+- `88d7a9a` — poprawki końcowego review: lifecycle Blackjacka, izolacja draftów, avatar 140 KB, realtime, recovery i powiadomienia.
 
 ## Niezależny review
 
