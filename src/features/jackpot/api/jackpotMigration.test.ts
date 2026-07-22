@@ -136,6 +136,29 @@ describe('daily jackpot migration security invariants', () => {
     expect(body).not.toContain('ROUND(v_pool.prize_amount, 2)');
   });
 
+  it('refunds the full price of every ticket when one player bought two', () => {
+    const body = getFunctionBody(
+      'private.finalize_daily_jackpot_pool\\(\\s*p_pool_date DATE,\\s*p_snapshot_user_id UUID DEFAULT NULL\\s*\\)',
+    );
+
+    expect(body).toContain('GROUP BY user_id');
+    expect(body).toContain('ROUND(SUM(price), 2) AS refund_amount');
+    expect(body).toContain('p.balance + r.refund_amount');
+    expect(body).toContain('t.user_id = c.user_id');
+  });
+
+  it('repairs unpaid tickets from jackpot rounds that already rolled over', () => {
+    const repairMigration =
+      migrationSqlByFile.get(
+        '20260722230000_fix_multi_ticket_jackpot_refunds.sql',
+      ) ?? '';
+
+    expect(repairMigration).toContain('WITH missing_refunds AS');
+    expect(repairMigration).toContain("p.status = 'rolled_over'");
+    expect(repairMigration).toContain('t.refunded_at IS NULL');
+    expect(repairMigration).toContain('ROUND(SUM(t.price), 2) AS refund_amount');
+  });
+
   it('publishes the per-player ticket limit in jackpot snapshots', () => {
     const fundedBody = getFunctionBody(
       'private.get_daily_jackpot_snapshot\\(\\s*p_pool_id UUID,\\s*p_user_id UUID\\s*\\)',
