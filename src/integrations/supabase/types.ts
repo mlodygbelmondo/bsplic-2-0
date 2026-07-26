@@ -88,13 +88,58 @@ export type Database = {
           },
         ]
       }
+      agent_runs: {
+        Row: {
+          agent_user_id: string | null
+          created_count: number
+          finished_at: string | null
+          held_count: number
+          id: string
+          kind: string
+          report: string | null
+          settled_count: number
+          started_at: string
+          status: string
+          summary: Json
+        }
+        Insert: {
+          agent_user_id?: string | null
+          created_count?: number
+          finished_at?: string | null
+          held_count?: number
+          id?: string
+          kind?: string
+          report?: string | null
+          settled_count?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+        }
+        Update: {
+          agent_user_id?: string | null
+          created_count?: number
+          finished_at?: string | null
+          held_count?: number
+          id?: string
+          kind?: string
+          report?: string | null
+          settled_count?: number
+          started_at?: string
+          status?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       bets: {
         Row: {
+          agent_duplicate_key: string | null
+          agent_metadata: Json
           bet_count: number
           bet_type: string
           category_id: string | null
           created_at: string
           ends_at: string
+          event_key: string | null
           id: string
           is_active: boolean
           is_bsplicboost: boolean
@@ -104,11 +149,14 @@ export type Database = {
           winning_option: string | null
         }
         Insert: {
+          agent_duplicate_key?: string | null
+          agent_metadata?: Json
           bet_count?: number
           bet_type: string
           category_id?: string | null
           created_at?: string
           ends_at: string
+          event_key?: string | null
           id?: string
           is_active?: boolean
           is_bsplicboost?: boolean
@@ -118,11 +166,14 @@ export type Database = {
           winning_option?: string | null
         }
         Update: {
+          agent_duplicate_key?: string | null
+          agent_metadata?: Json
           bet_count?: number
           bet_type?: string
           category_id?: string | null
           created_at?: string
           ends_at?: string
+          event_key?: string | null
           id?: string
           is_active?: boolean
           is_bsplicboost?: boolean
@@ -1300,11 +1351,44 @@ export type Database = {
       agent_settle_bet: {
         Args: {
           p_bet_id: string
+          p_evidence?: Json
           p_mode?: string
           p_scope?: string
           p_token: string
           p_winning_options?: string[]
         }
+        Returns: Json
+      }
+      agent_flag_settlement_hold: {
+        Args: {
+          p_bet_id: string
+          p_reason: string
+          p_run_id?: string | null
+          p_token: string
+        }
+        Returns: Json
+      }
+      agent_set_bet_ako_exclusions: {
+        Args: { p_bet_id: string; p_exclusions: Json; p_token: string }
+        Returns: Json
+      }
+      agent_start_run: {
+        Args: { p_kind?: string; p_token: string }
+        Returns: Json
+      }
+      agent_finish_run: {
+        Args: {
+          p_counts?: Json
+          p_report?: string | null
+          p_run_id: string
+          p_status?: string
+          p_summary?: Json
+          p_token: string
+        }
+        Returns: Json
+      }
+      agent_get_recent_runs: {
+        Args: { p_limit?: number; p_token: string }
         Returns: Json
       }
       review_bet_proposal: {

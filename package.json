@@ -11,6 +11,8 @@
     "season:reset": "node scripts/global-season-reset.mjs",
     "agent:accept-proposals": "node scripts/agent-accept-proposals.mjs",
     "agent:create-bets": "node scripts/agent-create-bets.mjs",
+    "agent:settle-bets": "node scripts/agent-settle-bets.mjs",
+    "agent:run": "node scripts/agent-run.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

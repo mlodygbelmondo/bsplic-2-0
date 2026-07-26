@@ -1,59 +1,218 @@
 ---
 name: bsplic-bet-agent-ops
-description: "Reference instructions for BSPLIC sportsbook agent operations in /home/piotr/bsplic-2-0. Use when the user asks for any BSPLIC agent action: fetch bet/proposal context, draft proposals, accept agent proposals, create bets directly, inspect settlement context, research results, prepare settlement recommendations, settle approved bets, smoke-test agent RPCs, or manage token scopes."
+description: "Autonomous BSPLIC sportsbook agent operations in /home/piotr/bsplic-2-0. Use for the daily unattended run (settle finished markets, publish new ones, set AKO exclusions) and for any manual BSPLIC agent action: fetch bet/settlement context, create bets, manage AKO exclusions, research results, settle bets, inspect run history, smoke-test agent RPCs, or manage token scopes."
 ---
 
 # BSPLIC Bet Agent Ops
 
+The agent runs unattended once a day. It settles everything that finished, then
+publishes new markets straight to the live board. Nobody approves its output, so
+every rule below is load-bearing.
+
 ## Guardrails
 
 - Work from `/home/piotr/bsplic-2-0`.
-- Load agent secrets from `/home/piotr/.codex-secrets/bsplic-agent.env`.
+- Secrets come from the environment: `BSPLIC_SUPABASE_URL`,
+  `BSPLIC_SUPABASE_ANON_KEY`, `BSPLIC_AGENT_TOKEN`. In a local shell,
+  `/home/piotr/.codex-secrets/bsplic-agent.env` is a fallback. Environment
+  variables always win.
 - Never print `BSPLIC_AGENT_TOKEN`, Supabase keys, or raw env file contents.
 - Never use a Supabase service-role key for this workflow.
-- Always browse for current schedules, bookmaker odds, or final results; sports/esports data is time-sensitive.
-- Treat the price for every option as a live-data requirement: use only decimal odds displayed by an identifiable bookmaker or an odds-comparison service that names the bookmaker and update time.
-- Never derive, estimate, round into existence, or label as bookmaker odds a price based on rankings, team form, prediction percentages, implied probabilities, or personal judgement.
-- If a current two-sided price cannot be verified for every offered outcome, do not create or publish that market. Report it as skipped with the missing source or outcome.
-- Record the bookmaker, source URL, observed-at time in UTC, and the exact displayed price for every market in `agent_metadata`. Preserve the quoted bookmaker price; do not apply an unrequested margin or price adjustment.
-- Cite sources in user-facing proposal and settlement reports.
-- Default to pending proposals. Publish proposals or create live bets directly only when the user explicitly asks for that exact action.
-- Never call `agent_settle_bet` until the user explicitly approves exact settlement recommendations in the current conversation.
-- Keep `accept:proposals`, `create:bets`, and `settle:bets` off the token unless the user intentionally enables those capabilities.
+- Always browse for current schedules, bookmaker odds and final results.
+  Sports/esports data is time-sensitive; nothing here may come from memory.
+- **Every offered outcome needs a live decimal price from a named bookmaker or
+  an odds-comparison service that names the bookmaker and the update time.**
+  Never derive, estimate, round into existence, or relabel a price based on
+  rankings, form, prediction percentages, implied probabilities or judgement.
+- If a current price cannot be verified for *every* outcome of a market, do not
+  publish that market. Report it as skipped with the missing source or outcome.
+- Record bookmaker, source URL, observed-at time in UTC and the exact displayed
+  price in `agent_metadata.odds_source`. Never apply an unrequested margin.
+- Never guess a settlement. Hold it (see **Settlement**).
+- Keep `BSPLIC` branding in admin-facing and user-facing copy.
 
-## Key Files
+## Daily run
 
-- Agent env: `/home/piotr/.codex-secrets/bsplic-agent.env`
-- Repo runbook: `/home/piotr/bsplic-2-0/.ai/docs/agent-bet-automation-runbook.md`
-- Accept proposals script: `/home/piotr/bsplic-2-0/scripts/agent-accept-proposals.mjs`
-- Direct bet creation script: `/home/piotr/bsplic-2-0/scripts/agent-create-bets.mjs`
-- Agent publishing migration: `/home/piotr/bsplic-2-0/supabase/migrations/20260603143000_agent_publish_bet_rpcs.sql`
-- Settlement migration: `/home/piotr/bsplic-2-0/supabase/migrations/20260524172000_canonical_sportsbook_settlement_rpc.sql`
-
-## Setup
-
-Use this before shell commands that call Supabase RPCs:
+Bracket the whole cycle so a failed or missed run is visible:
 
 ```bash
-cd /home/piotr/bsplic-2-0
-set +x
-source /home/piotr/.codex-secrets/bsplic-agent.env
+npm run agent:run -- start --kind daily      # -> { "run_id": "..." }
+# ... work ...
+npm run agent:run -- finish <RUN_UUID> --status ok --counts '{"created":12,"settled":5,"held":1}' --summary ./summary.json --report "..."
 ```
 
-The Node scripts load `/home/piotr/.codex-secrets/bsplic-agent.env` automatically when variables are not already set.
+Order is fixed:
+
+1. **Start the run.** Keep the `run_id`; it goes into settlement evidence and
+   holds.
+2. **Settle.** `agent_get_pending_settlement_context` → research results →
+   `npm run agent:settle-bets -- ./settlements.json --run-id <RUN_UUID>`.
+3. **Inventory.** `agent_get_bet_context` → what is already live, which markets
+   are grouped by `event_key`, and which AKO pairs already exist
+   (`akoExclusions`).
+4. **Discover and price.** Find upcoming events per the coverage policy, then
+   fetch a real two-sided price for every outcome.
+5. **Publish.** Build the payload with `event_key`, `agent_duplicate_key`,
+   `ako_ref`, `ako_exclusions` and `agent_metadata.odds_source`, then
+   `npm run agent:create-bets -- ./bets.json`.
+6. **Finish the run** with counts, `ako_unresolved`, `unexcluded_same_event_pairs`
+   and `settlement_holds` in the summary.
+
+If step 5 exits with code 2 there are unresolved AKO exclusions. Fix them with
+`agent_set_bet_ako_exclusions` before finishing the run, and never report
+`status: ok` while any remain.
+
+## AKO exclusions — the anti-arbitrage rule
+
+Two markets that are correlated must never be combinable on one accumulator. A
+user who can put "Team A wins" and "Team A or draw" on the same coupon is being
+handed free money.
+
+**You decide which pairs are correlated.** Nothing on the server does it for
+you. Before publishing, evaluate every pair among the markets you are creating,
+and every pair against markets already active (`activeBets` + `akoExclusions`
+from the context RPC).
+
+Correlation classes that must be linked:
+
+- Two markets on the same fixture — winner, double chance, over/under, both
+  teams to score, correct score, handicap, player props, map/set betting.
+- The same team or player across different markets — match winner and
+  tournament winner, match winner and top scorer.
+- Tournament progression — group winner and a match inside that group.
+- F1 — race winner, podium finish and fastest lap on the same Grand Prix.
+- Any pair where one outcome mechanically raises the probability of the other.
+
+Markets on genuinely independent events are fine to combine; that is the point
+of an accumulator.
+
+**Every same-event pair you deliberately leave unlinked goes into the run
+summary under `unexcluded_same_event_pairs`, with your reason.** That is what
+makes a wrong call reviewable afterwards.
+
+Link markets in the same request with `ako_ref`:
+
+```json
+[
+  {
+    "title": "Polska - Brazylia — zwycięzca meczu",
+    "bet_type": "1x2",
+    "options": [
+      { "name": "1", "odds": 2.4 },
+      { "name": "X", "odds": 3.3 },
+      { "name": "2", "odds": 2.85 }
+    ],
+    "ends_at": "2026-07-28T18:00:00Z",
+    "event_key": "fifa-wc-2026:pol-bra:2026-07-28",
+    "agent_duplicate_key": "fifa-wc-2026:pol-bra:1x2:2026-07-28",
+    "ako_ref": "pol-bra-1x2",
+    "ako_exclusions": [
+      { "ref": "pol-bra-ou25", "reason": "ten sam mecz — skorelowane rynki" }
+    ],
+    "agent_metadata": {
+      "odds_source": {
+        "bookmaker": "ExampleBookmaker",
+        "url": "https://example.com/event",
+        "observed_at": "2026-07-26T09:12:00Z",
+        "market": "match winner",
+        "prices": { "1": 2.4, "X": 3.3, "2": 2.85 }
+      }
+    }
+  }
+]
+```
+
+Exclusion targets resolve in this order: `ref` (same request) → `betId`
+(existing UUID) → `agent_duplicate_key` (existing bet). Use `agent_duplicate_key`
+when linking to something published on an earlier day. Exclusions are symmetric
+and additive; declaring the pair once is enough.
+
+To correct exclusions after publishing:
+
+```bash
+# Replaces the FULL exclusion list for that bet.
+agent_set_bet_ako_exclusions(p_token, p_bet_id, [{ "betId": "...", "reason": "..." }])
+```
+
+## Coverage policy
+
+Focus sports: football, CS2, LoL, tennis, NBA/basketball, darts, F1. Add others
+when `historicalBets` shows users engaged with them before.
+
+Tiers, not fixed caps:
+
+- **Tier A** — World Cup, EURO, CS2/LoL Majors and international finals, tennis
+  Slams, NBA playoffs, F1 Grand Prix weekends, major darts tournaments. Cover
+  *every* fixture. Add secondary markets on the headline fixtures: over/under
+  goals, both teams to score, first goalscorer, map handicap, set betting,
+  podium finish.
+- **Tier B** — top domestic leagues, regular seasons, tier-1 esports leagues.
+  Headline fixtures, match-winner markets, secondary markets only where a
+  two-sided price is verifiable.
+- **Tier C** — everything else. Skip unless history shows demand.
+
+Use `historicalBets` and `recentAcceptedProposals` from the context RPC to learn
+what this audience actually bets on, and let that shift the mix over time. Do
+not publish a market nobody will touch just to hit a number.
+
+Never publish a market whose `ends_at` has already passed, and set `ends_at` to
+the real event start.
+
+## Settlement
+
+Autonomous. Do not ask for approval.
+
+```bash
+npm run agent:settle-bets -- ./settlements.json --run-id <RUN_UUID>
+```
+
+Settle when **all** of these hold:
+
+- the event has actually finished,
+- the final result is confirmed by an official source, or by two independent
+  reputable sources that agree,
+- every winning option maps **exactly** onto a BSPLIC option name.
+
+Modes: `normal` for an ordinary winner, `refund` for a void (postponed,
+cancelled, abandoned, walkover that voids the market), `force_lost` only when
+every option should lose. Scope stays `pending_only` — it still closes the bet
+and records `winning_option` for markets with no pending legs.
+
+Settle ended, unresolved markets even when nobody placed a bet
+(`placed_bet_count = 0`) or there are no pending legs. That closes the market
+and keeps history correct.
+
+**Hold instead of guessing** when: no confirmed result; sources disagree; a
+source name does not map cleanly onto a BSPLIC option; the event ended
+abnormally and you cannot tell whether the market voids. A hold changes nothing
+about the bet — it records the reason so the next run does not re-derive it:
+
+```json
+{ "bet_id": "...", "hold": true, "reason": "brak potwierdzonego wyniku w źródłach" }
+```
+
+`agent_get_pending_settlement_context` returns `settlement_hold` with the
+previous reason and attempt count. Re-check held markets each run; a hold that
+survives three runs belongs in the report as something needing a human.
 
 ## RPCs
 
-- `agent_get_bet_context(p_token, p_recent_bet_limit, p_history_limit)` requires `read:bets`.
-- `agent_create_bet_proposals(p_token, p_proposals)` requires `create:proposals`.
-- `agent_accept_bet_proposals(p_token, p_proposal_ids, p_is_live, p_is_bsplicboost)` requires `accept:proposals`.
-- `agent_create_bets(p_token, p_bets)` requires `create:bets`.
-- `agent_get_pending_settlement_context(p_token, p_limit)` requires `read:settlement`.
-- `agent_settle_bet(p_token, p_bet_id, p_winning_options, p_mode, p_scope)` requires `settle:bets`.
+| RPC | Scope |
+| --- | --- |
+| `agent_get_bet_context(p_token, p_recent_bet_limit, p_history_limit)` | `read:bets` |
+| `agent_create_bets(p_token, p_bets)` | `create:bets` |
+| `agent_set_bet_ako_exclusions(p_token, p_bet_id, p_exclusions)` | `manage:ako` |
+| `agent_get_pending_settlement_context(p_token, p_limit)` | `read:settlement` |
+| `agent_settle_bet(p_token, p_bet_id, p_winning_options, p_mode, p_scope, p_evidence)` | `settle:bets` |
+| `agent_flag_settlement_hold(p_token, p_bet_id, p_reason, p_run_id)` | `settle:bets` |
+| `agent_start_run` / `agent_finish_run` / `agent_get_recent_runs` | `manage:runs` |
+| `agent_create_bet_proposals(p_token, p_proposals)` | `create:proposals` |
+| `agent_accept_bet_proposals(p_token, p_proposal_ids, ...)` | `accept:proposals` |
 
-## Fetch Context
+The proposal RPCs exist for the human review path and are not part of the daily
+autonomous run.
 
-Use when preparing proposals, checking duplicates, or deciding what can be accepted.
+Direct call shape:
 
 ```bash
 curl -sS "$BSPLIC_SUPABASE_URL/rest/v1/rpc/agent_get_bet_context" \
@@ -63,86 +222,56 @@ curl -sS "$BSPLIC_SUPABASE_URL/rest/v1/rpc/agent_get_bet_context" \
   --data "{\"p_token\":\"$BSPLIC_AGENT_TOKEN\",\"p_recent_bet_limit\":10,\"p_history_limit\":200}"
 ```
 
-Check `recentBets`, `activeBets`, `pendingProposals`, `recentAcceptedProposals`, and categories.
+## Duplicates
 
-## Draft Proposals
+`agent_duplicate_key` is the idempotency guard and is unique across `public.bets`.
+Build it deterministically from competition, fixture, market and date, e.g.
+`fifa-wc-2026:pol-bra:1x2:2026-07-28`. A re-run after a timeout must produce the
+same keys so nothing is published twice.
 
-1. Fetch context.
-2. Browse the current/upcoming event from an official or trusted schedule source.
-3. Fetch a current moneyline price for every option from a bookmaker or named odds-comparison feed. Capture the source URL, bookmaker, UTC observation time, market type, and exact decimal odds.
-4. Reject the candidate if the source is stale, the bookmaker is not identifiable, a required outcome has no price, the market type is not an exact match, or the displayed price is not decimal. Do not substitute a model estimate.
-5. Skip duplicates against recent bets, active bets, pending proposals, and recent accepted proposals.
-6. Build deterministic `agent_duplicate_key` values.
-7. Put a complete `agent_metadata.odds_source` object on every proposal, for example:
+The server also skips near-duplicates: same bet type, same normalised title,
+same option names, within ±6h. Distinct fixtures with identical option names
+(1/X/2, Over/Under) do **not** collide — give every market a distinct title.
 
-```json
-{
-  "bookmaker": "ExampleBookmaker",
-  "url": "https://example.com/event",
-  "observed_at": "2026-07-20T12:34:56Z",
-  "market": "match winner",
-  "prices": {
-    "Team A": 1.72,
-    "Team B": 2.08
-  }
-}
-```
+Payloads larger than 25 bets are chunked automatically by
+`npm run agent:create-bets`. Markets sharing an `event_key` are kept in the same
+batch so their `ako_ref` links resolve.
 
-8. Call `agent_create_bet_proposals` only with the captured prices unchanged.
-9. Report `created`, `skipped`, `errors`, bookmaker, observation time, and sources. Explicitly state that no market was priced from a model.
+## Reporting
 
-## Accept Agent Proposals
+Every run reports:
 
-Use only when the user explicitly asks to publish already-created pending agent proposals.
+- created markets, with bookmaker and observation time
+- skipped candidates and why (duplicate, unverifiable price, missing outcome)
+- settled markets with mode, winning options and sources
+- held markets with reasons
+- `ako_created`, and **loudly** any `ako_unresolved`
+- `unexcluded_same_event_pairs` with reasons
+- an explicit statement that no market was priced from a model
 
-```bash
-npm run agent:accept-proposals -- PROPOSAL_UUID_1 PROPOSAL_UUID_2
-npm run agent:accept-proposals -- PROPOSAL_UUID --live
-npm run agent:accept-proposals -- PROPOSAL_UUID --bsplicboost
-npm run agent:accept-proposals -- --json ./payload.json
-```
-
-Do not accept stale, ambiguous, human, or duplicate proposals. Report `accepted`, `skipped`, `errors`, and new `bet_id`s.
-
-## Create Direct Bets
-
-Use only when the user explicitly asks to bypass proposals and create live bets directly.
-
-```bash
-npm run agent:create-bets -- ./payload.json
-npm run agent:create-bets -- -
-```
-
-Payload can be a top-level array or `{ "bets": [...] }`. Each bet needs `title`, `bet_type`, `options`, `ends_at`, and optional `category_id`, `is_live`, `is_bsplicboost`, `agent_duplicate_key`.
-
-Report `created`, `skipped`, `errors`, confidence, and sources.
-
-## Settlement
-
-1. Fetch settlement context with `agent_get_pending_settlement_context`.
-2. Browse official/trusted result sources.
-3. Include ended, unresolved bets even when nobody placed them (`placed_bet_count = 0`) or when they have no pending legs (`pending_leg_count = 0`). Settlement still records the bet outcome, sets `winning_option`, and closes the market for historical/UI correctness.
-4. Report recommendations with exact BSPLIC option names, mode, scope, confidence, sources, and uncertainty.
-5. Wait for explicit approval before calling `agent_settle_bet`.
-6. Use `p_mode: "normal"` for ordinary winner settlement, `refund` for voids, or `force_lost` only when every option should lose.
-7. Use `pending_only` unless the user explicitly asks for correction scope `all`; `pending_only` is still appropriate for no-pick/no-pending bets because it closes the bet and records `winning_option` without reprocessing already settled legs.
-
-## Smoke Tests
+## Smoke tests
 
 App checks:
 
 ```bash
-npm run test -- src/features/admin/settlementApi.test.ts src/features/admin/components/ManageBetsTab.test.tsx src/features/admin/components/ProposalsTab.test.tsx
+npm run test -- src/features/admin/components/ManageBetsTab.test.tsx src/features/admin/components/ProposalsTab.test.tsx src/features/admin/components/AkoExclusionsEditor.test.tsx
 npm run lint
 npm run build
 ```
 
-Safest live RPC checks:
+Behavioral SQL contract tests against a local stack (see
+`src/test/db/README.md`):
 
-- `agent_get_bet_context`
-- `agent_get_pending_settlement_context`
-- `agent_create_bet_proposals` with `[]` only
-- `agent_create_bets` with `[]` only after `create:bets` is intentionally enabled
-- `agent_accept_bet_proposals` with an empty ID list only after `accept:proposals` is intentionally enabled; it should return validation without publishing
+```bash
+npm run test:db
+```
 
-Avoid test-publishing or test-settling real bets unless the user approved the exact target and expected result.
+Safe live RPC checks:
+
+- `agent_get_bet_context`, `agent_get_pending_settlement_context`,
+  `agent_get_recent_runs` — read-only
+- `agent_create_bets` with `[]`
+- `agent_create_bet_proposals` with `[]`
+
+Do not test-publish or test-settle real markets unless the operator approved the
+exact target and expected result.
