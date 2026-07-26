@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callRpc } from '@/integrations/supabase/rpc';
 import type {
   ReactionEmoji,
   RouletteBetType,
@@ -8,10 +8,6 @@ import type {
   SocialStory,
 } from '@/types/database';
 
-// The generated Supabase types don't know about our new RPC functions yet.
-// We cast .rpc via unknown until types are regenerated.
-const rpc = supabase.rpc.bind(supabase) as (...args: unknown[]) => ReturnType<typeof supabase.rpc>;
-
 // ── Feed ──────────────────────────────────────────────────────
 
 export async function fetchSocialFeed(
@@ -19,14 +15,13 @@ export async function fetchSocialFeed(
   offset = 0,
   userId?: string
 ): Promise<SocialFeedItem[]> {
-  const { data, error } = await rpc('get_social_feed', {
+  const data = await callRpc('get_social_feed', {
     p_limit: limit,
     p_offset: offset,
     p_user_id: userId ?? null,
   });
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as SocialFeedItem[];
+  return data ?? [];
 }
 
 export async function fetchSocialFeedItem(
@@ -34,45 +29,36 @@ export async function fetchSocialFeedItem(
   itemId: string,
   userId?: string,
 ): Promise<SocialFeedItem | null> {
-  const { data, error } = await rpc('get_social_feed_item', {
+  const data = await callRpc('get_social_feed_item', {
     p_item_type: itemType,
     p_item_id: itemId,
     p_user_id: userId ?? null,
   });
 
-  if (error) throw new Error(error.message);
-  return (data ?? null) as unknown as SocialFeedItem | null;
+  return data ?? null;
 }
 
 // ── Posts ──────────────────────────────────────────────────────
 
 export async function createPost(userId: string, content: string): Promise<string> {
-  const { data, error } = await rpc('create_social_post', {
+  return callRpc('create_social_post', {
     p_user_id: userId,
     p_content: content,
   });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as string;
 }
 
 // ── Stories ───────────────────────────────────────────────────
 
 export async function fetchActiveSocialStories(): Promise<SocialStory[]> {
-  const { data, error } = await rpc('get_active_social_stories');
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as SocialStory[];
+  const data = await callRpc('get_active_social_stories', undefined);
+  return data ?? [];
 }
 
 export async function createSocialStory(userId: string, content: string): Promise<string> {
-  const { data, error } = await rpc('create_social_story', {
+  return callRpc('create_social_story', {
     p_user_id: userId,
     p_content: content,
   });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as string;
 }
 
 export async function createCasinoShare(params: {
@@ -87,7 +73,7 @@ export async function createCasinoShare(params: {
   winningNumber: number | null;
   winningColor: RouletteColor | null;
 }): Promise<string> {
-  const { data, error } = await rpc('create_casino_social_share', {
+  return callRpc('create_casino_social_share', {
     p_user_id: params.userId,
     p_roulette_bet_id: params.betId,
     p_content: params.content,
@@ -99,9 +85,6 @@ export async function createCasinoShare(params: {
     p_casino_winning_number: params.winningNumber,
     p_casino_winning_color: params.winningColor,
   });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as string;
 }
 
 // ── Comments ──────────────────────────────────────────────────
@@ -110,15 +93,14 @@ export async function fetchComments(
   target: { postId?: string; couponId?: string; casinoShareId?: string },
   userId?: string
 ): Promise<SocialComment[]> {
-  const { data, error } = await rpc('get_comments_for_target', {
+  const data = await callRpc('get_comments_for_target', {
     p_post_id: target.postId ?? null,
     p_coupon_id: target.couponId ?? null,
     p_casino_share_id: target.casinoShareId ?? null,
     p_user_id: userId ?? null,
   });
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as SocialComment[];
+  return data ?? [];
 }
 
 export async function addComment(params: {
@@ -129,7 +111,7 @@ export async function addComment(params: {
   casinoShareId?: string;
   parentId?: string;
 }): Promise<string> {
-  const { data, error } = await rpc('add_social_comment', {
+  return callRpc('add_social_comment', {
     p_user_id: params.userId,
     p_content: params.content,
     p_post_id: params.postId ?? null,
@@ -137,9 +119,6 @@ export async function addComment(params: {
     p_casino_share_id: params.casinoShareId ?? null,
     p_parent_id: params.parentId ?? null,
   });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as string;
 }
 
 // ── Reactions ─────────────────────────────────────────────────
@@ -152,7 +131,7 @@ export async function toggleReaction(params: {
   casinoShareId?: string;
   commentId?: string;
 }): Promise<ReactionEmoji | null> {
-  const { data, error } = await rpc('toggle_reaction', {
+  return callRpc('toggle_reaction', {
     p_user_id: params.userId,
     p_emoji: params.emoji,
     p_post_id: params.postId ?? null,
@@ -160,7 +139,4 @@ export async function toggleReaction(params: {
     p_casino_share_id: params.casinoShareId ?? null,
     p_comment_id: params.commentId ?? null,
   });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as ReactionEmoji | null;
 }

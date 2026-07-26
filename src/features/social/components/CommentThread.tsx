@@ -12,6 +12,7 @@ import { compressImageFile } from '@/features/social/images';
 import { SocialImagePreview } from '@/features/social/components/SocialImagePreview';
 import { toast } from 'sonner';
 import { SocialContentBlock } from '@/features/social/components/SocialContentBlock';
+import { formatCommentCount } from '@/features/social/lib/socialFormatters';
 
 interface AttachedImage {
   blob: Blob;
@@ -467,14 +468,6 @@ function CommentInput({ onSubmit, disabled, placeholder, onCancel, currentUserId
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function formatCommentCount(count: number): string {
-  if (count === 1) return 'komentarz';
-  const lastTwo = count % 100;
-  if (lastTwo >= 12 && lastTwo <= 14) return 'komentarzy';
-  const lastDigit = count % 10;
-  if (lastDigit >= 2 && lastDigit <= 4) return 'komentarze';
-  return 'komentarzy';
-}
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();

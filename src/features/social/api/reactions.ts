@@ -1,7 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callRpc } from '@/integrations/supabase/rpc';
 import type { ReactionType } from '@/features/social/reactions';
-
-const rpc = supabase.rpc.bind(supabase) as (...args: unknown[]) => ReturnType<typeof supabase.rpc>;
 
 export interface ReactorUser {
   user_id: string;
@@ -17,7 +15,7 @@ export async function fetchReactors(params: {
   commentId?: string;
   emoji?: ReactionType;
 }): Promise<ReactorUser[]> {
-  const { data, error } = await rpc('get_reactors_for_target', {
+  const data = await callRpc('get_reactors_for_target', {
     p_post_id: params.postId ?? null,
     p_coupon_id: params.couponId ?? null,
     p_casino_share_id: params.casinoShareId ?? null,
@@ -25,6 +23,5 @@ export async function fetchReactors(params: {
     p_emoji: params.emoji ?? null,
   });
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ReactorUser[];
+  return data ?? [];
 }

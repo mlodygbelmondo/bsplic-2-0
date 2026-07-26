@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { callRpc } from '@/integrations/supabase/rpc';
 
 export type EniuSourceType = 'post' | 'comment';
 
@@ -31,10 +32,6 @@ interface EniuCommandResult {
   result?: unknown;
   error?: string;
 }
-
-const rpc = supabase.rpc.bind(supabase) as (
-  ...args: unknown[]
-) => ReturnType<typeof supabase.rpc>;
 
 export async function respondAsEniu(
   sourceType: EniuSourceType,
@@ -70,10 +67,9 @@ export async function commandEniu(command: string, preview: boolean) {
 }
 
 export async function fetchEniuBotRuns(limit = 20): Promise<EniuBotRun[]> {
-  const { data, error } = await rpc('admin_get_social_bot_runs', {
+  const data = await callRpc('admin_get_social_bot_runs', {
     p_limit: limit,
   });
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as EniuBotRun[];
+  return data ?? [];
 }

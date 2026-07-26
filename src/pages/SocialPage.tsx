@@ -3,7 +3,6 @@ import { Navbar } from '@/components/Navbar';
 import {
   SocialFeedItem,
   SocialComment,
-  ReactionEmoji,
   FeedItemType,
   SocialStory,
 } from '@/types/database';
@@ -11,9 +10,6 @@ import { cn } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SectionLoader } from '@/components/SectionLoader';
 import { ArrowUp, Loader2 } from 'lucide-react';
-import { useCoupon } from '@/contexts/CouponContext';
-import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
-import { fetchBetsByIds } from '@/features/home/api/bets';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostComposer } from '@/features/social/components/PostComposer';
@@ -23,8 +19,6 @@ import {
   type SocialStoryProfile,
 } from '@/features/social/components/SocialStories';
 import { buildSocialContent } from '@/features/social/content';
-import { respondAsEniu } from '@/features/social/api/eniuBot';
-import { mentionsEniu } from '@/features/social/eniuBot';
 import { uploadSocialImage } from '@/features/social/images';
 import { ReactorsDialog } from '@/features/social/components/ReactorsDialog';
 import {
@@ -34,20 +28,19 @@ import {
   createSocialStory,
   fetchComments,
   fetchActiveSocialStories,
-  addComment,
-  toggleReaction,
 } from '@/features/social/api/social';
+import {
+  useFeedInteractions,
+  type FeedInteractionsStore,
+} from '@/features/social/hooks/useFeedInteractions';
 import { useSocialRealtimeFeed } from '@/features/social/hooks/useSocialRealtimeFeed';
-import { updateReactionCounts } from '@/features/social/lib/feedReactions';
-import { formatEventsCount } from '@/features/social/lib/socialFormatters';
-import { REACTION_TYPES } from '@/features/social/reactions';
+import { triggerEniuBotReply } from '@/features/social/lib/eniuTrigger';
 import { getSocialItemPath } from '@/features/social/routes';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   getNextScrollChromeState,
   type ScrollChromeState,
 } from '@/lib/scroll-chrome';
-import type { ReactionType, ReactionCounts } from '@/features/social/reactions';
 
 const SOCIAL_FEED_PAGE_SIZE = 50;
 const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
@@ -95,7 +88,6 @@ export default function SocialPage() {
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(
     new Set(),
   );
-  const [copyingCoupons, setCopyingCoupons] = useState<Set<string>>(new Set());
   const [commentsMap, setCommentsMap] = useState<
     Record<string, SocialComment[]>
   >({});
@@ -105,7 +97,6 @@ export default function SocialPage() {
   const [commentsLoadingMap, setCommentsLoadingMap] = useState<
     Record<string, boolean>
   >({});
-  const { addItems, setPreferredCouponType } = useCoupon();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile } = useAuth();
@@ -135,14 +126,6 @@ export default function SocialPage() {
   const [highlightedItemKey, setHighlightedItemKey] = useState<string | null>(
     null,
   );
-  const [reactorsOpen, setReactorsOpen] = useState(false);
-  const [reactorsEmoji, setReactorsEmoji] = useState<ReactionType | null>(null);
-  const [reactorsTarget, setReactorsTarget] = useState<{
-    postId?: string;
-    couponId?: string;
-    casinoShareId?: string;
-    commentId?: string;
-  } | null>(null);
 
   const targetItemTypeParam = searchParams.get('itemType');
   const targetItemIdParam = searchParams.get('itemId');
@@ -385,69 +368,6 @@ export default function SocialPage() {
   const isAko = (item: SocialFeedItem) =>
     item.item_type === 'coupon' && item.legs !== null && item.legs.length > 1;
 
-  const setCouponCopying = (couponId: string, isCopying: boolean) => {
-    setCopyingCoupons((prev) => {
-      const next = new Set(prev);
-      if (isCopying) next.add(couponId);
-      else next.delete(couponId);
-      return next;
-    });
-  };
-
-  const handleCopyCoupon = async (item: SocialFeedItem) => {
-    const legs = item.legs ?? [];
-    const betIds = Array.from(
-      new Set(
-        legs
-          .map((leg) => leg.bet_id)
-          .filter((betId): betId is string => Boolean(betId)),
-      ),
-    );
-
-    if (betIds.length === 0) {
-      toast.error('Ten kupon nie zawiera zdarzeń możliwych do skopiowania');
-      return;
-    }
-
-    setCouponCopying(item.id, true);
-
-    try {
-      const bets = await fetchBetsByIds(betIds);
-      const { items, skippedCount } = buildCouponItemsFromSocial({
-        legs,
-        bets,
-      });
-
-      if (items.length === 0) {
-        toast.error(
-          'Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone',
-        );
-        return;
-      }
-
-      addItems(items);
-      setPreferredCouponType(items.length > 1 ? 'ako' : 'single');
-
-      if (skippedCount > 0) {
-        toast.success(
-          `Skopiowano ${formatEventsCount(items.length)}, pominięto ${formatEventsCount(skippedCount)}`,
-        );
-      } else {
-        toast.success(`Skopiowano kupon: ${formatEventsCount(items.length)}`);
-      }
-
-      navigate('/');
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Nie udało się skopiować kuponu';
-      toast.error(message);
-    } finally {
-      setCouponCopying(item.id, false);
-    }
-  };
-
   // ── Post creation ──────────────────────────────────────────
 
   const handleCreatePost = async (content: string, imageBlob?: Blob) => {
@@ -460,23 +380,9 @@ export default function SocialPage() {
     const payload = buildSocialContent(content, imagePath);
     const postId = await createPost(user.id, payload);
     await loadFeed();
-    if (mentionsEniu(content)) {
-      void respondAsEniu('post', postId)
-        .then((result) => {
-          if (!result.ok) {
-            console.error(
-              'Eniu failed to respond',
-              result.error || 'Eniu nie odpowiedział',
-            );
-          }
-          return loadComments(postId, 'post');
-        })
-        .catch((error) => {
-          const message =
-            error instanceof Error ? error.message : 'Eniu nie odpowiedział';
-          console.error('Eniu failed to respond', message);
-        });
-    }
+    triggerEniuBotReply('post', postId, content, () =>
+      loadComments(postId, 'post'),
+    );
     toast.success('Post opublikowany');
   };
 
@@ -534,164 +440,52 @@ export default function SocialPage() {
     loadComments,
   });
 
-  const handleAddComment = useCallback(
-    async (
-      itemId: string,
-      itemType: FeedItemType,
-      content: string,
-      parentId?: string,
-      imageBlob?: Blob,
-    ) => {
-      if (!user) return;
-      let imagePath: string | undefined;
-      if (imageBlob) {
-        imagePath = await uploadSocialImage(user.id, imageBlob);
-      }
+  // ── Feed interactions (comments, reactions, coupon copy) ──
 
-      const payload = buildSocialContent(content, imagePath);
-      const commentId = await addComment({
-        userId: user.id,
-        content: payload,
-        postId: itemType === 'post' ? itemId : undefined,
-        couponId: itemType === 'coupon' ? itemId : undefined,
-        casinoShareId: itemType === 'casino' ? itemId : undefined,
-        parentId,
-      });
+  const commentsMapRef = useRef(commentsMap);
+  commentsMapRef.current = commentsMap;
 
-      if (mentionsEniu(content)) {
-        void respondAsEniu('comment', commentId)
-          .then((result) => {
-            if (!result.ok) {
-              console.error(
-                'Eniu failed to respond',
-                result.error || 'Eniu nie odpowiedział',
-              );
-            }
-            return loadComments(itemId, itemType);
-          })
-          .catch((error) => {
-            const message =
-              error instanceof Error ? error.message : 'Eniu nie odpowiedział';
-            console.error('Eniu failed to respond', message);
-          });
-      }
-
-      setFeedItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                comment_count: (item.comment_count ?? 0) + 1,
-              }
-            : item,
-        ),
-      );
-
-      await loadComments(itemId, itemType);
-    },
-    [user, loadComments],
-  );
-
-  // ── Reactions ──────────────────────────────────────────────
-
-  const handleToggleReaction = useCallback(
-    async (itemId: string, itemType: FeedItemType, emoji: ReactionType) => {
-      if (!user) return;
-      const nextReaction = await toggleReaction({
-        userId: user.id,
-        emoji: emoji as ReactionEmoji,
-        postId: itemType === 'post' ? itemId : undefined,
-        couponId: itemType === 'coupon' ? itemId : undefined,
-        casinoShareId: itemType === 'casino' ? itemId : undefined,
-      });
-
-      setFeedItems((prev) =>
-        prev.map((item) => {
-          if (item.id !== itemId || item.item_type !== itemType) return item;
-          return {
-            ...item,
-            reactions: updateReactionCounts(
-              item.reactions,
-              item.my_reaction,
-              nextReaction as ReactionEmoji | null,
-            ),
-            my_reaction: nextReaction as ReactionEmoji | null,
-          };
-        }),
-      );
-    },
-    [user],
-  );
-
-  const handleToggleCommentReaction = useCallback(
-    async (
-      commentId: string,
-      emoji: ReactionType,
-      itemId: string,
-      _itemType: FeedItemType,
-    ) => {
-      if (!user) return;
-      const nextReaction = await toggleReaction({
-        userId: user.id,
-        emoji: emoji as ReactionEmoji,
-        commentId,
-      });
-
-      setCommentsMap((prev) => {
-        const current = prev[itemId] ?? [];
-        return {
-          ...prev,
-          [itemId]: current.map((comment) =>
-            comment.id === commentId
-              ? {
-                  ...comment,
-                  reactions: updateReactionCounts(
-                    comment.reactions,
-                    comment.my_reaction,
-                    nextReaction as ReactionEmoji | null,
-                  ),
-                  my_reaction: nextReaction as ReactionEmoji | null,
-                }
-              : comment,
+  const interactionsStore = useMemo<FeedInteractionsStore>(
+    () => ({
+      updateItem: (itemId, itemType, updater) => {
+        setFeedItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId && item.item_type === itemType
+              ? updater(item)
+              : item,
           ),
-        };
-      });
-    },
-    [user],
+        );
+      },
+      updateComment: (itemId, commentId, updater) => {
+        setCommentsMap((prev) => {
+          const current = prev[itemId] ?? [];
+          return {
+            ...prev,
+            [itemId]: current.map((comment) =>
+              comment.id === commentId ? updater(comment) : comment,
+            ),
+          };
+        });
+      },
+      findComment: (commentId) =>
+        Object.values(commentsMapRef.current)
+          .flat()
+          .find((entry) => entry.id === commentId),
+      reloadComments: loadComments,
+    }),
+    [loadComments],
   );
 
-  const handleOpenItemReactors = useCallback((item: SocialFeedItem) => {
-    const firstReactionType =
-      REACTION_TYPES.find((type) => (item.reactions?.[type] ?? 0) > 0) ?? null;
-
-    setReactorsTarget(
-      item.item_type === 'post'
-        ? { postId: item.id }
-        : item.item_type === 'coupon'
-          ? { couponId: item.id }
-          : { casinoShareId: item.id },
-    );
-    setReactorsEmoji(firstReactionType);
-    setReactorsOpen(true);
-  }, []);
-
-  const handleOpenCommentReactors = useCallback(
-    (commentId: string) => {
-      const comment = Object.values(commentsMap)
-        .flat()
-        .find((entry) => entry.id === commentId);
-      const firstReactionType =
-        REACTION_TYPES.find(
-          (type) =>
-            ((comment?.reactions as ReactionCounts | null)?.[type] ?? 0) > 0,
-        ) ?? null;
-
-      setReactorsTarget({ commentId });
-      setReactorsEmoji(firstReactionType);
-      setReactorsOpen(true);
-    },
-    [commentsMap],
-  );
+  const {
+    copyingCoupons,
+    handleCopyCoupon,
+    handleAddComment,
+    handleToggleReaction,
+    handleToggleCommentReaction,
+    handleOpenItemReactors,
+    handleOpenCommentReactors,
+    reactorsDialogProps,
+  } = useFeedInteractions(interactionsStore);
 
   // ── Render ─────────────────────────────────────────────────
 
@@ -903,12 +697,7 @@ export default function SocialPage() {
           <ArrowUp className="h-5 w-5" />
         </button>
       )}
-      <ReactorsDialog
-        open={reactorsOpen}
-        onOpenChange={setReactorsOpen}
-        target={reactorsTarget}
-        initialEmoji={reactorsEmoji}
-      />
+      <ReactorsDialog {...reactorsDialogProps} />
     </div>
   );
 }

@@ -160,6 +160,10 @@ describe('daily jackpot migration security invariants', () => {
   });
 
   it('publishes the per-player ticket limit in jackpot snapshots', () => {
+    const consolidationMigration =
+      migrationSqlByFile.get(
+        '20260724230000_consolidate_daily_jackpot_lifecycle.sql',
+      ) ?? '';
     const fundedBody = getFunctionBody(
       'private.get_daily_jackpot_snapshot\\(\\s*p_pool_id UUID,\\s*p_user_id UUID\\s*\\)',
     );
@@ -167,8 +171,17 @@ describe('daily jackpot migration security invariants', () => {
       'private.get_empty_daily_jackpot_snapshot\\(p_pool_date DATE\\)',
     );
 
-    expect(fundedBody).toContain("'max_tickets_per_player', 2");
-    expect(emptyBody).toContain("'max_tickets_per_player', 2");
+    // The limit value lives once, in the private rules authority...
+    expect(consolidationMigration).toMatch(
+      /daily_jackpot_rules[\s\S]*?'max_tickets_per_player',\s*2/,
+    );
+    // ...and both snapshot builders publish it from there.
+    expect(fundedBody).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
+    expect(emptyBody).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
   });
 
   it('publishes all current user ticket numbers in jackpot snapshots', () => {
@@ -251,7 +264,12 @@ describe('daily jackpot migration security invariants', () => {
     );
 
     expect(body).toContain('v_user_ticket_count');
-    expect(body).toContain('IF v_user_ticket_count >= 2 THEN');
+    expect(body).toContain(
+      'IF v_user_ticket_count >= v_max_tickets_per_player THEN',
+    );
+    expect(body).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
   });
 
   it('ships post-deploy ticket contract fixes in a fresh migration', () => {

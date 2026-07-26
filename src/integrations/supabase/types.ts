@@ -1343,6 +1343,10 @@ export type Database = {
           message: string | null
         }[]
       }
+      get_money_transfer_rules: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_public_badges: {
         Args: { p_user_id: string }
         Returns: Json

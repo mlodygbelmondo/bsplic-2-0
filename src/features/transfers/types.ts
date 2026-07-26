@@ -4,6 +4,16 @@ export interface MoneyTransferRecipient {
   avatar_url: string | null;
 }
 
+export interface MoneyTransferRules {
+  min_amount: number;
+  max_message_length: number;
+  max_transfers_per_hour: number;
+  min_account_age_days: number;
+  sender_eligible_at: string | null;
+  sender_eligible: boolean;
+  server_now: string;
+}
+
 export interface MoneyTransferResult {
   id: string;
   amount: number;

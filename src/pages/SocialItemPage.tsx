@@ -1,43 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCoupon } from '@/contexts/CouponContext';
-import { buildCouponItemsFromSocial } from '@/features/social/copyCoupon';
-import { fetchBetsByIds } from '@/features/home/api/bets';
 import {
-  addComment,
   fetchComments,
   fetchSocialFeedItem,
-  toggleReaction,
 } from '@/features/social/api/social';
-import { respondAsEniu } from '@/features/social/api/eniuBot';
-import { mentionsEniu } from '@/features/social/eniuBot';
-import { uploadSocialImage } from '@/features/social/images';
-import { updateReactionCounts } from '@/features/social/lib/feedReactions';
-import { formatEventsCount } from '@/features/social/lib/socialFormatters';
 import { ReactorsDialog } from '@/features/social/components/ReactorsDialog';
 import { SocialFeedCard } from '@/features/social/components/SocialFeedCard';
+import {
+  useFeedInteractions,
+  type FeedInteractionsStore,
+} from '@/features/social/hooks/useFeedInteractions';
 import {
   getSocialItemCommentsTarget,
   isFeedItemType,
 } from '@/features/social/routes';
-import { buildSocialContent } from '@/features/social/content';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import {
-  REACTION_TYPES,
-  type ReactionCounts,
-  type ReactionType,
-} from '@/features/social/reactions';
-import type {
-  FeedItemType,
-  ReactionEmoji,
-  SocialComment,
-  SocialFeedItem,
-} from '@/types/database';
+import type { SocialComment, SocialFeedItem } from '@/types/database';
 
 const EMPTY_COMMENTS: SocialComment[] = [];
 
@@ -46,22 +29,11 @@ export default function SocialItemPage() {
   const { itemType: itemTypeParam, itemId } = useParams();
   const itemType = isFeedItemType(itemTypeParam) ? itemTypeParam : null;
   const { user } = useAuth();
-  const { addItems, setPreferredCouponType } = useCoupon();
-  const navigate = useNavigate();
   const [item, setItem] = useState<SocialFeedItem | null>(null);
   const [comments, setComments] = useState<SocialComment[]>(EMPTY_COMMENTS);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [copyingCoupons, setCopyingCoupons] = useState<Set<string>>(new Set());
-  const [reactorsOpen, setReactorsOpen] = useState(false);
-  const [reactorsEmoji, setReactorsEmoji] = useState<ReactionType | null>(null);
-  const [reactorsTarget, setReactorsTarget] = useState<{
-    postId?: string;
-    couponId?: string;
-    casinoShareId?: string;
-    commentId?: string;
-  } | null>(null);
 
   const loadCommentsForItem = useCallback(async () => {
     if (!itemType || !itemId) return;
@@ -135,220 +107,46 @@ export default function SocialItemPage() {
     };
   }, [itemId, itemType, user?.id]);
 
-  const setCouponCopying = (couponId: string, isCopying: boolean) => {
-    setCopyingCoupons((prev) => {
-      const next = new Set(prev);
-      if (isCopying) next.add(couponId);
-      else next.delete(couponId);
-      return next;
-    });
-  };
+  // ── Feed interactions (comments, reactions, coupon copy) ──
 
-  const handleCopyCoupon = async (selectedItem: SocialFeedItem) => {
-    const legs = selectedItem.legs ?? [];
-    const betIds = Array.from(
-      new Set(
-        legs
-          .map((leg) => leg.bet_id)
-          .filter((betId): betId is string => Boolean(betId)),
-      ),
-    );
+  const commentsRef = useRef(comments);
+  commentsRef.current = comments;
 
-    if (betIds.length === 0) {
-      toast.error('Ten kupon nie zawiera zdarzeń możliwych do skopiowania');
-      return;
-    }
-
-    setCouponCopying(selectedItem.id, true);
-
-    try {
-      const bets = await fetchBetsByIds(betIds);
-      const { items, skippedCount } = buildCouponItemsFromSocial({
-        legs,
-        bets,
-      });
-
-      if (items.length === 0) {
-        toast.error(
-          'Wszystkie zdarzenia z tego kuponu są już niedostępne lub rozliczone',
+  const interactionsStore = useMemo<FeedInteractionsStore>(
+    () => ({
+      updateItem: (targetItemId, targetItemType, updater) => {
+        setItem((current) =>
+          current &&
+          current.id === targetItemId &&
+          current.item_type === targetItemType
+            ? updater(current)
+            : current,
         );
-        return;
-      }
-
-      addItems(items);
-      setPreferredCouponType(items.length > 1 ? 'ako' : 'single');
-
-      if (skippedCount > 0) {
-        toast.success(
-          `Skopiowano ${formatEventsCount(items.length)}, pominięto ${formatEventsCount(skippedCount)}`,
+      },
+      updateComment: (_targetItemId, commentId, updater) => {
+        setComments((current) =>
+          current.map((comment) =>
+            comment.id === commentId ? updater(comment) : comment,
+          ),
         );
-      } else {
-        toast.success(`Skopiowano kupon: ${formatEventsCount(items.length)}`);
-      }
-
-      navigate('/');
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Nie udało się skopiować kuponu';
-      toast.error(message);
-    } finally {
-      setCouponCopying(selectedItem.id, false);
-    }
-  };
-
-  const handleAddComment = useCallback(
-    async (
-      selectedItemId: string,
-      selectedItemType: FeedItemType,
-      content: string,
-      parentId?: string,
-      imageBlob?: Blob,
-    ) => {
-      if (!user) return;
-      let imagePath: string | undefined;
-      if (imageBlob) {
-        imagePath = await uploadSocialImage(user.id, imageBlob);
-      }
-
-      const payload = buildSocialContent(content, imagePath);
-      const commentId = await addComment({
-        userId: user.id,
-        content: payload,
-        postId: selectedItemType === 'post' ? selectedItemId : undefined,
-        couponId: selectedItemType === 'coupon' ? selectedItemId : undefined,
-        casinoShareId:
-          selectedItemType === 'casino' ? selectedItemId : undefined,
-        parentId,
-      });
-
-      if (mentionsEniu(content)) {
-        void respondAsEniu('comment', commentId)
-          .then((result) => {
-            if (!result.ok) {
-              console.error(
-                'Eniu failed to respond',
-                result.error || 'Eniu nie odpowiedział',
-              );
-            }
-            return loadCommentsForItem();
-          })
-          .catch((error) => {
-            const message =
-              error instanceof Error ? error.message : 'Eniu nie odpowiedział';
-            console.error('Eniu failed to respond', message);
-          });
-      }
-
-      setItem((current) =>
-        current
-          ? {
-              ...current,
-              comment_count: (current.comment_count ?? 0) + 1,
-            }
-          : current,
-      );
-
-      await loadCommentsForItem();
-    },
-    [loadCommentsForItem, user],
+      },
+      findComment: (commentId) =>
+        commentsRef.current.find((entry) => entry.id === commentId),
+      reloadComments: () => loadCommentsForItem(),
+    }),
+    [loadCommentsForItem],
   );
 
-  const handleToggleReaction = useCallback(
-    async (
-      selectedItemId: string,
-      selectedItemType: FeedItemType,
-      emoji: ReactionType,
-    ) => {
-      if (!user) return;
-      const nextReaction = await toggleReaction({
-        userId: user.id,
-        emoji: emoji as ReactionEmoji,
-        postId: selectedItemType === 'post' ? selectedItemId : undefined,
-        couponId: selectedItemType === 'coupon' ? selectedItemId : undefined,
-        casinoShareId:
-          selectedItemType === 'casino' ? selectedItemId : undefined,
-      });
-
-      setItem((current) =>
-        current && current.id === selectedItemId
-          ? {
-              ...current,
-              reactions: updateReactionCounts(
-                current.reactions,
-                current.my_reaction,
-                nextReaction as ReactionEmoji | null,
-              ),
-              my_reaction: nextReaction as ReactionEmoji | null,
-            }
-          : current,
-      );
-    },
-    [user],
-  );
-
-  const handleToggleCommentReaction = useCallback(
-    async (
-      commentId: string,
-      emoji: ReactionType,
-      _selectedItemId: string,
-      _selectedItemType: FeedItemType,
-    ) => {
-      if (!user) return;
-      const nextReaction = await toggleReaction({
-        userId: user.id,
-        emoji: emoji as ReactionEmoji,
-        commentId,
-      });
-
-      setComments((current) =>
-        current.map((comment) =>
-          comment.id === commentId
-            ? {
-                ...comment,
-                reactions: updateReactionCounts(
-                  comment.reactions,
-                  comment.my_reaction,
-                  nextReaction as ReactionEmoji | null,
-                ),
-                my_reaction: nextReaction as ReactionEmoji | null,
-              }
-            : comment,
-        ),
-      );
-    },
-    [user],
-  );
-
-  const handleOpenItemReactors = useCallback((selectedItem: SocialFeedItem) => {
-    const firstReactionType =
-      REACTION_TYPES.find(
-        (type) => (selectedItem.reactions?.[type] ?? 0) > 0,
-      ) ?? null;
-
-    setReactorsTarget(
-      getSocialItemCommentsTarget(selectedItem.item_type, selectedItem.id),
-    );
-    setReactorsEmoji(firstReactionType);
-    setReactorsOpen(true);
-  }, []);
-
-  const handleOpenCommentReactors = useCallback(
-    (commentId: string) => {
-      const comment = comments.find((entry) => entry.id === commentId);
-      const firstReactionType =
-        REACTION_TYPES.find(
-          (type) =>
-            ((comment?.reactions as ReactionCounts | null)?.[type] ?? 0) > 0,
-        ) ?? null;
-
-      setReactorsTarget({ commentId });
-      setReactorsEmoji(firstReactionType);
-      setReactorsOpen(true);
-    },
-    [comments],
-  );
+  const {
+    copyingCoupons,
+    handleCopyCoupon,
+    handleAddComment,
+    handleToggleReaction,
+    handleToggleCommentReaction,
+    handleOpenItemReactors,
+    handleOpenCommentReactors,
+    reactorsDialogProps,
+  } = useFeedInteractions(interactionsStore);
 
   const isAko =
     item?.item_type === 'coupon' && item.legs !== null && item.legs.length > 1;
@@ -407,12 +205,7 @@ export default function SocialItemPage() {
           )}
         </div>
       </div>
-      <ReactorsDialog
-        open={reactorsOpen}
-        onOpenChange={setReactorsOpen}
-        target={reactorsTarget}
-        initialEmoji={reactorsEmoji}
-      />
+      <ReactorsDialog {...reactorsDialogProps} />
     </div>
   );
 }
