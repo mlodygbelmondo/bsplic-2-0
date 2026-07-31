@@ -136,7 +136,34 @@ describe('daily jackpot migration security invariants', () => {
     expect(body).not.toContain('ROUND(v_pool.prize_amount, 2)');
   });
 
+  it('refunds the full price of every ticket when one player bought two', () => {
+    const body = getFunctionBody(
+      'private.finalize_daily_jackpot_pool\\(\\s*p_pool_date DATE,\\s*p_snapshot_user_id UUID DEFAULT NULL\\s*\\)',
+    );
+
+    expect(body).toContain('GROUP BY user_id');
+    expect(body).toContain('ROUND(SUM(price), 2) AS refund_amount');
+    expect(body).toContain('p.balance + r.refund_amount');
+    expect(body).toContain('t.user_id = c.user_id');
+  });
+
+  it('repairs unpaid tickets from jackpot rounds that already rolled over', () => {
+    const repairMigration =
+      migrationSqlByFile.get(
+        '20260722230000_fix_multi_ticket_jackpot_refunds.sql',
+      ) ?? '';
+
+    expect(repairMigration).toContain('WITH missing_refunds AS');
+    expect(repairMigration).toContain("p.status = 'rolled_over'");
+    expect(repairMigration).toContain('t.refunded_at IS NULL');
+    expect(repairMigration).toContain('ROUND(SUM(t.price), 2) AS refund_amount');
+  });
+
   it('publishes the per-player ticket limit in jackpot snapshots', () => {
+    const consolidationMigration =
+      migrationSqlByFile.get(
+        '20260724230000_consolidate_daily_jackpot_lifecycle.sql',
+      ) ?? '';
     const fundedBody = getFunctionBody(
       'private.get_daily_jackpot_snapshot\\(\\s*p_pool_id UUID,\\s*p_user_id UUID\\s*\\)',
     );
@@ -144,8 +171,17 @@ describe('daily jackpot migration security invariants', () => {
       'private.get_empty_daily_jackpot_snapshot\\(p_pool_date DATE\\)',
     );
 
-    expect(fundedBody).toContain("'max_tickets_per_player', 2");
-    expect(emptyBody).toContain("'max_tickets_per_player', 2");
+    // The limit value lives once, in the private rules authority...
+    expect(consolidationMigration).toMatch(
+      /daily_jackpot_rules[\s\S]*?'max_tickets_per_player',\s*2/,
+    );
+    // ...and both snapshot builders publish it from there.
+    expect(fundedBody).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
+    expect(emptyBody).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
   });
 
   it('publishes all current user ticket numbers in jackpot snapshots', () => {
@@ -228,7 +264,12 @@ describe('daily jackpot migration security invariants', () => {
     );
 
     expect(body).toContain('v_user_ticket_count');
-    expect(body).toContain('IF v_user_ticket_count >= 2 THEN');
+    expect(body).toContain(
+      'IF v_user_ticket_count >= v_max_tickets_per_player THEN',
+    );
+    expect(body).toContain(
+      "(private.daily_jackpot_rules()->>'max_tickets_per_player')::INTEGER",
+    );
   });
 
   it('ships post-deploy ticket contract fixes in a fresh migration', () => {

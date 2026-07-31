@@ -6,6 +6,7 @@ import MoneyTransferDialog from '@/features/transfers/components/MoneyTransferDi
 const searchRecipientsMock = vi.fn();
 const createTransferMock = vi.fn();
 const fetchHistoryMock = vi.fn();
+const fetchRulesMock = vi.fn();
 const refreshProfileMock = vi.fn();
 const updateProfileBalanceMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -15,7 +16,18 @@ vi.mock('@/features/transfers/api', () => ({
   searchMoneyTransferRecipients: (...args: unknown[]) => searchRecipientsMock(...args),
   createMoneyTransfer: (...args: unknown[]) => createTransferMock(...args),
   fetchMoneyTransferHistory: (...args: unknown[]) => fetchHistoryMock(...args),
+  fetchMoneyTransferRules: (...args: unknown[]) => fetchRulesMock(...args),
 }));
+
+const eligibleRules = {
+  min_amount: 1,
+  max_message_length: 2000,
+  max_transfers_per_hour: 5,
+  min_account_age_days: 14,
+  sender_eligible_at: '2025-01-15T00:00:00.000Z',
+  sender_eligible: true,
+  server_now: '2026-07-20T10:00:00.000Z',
+};
 
 vi.mock('sonner', () => ({
   toast: {
@@ -66,6 +78,7 @@ describe('MoneyTransferDialog', () => {
       created_at: '2026-07-20T10:00:00.000Z',
     });
     fetchHistoryMock.mockResolvedValue([]);
+    fetchRulesMock.mockResolvedValue(eligibleRules);
     refreshProfileMock.mockResolvedValue(undefined);
     updateProfileBalanceMock.mockReset();
   });
@@ -229,7 +242,15 @@ describe('MoneyTransferDialog', () => {
     expect(completedBeforeRefresh).toBe(true);
   });
 
-  it('does not let a new account continue before the fourteen-day threshold', () => {
+  it('does not let a new account continue before the fourteen-day threshold', async () => {
+    fetchRulesMock.mockResolvedValue({
+      ...eligibleRules,
+      sender_eligible_at: new Date(
+        Date.now() + 14 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      sender_eligible: false,
+    });
+
     render(
       <MoneyTransferDialog
         open
@@ -240,7 +261,78 @@ describe('MoneyTransferDialog', () => {
       />,
     );
 
-    expect(screen.getByText(/po 14 dniach od utworzenia konta/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/po 14 dniach od utworzenia konta/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dalej' })).toBeDisabled();
+  });
+
+  it('keeps transfers blocked until authoritative rules load', async () => {
+    let resolveRules: ((value: typeof eligibleRules) => void) | undefined;
+    fetchRulesMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRules = resolve;
+        }),
+    );
+
+    renderDialog();
+
+    expect(
+      screen.getByRole('button', { name: 'Ładowanie zasad...' }),
+    ).toBeDisabled();
+
+    resolveRules?.(eligibleRules);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Dalej' })).toBeEnabled(),
+    );
+  });
+
+  it('shows a rules error and remains blocked until retry succeeds', async () => {
+    fetchRulesMock
+      .mockRejectedValueOnce(new Error('Serwer zasad jest niedostępny'))
+      .mockResolvedValueOnce(eligibleRules);
+
+    renderDialog();
+
+    expect(
+      await screen.findByText('Serwer zasad jest niedostępny'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Zasady niedostępne' }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Dalej' })).toBeEnabled(),
+    );
+    expect(fetchRulesMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('unlocks an open dialog when the server eligibility time passes', async () => {
+    const serverNow = new Date('2026-07-20T10:00:00.000Z');
+    fetchRulesMock
+      .mockResolvedValueOnce({
+        ...eligibleRules,
+        sender_eligible_at: new Date(serverNow.getTime() + 100).toISOString(),
+        sender_eligible: false,
+        server_now: serverNow.toISOString(),
+      })
+      .mockResolvedValueOnce({
+        ...eligibleRules,
+        sender_eligible_at: new Date(serverNow.getTime() + 100).toISOString(),
+        sender_eligible: true,
+        server_now: new Date(serverNow.getTime() + 150).toISOString(),
+      });
+
+    renderDialog();
+
+    expect(await screen.findByText(/po 14 dniach od utworzenia konta/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dalej' })).toBeDisabled();
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Dalej' })).toBeEnabled(),
+      { timeout: 1_000 },
+    );
+    expect(fetchRulesMock).toHaveBeenCalledTimes(2);
   });
 });

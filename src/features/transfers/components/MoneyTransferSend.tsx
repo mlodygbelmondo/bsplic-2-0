@@ -14,15 +14,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createMoneyTransfer,
+  fetchMoneyTransferRules,
   searchMoneyTransferRecipients,
 } from '@/features/transfers/api';
 import {
+  FALLBACK_MONEY_TRANSFER_RULES,
   formatMoney,
   formatTransferDate,
-  MONEY_TRANSFER_MESSAGE_LIMIT,
   parseMoney,
 } from '@/features/transfers/format';
-import type { MoneyTransferRecipient } from '@/features/transfers/types';
+import type {
+  MoneyTransferRecipient,
+  MoneyTransferRules,
+} from '@/features/transfers/types';
 import { getErrorMessage } from '@/lib/errors';
 import type { Profile } from '@/types/database';
 
@@ -56,18 +60,75 @@ export function MoneyTransferSend({
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  const [rules, setRules] = useState<MoneyTransferRules | null>(null);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+  const [rulesRequest, setRulesRequest] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRulesError(null);
+    fetchMoneyTransferRules()
+      .then((next) => {
+        if (!cancelled) {
+          setRules(next);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setRules(null);
+        const message = getErrorMessage(
+          error,
+          'Nie udało się pobrać zasad transferów',
+        );
+        setRulesError(message);
+        toast.error(message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rulesRequest]);
+
+  const minAmount = rules?.min_amount ?? FALLBACK_MONEY_TRANSFER_RULES.min_amount;
+  const messageLimit =
+    rules?.max_message_length ??
+    FALLBACK_MONEY_TRANSFER_RULES.max_message_length;
+  const maxTransfersPerHour =
+    rules?.max_transfers_per_hour ??
+    FALLBACK_MONEY_TRANSFER_RULES.max_transfers_per_hour;
+  const minAccountAgeDays =
+    rules?.min_account_age_days ??
+    FALLBACK_MONEY_TRANSFER_RULES.min_account_age_days;
 
   const amount = useMemo(() => parseMoney(amountInput), [amountInput]);
   const messageLength = useMemo(() => Array.from(message).length, [message]);
   const balance = Number(profile.balance);
   const balanceAfter = amount === null ? balance : balance - amount;
   const accountEligibleAt = useMemo(() => {
+    if (rules) {
+      if (!rules.sender_eligible_at) return null;
+      const eligibleAt = new Date(rules.sender_eligible_at).getTime();
+      return Number.isFinite(eligibleAt) ? eligibleAt : null;
+    }
     const createdAt = new Date(profile.created_at).getTime();
     if (!Number.isFinite(createdAt)) return null;
-    return createdAt + 14 * 24 * 60 * 60 * 1000;
-  }, [profile.created_at]);
-  const accountIsTooNew =
-    accountEligibleAt !== null && accountEligibleAt > Date.now();
+    return createdAt + minAccountAgeDays * 24 * 60 * 60 * 1000;
+  }, [minAccountAgeDays, profile.created_at, rules]);
+  const accountIsTooNew = rules
+    ? !rules.sender_eligible
+    : accountEligibleAt !== null && accountEligibleAt > Date.now();
+
+  useEffect(() => {
+    if (!rules || rules.sender_eligible || accountEligibleAt === null) return;
+
+    const serverNow = new Date(rules.server_now).getTime();
+    if (!Number.isFinite(serverNow)) return;
+
+    const timeoutId = window.setTimeout(
+      () => setRulesRequest((current) => current + 1),
+      Math.max(accountEligibleAt - serverNow, 0) + 50,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [accountEligibleAt, rules]);
 
   useEffect(() => {
     if (selectedRecipient) return;
@@ -105,25 +166,34 @@ export function MoneyTransferSend({
     };
   }, [query, selectedRecipient]);
 
-  const handleContinue = () => {
-    if (!selectedRecipient) {
-      toast.error('Wybierz odbiorcę');
-      return;
+  const getValidationError = () => {
+    if (!rules) {
+      return rulesError
+        ? 'Najpierw ponów pobieranie zasad transferów'
+        : 'Poczekaj na pobranie zasad transferów';
     }
-    if (amount === null || amount < 1) {
-      toast.error('Wpisz kwotę co najmniej 1,00 zł');
-      return;
+    if (!selectedRecipient) {
+      return 'Wybierz odbiorcę';
+    }
+    if (amount === null || amount < minAmount) {
+      return `Wpisz kwotę co najmniej ${formatMoney(minAmount)} zł`;
     }
     if (amount > balance) {
-      toast.error('Niewystarczające saldo');
-      return;
+      return 'Niewystarczające saldo';
     }
-    if (messageLength > MONEY_TRANSFER_MESSAGE_LIMIT) {
-      toast.error('Wiadomość może mieć maksymalnie 2000 znaków');
-      return;
+    if (messageLength > messageLimit) {
+      return `Wiadomość może mieć maksymalnie ${messageLimit} znaków`;
     }
     if (accountIsTooNew) {
-      toast.error('Konto nadawcy musi istnieć od co najmniej 14 dni');
+      return `Konto nadawcy musi istnieć od co najmniej ${minAccountAgeDays} dni`;
+    }
+    return null;
+  };
+
+  const handleContinue = () => {
+    const validationError = getValidationError();
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -133,6 +203,13 @@ export function MoneyTransferSend({
 
   const handleSubmit = async () => {
     if (!selectedRecipient || amount === null || !idempotencyKey) return;
+    const validationError = getValidationError();
+    if (validationError) {
+      setConfirming(false);
+      setIdempotencyKey(null);
+      toast.error(validationError);
+      return;
+    }
 
     setSubmitting(true);
     onSubmittingChange(true);
@@ -227,6 +304,19 @@ export function MoneyTransferSend({
 
   return (
     <div className="space-y-4">
+      {rulesError && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          <p>{rulesError}</p>
+          <button
+            type="button"
+            onClick={() => setRulesRequest((current) => current + 1)}
+            className="mt-1 font-semibold underline underline-offset-2"
+          >
+            Spróbuj ponownie
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2">
         <label htmlFor="transfer-recipient" className="text-sm font-semibold">
           Odbiorca
@@ -336,7 +426,8 @@ export function MoneyTransferSend({
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Minimum 1,00 zł · maksymalnie 5 transferów w ciągu godziny
+          Minimum {formatMoney(minAmount)} zł · maksymalnie{' '}
+          {maxTransfersPerHour} transferów w ciągu godziny
         </p>
       </div>
 
@@ -348,9 +439,9 @@ export function MoneyTransferSend({
               (opcjonalnie)
             </span>
           </label>
-          {messageLength >= 1800 && (
+          {messageLength >= messageLimit - 200 && (
             <span className="text-xs text-muted-foreground">
-              {messageLength}/{MONEY_TRANSFER_MESSAGE_LIMIT}
+              {messageLength}/{messageLimit}
             </span>
           )}
         </div>
@@ -358,10 +449,7 @@ export function MoneyTransferSend({
           id="transfer-message"
           value={message}
           onChange={(event) => {
-            if (
-              Array.from(event.target.value).length <=
-              MONEY_TRANSFER_MESSAGE_LIMIT
-            ) {
+            if (Array.from(event.target.value).length <= messageLimit) {
               setMessage(event.target.value);
             }
           }}
@@ -376,8 +464,8 @@ export function MoneyTransferSend({
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             Transfery będą dostępne{' '}
-            {formatTransferDate(new Date(accountEligibleAt).toISOString())}, po
-            14 dniach od utworzenia konta.
+            {formatTransferDate(new Date(accountEligibleAt).toISOString())}, po{' '}
+            {minAccountAgeDays} dniach od utworzenia konta.
           </p>
         </div>
       )}
@@ -385,10 +473,11 @@ export function MoneyTransferSend({
       <Button
         type="button"
         onClick={handleContinue}
-        disabled={accountIsTooNew}
+        disabled={!rules || accountIsTooNew}
         className="h-11 w-full gradient-primary font-bold text-primary-foreground"
       >
-        <Send className="mr-2 h-4 w-4" /> Dalej
+        <Send className="mr-2 h-4 w-4" />
+        {rules ? 'Dalej' : rulesError ? 'Zasady niedostępne' : 'Ładowanie zasad...'}
       </Button>
     </div>
   );

@@ -1,9 +1,59 @@
 import { supabase } from '@/integrations/supabase/client';
+import { callRpc } from '@/integrations/supabase/rpc';
 import type {
   MoneyTransferHistoryEntry,
   MoneyTransferRecipient,
   MoneyTransferResult,
+  MoneyTransferRules,
 } from '@/features/transfers/types';
+
+function parseMoneyTransferRules(value: unknown): MoneyTransferRules {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('Serwer zwrócił nieprawidłowe zasady transferów');
+  }
+
+  const {
+    min_amount,
+    max_message_length,
+    max_transfers_per_hour,
+    min_account_age_days,
+    sender_eligible_at,
+    sender_eligible,
+    server_now,
+  } = value as Record<string, unknown>;
+
+  if (
+    typeof min_amount !== 'number' ||
+    typeof max_message_length !== 'number' ||
+    typeof max_transfers_per_hour !== 'number' ||
+    typeof min_account_age_days !== 'number' ||
+    typeof sender_eligible !== 'boolean' ||
+    typeof server_now !== 'string'
+  ) {
+    throw new Error('Serwer zwrócił nieprawidłowe zasady transferów');
+  }
+
+  if (sender_eligible_at !== null && typeof sender_eligible_at !== 'string') {
+    throw new Error('Serwer zwrócił nieprawidłowe zasady transferów');
+  }
+
+  return {
+    min_amount,
+    max_message_length,
+    max_transfers_per_hour,
+    min_account_age_days,
+    sender_eligible_at:
+      typeof sender_eligible_at === 'string' ? sender_eligible_at : null,
+    sender_eligible,
+    server_now,
+  };
+}
+
+export async function fetchMoneyTransferRules(): Promise<MoneyTransferRules> {
+  const { data, error } = await supabase.rpc('get_money_transfer_rules');
+  if (error) throw new Error(error.message);
+  return parseMoneyTransferRules(data);
+}
 
 function parseMoneyTransferResult(value: unknown): MoneyTransferResult {
   if (

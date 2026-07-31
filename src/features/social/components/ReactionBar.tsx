@@ -11,11 +11,10 @@ import {
   REACTION_EMOJIS,
   REACTION_LABELS,
   REACTION_TYPES,
-  sortedReactions,
-  totalReactions,
   type ReactionCounts,
   type ReactionType,
 } from '../reactions';
+import { ReactionSummaryButton } from './ReactionSummaryButton';
 
 const LONG_PRESS_MS = 500;
 const PICKER_CLOSE_MS = 140;
@@ -43,10 +42,6 @@ export function ReactionBar({
   showSummary = true,
   showActionIcon = false,
 }: ReactionBarProps) {
-  const sorted = sortedReactions(reactions);
-  const reactionsTotal = totalReactions(reactions);
-  const visibleReactions = sorted.slice(0, 3);
-
   return (
     <div
       className={cn(
@@ -56,21 +51,14 @@ export function ReactionBar({
       role="group"
       aria-label="Reakcje"
     >
-      {showSummary && reactionsTotal > 0 && (
-        <button
-          type="button"
-          onClick={onOpenReactors}
-          disabled={disabled || !onOpenReactors}
+      {showSummary && (
+        <ReactionSummaryButton
+          reactions={reactions}
+          onOpenReactors={onOpenReactors}
+          disabled={disabled}
           className="social-reaction-summary-button inline-flex items-center gap-1 rounded-full text-xs font-medium text-muted-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-55"
-          aria-label={`Wyświetl reakcje (${reactionsTotal})`}
-        >
-          <span className="social-reaction-summary-stack" aria-hidden="true">
-            {visibleReactions.map(({ type, emoji }) => (
-              <span key={type}>{emoji}</span>
-            ))}
-          </span>
-          <span>{reactionsTotal}</span>
-        </button>
+          stackClassName="social-reaction-summary-stack"
+        />
       )}
 
       <ReactionActionButton

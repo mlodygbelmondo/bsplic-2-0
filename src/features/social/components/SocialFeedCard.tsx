@@ -25,16 +25,19 @@ import { cn } from '@/lib/utils';
 import type { FeedItemType, SocialComment, SocialFeedItem } from '@/types/database';
 import { parseSocialContent } from '@/features/social/content';
 import {
-  sortedReactions,
   totalReactions,
   type ReactionCounts,
   type ReactionType,
 } from '@/features/social/reactions';
-import { formatSocialTimeAgo } from '@/features/social/lib/socialFormatters';
+import {
+  formatCommentCount,
+  formatSocialTimeAgo,
+} from '@/features/social/lib/socialFormatters';
 import { getSocialItemPath } from '@/features/social/routes';
 import type { FlatComment } from '@/features/social/thread';
 import { CommentThread } from './CommentThread';
 import { ReactionBar } from './ReactionBar';
+import { ReactionSummaryButton } from './ReactionSummaryButton';
 import { SocialContentBlock } from './SocialContentBlock';
 
 interface SocialFeedCardProps {
@@ -358,9 +361,7 @@ function MobileFacebookEngagement({
   onComment,
   onShare,
 }: MobileFacebookEngagementProps) {
-  const sorted = sortedReactions(reactions);
   const reactionsTotal = totalReactions(reactions);
-  const visibleReactions = sorted.slice(0, 3);
   const hasSummary = reactionsTotal > 0 || commentCount > 0;
 
   return (
@@ -368,26 +369,19 @@ function MobileFacebookEngagement({
       {hasSummary && (
         <div className="social-mobile-engagement-summary">
           {reactionsTotal > 0 ? (
-            <button
-              type="button"
-              className="social-mobile-reaction-summary"
-              onClick={onOpenReactors}
+            <ReactionSummaryButton
+              reactions={reactions}
+              onOpenReactors={onOpenReactors}
               disabled={disabled}
-              aria-label={`Wyświetl reakcje (${reactionsTotal})`}
-            >
-              <span className="social-mobile-reaction-stack" aria-hidden="true">
-                {visibleReactions.map(({ type, emoji }) => (
-                  <span key={type}>{emoji}</span>
-                ))}
-              </span>
-              <span>{reactionsTotal}</span>
-            </button>
+              className="social-mobile-reaction-summary"
+              stackClassName="social-mobile-reaction-stack"
+            />
           ) : (
             <span />
           )}
           {commentCount > 0 && (
             <span className="social-mobile-comment-count">
-              {commentCount} {formatFeedCommentCount(commentCount)}
+              {commentCount} {formatCommentCount(commentCount)}
             </span>
           )}
         </div>
@@ -627,13 +621,4 @@ function CouponContent({ item, ako, expanded, onToggle }: CouponContentProps) {
       )}
     </>
   );
-}
-
-function formatFeedCommentCount(count: number): string {
-  if (count === 1) return 'komentarz';
-  const lastTwo = count % 100;
-  if (lastTwo >= 12 && lastTwo <= 14) return 'komentarzy';
-  const lastDigit = count % 10;
-  if (lastDigit >= 2 && lastDigit <= 4) return 'komentarze';
-  return 'komentarzy';
 }

@@ -9,6 +9,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Behavioral DB contract tests run via `npm run test:db` (vitest.db.config.ts).
+    exclude: ["**/node_modules/**", "src/test/db/**"],
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
