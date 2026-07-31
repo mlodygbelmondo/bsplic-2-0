@@ -1,7 +1,7 @@
 # BSPLIC Expo migration status
 
-Ostatnia aktualizacja: 2026-07-21  
-Gałąź: `codex/expo-migration`  
+Ostatnia aktualizacja: 2026-07-21
+Gałąź: `codex/expo-migration`
 Umowa: [`expo-migration-contract.md`](./expo-migration-contract.md)
 
 Ten plik jest trwałą referencją wykonania migracji. Statusy odnoszą się do rygorystycznej definicji ukończenia z umowy: realny backend, kompletne stany i nawigacja, zgodność mobilnego designu oraz ręczne przejście albo wiarygodny test. Końcowa pętla QA została wykonana na iPhone 17 Pro (iOS 26.5), na uwierzytelnionym koncie QA i side-by-side z produkcyjnym PWA. Operacje finansowe, publikacje i uploady nie były wykonywane tylko po to, aby uzyskać dowód — sprawdzono ich formularze, walidację i kod bez nieodwracalnej mutacji danych.

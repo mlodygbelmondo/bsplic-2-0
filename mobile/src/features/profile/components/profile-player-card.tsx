@@ -155,4 +155,3 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   secondaryStats: { flexDirection: 'row', gap: 8 },
 });
-

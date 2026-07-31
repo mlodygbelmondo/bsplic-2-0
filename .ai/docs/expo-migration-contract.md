@@ -158,4 +158,3 @@ After implementation, use an independent reviewer to inspect the full diff, feat
 - Do not stop until every inventory item is classified.
 - Existing unrelated defects should be documented, not broadened into refactors, unless the smallest tested fix is necessary to continue.
 - The final report must include changed files, logical commits, commands and results, manual QA evidence, reviewer findings, the complete status inventory, known risks, and every external/manual input still needed from Piotr.
-
