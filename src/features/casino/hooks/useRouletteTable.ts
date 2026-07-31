@@ -33,6 +33,8 @@ interface PlaceBetInput {
   stake: number;
 }
 
+const ADVANCE_ERROR_LOG_INTERVAL_MS = 30_000;
+
 export function useRouletteTable({
   userId,
   username = 'Ty',
@@ -53,9 +55,13 @@ export function useRouletteTable({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [tableMessage, setTableMessage] = useState<string | null>(null);
+  const currentRoundRef = useRef<RouletteTableRound | null>(null);
   const refreshProfileRef = useRef(refreshProfile);
   const lastSettledRoundIdRef = useRef<string | null>(null);
   const syncSnapshotPromiseRef = useRef<Promise<void> | null>(null);
+  const syncRoundStatePromiseRef = useRef<Promise<void> | null>(null);
+  const syncRoundStateRerunRequestedRef = useRef(false);
+  const lastAdvanceErrorLoggedAtRef = useRef(0);
   const lastCountdownSecondRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -76,6 +82,7 @@ export function useRouletteTable({
         // 50 spins of history feed the hot/cold + color distribution stats.
         const snapshot = await getRouletteTableSnapshot('main', 50);
 
+        currentRoundRef.current = snapshot.currentRound;
         setCurrentRound(snapshot.currentRound);
         setRecentSpins(snapshot.recentSpins);
         setRecentWins(snapshot.recentWins);
@@ -113,6 +120,77 @@ export function useRouletteTable({
     [userId],
   );
 
+  const syncFreshSnapshot = useCallback(async () => {
+    const pendingSnapshot = syncSnapshotPromiseRef.current;
+    await syncSnapshot();
+
+    // A write must not reuse a snapshot that started before that write. If a
+    // request was already in flight, follow it with one guaranteed-fresh read.
+    if (pendingSnapshot) {
+      await syncSnapshot();
+    }
+  }, [syncSnapshot]);
+
+  const syncRoundState = useCallback(() => {
+    if (syncRoundStatePromiseRef.current) {
+      syncRoundStateRerunRequestedRef.current = true;
+      return syncRoundStatePromiseRef.current;
+    }
+
+    const syncPromise = (async () => {
+      const attemptedAdvanceKeys = new Set<string>();
+
+      do {
+        syncRoundStateRerunRequestedRef.current = false;
+        let didAdvanceRound = false;
+        const round = currentRoundRef.current;
+
+        if (round) {
+          const targetMs = getRouletteCountdownTargetMs(round);
+          const advanceKey = `${round.id}:${round.phase}`;
+          if (
+            targetMs !== null &&
+            Date.now() >= targetMs &&
+            !attemptedAdvanceKeys.has(advanceKey)
+          ) {
+            attemptedAdvanceKeys.add(advanceKey);
+            // The phase is overdue: nudge the shared round forward ourselves
+            // instead of waiting for the backup cron tick.
+            try {
+              await advanceRouletteRoundIfDue();
+              didAdvanceRound = true;
+            } catch (error) {
+              const now = Date.now();
+              if (
+                now - lastAdvanceErrorLoggedAtRef.current >=
+                ADVANCE_ERROR_LOG_INTERVAL_MS
+              ) {
+                console.warn(
+                  'Roulette round advance failed; retrying shortly.',
+                  error,
+                );
+                lastAdvanceErrorLoggedAtRef.current = now;
+              }
+            }
+          }
+        }
+
+        if (didAdvanceRound) {
+          await syncFreshSnapshot();
+        } else {
+          await syncSnapshot();
+        }
+      } while (syncRoundStateRerunRequestedRef.current);
+    })().finally(() => {
+      if (syncRoundStatePromiseRef.current === syncPromise) {
+        syncRoundStatePromiseRef.current = null;
+      }
+    });
+
+    syncRoundStatePromiseRef.current = syncPromise;
+    return syncPromise;
+  }, [syncFreshSnapshot, syncSnapshot]);
+
   useEffect(() => {
     void syncSnapshot(true);
 
@@ -126,31 +204,62 @@ export function useRouletteTable({
   }, [syncSnapshot]);
 
   useEffect(() => {
-    // An idle table still polls (slowly) so a round started by another player
-    // shows up even when realtime drops the event.
-    const nextSyncTimer = window.setTimeout(() => {
-      void (async () => {
-        if (currentRound) {
-          const targetMs = getRouletteCountdownTargetMs(currentRound);
-          if (targetMs !== null && Date.now() >= targetMs) {
-            // The phase is overdue: nudge the shared round forward ourselves
-            // instead of waiting for the backup cron tick.
-            try {
-              await advanceRouletteRoundIfDue();
-            } catch {
-              // Best effort - the snapshot below still reflects server state.
-            }
-          }
-        }
+    let isCancelled = false;
+    let nextSyncTimer: number | null = null;
 
-        await syncSnapshot();
-      })();
-    }, getRouletteNextSyncDelayMs(currentRound));
+    const clearNextSync = () => {
+      if (nextSyncTimer !== null) {
+        window.clearTimeout(nextSyncTimer);
+        nextSyncTimer = null;
+      }
+    };
+
+    const scheduleNextSync = () => {
+      clearNextSync();
+      if (isCancelled || document.visibilityState !== 'visible') {
+        return;
+      }
+
+      nextSyncTimer = window.setTimeout(() => {
+        nextSyncTimer = null;
+        void syncRoundState().finally(() => {
+          // A snapshot can legitimately return the same round (including
+          // null) or fail transiently. Keep polling in both cases instead of
+          // relying on a React state change to re-arm this timer.
+          if (!isCancelled) {
+            scheduleNextSync();
+          }
+        });
+      }, getRouletteNextSyncDelayMs(currentRound));
+    };
+
+    const syncOnResume = () => {
+      if (document.visibilityState !== 'visible') {
+        clearNextSync();
+        return;
+      }
+
+      clearNextSync();
+      void syncRoundState().finally(() => {
+        if (!isCancelled) {
+          scheduleNextSync();
+        }
+      });
+    };
+
+    scheduleNextSync();
+    document.addEventListener('visibilitychange', syncOnResume);
+    window.addEventListener('focus', syncOnResume);
+    window.addEventListener('pageshow', syncOnResume);
 
     return () => {
-      window.clearTimeout(nextSyncTimer);
+      isCancelled = true;
+      clearNextSync();
+      document.removeEventListener('visibilitychange', syncOnResume);
+      window.removeEventListener('focus', syncOnResume);
+      window.removeEventListener('pageshow', syncOnResume);
     };
-  }, [currentRound, syncSnapshot]);
+  }, [currentRound, syncRoundState]);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -207,13 +316,13 @@ export function useRouletteTable({
           }),
         );
         await refreshProfileRef.current();
-        await syncSnapshot();
+        await syncFreshSnapshot();
         return acceptedBet;
       } finally {
         setIsPlacingBet(false);
       }
     },
-    [avatarUrl, syncSnapshot, userId, username],
+    [avatarUrl, syncFreshSnapshot, userId, username],
   );
 
   const latestSettledRound = recentSpins[0] ?? null;
