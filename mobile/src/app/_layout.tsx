@@ -15,6 +15,7 @@ import { Text, View } from 'react-native';
 
 import { AuthenticatedShell } from '@/components/navigation/AuthenticatedShell';
 import { AppLoader } from '@/components/feedback/AppLoader';
+import { useReducedMotion } from '@/components/feedback/use-reduced-motion';
 import { AppButton } from '@/components/ui';
 import { LoginScreen } from '@/features/auth/components/login-screen';
 import { AppThemeProvider, useAppTheme } from '@/hooks/use-app-theme';
@@ -27,6 +28,7 @@ void SplashScreen.preventAutoHideAsync();
 
 function RoutedApplication() {
   const pathname = usePathname();
+  const reducedMotion = useReducedMotion();
   const { navigationTheme, tokens } = useAppTheme();
   const { user, profile, loading, error, refreshProfile, signOut } = useAuth();
   const publicResetRoute = pathname === '/reset-password';
@@ -42,7 +44,7 @@ function RoutedApplication() {
   }
   if (!user && !publicResetRoute) return <LoginScreen />;
 
-  const routes = <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />;
+  const routes = <Stack screenOptions={{ headerShown: false, animation: reducedMotion ? 'none' : 'slide_from_right' }} />;
   return <ThemeProvider value={navigationTheme}>{publicResetRoute ? routes : <AuthenticatedShell>{routes}</AuthenticatedShell>}</ThemeProvider>;
 }
 

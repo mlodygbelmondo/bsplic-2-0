@@ -22,7 +22,9 @@ interface StoriesProps {
   currentUsername: string;
   currentAvatarUrl?: string | null;
   writesDisabled: boolean;
+  enabled?: boolean;
   onCreate(text: string, image: PreparedSocialImage | null): Promise<void>;
+  onInteractionChange?: (blocked: boolean) => void;
 }
 
 export interface StoryProfile {
@@ -31,7 +33,7 @@ export interface StoryProfile {
   avatarUrl: string | null;
 }
 
-export function Stories({ stories, profileFallbacks, currentUserId, currentUsername, currentAvatarUrl, writesDisabled, onCreate }: StoriesProps) {
+export function Stories({ stories, profileFallbacks, currentUserId, currentUsername, currentAvatarUrl, writesDisabled, enabled = true, onCreate, onInteractionChange }: StoriesProps) {
   const { tokens } = useAppTheme();
   const [now, setNow] = useState(Date.now());
   const [compose, setCompose] = useState(false);
@@ -40,21 +42,37 @@ export function Stories({ stories, profileFallbacks, currentUserId, currentUsern
   const story = selected === null ? null : active[selected] ?? null;
 
   useEffect(() => {
+    if (!enabled) return;
     const interval = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [enabled]);
   useEffect(() => {
-    if (!story) return;
+    if (!enabled || !story) return;
     const timeout = setTimeout(() => {
       if (selected !== null && selected < active.length - 1) setSelected(selected + 1);
       else setSelected(null);
     }, 7_000);
     return () => clearTimeout(timeout);
-  }, [active.length, selected, story]);
+  }, [active.length, enabled, selected, story]);
+  useEffect(() => {
+    onInteractionChange?.(compose || selected !== null);
+  }, [compose, onInteractionChange, selected]);
+  useEffect(() => {
+    if (enabled) return;
+    setCompose(false);
+    setSelected(null);
+  }, [enabled]);
 
   return (
     <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.strip}
+        onTouchStart={() => onInteractionChange?.(true)}
+        onTouchEnd={() => onInteractionChange?.(compose || selected !== null)}
+        onTouchCancel={() => onInteractionChange?.(compose || selected !== null)}
+      >
         <Pressable accessibilityRole="button" accessibilityLabel="Utwórz relację" disabled={writesDisabled} onPress={() => setCompose(true)} style={[styles.tile, { backgroundColor: tokens.colors.card, borderColor: tokens.colors.border }]}>
           <AppAvatar name={currentUsername} source={currentAvatarUrl ? { uri: currentAvatarUrl } : undefined} size={52} />
           <View style={[styles.plus, { backgroundColor: tokens.colors.primary }]}><Plus size={15} color={tokens.colors.primaryForeground} /></View>

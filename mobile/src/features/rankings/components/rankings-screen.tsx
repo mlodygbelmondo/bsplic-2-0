@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import { useChromeScroll } from '@/components/navigation/navigation-chrome';
+import { useRouteActive } from '@/hooks/use-route-active';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/providers/auth-provider';
@@ -84,7 +86,14 @@ function Segment<T extends string>({
   );
 }
 
-export function RankingsScreen() {
+export interface RankingsScreenProps {
+  active?: boolean;
+  topInset?: number;
+}
+
+export function RankingsScreen({ active, topInset = 0 }: RankingsScreenProps = {}) {
+  const focused = useRouteActive();
+  const routeActive = active ?? focused;
   const { tokens } = useAppTheme();
   const { user } = useAuth();
   const [type, setType] = useState<RankingType>('sportsbook');
@@ -92,7 +101,9 @@ export function RankingsScreen() {
   const { data = [], error, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['rankings', type],
     queryFn: () => fetchRankings(type),
+    enabled: routeActive,
   });
+  const chromeScroll = useChromeScroll({ active: routeActive, minimumHideOffset: topInset });
   const rankings = useMemo(
     () => [...data].sort((a, b) => b[sort] - a[sort]),
     [data, sort],
@@ -101,10 +112,14 @@ export function RankingsScreen() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: tokens.colors.background }}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 96 }}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={{ paddingHorizontal: 12, paddingTop: topInset, paddingBottom: 96 }}
       data={rankings}
       keyExtractor={(entry) => entry.id}
+      initialNumToRender={12}
+      maxToRenderPerBatch={10}
+      updateCellsBatchingPeriod={50}
+      windowSize={7}
       refreshing={isRefetching}
       onRefresh={() => void refetch()}
       ListHeaderComponent={
@@ -218,6 +233,9 @@ export function RankingsScreen() {
           </Link>
         );
       }}
+      onScroll={chromeScroll.onScroll}
+      onScrollBeginDrag={chromeScroll.onScrollBeginDrag}
+      scrollEventThrottle={chromeScroll.scrollEventThrottle}
     />
   );
 }

@@ -6,6 +6,7 @@ import { AccessiblePressable } from '@/components/ui/AccessiblePressable';
 import { AppAvatar } from '@/components/ui/AppAvatar';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppText } from '@/components/ui/AppText';
+import { useReducedMotion } from '@/components/feedback/use-reduced-motion';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 export interface AppUserMenuProps {
@@ -41,6 +42,7 @@ export function AppUserMenu({
   onAdmin,
   onLogout,
 }: AppUserMenuProps) {
+  const reducedMotion = useReducedMotion();
   const { theme, tokens, toggleTheme } = useAppTheme();
 
   const runAndClose = (action?: () => void | Promise<void>) => {
@@ -55,7 +57,7 @@ export function AppUserMenu({
   };
 
   return (
-    <AppModal visible={visible} title="Menu" onClose={onClose} presentation="sheet">
+    <AppModal visible={visible} title="Menu" onClose={onClose} presentation="sheet" animationType={reducedMotion ? 'none' : 'slide'}>
       {username ? (
         <AccessiblePressable accessibilityLabel={`Otwórz profil ${username}`} onPress={() => runAndClose(onProfile)} style={styles.profile}>
           <AppAvatar name={username} source={avatarSource} size={44} />

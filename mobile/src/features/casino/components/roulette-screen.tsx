@@ -4,6 +4,7 @@ import { Alert, Image, ImageBackground, Pressable, ScrollView, Text, View } from
 import { ChevronUp, Trophy, Users, Volume2, VolumeX } from 'lucide-react-native';
 
 import { AppButton, AppInput } from '@/components/ui';
+import { useChromeScroll } from '@/components/navigation/navigation-chrome';
 import { RouletteWheel } from '@/features/casino/components/roulette-wheel';
 import { useCasinoFeedback } from '@/features/casino/hooks/use-casino-feedback';
 import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
@@ -32,8 +33,19 @@ const colors = {
 };
 const types: RouletteBetType[] = ['straight', 'color', 'parity', 'range'];
 
-export function RouletteScreen() {
-  const routeActive = useRouteActive();
+export interface RouletteScreenProps {
+  active?: boolean;
+  topInset?: number;
+  onSwipeBlockedChange?: (blocked: boolean) => void;
+}
+
+export function RouletteScreen({
+  active,
+  topInset = 0,
+  onSwipeBlockedChange,
+}: RouletteScreenProps = {}) {
+  const focused = useRouteActive();
+  const routeActive = active ?? focused;
   const { user, profile, refreshProfile } = useAuth();
   const { canPerformWrites } = useNetwork();
   const feedback = useCasinoFeedback();
@@ -44,15 +56,25 @@ export function RouletteScreen() {
   const [stake, setStake] = useState('10');
   const [betPanelOpen, setBetPanelOpen] = useState(false);
   const [sharingToSocial, setSharingToSocial] = useState(false);
+  const chromeScroll = useChromeScroll({ active: routeActive, minimumHideOffset: topInset });
   const values = useMemo(() => getRouletteBetValueOptions(betType), [betType]);
   const shareableWin = useMemo(() => table.recentWins.find((win) => win.user_id === user!.id) ?? null, [table.recentWins, user]);
 
   useEffect(() => {
+    if (!routeActive) return;
     const result = table.latestSettledRound;
     if (!result || result.id === lastResultRef.current) return;
     if (lastResultRef.current) feedback.result(table.activeBets.some((bet) => bet.round_id === result.id && bet.is_win === true));
     lastResultRef.current = result.id;
-  }, [feedback, table.activeBets, table.latestSettledRound]);
+  }, [feedback, routeActive, table.activeBets, table.latestSettledRound]);
+
+  useEffect(() => {
+    onSwipeBlockedChange?.(betPanelOpen || table.isPlacingBet || sharingToSocial);
+  }, [betPanelOpen, onSwipeBlockedChange, sharingToSocial, table.isPlacingBet]);
+  useEffect(() => {
+    if (routeActive) return;
+    setBetPanelOpen(false);
+  }, [routeActive]);
 
   const place = async () => {
     const amount = Number(stake.replace(',', '.'));
@@ -101,7 +123,13 @@ export function RouletteScreen() {
   return (
     <ImageBackground source={require('../../../../assets/images/casino/roulette-mobile-background.webp')} resizeMode="cover" style={{ flex: 1, backgroundColor: '#09090b' }}>
       <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(5,4,7,0.34)' }} />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ gap: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 174 }}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ gap: 20, paddingHorizontal: 16, paddingTop: topInset + 12, paddingBottom: 174 }}
+        onScroll={chromeScroll.onScroll}
+        onScrollBeginDrag={chromeScroll.onScrollBeginDrag}
+        scrollEventThrottle={chromeScroll.scrollEventThrottle}
+      >
         <View style={{ minHeight: 58, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: 'rgba(0,0,0,0.46)', paddingHorizontal: 14, paddingVertical: 9, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
             <Text allowFontScaling={false} style={{ color: 'rgba(253,230,138,0.72)', fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>{countdownLabel}</Text>

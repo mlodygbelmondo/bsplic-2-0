@@ -8,6 +8,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppText } from '@/components/ui/AppText';
 import { AppLoader } from '@/components/feedback/AppLoader';
 import { StateNotice } from '@/components/feedback/StateNotice';
+import { useChromeScroll } from '@/components/navigation/navigation-chrome';
 import { fetchBetsByIds } from '@/features/home/api/bets';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRouteActive } from '@/hooks/use-route-active';
@@ -42,8 +43,19 @@ const FILTERS: Array<{ value: FeedFilter; label: string }> = [
 const itemKey = (type: FeedItemType, id: string) => `${type}:${id}`;
 const targetFor = (type: FeedItemType, id: string) => type === 'post' ? { postId: id } : type === 'coupon' ? { couponId: id } : { casinoShareId: id };
 
-export function SocialScreen() {
-  const routeActive = useRouteActive();
+export interface SocialScreenProps {
+  active?: boolean;
+  topInset?: number;
+  onSwipeBlockedChange?: (blocked: boolean) => void;
+}
+
+export function SocialScreen({
+  active,
+  topInset = 0,
+  onSwipeBlockedChange,
+}: SocialScreenProps = {}) {
+  const focused = useRouteActive();
+  const routeActive = active ?? focused;
   const { tokens } = useAppTheme();
   const { user, profile } = useAuth();
   const network = useNetwork();
@@ -64,6 +76,24 @@ export function SocialScreen() {
   const [commentComposer, setCommentComposer] = useState<{ item: SocialFeedItem; parentId?: string; initialText?: string } | null>(null);
   const [reactorsTarget, setReactorsTarget] = useState<ReactionTarget | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [storyInteraction, setStoryInteraction] = useState(false);
+  const chromeScroll = useChromeScroll({ active: routeActive, minimumHideOffset: topInset });
+
+  useEffect(() => {
+    onSwipeBlockedChange?.(
+      composerOpen
+      || commentComposer !== null
+      || reactorsTarget !== null
+      || storyInteraction,
+    );
+  }, [commentComposer, composerOpen, onSwipeBlockedChange, reactorsTarget, storyInteraction]);
+  useEffect(() => {
+    if (routeActive) return;
+    setComposerOpen(false);
+    setCommentComposer(null);
+    setReactorsTarget(null);
+    setStoryInteraction(false);
+  }, [routeActive]);
 
   const writesDisabled = !user || !network.canPerformWrites;
   const visibleItems = useMemo(() => filter === 'all' ? items : items.filter((item) => item.item_type === filter), [filter, items]);
@@ -236,7 +266,7 @@ export function SocialScreen() {
         {FILTERS.map((entry) => <Pressable key={entry.value} accessibilityRole="button" accessibilityState={{ selected: filter === entry.value }} onPress={() => setFilter(entry.value)} style={[styles.filter, filter === entry.value && { backgroundColor: tokens.colors.primary }]}><AppText variant="caption" style={filter === entry.value ? { color: tokens.colors.primaryForeground, fontWeight: '700' } : undefined}>{entry.label}</AppText></Pressable>)}
       </View>
       {user ? <Pressable accessibilityRole="button" disabled={writesDisabled} onPress={() => setComposerOpen(true)} style={[styles.composeEntry, { backgroundColor: tokens.colors.card, borderColor: tokens.colors.border }]}><AppAvatar name={profile?.username ?? 'Ty'} source={profile?.avatar_url ? { uri: profile.avatar_url } : undefined} size={40} /><View style={[styles.composePrompt, { backgroundColor: tokens.colors.muted }]}><AppText tone="muted">Co nowego?</AppText></View><MessageSquarePlus size={22} color={tokens.colors.primary} /></Pressable> : null}
-      {user ? <Stories stories={stories} profileFallbacks={storyProfiles} currentUserId={user.id} currentUsername={profile?.username ?? 'Ty'} currentAvatarUrl={profile?.avatar_url} writesDisabled={writesDisabled} onCreate={(text, image) => createContent('story', text, image)} /> : null}
+      {user ? <Stories stories={stories} profileFallbacks={storyProfiles} currentUserId={user.id} currentUsername={profile?.username ?? 'Ty'} currentAvatarUrl={profile?.avatar_url} writesDisabled={writesDisabled} enabled={routeActive} onCreate={(text, image) => createContent('story', text, image)} onInteractionChange={setStoryInteraction} /> : null}
     </View>
   );
 
@@ -248,8 +278,12 @@ export function SocialScreen() {
       <FlatList
         data={visibleItems}
         keyExtractor={(item) => itemKey(item.item_type, item.id)}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.list}
+        initialNumToRender={5}
+        maxToRenderPerBatch={4}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[styles.list, { paddingTop: topInset }]}
         ListHeaderComponent={header}
         renderItem={({ item }) => {
           const key = itemKey(item.item_type, item.id);
@@ -260,6 +294,9 @@ export function SocialScreen() {
         onEndReachedThreshold={0.8}
         ListEmptyComponent={<StateNotice kind="empty" title={filter === 'all' ? 'Brak aktywności' : 'Brak wpisów dla tego filtra'} message="Nowe wpisy pojawią się tutaj." />}
         ListFooterComponent={loadingMore ? <AppLoader size="small" label="Ładowanie kolejnych wpisów…" /> : <View style={styles.footer} />}
+        onScroll={chromeScroll.onScroll}
+        onScrollBeginDrag={chromeScroll.onScrollBeginDrag}
+        scrollEventThrottle={chromeScroll.scrollEventThrottle}
       />
       <ComposerModal visible={composerOpen} title="Utwórz post" placeholder="Co nowego? Oznacz użytkownika przez @…" draftScope="post" currentUserId={user?.id} onClose={() => setComposerOpen(false)} onSubmit={(text, image) => createContent('post', text, image)} />
       <ComposerModal key={`${commentComposer?.item.item_type ?? ''}:${commentComposer?.item.id ?? ''}:${commentComposer?.parentId ?? ''}`} visible={!!commentComposer} title={commentComposer?.parentId ? 'Odpowiedz' : 'Dodaj komentarz'} placeholder="Napisz komentarz…" draftScope={commentComposer ? `comment.${itemKey(commentComposer.item.item_type, commentComposer.item.id)}.${commentComposer.parentId ?? 'root'}` : 'comment'} currentUserId={user?.id} initialText={commentComposer?.initialText} onClose={() => setCommentComposer(null)} onSubmit={addNewComment} />

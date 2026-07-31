@@ -19,38 +19,48 @@ Ten plik jest trwałą referencją wykonania migracji. Statusy odnoszą się do 
 
 | # | Obszar | Status | Stan i brakujący dowód |
 |---|---|---|---|
-| 1 | Shell, maintenance, connectivity, themes, providers, role gates | partial | Light/dark, header, menu, natywny dock, focus gating i powroty sprawdzone. Produkcyjny maintenance i pełne odcięcie sieci nie były wymuszane; kod i UI tych stanów są obecne. |
+| 1 | Shell, maintenance, connectivity, themes, providers, role gates | partial | Light/dark, header, menu, natywny dock, focus gating i powroty sprawdzone. Główne taby używają natywnego pagera z natychmiastowym selection, czystym slide, ochroną przed stale callbacks i reduced motion. Produkcyjny maintenance i pełne odcięcie sieci nie były wymuszane; kod i UI tych stanów są obecne. |
 | 2 | Login, recovery, refresh, logout | partial | Login, invalid credentials, sesja i invalid recovery sprawdzone; brak aktywnego jednorazowego tokenu do bezpiecznego wykonania recovery success/expired. |
-| 3 | Sportsbook home | partial | Side-by-side z PWA; przebudowano filtry, jackpot, karty i kursy, a realtime bets/categories jest focus-gated. Brak reprezentatywnych closed/in-progress cards i pełnego error/empty renderu w danych QA. |
+| 3 | Sportsbook home | partial | Side-by-side z PWA; przebudowano filtry, jackpot, karty i kursy, selection odzyskał krótki spring, a realtime bets/categories jest focus-gated. Brak reprezentatywnych closed/in-progress cards i pełnego error/empty renderu w danych QA. |
 | 4 | Coupon | partial | Zaznaczenie/usunięcie opcji, single/AKO, stawka, podsumowanie i CTA sprawdzone bez postawienia zakładu; nie wszystkie warianty exclusions/copied-social wystąpiły w danych QA. |
 | 5 | Wallet | complete | Saldo, top-up state, formularz transferu, historia i walidacja sprawdzone bez wysyłania pieniędzy. |
-| 6 | Profile | partial | Własny/publiczny profil, karta gracza, statystyki, historie i akcje sprawdzone wizualnie; upload oraz missing-user nie zostały wykonane na koncie QA. |
+| 6 | Profile | partial | Własny profil porównano ponownie z PWA w light/dark: przywrócono strukturę karty, oszczędne wejścia/shimmer oraz kompaktową historię (10-row preview, collapsed AKO, lazy Casino, paginacja). Expand i lazy load sprawdzone na iOS; upload oraz missing-user nie zostały wykonane na koncie QA. |
 | 7 | Rankings | partial | Tryby, metryki, wiersze i nawigacja sprawdzone side-by-side z PWA; wymuszone empty/error nie były dostępne w danych QA. |
 | 8 | Social | partial | Feed, filtry, kupony/posty/casino, komentarze, composer, mention i draft sprawdzone. Nie publikowano treści/reakcji tylko dla dowodu; brak aktywnego story i kart YouTube/Spotify ograniczył manualny zakres. |
 | 9 | YouTube/Spotify | partial | Inline WebView i external fallback są wdrożone; w danych QA nie było aktywnej zawartości obu providerów do ręcznej próby. |
 | 10 | Casino lobby | complete | Przebudowane na obrazowe, pionowe karty i porównane z mobilnym PWA. |
 | 11 | Roulette | partial | Koło, pionowe tło, stan waiting, wygrane i open/closed panel stawki sprawdzone; nie wysłano zakładu, a dynamicznego cyklu spinning/settled nie wymuszano. |
 | 12 | Blackjack | partial | Pionowe tło i aktywna gra z hit/stand/double zostały sprawdzone; foreground anuluje reveal i pobiera świeży stan serwera. Nie wykonywano akcji ani nie wymuszano wszystkich stanów insurance/split/settled. |
-| 13 | Jackpot | partial | Karta i wejście do rozliczenia są zgodne wizualnie; realna runda draw/claim nie była dostępna w oknie QA. |
+| 13 | Jackpot | partial | Karta i wejście do rozliczenia są zgodne wizualnie, a dekoracja home ma tani focus-gated ambient motion. Realna runda draw/claim nie była dostępna; natywny draw nadal nie odtwarza pełnej choreografii ticket-flight/spotlight/winner z PWA. |
 | 14 | Bonuses and feature polls | partial | Natywne overlaye i operacje są wdrożone; backend nie zwrócił aktywnej kampanii/ankiety do wymuszenia powierzchni. |
 | 15 | In-app notifications | complete | Sheet, unread, preferencja dźwięku, deep link i lifecycle kanału realtime sprawdzone ręcznie. |
 | 16 | Admin/moderator | partial | Denied oraz pełny admin, dashboard, wszystkie taby, walidacje, paginacje i bezpieczne confirmation modals sprawdzone. Brak konta moderatora i brak produkcyjnych mutacji settle/refund/create. |
 
 Nie ma pozycji `not started`. Każdy obszar i wszystkie 44 powierzchnie z `expo-screen-audit.md` zostały sklasyfikowane. Status `partial` oznacza brak wiarygodnego dowodu dla co najmniej jednego warunkowego lub mutującego stanu, a nie brak trasy czy atrapę. Dostępne powierzchnie zostały przejrzane w bezpiecznej, uwierzytelnionej sesji; szczegółowy dowód i ograniczenia są w macierzy ekranów.
 
+## Najważniejsze pozostałe luki
+
+1. **Jackpot draw motion** — logika reveal/claim/resume jest obecna, ale ticket-flight, spotlight i winner choreography z PWA pozostają największą realną luką wizualną.
+2. **Blackjack motion states** — staged reveal działa, lecz pełny deal/flip/result polish wymaga przejścia insurance, split, multi-hand i settled na kontrolowanych danych.
+3. **Dynamic roulette cycle** — native-driver spin istnieje; waiting/spinning/settled, result feedback i resume wymagają jednego wiarygodnego pełnego cyklu.
+4. **Social media/motion states** — aktywna story, YouTube, Spotify, reaction transitions i część engagement overlays nie miały danych do manualnego porównania.
+5. **Warunkowe oraz mutujące QA** — recovery success/expired, profile upload/missing user, offline, maintenance, jackpot winner/claim, bonus/poll i admin/moderator mutations nadal są `partial`, ponieważ nie były bezpiecznie wymuszane na produkcyjnym backendzie.
+
+Nie ma już architektonicznego blokera dla płynnego przełączania głównych tabów. Pozostałe luki są ograniczone do konkretnych powierzchni/stanów, a nie całej nawigacji.
+
 ## Walidacja wykonana
 
 - `mobile: npx tsc --noEmit` — pass.
+- `mobile: npx vitest run --config vitest.config.ts` — pass, 2 pliki / 13 testów (profile history i race/lifecycle pagera).
 - `mobile: npm run lint` — pass, 0 błędów; 5 ostrzeżeń Fast Refresh w providerach.
-- `mobile: npx expo-doctor` — wcześniej 20/20; końcowa próba offline wykonała 18/20, a dwie kontrole wymagające Expo API nie mogły rozwiązać `exp.host` (nie jest to błąd projektu).
-- `mobile: npx expo export --platform ios` — pass, 3707 modułów, Hermes bundle około 7 MB.
-- `mobile: npx expo export --platform android` — pass, 3780 modułów, Hermes bundle około 7,2 MB.
-- Końcowa runda po audycie: iOS export — pass, 3710 modułów, Hermes 7,1 MB; Android export — pass, 3790 modułów, Hermes 7,3 MB.
-- Końcowa próba `npx expo-doctor` nie zwróciła wyniku i została przerwana po zawieszeniu na kontroli sieciowej; zachowano wcześniejszy wynik opisany wyżej, bez raportowania nowej próby jako pass.
+- `mobile: npx expo-doctor` — pass, 20/20.
+- `mobile: npx expo export --platform ios --output-dir /tmp/bsplic-expo-final-ios-20260721` — pass, 3721 modułów, Hermes bundle 7,1 MB.
+- `mobile: npx expo export --platform android --output-dir /tmp/bsplic-expo-export-android-20260721` — pass, 3801 modułów, Hermes bundle 7,3 MB.
 - Root: `npm run lint` — pass z istniejącymi ostrzeżeniami.
 - Root: `npm run build` — pass, włącznie z generacją PWA.
 - Root: pełny Vitest został zabity przez limit RAM (`exit 137`); przebieg single-worker wykonał liczne zestawy, ale nie zwrócił kompletnego finalnego podsumowania, więc nie jest raportowany jako pełny pass.
 - iOS Simulator: pass na iPhone 17 Pro, iOS 26.5. Expo Go uruchomiło aplikację, zachowało sesję Supabase i pozwoliło przejść cały dostępny inwentarz. Zebrano czyste screenshoty stanów jasnych/ciemnych, kasyna, formularzy i nawigacji.
+- iOS motion/profile regression: light/dark profile, collapsed/expanded AKO, lazy Casino history oraz szybka sekwencja Social → Ruletka → Rankingi — pass; ostatni tab pozostaje selected bez cofnięcia do zdarzenia pośredniego.
 - Android emulator celowo nie został uruchomiony.
 
 ## Commity migracji
@@ -72,6 +82,8 @@ Nie ma pozycji `not started`. Każdy obszar i wszystkie 44 powierzchnie z `expo-
 Pierwszy przegląd znalazł błędy auth recovery, uploadu avatarów, kluczy realtime social, lifecycle ukrytych tras, motywów, offline admina, atomowości SecureStore i brak formularza propozycji. Wszystkie zostały naprawione. Druga runda dodatkowo wykorzystała przygotowane mechanizmy prezentacji casino: koło ruletki, staged reveal blackjacka, publikację wygranej do Socialu i foreground resync Jackpotu. Końcowy re-review nie znalazł żadnych actionable P1/P2. Powierzchnie nadal pozostają `partial`, dopóki nie powstanie wiarygodny manualny dowód na iOS.
 
 Po pełnym audycie 44 powierzchni dodatkowy niezależny review całego diffu wykrył P2 w lifecycle Blackjacka, izolacji draftów Social, limicie avatara, focus-gating realtime kategorii, recovery fallbacku, obsłudze błędów powiadomień i rzetelności statusów. Wszystkie zostały poprawione; ponowny review aktualnego worktree zakończył się werdyktem „brak dalszych actionable P0–P2”.
+
+Review bieżącego motion/profile passa wykrył P2 w odwracalności paginacji historii, etykiecie `Ruletka`, lifecycle nieaktywnego countdownu Jackpotu, reduced motion oraz race'ach pagera (stale drag, detail route i przerwanie programmatic transition). Dodano normalizację/testy, ukryty-history state i jednoznaczne ownership pagera: swipe jest blokowany wyłącznie do settle wywołanego przez dock. Końcowy niezależny re-review nie znalazł dalszych actionable P0/P1/P2; pozostawił jedynie udokumentowane ryzyka braku interaktywnego Android QA i niedostępnych dynamicznych stanów backendu.
 
 ## Wymagane działania zewnętrzne
 

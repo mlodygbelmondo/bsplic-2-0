@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Volume2, VolumeX } from 'lucide-react-native';
 
+import { useChromeScroll } from '@/components/navigation/navigation-chrome';
 import {
   blackjackDeclineInsurance,
   blackjackDoubleDown,
@@ -98,14 +99,30 @@ function PlayingCard({ card, hidden = false, overlap = false }: { card?: Card; h
   );
 }
 
-function Hand({ cards, hiddenCount = 0 }: { cards: Card[]; hiddenCount?: number }) {
+function Hand({
+  cards,
+  hiddenCount = 0,
+  onHorizontalInteractionChange,
+}: {
+  cards: Card[];
+  hiddenCount?: number;
+  onHorizontalInteractionChange?: (blocked: boolean) => void;
+}) {
   const entries = [
     ...cards.map((card) => ({ key: card.id ?? `${card.rank}-${card.suit}`, card, hidden: false })),
     ...Array.from({ length: hiddenCount }, (_, index) => ({ key: `hidden-${index}`, card: undefined, hidden: true })),
   ];
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: '100%' }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 12, paddingBottom: 7 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ width: '100%' }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 12, paddingBottom: 7 }}
+      onTouchStart={() => onHorizontalInteractionChange?.(true)}
+      onTouchEnd={() => onHorizontalInteractionChange?.(false)}
+      onTouchCancel={() => onHorizontalInteractionChange?.(false)}
+    >
       {entries.map((entry, index) => <PlayingCard key={entry.key} card={entry.card} hidden={entry.hidden} overlap={index > 0} />)}
     </ScrollView>
   );
@@ -138,8 +155,19 @@ function GameAction({ label, primary = false, disabled = false, onPress }: { lab
   );
 }
 
-export function BlackjackScreen() {
-  const routeActive = useRouteActive();
+export interface BlackjackScreenProps {
+  active?: boolean;
+  topInset?: number;
+  onSwipeBlockedChange?: (blocked: boolean) => void;
+}
+
+export function BlackjackScreen({
+  active,
+  topInset = 0,
+  onSwipeBlockedChange,
+}: BlackjackScreenProps = {}) {
+  const focused = useRouteActive();
+  const routeActive = active ?? focused;
   const { user, profile, refreshProfile } = useAuth();
   const { canPerformWrites } = useNetwork();
   const feedback = useCasinoFeedback();
@@ -154,6 +182,13 @@ export function BlackjackScreen() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [tableLabel, setTableLabel] = useState('');
+  const [horizontalInteraction, setHorizontalInteraction] = useState(false);
+  const [keyboardInteraction, setKeyboardInteraction] = useState(false);
+  const chromeScroll = useChromeScroll({ active: routeActive, minimumHideOffset: topInset });
+
+  useEffect(() => {
+    onSwipeBlockedChange?.(acting || horizontalInteraction || keyboardInteraction);
+  }, [acting, horizontalInteraction, keyboardInteraction, onSwipeBlockedChange]);
 
   const load = useCallback(async () => {
     const sequence = ++loadSequenceRef.current;
@@ -186,6 +221,16 @@ export function BlackjackScreen() {
     mountedRef.current = true;
     void AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
     const motionSubscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    return () => {
+      mountedRef.current = false;
+      loadSequenceRef.current += 1;
+      revealSequenceRef.current += 1;
+      motionSubscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!routeActive) return;
     const appStateSubscription = AppState.addEventListener('change', (state) => {
       appActiveRef.current = state === 'active';
       routeActiveRef.current = routeActive && appActiveRef.current;
@@ -194,10 +239,9 @@ export function BlackjackScreen() {
       if (routeActiveRef.current) void load();
     });
     return () => {
-      mountedRef.current = false;
+      routeActiveRef.current = false;
       loadSequenceRef.current += 1;
       revealSequenceRef.current += 1;
-      motionSubscription.remove();
       appStateSubscription.remove();
     };
   }, [load, routeActive]);
@@ -274,7 +318,14 @@ export function BlackjackScreen() {
   return (
     <ImageBackground source={require('../../../../assets/images/casino/blackjack-mobile-background.webp')} resizeMode="cover" style={{ flex: 1, backgroundColor: '#050807' }}>
       <View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(4,5,9,0.48)' }} />
-      <ScrollView style={{ flex: 1 }} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 110 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: topInset + 18, paddingBottom: 110 }}
+        onScroll={chromeScroll.onScroll}
+        onScrollBeginDrag={chromeScroll.onScrollBeginDrag}
+        scrollEventThrottle={chromeScroll.scrollEventThrottle}
+      >
         <View style={{ alignItems: 'center', minHeight: 38, justifyContent: 'center', paddingHorizontal: 42 }}>
           <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 11, fontWeight: '600' }}>{tableLabel || 'Wczytywanie stołu…'}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={feedback.muted ? 'Włącz dźwięki' : 'Wycisz dźwięki'} onPress={feedback.toggleMuted} style={{ position: 'absolute', right: 0, width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(0,0,0,0.35)' }}>
@@ -288,7 +339,7 @@ export function BlackjackScreen() {
               <Text allowFontScaling={false} style={{ color: 'rgba(255,255,255,0.82)', backgroundColor: 'rgba(0,0,0,0.54)', borderColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6, fontSize: 14, fontWeight: '600' }}>
                 Krupier: {calculateHandValue(game.dealerHand)}{game.dealerHiddenCount > 0 && (game.status === 'playing' || game.status === 'insurance') ? ' + ?' : ''}
               </Text>
-              <Hand cards={game.dealerHand} hiddenCount={game.dealerHiddenCount ?? 0} />
+              <Hand cards={game.dealerHand} hiddenCount={game.dealerHiddenCount ?? 0} onHorizontalInteractionChange={setHorizontalInteraction} />
             </View>
 
             {game.status === 'insurance' ? (
@@ -331,10 +382,17 @@ export function BlackjackScreen() {
             ) : null}
 
             <View style={{ minHeight: 198, justifyContent: 'center' }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, gap: 12, paddingHorizontal: 4 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1, gap: 12, paddingHorizontal: 4 }}
+                onTouchStart={() => setHorizontalInteraction(true)}
+                onTouchEnd={() => setHorizontalInteraction(false)}
+                onTouchCancel={() => setHorizontalInteraction(false)}
+              >
                 {game.playerHands.map((hand, index) => (
                   <View key={hand.id} style={{ minWidth: game.playerHands.length > 1 ? 260 : 354, alignItems: 'center', justifyContent: 'center', opacity: game.playerHands.length > 1 && game.status === 'playing' && index !== game.activeHandIndex ? 0.5 : 1 }}>
-                    <Hand cards={hand.cards} />
+                    <Hand cards={hand.cards} onHorizontalInteractionChange={setHorizontalInteraction} />
                     <Text allowFontScaling={false} style={{ color: colors.text, backgroundColor: 'rgba(0,0,0,0.56)', borderColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, fontSize: 16, fontWeight: '700' }}>Ty: {calculateHandValue(hand.cards)}</Text>
                     <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 13, marginTop: 8 }}>Stawka: {hand.stake.toFixed(2)} zł</Text>
                   </View>
@@ -358,7 +416,7 @@ export function BlackjackScreen() {
                 ))}
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput accessibilityLabel="Stawka" keyboardType="decimal-pad" value={stake} onChangeText={setStake} style={{ flex: 1, minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(0,0,0,0.4)', color: colors.text, textAlign: 'center', fontSize: 18 }} />
+                <TextInput accessibilityLabel="Stawka" keyboardType="decimal-pad" value={stake} onChangeText={setStake} onFocus={() => setKeyboardInteraction(true)} onBlur={() => setKeyboardInteraction(false)} style={{ flex: 1, minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(0,0,0,0.4)', color: colors.text, textAlign: 'center', fontSize: 18 }} />
                 <Pressable accessibilityRole="button" accessibilityLabel="Graj" disabled={acting || !canPerformWrites} onPress={start} style={({ pressed }) => ({ flex: 1, minHeight: 48, borderRadius: 12, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center', opacity: acting || !canPerformWrites ? 0.45 : pressed ? 0.82 : 1 })}><Text allowFontScaling={false} style={{ color: '#15100a', fontSize: 16, fontWeight: '800' }}>Graj</Text></Pressable>
               </View>
               <Text allowFontScaling={false} style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>Saldo: {balance.toFixed(2)} zł</Text>

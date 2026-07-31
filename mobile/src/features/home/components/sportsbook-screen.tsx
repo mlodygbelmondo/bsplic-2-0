@@ -1,6 +1,6 @@
 import 'expo-sqlite/localStorage/install';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import {
   ActivityIndicator,
@@ -11,7 +11,16 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/components/feedback/use-reduced-motion';
+import { useChromeScroll, useNavigationChrome } from '@/components/navigation/navigation-chrome';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useCoupon } from '@/providers/coupon-provider';
 import { useBets, type SortMode } from '@/features/home/hooks/useBets';
@@ -30,6 +39,8 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: 'popular', label: 'Popularne' },
   { value: 'ending_soon', label: 'Kończące się' },
 ];
+const FILTER_TOOLBAR_HEIGHT = 60;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function readValue(key: string) {
   try {
@@ -49,11 +60,32 @@ function BetOptionButton({
   optionCount: number;
 }) {
   const { tokens } = useAppTheme();
+  const reducedMotion = useReducedMotion();
   const { items, addItem, removeItem } = useCoupon();
   const selected = items.some(
     (item) =>
       item.bet.id === bet.id && item.selectedOption === option.name,
   );
+  const previousSelected = useRef(selected);
+  const selectionScale = useSharedValue(1);
+  const selectionStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: selectionScale.value }],
+  }));
+
+  useEffect(() => {
+    if (!previousSelected.current && selected && !reducedMotion) {
+      selectionScale.value = withTiming(0.94, { duration: 1 }, () => {
+        selectionScale.value = withSpring(1, {
+          damping: 12,
+          stiffness: 340,
+          mass: 0.45,
+        });
+      });
+    } else {
+      selectionScale.value = 1;
+    }
+    previousSelected.current = selected;
+  }, [reducedMotion, selected, selectionScale]);
 
   const handlePress = () => {
     if (selected) {
@@ -78,10 +110,10 @@ function BetOptionButton({
       style={{
         width: optionCount === 1 ? '100%' : optionCount === 3 ? '31.6%' : '48.7%',
       }}>
-      <View style={{ minHeight: 50, justifyContent: 'center', alignItems: 'center', gap: 2, borderRadius: 11, borderCurve: 'continuous', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: selected ? tokens.colors.foreground : '#FFE14A' }}>
+      <Animated.View style={[{ minHeight: 50, justifyContent: 'center', alignItems: 'center', gap: 2, borderRadius: 11, borderCurve: 'continuous', paddingHorizontal: 10, paddingVertical: 8, backgroundColor: selected ? tokens.colors.foreground : '#FFE14A' }, selectionStyle]}>
         <Text numberOfLines={1} style={{ color: selected ? '#FFE14A' : '#27220F', fontSize: 12, fontWeight: '700' }}>{option.name}</Text>
         <Text selectable style={{ color: selected ? '#FFE14A' : '#171405', fontSize: 16, fontWeight: '900', fontStyle: 'italic', fontVariant: ['tabular-nums'] }}>{option.odds.toFixed(2)}</Text>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -205,9 +237,21 @@ function FilterOption({
   );
 }
 
-export function SportsbookScreen() {
-  const routeActive = useRouteActive();
+export interface SportsbookScreenProps {
+  active?: boolean;
+  topInset?: number;
+  onSwipeBlockedChange?: (blocked: boolean) => void;
+}
+
+export function SportsbookScreen({
+  active,
+  topInset = 0,
+  onSwipeBlockedChange,
+}: SportsbookScreenProps = {}) {
+  const focused = useRouteActive();
+  const routeActive = active ?? focused;
   const { tokens } = useAppTheme();
+  const { progress: chromeProgress } = useNavigationChrome();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() =>
     readValue(CATEGORY_KEY),
   );
@@ -234,6 +278,26 @@ export function SportsbookScreen() {
   } = useBets(selectedCategory, sort, includeInProgress, routeActive);
 
   const bets = useMemo(() => [...liveBets, ...sortedBets], [liveBets, sortedBets]);
+  const chromeScroll = useChromeScroll({
+    active: routeActive,
+    minimumHideOffset: topInset + FILTER_TOOLBAR_HEIGHT,
+    onBeginDrag: () => setFilterPanel(null),
+  });
+  const toolbarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -(topInset + FILTER_TOOLBAR_HEIGHT) * chromeProgress.value }],
+  }), [topInset]);
+  const couponStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(chromeProgress.value, [0, 1], [0, 74]) }],
+  }));
+
+  useEffect(() => {
+    onSwipeBlockedChange?.(filterPanel !== null || proposalOpen);
+  }, [filterPanel, onSwipeBlockedChange, proposalOpen]);
+  useEffect(() => {
+    if (routeActive) return;
+    setFilterPanel(null);
+    setProposalOpen(false);
+  }, [routeActive]);
 
   const selectCategory = (categoryId: string | null) => {
     setSelectedCategory(categoryId);
@@ -268,51 +332,70 @@ export function SportsbookScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.colors.background }}>
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: topInset,
+            left: 0,
+            right: 0,
+            height: FILTER_TOOLBAR_HEIGHT,
+            zIndex: 40,
+            backgroundColor: tokens.colors.background,
+          },
+          toolbarStyle,
+        ]}
+      >
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: filterPanel === 'sort' }}
+              onPress={() => setFilterPanel(current => current === 'sort' ? null : 'sort')}
+              style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text numberOfLines={1} style={{ color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{includeInProgress ? '' : '●  '}{SORT_OPTIONS.find(option => option.value === sort)?.label}</Text>
+              <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
+            </Pressable>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: filterPanel === 'category' }}
+              onPress={() => setFilterPanel(current => current === 'category' ? null : 'category')}
+              style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text numberOfLines={1} style={{ flex: 1, color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{selectedCategory && categoryMap[selectedCategory] ? `${categoryMap[selectedCategory].emoji} ${categoryMap[selectedCategory].name}` : '🌐 Wszystkie'}</Text>
+              <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {filterPanel === 'sort' ? <View style={{ position: 'absolute', top: 60, left: 12, width: '47%', zIndex: 40, gap: 6 }}>
+          {SORT_OPTIONS.map(option => <FilterOption key={option.value} label={option.label} selected={sort === option.value} onPress={() => { selectSort(option.value); setFilterPanel(null); }} />)}
+          <FilterOption label="●  Aktywne" selected={!includeInProgress} onPress={toggleInProgress} />
+          <Pressable onPress={() => { setFilterPanel(null); setProposalOpen(true); }} style={{ height: 42, borderRadius: 999, justifyContent: 'center', backgroundColor: tokens.colors.primary, paddingHorizontal: 14 }}><Text style={{ color: tokens.colors.primaryForeground, fontSize: 13, fontWeight: '800' }}>💡 Zaproponuj zakład</Text></Pressable>
+        </View> : null}
+
+        {filterPanel === 'category' ? <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ position: 'absolute', top: 60, right: 12, width: '47%', maxHeight: 440, zIndex: 40 }} contentContainerStyle={{ gap: 6 }}>
+          <FilterOption label="🌐 Wszystkie" selected={!selectedCategory} onPress={() => { selectCategory(null); setFilterPanel(null); }} />
+          {categories.map(category => <FilterOption key={category.id} label={`${category.emoji} ${category.name}`} selected={selectedCategory === category.id} onPress={() => { selectCategory(category.id); setFilterPanel(null); }} />)}
+        </ScrollView> : null}
+      </Animated.View>
+
       <FlatList
         data={bets}
         keyExtractor={(bet) => bet.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
         renderItem={({ item }) => (
           <BetCard bet={item} category={item.category ?? categoryMap[item.category_id ?? '']} />
         )}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingBottom: items.length ? 160 : 112 }}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ paddingTop: topInset + FILTER_TOOLBAR_HEIGHT + 10, paddingBottom: items.length ? 160 : 112 }}
         ListHeaderComponent={
-          <View style={{ gap: 10, paddingBottom: filterPanel === 'sort' ? 62 : 10, zIndex: 20 }}>
-            <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: filterPanel === 'sort' }}
-                  onPress={() => setFilterPanel(current => current === 'sort' ? null : 'sort')}
-                  style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text numberOfLines={1} style={{ color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{includeInProgress ? '' : '●  '}{SORT_OPTIONS.find(option => option.value === sort)?.label}</Text>
-                  <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
-                </Pressable>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: filterPanel === 'category' }}
-                  onPress={() => setFilterPanel(current => current === 'category' ? null : 'category')}
-                  style={{ height: 44, borderRadius: 999, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text numberOfLines={1} style={{ flex: 1, color: tokens.colors.foreground, fontSize: 14, fontWeight: '700' }}>{selectedCategory && categoryMap[selectedCategory] ? `${categoryMap[selectedCategory].emoji} ${categoryMap[selectedCategory].name}` : '🌐 Wszystkie'}</Text>
-                  <Text style={{ color: tokens.colors.mutedForeground, fontSize: 13 }}>⌄</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {filterPanel === 'sort' ? <View style={{ position: 'absolute', top: 60, left: 12, width: '47%', zIndex: 40, gap: 6 }}>
-              {SORT_OPTIONS.map(option => <FilterOption key={option.value} label={option.label} selected={sort === option.value} onPress={() => { selectSort(option.value); setFilterPanel(null); }} />)}
-              <FilterOption label="●  Aktywne" selected={!includeInProgress} onPress={toggleInProgress} />
-              <Pressable onPress={() => { setFilterPanel(null); setProposalOpen(true); }} style={{ height: 42, borderRadius: 999, justifyContent: 'center', backgroundColor: tokens.colors.primary, paddingHorizontal: 14 }}><Text style={{ color: tokens.colors.primaryForeground, fontSize: 13, fontWeight: '800' }}>💡 Zaproponuj zakład</Text></Pressable>
-            </View> : null}
-
-            {filterPanel === 'category' ? <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ position: 'absolute', top: 60, right: 12, width: '47%', maxHeight: 440, zIndex: 40 }} contentContainerStyle={{ gap: 6 }}>
-              <FilterOption label="🌐 Wszystkie" selected={!selectedCategory} onPress={() => { selectCategory(null); setFilterPanel(null); }} />
-              {categories.map(category => <FilterOption key={category.id} label={`${category.emoji} ${category.name}`} selected={selectedCategory === category.id} onPress={() => { selectCategory(category.id); setFilterPanel(null); }} />)}
-            </ScrollView> : null}
-
+          <View style={{ gap: 10, paddingBottom: 10, zIndex: 20 }}>
             <DailyJackpotCard enabled={routeActive} />
 
             {error && <View style={{ marginHorizontal: 12, borderRadius: 12, backgroundColor: tokens.colors.secondary, padding: 10 }}><Text style={{ color: tokens.colors.foreground, fontSize: 12, textAlign: 'center' }}>Pokazujemy ostatnio zapisane dane. {error}</Text></View>}
@@ -347,14 +430,17 @@ export function SportsbookScreen() {
             onRefresh={refresh}
           />
         }
+        onScroll={chromeScroll.onScroll}
+        onScrollBeginDrag={chromeScroll.onScrollBeginDrag}
+        scrollEventThrottle={chromeScroll.scrollEventThrottle}
       />
 
       {items.length > 0 ? (
-        <Pressable
+        <AnimatedPressable
           accessibilityRole="button"
           accessibilityLabel={`Otwórz kupon, ${items.length} pozycji`}
           onPress={() => router.push('/coupon')}
-          style={{
+          style={[{
             position: 'absolute',
             left: 14,
             right: 14,
@@ -368,7 +454,7 @@ export function SportsbookScreen() {
             backgroundColor: tokens.colors.primary,
             paddingHorizontal: 18,
             boxShadow: '0 12px 30px rgba(255,10,84,0.34)',
-          }}>
+          }, couponStyle]}>
           <Text style={{ color: tokens.colors.primaryForeground, fontSize: 15, fontWeight: '900' }}>
             Kupon · {items.length}
           </Text>
@@ -377,7 +463,7 @@ export function SportsbookScreen() {
             style={{ color: tokens.colors.primaryForeground, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
             Kurs {totalOdds.toFixed(2)}
           </Text>
-        </Pressable>
+        </AnimatedPressable>
       ) : null}
       <ProposeBetModal
         visible={proposalOpen}

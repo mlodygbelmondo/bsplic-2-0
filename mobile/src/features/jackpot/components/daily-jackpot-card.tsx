@@ -3,7 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { Alert, AppState, Pressable, Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/components/feedback/use-reduced-motion';
 import { buyDailyJackpotTicket, getDailyJackpotState } from '@/features/jackpot/api/jackpot';
 import { formatJackpotAmount, getDrawTimeLabel } from '@/features/jackpot/lib/jackpotFormat';
 import { useAuth } from '@/providers/auth-provider';
@@ -13,9 +23,14 @@ import type { DailyJackpotSnapshot } from '@/features/jackpot/types';
 export function DailyJackpotCard({ enabled = true }: { enabled?: boolean }) {
   const { profile, refreshProfile } = useAuth();
   const { canPerformWrites } = useNetwork();
+  const reducedMotion = useReducedMotion();
   const [snapshot, setSnapshot] = useState<DailyJackpotSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const prizeFloat = useSharedValue(0);
+  const prizeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: prizeFloat.value }],
+  }));
   const load = useCallback(() => void getDailyJackpotState().then(setSnapshot).catch(() => setSnapshot(null)), []);
 
   useEffect(() => {
@@ -28,10 +43,26 @@ export function DailyJackpotCard({ enabled = true }: { enabled?: boolean }) {
 
   useEffect(() => {
     setElapsedSeconds(0);
-    if (snapshot?.status !== 'collecting') return;
+    if (!enabled || snapshot?.status !== 'collecting') return;
     const timer = setInterval(() => setElapsedSeconds(value => value + 1), 1_000);
     return () => clearInterval(timer);
-  }, [snapshot?.drawScheduledAt, snapshot?.serverNow, snapshot?.status]);
+  }, [enabled, snapshot?.drawScheduledAt, snapshot?.serverNow, snapshot?.status]);
+
+  useEffect(() => {
+    cancelAnimation(prizeFloat);
+    if (!enabled || reducedMotion) {
+      prizeFloat.value = 0;
+      return;
+    }
+    prizeFloat.value = withRepeat(
+      withSequence(
+        withTiming(-4, { duration: 2_800, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 2_800, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+    );
+    return () => cancelAnimation(prizeFloat);
+  }, [enabled, prizeFloat, reducedMotion]);
 
   const countdown = useMemo(() => {
     if (!snapshot?.drawScheduledAt || !snapshot.serverNow) return '00:00:00';
@@ -80,7 +111,9 @@ export function DailyJackpotCard({ enabled = true }: { enabled?: boolean }) {
     style={{ marginHorizontal: 12, minHeight: rolledOver ? 218 : 194, overflow: 'hidden', borderRadius: 14, borderWidth: 1, borderColor: '#D6692F', backgroundColor: '#5A1C16', padding: 14, justifyContent: 'space-between' }}
   >
     <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(37,0,8,0.42)' }} />
-    <Image pointerEvents="none" source={require('../../../../assets/images/jackpot/daily-jackpot-prizes.png')} contentFit="contain" style={{ position: 'absolute', width: 210, height: 148, right: -28, top: -9, opacity: 0.48 }} />
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: 210, height: 148, right: -28, top: -9 }, prizeStyle]}>
+      <Image source={require('../../../../assets/images/jackpot/daily-jackpot-prizes.png')} contentFit="contain" style={{ width: 210, height: 148, opacity: 0.48 }} />
+    </Animated.View>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <View style={{ gap: 1 }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><Text style={{ color: '#FAD0C0', fontSize: 9, fontWeight: '800' }}>PULA</Text><Pressable accessibilityRole="button" accessibilityLabel="Skąd bierze się Jackpot?" onPress={() => Alert.alert('Skąd bierze się Jackpot?', 'Pula Jackpotu bierze się z 20% stawek przegranych kuponów z poprzedniego dnia oraz z kupionych ticketów w aktualnym losowaniu. Im większy ruch w grze, tym większa pula do zgarnięcia.')} hitSlop={8}><Text style={{ color: '#FAD0C0', fontSize: 10 }}>ⓘ</Text></Pressable></View><Text style={{ color: '#FFFFFF', fontSize: 31, lineHeight: 36, fontWeight: '900' }}>{formatHeroAmount(snapshot.prizeAmount)}</Text></View>
       <View style={{ borderRadius: 999, backgroundColor: '#160B0BCC', paddingHorizontal: 10, paddingVertical: 6 }}><Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>◷ {statusLabel}</Text></View>

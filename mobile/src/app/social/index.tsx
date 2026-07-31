@@ -1,2 +1,1 @@
-import { SocialScreen } from '@/features/social';
-export default function SocialRoute() { return <SocialScreen />; }
+export default function SocialRoute() { return null; }
