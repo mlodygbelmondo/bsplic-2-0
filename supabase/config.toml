@@ -1,1 +1,4 @@
 project_id = "imucpqgglvarpoezhbdb"
+
+[functions.bsplic-agent-mcp]
+verify_jwt = false

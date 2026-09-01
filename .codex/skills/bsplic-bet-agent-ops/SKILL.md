@@ -9,6 +9,10 @@ The agent runs unattended once a day. It settles everything that finished, then
 publishes new markets straight to the live board. Nobody approves its output, so
 every rule below is load-bearing.
 
+The production ChatGPT task uses
+[the Scheduled Task prompt](assets/scheduled-task-prompt.md). Keep it aligned
+with the policies in this skill when behavior changes.
+
 ## Guardrails
 
 - Work from `/home/piotr/bsplic-2-0`.
@@ -24,8 +28,14 @@ every rule below is load-bearing.
   an odds-comparison service that names the bookmaker and the update time.**
   Never derive, estimate, round into existence, or relabel a price based on
   rankings, form, prediction percentages, implied probabilities or judgement.
+- One fresh, internally complete source snapshot is enough. Prices naturally
+  differ between bookmakers, regions, pages, and observation times. Pick one
+  source and use its displayed prices; do not require agreement with another
+  page and never skip an important event solely because another source differs.
 - If a current price cannot be verified for *every* outcome of a market, do not
-  publish that market. Report it as skipped with the missing source or outcome.
+  publish that market from that source. Try another bookmaker, a comparison
+  service that identifies the bookmaker and update time, or a simpler market
+  before skipping the event.
 - Record bookmaker, source URL, observed-at time in UTC and the exact displayed
   price in `agent_metadata.odds_source`. Never apply an unrequested margin.
 - Never guess a settlement. Hold it (see **Settlement**).
@@ -139,6 +149,26 @@ agent_set_bet_ako_exclusions(p_token, p_bet_id, [{ "betId": "...", "reason": "..
 Focus sports: football, CS2, LoL, tennis, NBA/basketball, darts, F1. Add others
 when `historicalBets` shows users engaged with them before.
 
+Aim to publish roughly 10 to 15 new useful markets per daily run. Fewer are
+acceptable only after checking the priority slate across multiple sources and
+recording why the remaining important events could not be priced. Publish more
+when the day has an unusually strong slate. The target is a discovery floor,
+not permission to create obscure filler.
+
+Run a must-cover sweep before general discovery:
+
+- every upcoming Real Madrid and FC Barcelona fixture;
+- Polish athletes and Polish teams in bookmaker-listed events, especially
+  Polish tennis players and major international competitions;
+- headline fixtures involving the biggest European football clubs;
+- marquee NBA games, playoffs, finals, and games involving top teams or stars;
+- top-tier CS2 and LoL, Grand Slam tennis, Formula 1 weekends, and major darts.
+
+For each must-cover event, try the primary match-winner market first. If that
+exact market cannot be sourced, try another simple, clearly defined market from
+a fresh source. Price disagreement between sources is normal and is not a skip
+reason; missing or invented prices are.
+
 Tiers, not fixed caps:
 
 - **Tier A** — World Cup, EURO, CS2/LoL Majors and international finals, tennis
@@ -202,7 +232,7 @@ survives three runs belongs in the report as something needing a human.
 | `agent_get_bet_context(p_token, p_recent_bet_limit, p_history_limit)` | `read:bets` |
 | `agent_create_bets(p_token, p_bets)` | `create:bets` |
 | `agent_set_bet_ako_exclusions(p_token, p_bet_id, p_exclusions)` | `manage:ako` |
-| `agent_get_pending_settlement_context(p_token, p_limit)` | `read:settlement` |
+| `agent_get_pending_settlement_context(p_token, p_limit, p_offset)` | `read:settlement` |
 | `agent_settle_bet(p_token, p_bet_id, p_winning_options, p_mode, p_scope, p_evidence)` | `settle:bets` |
 | `agent_flag_settlement_hold(p_token, p_bet_id, p_reason, p_run_id)` | `settle:bets` |
 | `agent_start_run` / `agent_finish_run` / `agent_get_recent_runs` | `manage:runs` |

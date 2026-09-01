@@ -43,6 +43,7 @@ const ManageBetsTab = lazy(() => import('./ManageBetsTab'));
 const ProposalsTab = lazy(() => import('./ProposalsTab'));
 const CategoriesTab = lazy(() => import('./CategoriesTab'));
 const EniuBotTab = lazy(() => import('./EniuBotTab'));
+const AgentRunsTab = lazy(() => import('./AgentRunsTab'));
 const BonusCampaignsTab = lazy(() => import('./BonusCampaignsTab'));
 const FeaturePollsTab = lazy(() => import('./FeaturePollsTab'));
 
@@ -80,6 +81,7 @@ const TABS: TabConfig[] = [
   },
   { key: 'categories', label: 'Kategorie', shortLabel: 'Kat.', icon: Tag },
   { key: 'eniu', label: 'Eniu', shortLabel: 'Eniu', icon: Bot },
+  { key: 'agent', label: 'Agent betów', shortLabel: 'Agent', icon: Bot },
   { key: 'bonuses', label: 'Bonusy', shortLabel: 'Bonus', icon: BadgePlus },
   {
     key: 'feature-polls',
@@ -101,6 +103,7 @@ const MOBILE_MORE_TAB_KEYS: AdminTab[] = [
   'dashboard',
   'categories',
   'eniu',
+  'agent',
   'feature-polls',
 ];
 
@@ -261,6 +264,7 @@ export default function AdminLayout() {
                 {activeTab === 'proposals' && <ProposalsTab />}
                 {activeTab === 'categories' && <CategoriesTab />}
                 {activeTab === 'eniu' && <EniuBotTab />}
+                {activeTab === 'agent' && <AgentRunsTab />}
                 {activeTab === 'bonuses' && <BonusCampaignsTab />}
                 {activeTab === 'feature-polls' && <FeaturePollsTab />}
                 {activeTab === 'more' && (

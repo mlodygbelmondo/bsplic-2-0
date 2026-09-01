@@ -5,6 +5,7 @@ export type AdminTab =
   | 'proposals'
   | 'categories'
   | 'eniu'
+  | 'agent'
   | 'bonuses'
   | 'feature-polls'
   | 'more';
