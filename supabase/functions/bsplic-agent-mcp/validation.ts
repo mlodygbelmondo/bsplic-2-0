@@ -10,6 +10,14 @@ export interface AgentOddsSource {
   prices: Record<string, number>;
 }
 
+export interface AgentScheduleSource {
+  provider: string;
+  url: string;
+  observed_at: string;
+  displayed_start: string;
+  timezone: string;
+}
+
 export interface AgentBetInput {
   title: string;
   category_id?: string | null;
@@ -28,6 +36,8 @@ export interface AgentBetInput {
     reason: string;
   }>;
   agent_metadata: {
+    event_starts_at: string;
+    schedule_source: AgentScheduleSource;
     odds_source: AgentOddsSource;
     [key: string]: unknown;
   };
@@ -49,6 +59,7 @@ export interface AgentSettlementInput {
 }
 
 const MAX_ODDS_AGE_MS = 6 * 60 * 60 * 1000;
+const MAX_SCHEDULE_AGE_MS = 24 * 60 * 60 * 1000;
 const MIN_BETTING_WINDOW_MS = 2 * 60 * 60 * 1000;
 
 function isHttpsUrl(value: string): boolean {
@@ -78,10 +89,15 @@ export function validateBets(
   bets.forEach((bet, index) => {
     const prefix = `bets[${index}]`;
     const endsAt = new Date(bet.ends_at).getTime();
+    const eventStartsAt = new Date(
+      bet.agent_metadata?.event_starts_at,
+    ).getTime();
     const observedAt = new Date(
       bet.agent_metadata?.odds_source?.observed_at,
     ).getTime();
     const source = bet.agent_metadata?.odds_source;
+    const scheduleSource = bet.agent_metadata?.schedule_source;
+    const scheduleObservedAt = new Date(scheduleSource?.observed_at).getTime();
 
     if (!bet.title?.trim()) errors.push(`${prefix}.title is required`);
     if (!bet.event_key?.trim()) errors.push(`${prefix}.event_key is required`);
@@ -103,8 +119,55 @@ export function validateBets(
 
     if (!Number.isFinite(endsAt)) {
       errors.push(`${prefix}.ends_at must be an ISO date`);
-    } else if (endsAt - now.getTime() < MIN_BETTING_WINDOW_MS) {
-      errors.push(`${prefix}.ends_at must leave at least 2 hours to bet`);
+    }
+    if (!Number.isFinite(eventStartsAt)) {
+      errors.push(
+        `${prefix}.agent_metadata.event_starts_at must be an ISO date`,
+      );
+    } else {
+      if (eventStartsAt - now.getTime() < MIN_BETTING_WINDOW_MS) {
+        errors.push(
+          `${prefix}.event start must leave at least 2 hours to bet; never postpone ends_at`,
+        );
+      }
+      if (Number.isFinite(endsAt) && endsAt !== eventStartsAt) {
+        errors.push(
+          `${prefix}.ends_at must exactly equal agent_metadata.event_starts_at`,
+        );
+      }
+    }
+
+    if (!scheduleSource?.provider?.trim()) {
+      errors.push(
+        `${prefix}.agent_metadata.schedule_source.provider is required`,
+      );
+    }
+    if (!scheduleSource?.url || !isHttpsUrl(scheduleSource.url)) {
+      errors.push(
+        `${prefix}.agent_metadata.schedule_source.url must use HTTPS`,
+      );
+    }
+    if (!scheduleSource?.displayed_start?.trim()) {
+      errors.push(
+        `${prefix}.agent_metadata.schedule_source.displayed_start is required`,
+      );
+    }
+    if (!scheduleSource?.timezone?.trim()) {
+      errors.push(
+        `${prefix}.agent_metadata.schedule_source.timezone is required`,
+      );
+    }
+    if (!Number.isFinite(scheduleObservedAt)) {
+      errors.push(
+        `${prefix}.agent_metadata.schedule_source.observed_at must be an ISO date`,
+      );
+    } else if (
+      scheduleObservedAt > now.getTime() + 5 * 60 * 1000 ||
+      now.getTime() - scheduleObservedAt > MAX_SCHEDULE_AGE_MS
+    ) {
+      errors.push(
+        `${prefix}.schedule source must have been observed in the last 24 hours`,
+      );
     }
 
     if (!Array.isArray(bet.options) || bet.options.length === 0) {

@@ -42,7 +42,9 @@ const betSchema = z.object({
   options: z.array(optionSchema).min(1),
   ends_at: z
     .string()
-    .describe('ISO timestamp at least two hours in the future'),
+    .describe(
+      'ISO timestamp equal to agent_metadata.event_starts_at; never move it to preserve a betting window',
+    ),
   is_live: z.boolean().optional(),
   is_bsplicboost: z.boolean().optional(),
   event_key: z
@@ -57,6 +59,27 @@ const betSchema = z.object({
   ako_exclusions: z.array(exclusionSchema).optional(),
   agent_metadata: z
     .object({
+      event_starts_at: z
+        .string()
+        .describe('Verified real event start as an ISO timestamp'),
+      schedule_source: z.object({
+        provider: z.string().min(1),
+        url: z
+          .string()
+          .url()
+          .describe('HTTPS event or schedule page showing the start time'),
+        observed_at: z
+          .string()
+          .describe('ISO timestamp from the last 24 hours'),
+        displayed_start: z
+          .string()
+          .min(1)
+          .describe('Start date and time exactly as displayed by the source'),
+        timezone: z
+          .string()
+          .min(1)
+          .describe('Timezone used to interpret displayed_start'),
+      }),
       odds_source: z.object({
         bookmaker: z.string().min(1),
         url: z
@@ -319,7 +342,7 @@ function createServer(): McpServer {
     {
       title: 'Create sourced BSPLIC markets',
       description:
-        'Create up to 25 deduplicated markets. Prices must exactly match a named bookmaker source observed in the last six hours. The close time must leave two hours to bet. Include AKO exclusions for markets from the same event or otherwise correlated.',
+        'Create up to 25 deduplicated markets. ends_at must equal the verified real event start from schedule_source. Never postpone ends_at to preserve a betting window: skip events starting in under two hours. Prices must exactly match a named bookmaker source observed in the last six hours. Include AKO exclusions for markets from the same event or otherwise correlated.',
       inputSchema: z.object({ bets: z.array(betSchema).min(1).max(25) }),
       annotations: {
         readOnlyHint: false,

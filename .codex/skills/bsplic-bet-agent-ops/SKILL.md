@@ -120,6 +120,14 @@ Link markets in the same request with `ako_ref`:
       { "ref": "pol-bra-ou25", "reason": "ten sam mecz — skorelowane rynki" }
     ],
     "agent_metadata": {
+      "event_starts_at": "2026-07-28T18:00:00Z",
+      "schedule_source": {
+        "provider": "FIFA",
+        "url": "https://example.com/official-event-schedule",
+        "observed_at": "2026-07-26T09:10:00Z",
+        "displayed_start": "28 July 2026, 20:00",
+        "timezone": "Europe/Warsaw"
+      },
       "odds_source": {
         "bookmaker": "ExampleBookmaker",
         "url": "https://example.com/event",
@@ -185,8 +193,13 @@ Use `historicalBets` and `recentAcceptedProposals` from the context RPC to learn
 what this audience actually bets on, and let that shift the mix over time. Do
 not publish a market nobody will touch just to hit a number.
 
-Never publish a market whose `ends_at` has already passed, and set `ends_at` to
-the real event start.
+Verify every event start on a current official competition, organizer, team, or
+event-specific bookmaker page. Set `ends_at` exactly to that real start and
+store the same instant in `agent_metadata.event_starts_at`. Record provider,
+HTTPS URL, observation time, the displayed start and its timezone in
+`agent_metadata.schedule_source`. Never move the date or time forward to create
+or preserve a betting window. If the verified start is under two hours away or
+has passed, skip the market.
 
 ## Settlement
 

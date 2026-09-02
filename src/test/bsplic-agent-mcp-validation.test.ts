@@ -20,6 +20,14 @@ function validBet(): AgentBetInput {
     agent_duplicate_key: 'football:pol-ger:12:2026-09-02',
     ako_ref: 'pol-ger-12',
     agent_metadata: {
+      event_starts_at: '2026-09-02T18:00:00Z',
+      schedule_source: {
+        provider: 'Example League',
+        url: 'https://example.com/schedule/pol-ger',
+        observed_at: '2026-08-31T23:20:00Z',
+        displayed_start: '2 September 2026, 20:00',
+        timezone: 'Europe/Warsaw',
+      },
       odds_source: {
         bookmaker: 'Example Bookmaker',
         url: 'https://example.com/pol-ger',
@@ -38,6 +46,7 @@ describe('validateBets', () => {
   it('rejects stale or rewritten prices and short betting windows', () => {
     const bet = validBet();
     bet.ends_at = '2026-09-01T01:00:00Z';
+    bet.agent_metadata.event_starts_at = '2026-09-01T01:00:00Z';
     bet.options[0].odds = 3;
     bet.agent_metadata.odds_source.observed_at = '2026-08-31T12:00:00Z';
 
@@ -46,6 +55,27 @@ describe('validateBets', () => {
         expect.stringContaining('at least 2 hours'),
         expect.stringContaining('last 6 hours'),
         expect.stringContaining('exactly match'),
+      ]),
+    );
+  });
+
+  it('rejects moving the close time one day past the verified event start', () => {
+    const bet = validBet();
+    bet.title = 'La Liga: Barcelona - Rayo Vallecano';
+    bet.ends_at = '2026-09-01T19:30:00Z';
+    bet.agent_metadata.event_starts_at = '2026-08-31T19:30:00Z';
+    bet.agent_metadata.schedule_source = {
+      provider: 'LaLiga',
+      url: 'https://www.laliga.com/match/barcelona-rayo',
+      observed_at: '2026-08-31T23:27:00Z',
+      displayed_start: 'LUN 31.08.2026 21:30 h',
+      timezone: 'Europe/Madrid',
+    };
+
+    expect(validateBets([bet], new Date('2026-08-31T23:28:00Z'))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('never postpone ends_at'),
+        expect.stringContaining('must exactly equal'),
       ]),
     );
   });

@@ -16,8 +16,10 @@ it does not consume OpenAI API credits.
 - Paste [the Scheduled Task prompt](../.codex/skills/bsplic-bet-agent-ops/assets/scheduled-task-prompt.md)
   into the task instructions.
 
-The Edge Function performs its own token, odds freshness, betting-window,
-duplicate-key, settlement-evidence, and same-event AKO checks. The task prompt
+The Edge Function and a database insert trigger enforce schedule provenance,
+exact event-start/close-time equality, and the betting window for agent-created
+markets. The Edge Function also checks its access token, odds freshness,
+duplicate keys, settlement evidence, and same-event AKO links. The task prompt
 controls discovery priorities and the normal target of 10 to 15 new markets.
 
 After changing the prompt file, update the active Scheduled Task manually. The

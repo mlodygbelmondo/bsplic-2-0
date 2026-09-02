@@ -68,13 +68,28 @@ describe('autonomous agent bet ops RPC contract', () => {
   }
 
   async function createBets(bets: BetInput[]) {
+    const scheduleObservedAt = new Date().toISOString();
+    const sourcedBets = bets.map((bet) => ({
+      ...bet,
+      agent_metadata: {
+        event_starts_at: bet.ends_at,
+        schedule_source: {
+          provider: 'Contract test schedule',
+          url: 'https://example.test/schedule',
+          observed_at: scheduleObservedAt,
+          displayed_start: bet.ends_at,
+          timezone: 'UTC',
+        },
+        ...(bet.agent_metadata ?? {}),
+      },
+    }));
     const result = await callAgentRpc<{
       created: Array<{ id: string; title: string; ako_ref: string | null }>;
       skipped: Array<{ title: string; reason: string }>;
       errors: Array<{ title?: string; reason: string }>;
       ako_created: Array<{ bet_id_a: string; bet_id_b: string }>;
       ako_unresolved: Array<Record<string, unknown>>;
-    }>('agent_create_bets', { p_bets: bets });
+    }>('agent_create_bets', { p_bets: sourcedBets });
 
     for (const row of result.created) {
       createdBetIds.add(row.id);
@@ -195,6 +210,31 @@ describe('autonomous agent bet ops RPC contract', () => {
     expect(second.created).toHaveLength(0);
     expect(second.skipped).toHaveLength(1);
     expect(second.skipped[0].reason).toContain('agent_duplicate_key');
+  }, 60_000);
+
+  it('rejects a close time moved past the verified event start', async () => {
+    const verifiedStart = hoursFromNow(6);
+    const result = await createBets([
+      {
+        title: `Shifted event start probe [${runTag}]`,
+        bet_type: '12',
+        options: [
+          { name: 'A', odds: 1.8 },
+          { name: 'B', odds: 2.0 },
+        ],
+        ends_at: hoursFromNow(30),
+        agent_duplicate_key: `shifted-start-${runTag}`,
+        agent_metadata: {
+          event_starts_at: verifiedStart,
+        },
+      },
+    ]);
+
+    expect(result.created).toEqual([]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].reason).toContain(
+      'ends_at must exactly equal event_starts_at',
+    );
   }, 60_000);
 
   it('persists provenance on directly created bets', async () => {
