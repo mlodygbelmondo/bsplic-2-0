@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      TZ: Europe/Warsaw
       VITE_SUPABASE_URL: https://replay-test.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: replay-test-public-key-not-a-secret
     steps:
@@ -31,9 +32,11 @@ jobs:
       - name: Unit tests
         run: npm run test
       - name: Baseline lint (record existing issues)
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: npm run lint
       - name: Production build and bundle report
+        if: ${{ !cancelled() }}
         run: npm run perf:build
       - uses: actions/upload-artifact@v4
         if: always()
