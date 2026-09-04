@@ -117,8 +117,12 @@ export function ReplayExperience({ model, username }: { model: ReplayModel; user
 
   const goTo = (index: number) => {
     setPlaying(false);
-    setChapter(Math.max(0, Math.min(CHAPTERS.length - 1, index)));
-    stageRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    const next = Math.max(0, Math.min(CHAPTERS.length - 1, index));
+    setChapter(next);
+    const experience = stageRef.current?.parentElement;
+    // Keep the controls visible and focus intact when the previous scene unmounts.
+    experience?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    experience?.querySelectorAll<HTMLButtonElement>('.replay-chapters button')[next]?.focus({ preventScroll: true });
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]'))) return;

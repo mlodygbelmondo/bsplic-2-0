@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 const NOW = Date.parse('2026-09-04T12:00:00Z');
@@ -59,6 +59,17 @@ async function setup(page: Page, options: { signedIn?: boolean; rows?: unknown; 
 }
 
 const chapter = (page: Page, index: number) => page.getByRole('button', { name: new RegExp(`^Rozdział ${index}:`) });
+async function capture(page: Page, info: TestInfo, name: string) {
+  await expect(page.locator('.replay-scene')).toHaveCSS('opacity', '1');
+  const poster = page.locator('.replay-poster-preview img');
+  if (await poster.count()) {
+    await expect.poll(() => poster.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth === 1080)).toBe(true);
+  }
+  const path = info.outputPath(name);
+  await page.screenshot({ path, fullPage: true, animations: 'disabled' });
+  await info.attach(name, { path, contentType: 'image/png' });
+}
+
 async function noOverflow(page: Page) {
   expect(await page.locator('main.replay-page').evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
 }
@@ -70,7 +81,11 @@ test('production app: five chapters, chart, map and real PNG export', async ({ p
   await expect(page.getByRole('heading', { name: /Twoja gra/ })).toBeVisible();
   expect(state.reads[0]).toEqual({ p_user_id: USER, p_limit: 201, p_offset: 0 });
   await noOverflow(page);
-  await page.screenshot({ path: info.outputPath('replay-opening.png'), fullPage: true });
+  await capture(page, info, 'replay-opening.png');
+  if (info.project.name === 'mobile-webkit') {
+    await page.locator('.replay-cover-ticket').scrollIntoViewIfNeeded();
+    await capture(page, info, 'replay-ticket-mobile.png');
+  }
   await chapter(page, 2).click();
   const slider = page.getByRole('slider');
   await slider.focus();
@@ -78,14 +93,14 @@ test('production app: five chapters, chart, map and real PNG export', async ({ p
   await slider.press('ArrowLeft');
   expect(Number(await slider.inputValue())).toBe(Number(old) - 1);
   await expect(chapter(page, 2)).toHaveAttribute('aria-current', 'step');
-  await page.screenshot({ path: info.outputPath('replay-balance.png'), fullPage: true });
+  await capture(page, info, 'replay-balance.png');
   await chapter(page, 3).click();
   await page.getByText(/Szczegóły kuponu/).click();
   await expect(page.locator('.replay-legs')).toBeVisible();
   await chapter(page, 4).click();
   await page.locator('.replay-map button').first().click();
   await expect(page.locator('.replay-map button').first()).toHaveAttribute('aria-pressed', 'true');
-  await page.screenshot({ path: info.outputPath('replay-map.png'), fullPage: true });
+  await capture(page, info, 'replay-map.png');
   await chapter(page, 5).click();
   await expect(page.getByRole('img', { name: /bez nicku/ })).toBeVisible();
   await expect(page.getByRole('checkbox')).not.toBeChecked();
@@ -99,10 +114,15 @@ test('production app: five chapters, chart, map and real PNG export', async ({ p
   expect(bytes.readUInt32BE(16)).toBe(1080);
   expect(bytes.readUInt32BE(20)).toBe(1920);
   await download.saveAs(info.outputPath('bsplic-replay.png'));
+  await info.attach('Exported PNG', { path: info.outputPath('bsplic-replay.png'), contentType: 'image/png' });
   await page.getByRole('checkbox').check();
   await expect(page.getByRole('img', { name: /gracza Astra Demo/ })).toBeVisible();
   await noOverflow(page);
-  await page.screenshot({ path: info.outputPath('replay-finale.png'), fullPage: true });
+  await capture(page, info, 'replay-finale.png');
+  if (info.project.name === 'mobile-webkit') {
+    await page.locator('.replay-poster-preview').scrollIntoViewIfNeeded();
+    await capture(page, info, 'replay-poster-mobile.png');
+  }
   expect(state.writes).toEqual([]);
   expect(state.errors).toEqual([]);
 });
@@ -176,4 +196,41 @@ test('320px view and long user content remain usable across all chapters', async
     await noOverflow(page);
   }
   expect(state.errors).toEqual([]);
+});
+
+
+test('a dense period explicitly discloses the cap and all 200 coupons stay inspectable', async ({ page }) => {
+  const rows = fixtures(201).map((row, index) => ({ ...row, created_at: new Date(NOW - (index + 1) * 60_000).toISOString() }));
+  const state = await setup(page, { rows });
+  await page.goto('/replay');
+  await expect(page.getByRole('status')).toContainText('zakres jest częściowy');
+  await chapter(page, 4).click();
+  await expect(page.locator('.replay-map button')).toHaveCount(40);
+  await page.getByRole('button', { name: 'Pokaż wszystkie (200)' }).click();
+  await expect(page.locator('.replay-map button')).toHaveCount(200);
+  const button = page.locator('.replay-map button').first();
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  const box = await button.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  expect(state.reads).toHaveLength(1);
+  await noOverflow(page);
+});
+
+test('losses and pending results stay truthful through a real refresh', async ({ page }) => {
+  const rows = fixtures(2).map((row) => ({ ...row, status: 'lost', stake: 100, payout: 0 }));
+  const state = await setup(page, { rows });
+  await page.goto('/replay');
+  await chapter(page, 2).click();
+  await expect(page.locator('.replay-big-money')).toContainText('-200,00');
+  await chapter(page, 3).click();
+  await expect(page.getByText(/nie ma jeszcze wygranej/)).toBeVisible();
+  state.rows = [{ ...fixtures(1)[0], status: 'pending', payout: 0 }];
+  await page.getByRole('button', { name: 'Odśwież Replay' }).click();
+  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
+  await chapter(page, 2).click();
+  await expect(page.getByText('Jeszcze w grze')).toBeVisible();
+  await expect(page.getByRole('slider')).toHaveCount(0);
+  expect(state.writes).toEqual([]);
 });

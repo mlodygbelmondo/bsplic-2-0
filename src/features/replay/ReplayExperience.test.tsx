@@ -39,6 +39,17 @@ describe('Replay experience', () => {
     expect(slider).toHaveValue('0');
     expect(slider.getAttribute('aria-valuetext')).toContain('bilans');
   });
+  it('keeps keyboard focus on a persistent chapter control when a scene unmounts', () => {
+    render(<ReplayExperience model={model} username="Astra Demo" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Rozdział 4: Mapa' }));
+    const map = screen.getByRole('group', { name: /Mapa kuponów/ });
+    const tile = within(map).getAllByRole('button')[0];
+    tile.focus();
+    fireEvent.keyDown(tile, { key: 'ArrowRight' });
+    expect(screen.getByRole('button', { name: 'Rozdział 5: Finał' })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.getByRole('button', { name: 'Rozdział 4: Mapa' })).toHaveFocus();
+  });
   it('never moves before opting in and pauses on interaction', () => {
     vi.useFakeTimers();
     render(<ReplayExperience model={model} username="Astra Demo" />);

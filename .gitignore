@@ -53,3 +53,7 @@ tmp/
 tmp/imagegen/
 deno.lock
 .superpowers/
+
+# Replay browser verification output
+playwright-replay-report/
+test-results/
