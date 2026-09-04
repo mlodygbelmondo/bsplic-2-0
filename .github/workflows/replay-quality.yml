@@ -31,13 +31,26 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - name: Unit tests
         run: npm run test
-      - name: Baseline lint (record existing issues)
+      - name: Lint
         if: ${{ !cancelled() }}
-        continue-on-error: true
         run: npm run lint
       - name: Production build and bundle report
         if: ${{ !cancelled() }}
         run: npm run perf:build
+      - name: Prepare isolated local verification inputs
+        if: ${{ !cancelled() }}
+        run: |
+          git archive HEAD | gzip > /tmp/replay-source.tar.gz
+          tar -czf /tmp/replay-dependencies.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: replay-local-verification
+          path: |
+            /tmp/replay-source.tar.gz
+            /tmp/replay-dependencies.tar.gz
+          retention-days: 1
+          compression-level: 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:

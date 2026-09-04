@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 
 const loadProfilePage = () => import("./pages/ProfilePage");
+const loadReplayPage = () => import("@/features/replay/ReplayPage");
 const loadRankingsPage = () => import("./pages/RankingsPage");
 const loadSocialPage = () => import("./pages/SocialPage");
 const loadSocialItemPage = () => import("./pages/SocialItemPage");
@@ -26,6 +27,7 @@ const loadJackpotDrawPage = () =>
   import("@/features/jackpot/pages/JackpotDrawPage");
 
 const ProfilePage = lazy(loadProfilePage);
+const ReplayPage = lazy(loadReplayPage);
 const RankingsPage = lazy(loadRankingsPage);
 const SocialPage = lazy(loadSocialPage);
 const SocialItemPage = lazy(loadSocialItemPage);
@@ -168,6 +170,14 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/profile/:userId" element={<ProfilePage />} />
+                <Route
+                  path="/replay"
+                  element={
+                    <AuthenticatedRoute>
+                      <ReplayPage />
+                    </AuthenticatedRoute>
+                  }
+                />
                 <Route path="/rankings" element={<RankingsPage />} />
                 <Route path="/social" element={<SocialPage />} />
                 <Route
