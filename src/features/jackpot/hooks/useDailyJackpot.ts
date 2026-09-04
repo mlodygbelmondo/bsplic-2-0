@@ -2,10 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  buyDailyJackpotTicket,
-  getDailyJackpotState,
-} from '../api/jackpot';
+import { buyDailyJackpotTicket, getDailyJackpotState } from '../api/jackpot';
 import type { DailyJackpotSnapshot } from '../types';
 
 const JACKPOT_POLL_MS = 45_000;
@@ -18,7 +15,9 @@ function getPurchasedTicketLabel(
   previousSnapshot: DailyJackpotSnapshot,
   nextSnapshot: DailyJackpotSnapshot,
 ) {
-  const previousTicketNumbers = new Set(previousSnapshot.currentUserTicketNumbers);
+  const previousTicketNumbers = new Set(
+    previousSnapshot.currentUserTicketNumbers,
+  );
   const newTicketNumber =
     nextSnapshot.currentUserTicketNumbers.find(
       (ticketNumber) => !previousTicketNumbers.has(ticketNumber),
@@ -33,6 +32,10 @@ export function useDailyJackpot() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
   const refreshedSettledPoolsRef = useRef<Set<string>>(new Set());
+  const loadingRef = useRef(false);
+  const buyingRef = useRef(false);
+  const lastLoadAtRef = useRef(Number.NEGATIVE_INFINITY);
+  const snapshotVersionRef = useRef(0);
 
   const refreshBalanceAfterStateMaintenance = useCallback(
     async (nextSnapshot: DailyJackpotSnapshot) => {
@@ -65,13 +68,19 @@ export function useDailyJackpot() {
 
   const load = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (loadingRef.current || buyingRef.current) return;
+      loadingRef.current = true;
+      lastLoadAtRef.current = Date.now();
+      const snapshotVersion = snapshotVersionRef.current;
       if (!silent) {
         setLoading(true);
       }
 
       try {
         const nextSnapshot = await getDailyJackpotState();
-        setSnapshot(nextSnapshot);
+        if (snapshotVersion === snapshotVersionRef.current) {
+          setSnapshot(nextSnapshot);
+        }
         await refreshBalanceAfterStateMaintenance(nextSnapshot);
       } catch (error) {
         if (!silent) {
@@ -82,6 +91,7 @@ export function useDailyJackpot() {
           toast.error(message);
         }
       } finally {
+        loadingRef.current = false;
         if (!silent) {
           setLoading(false);
         }
@@ -91,15 +101,21 @@ export function useDailyJackpot() {
   );
 
   const buyTicket = useCallback(async () => {
-    if (!snapshot?.poolId || buying) {
+    if (!snapshot?.poolId || buyingRef.current) {
       return;
     }
 
+    buyingRef.current = true;
+    snapshotVersionRef.current += 1;
     setBuying(true);
     try {
       const nextSnapshot = await buyDailyJackpotTicket(snapshot.poolId);
-      const purchasedTicketLabel = getPurchasedTicketLabel(snapshot, nextSnapshot);
+      const purchasedTicketLabel = getPurchasedTicketLabel(
+        snapshot,
+        nextSnapshot,
+      );
       setSnapshot(nextSnapshot);
+      lastLoadAtRef.current = Date.now();
       await refreshProfile();
       toast.success(
         purchasedTicketLabel
@@ -108,32 +124,41 @@ export function useDailyJackpot() {
       );
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Nie udało się kupić ticketu';
+        error instanceof Error ? error.message : 'Nie udało się kupić ticketu';
       toast.error(message);
     } finally {
+      buyingRef.current = false;
       setBuying(false);
     }
-  }, [buying, refreshProfile, snapshot]);
+  }, [refreshProfile, snapshot]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (
-      snapshot?.status !== 'collecting' &&
-      snapshot?.status !== 'locked'
-    ) {
+    if (snapshot?.status !== 'collecting' && snapshot?.status !== 'locked') {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void load({ silent: true });
-    }, JACKPOT_POLL_MS);
+    const refreshWhenVisible = () => {
+      if (
+        document.visibilityState !== 'hidden' &&
+        navigator.onLine !== false &&
+        Date.now() - lastLoadAtRef.current >= JACKPOT_POLL_MS
+      ) {
+        void load({ silent: true });
+      }
+    };
+    const intervalId = window.setInterval(refreshWhenVisible, JACKPOT_POLL_MS);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('online', refreshWhenVisible);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('online', refreshWhenVisible);
+    };
   }, [load, snapshot?.status]);
 
   return {

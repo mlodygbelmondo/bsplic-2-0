@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DailyJackpotSnapshot } from '../types';
 
@@ -56,6 +56,11 @@ const snapshot: DailyJackpotSnapshot = {
 };
 
 describe('useDailyJackpot', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     getDailyJackpotStateMock.mockResolvedValue(snapshot);
@@ -81,6 +86,99 @@ describe('useDailyJackpot', () => {
 
     expect(buyDailyJackpotTicketMock).toHaveBeenCalledWith('pool-1');
     expect(toastSuccessMock).toHaveBeenCalledWith('Ticket #22 kupiony!');
+  });
+
+  it('skips background polls and refreshes overdue data when visible again', async () => {
+    vi.useFakeTimers();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    visibility.mockReturnValue('visible');
+    renderHook(() => useDailyJackpot());
+    await act(async () => {});
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(1);
+
+    visibility.mockReturnValue('hidden');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(180_000);
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(1);
+
+    visibility.mockReturnValue('visible');
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not overlap slow polls', async () => {
+    vi.useFakeTimers();
+    renderHook(() => useDailyJackpot());
+    await act(async () => {});
+    let resolvePoll!: (value: DailyJackpotSnapshot) => void;
+    getDailyJackpotStateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePoll = resolve;
+        }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(135_000);
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      resolvePoll(snapshot);
+    });
+  });
+
+  it('keeps the purchased ticket when an older poll finishes afterwards', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useDailyJackpot());
+    await act(async () => {});
+    let resolvePoll!: (value: DailyJackpotSnapshot) => void;
+    getDailyJackpotStateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePoll = resolve;
+        }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(45_000);
+    });
+    await act(async () => {
+      await result.current.buyTicket();
+    });
+    await act(async () => {
+      resolvePoll(snapshot);
+    });
+    expect(result.current.snapshot?.currentUserTicketNumbers).toEqual([14, 22]);
+  });
+
+  it('skips offline polls and refreshes once when connectivity returns', async () => {
+    vi.useFakeTimers();
+    const online = vi.spyOn(navigator, 'onLine', 'get');
+    online.mockReturnValue(true);
+    const { unmount } = renderHook(() => useDailyJackpot());
+    await act(async () => {});
+    online.mockReturnValue(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(1);
+    online.mockReturnValue(true);
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(2);
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+      window.dispatchEvent(new Event('online'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(getDailyJackpotStateMock).toHaveBeenCalledTimes(2);
   });
 
   it('refreshes the visible balance when state maintenance auto-credits rewards', async () => {

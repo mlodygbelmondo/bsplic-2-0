@@ -56,7 +56,9 @@ function getFeedTargetFromRealtimeEvent(row: RealtimeRow): FeedTarget | null {
     !targetId ||
     !sourceTable ||
     !operation ||
-    (targetType !== 'post' && targetType !== 'coupon' && targetType !== 'casino')
+    (targetType !== 'post' &&
+      targetType !== 'coupon' &&
+      targetType !== 'casino')
   ) {
     return null;
   }
@@ -82,7 +84,63 @@ export function useSocialRealtimeFeed({
   }, [feedItems]);
 
   useEffect(() => {
+    // A single action can emit several events for the same feed item.
+    // Merge them before reading, and never overlap reads for that item.
+    const pending = new Map<
+      string,
+      {
+        itemType: FeedItemType;
+        itemId: string;
+        allowInsert: boolean;
+        refreshItem: boolean;
+        refreshComments: boolean;
+      }
+    >();
+    const inFlight = new Set<string>();
+    let timeoutId: number | undefined;
+    let disposed = false;
+
+    const scheduleFlush = () => {
+      if (disposed || timeoutId !== undefined) return;
+      timeoutId = window.setTimeout(flush, 250);
+    };
+
+    const flush = () => {
+      timeoutId = undefined;
+      for (const [key, target] of pending) {
+        if (inFlight.has(key)) continue;
+        pending.delete(key);
+        inFlight.add(key);
+        const reads: Array<() => void | Promise<void>> = [];
+        if (target.refreshItem) {
+          reads.push(() =>
+            refreshFeedItem(target.itemType, target.itemId, {
+              allowInsert: target.allowInsert,
+            }),
+          );
+        }
+        if (
+          target.refreshComments &&
+          commentsLoadedMapRef.current[target.itemId]
+        ) {
+          reads.push(() => loadComments(target.itemId, target.itemType));
+        }
+        void Promise.allSettled(
+          reads.map((read) => Promise.resolve().then(read)),
+        ).then((results) => {
+          for (const result of results) {
+            if (result.status === 'rejected') {
+              console.error('Social realtime refresh failed:', result.reason);
+            }
+          }
+          inFlight.delete(key);
+          if (pending.has(key)) scheduleFlush();
+        });
+      }
+    };
+
     const refreshSocialTarget = (payload: SocialRealtimePayload) => {
+      if (disposed) return;
       const row = getChangedRow(payload);
       const target = getFeedTargetFromRealtimeEvent(row);
       if (!target) return;
@@ -97,19 +155,25 @@ export function useSocialRealtimeFeed({
           target.sourceTable === 'casino_social_shares' ||
           target.sourceTable === 'coupons');
 
-      if (isLoaded || isFeedItemInsert) {
-        void refreshFeedItem(target.itemType, target.itemId, {
-          allowInsert: isFeedItemInsert,
-        });
-      }
-
-      if (
+      const refreshComments = Boolean(
         (target.sourceTable === 'social_comments' ||
           target.sourceTable === 'social_reactions') &&
-        commentsLoadedMapRef.current[target.itemId]
-      ) {
-        void loadComments(target.itemId, target.itemType);
-      }
+        commentsLoadedMapRef.current[target.itemId],
+      );
+      if (!isLoaded && !isFeedItemInsert && !refreshComments) return;
+
+      const key = `${target.itemType}:${target.itemId}`;
+      const previous = pending.get(key);
+      pending.set(key, {
+        itemType: target.itemType,
+        itemId: target.itemId,
+        allowInsert: isFeedItemInsert || (previous?.allowInsert ?? false),
+        refreshItem:
+          isLoaded || isFeedItemInsert || (previous?.refreshItem ?? false),
+        refreshComments:
+          refreshComments || (previous?.refreshComments ?? false),
+      });
+      scheduleFlush();
     };
 
     const channel = supabase
@@ -126,6 +190,9 @@ export function useSocialRealtimeFeed({
       .subscribe();
 
     return () => {
+      disposed = true;
+      window.clearTimeout(timeoutId);
+      pending.clear();
       supabase.removeChannel(channel);
     };
   }, [loadComments, refreshFeedItem]);

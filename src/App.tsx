@@ -54,45 +54,6 @@ const FeaturePollSurface = lazy(() =>
   ),
 );
 
-// Warm the lazy route chunks during idle time so in-app navigation
-// doesn't flash the full-screen loader on every page change.
-const PREFETCH_PAGE_LOADERS = [
-  loadSocialPage,
-  loadRankingsPage,
-  loadProfilePage,
-  loadSocialItemPage,
-  loadCasinoLayout,
-  loadCasinoHub,
-  loadCasinoRoulettePage,
-  loadCasinoBlackjackPage,
-  loadNotFound,
-];
-
-function RoutePrefetcher() {
-  useEffect(() => {
-    const prefetchRoutes = () => {
-      PREFETCH_PAGE_LOADERS.forEach((load) => {
-        void load().catch(() => {
-          // Chunk fetch failed (offline, deploy in progress) — the route
-          // will load on demand instead.
-        });
-      });
-    };
-
-    if (typeof window.requestIdleCallback === "function") {
-      const idleId = window.requestIdleCallback(prefetchRoutes, {
-        timeout: 5000,
-      });
-      return () => window.cancelIdleCallback(idleId);
-    }
-
-    const timeoutId = window.setTimeout(prefetchRoutes, 2500);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
-  return null;
-}
-
 // Fade out the static splash from index.html once React has painted the
 // first frame (which is the visually identical BrandedLoader or the app).
 function SplashScreenRemover() {
@@ -197,7 +158,6 @@ const App = () => (
       <SplashScreenRemover />
       <ConnectionToasts />
       <PwaUpdateModal />
-      <RoutePrefetcher />
       <BrowserRouter>
         <AuthProvider>
           <AuthenticatedBonusCampaignSurface />
