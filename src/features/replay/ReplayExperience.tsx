@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { ArrowLeft, ArrowRight, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
 
 import type { CouponHistoryEntry } from '@/types/database';
@@ -91,6 +91,7 @@ function useReducedMotion() {
 }
 
 export function ReplayExperience({ model, username }: { model: ReplayModel; username: string }) {
+  const stageRef = useRef<HTMLDivElement>(null);
   const [chapter, setChapter] = useState(0);
   const [playing, setPlaying] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -117,6 +118,7 @@ export function ReplayExperience({ model, username }: { model: ReplayModel; user
   const goTo = (index: number) => {
     setPlaying(false);
     setChapter(Math.max(0, Math.min(CHAPTERS.length - 1, index)));
+    stageRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]'))) return;
@@ -133,14 +135,14 @@ export function ReplayExperience({ model, username }: { model: ReplayModel; user
         <button type="button" className="replay-button replay-autoplay" disabled={reducedMotion || chapter === CHAPTERS.length - 1} aria-label={playing ? 'Wstrzymaj Replay' : 'Odtwórz automatycznie'} aria-pressed={playing} onClick={() => setPlaying((value) => !value)}>{playing ? <Pause aria-hidden="true" size={18} /> : <Play aria-hidden="true" size={18} />}</button>
       </div>
       <p className="sr-only" aria-live={playing ? 'off' : 'polite'}>{CHAPTERS[chapter]}, rozdział {chapter + 1} z {CHAPTERS.length}</p>
-      <div className="replay-stage" onFocusCapture={() => setPlaying(false)} onPointerDown={() => setPlaying(false)} onMouseEnter={() => setPlaying(false)}>
+      <div ref={stageRef} className="replay-stage" onFocusCapture={() => setPlaying(false)} onPointerDown={() => setPlaying(false)} onMouseEnter={() => setPlaying(false)}>
         <div className="replay-scene" key={chapter}>
           {chapter === 0 && <div className="replay-intro">
             <div><p className="replay-eyebrow"><Sparkles aria-hidden="true" size={15} /> BSPLIC ORIGINAL / TWÓJ REPLAY</p><h2>Twoja gra.<br /><em>Bez filtra.</em></h2><p className="replay-copy"><b className="replay-username">{username}</b>, za każdym kuponem jest historia. Przewiń swoją — od pierwszego ruchu do ostatniego wyniku.</p><button type="button" className="replay-button replay-button-primary" onClick={() => goTo(1)}>Zobacz swoją historię <ArrowRight aria-hidden="true" size={18} /></button><div className="replay-metrics"><div><span>Kupony</span><strong>{model.coupons.length}</strong></div><div><span>Wygrane</span><strong>{model.counts.won}</strong></div><div><span>Dni z kuponem</span><strong>{model.activeDays}</strong></div></div></div>
             <div className="replay-art"><div className="replay-orbits" aria-hidden="true"><i /><i /><i /></div><div className="replay-cover-ticket"><div className="replay-ticket-top"><span>BSPLIC 2.0</span><Sparkles aria-hidden="true" size={24} /></div><span className="replay-edition">EDYCJA OSOBISTA / {model.periodLabel}</span><strong className="replay-cover-number">{String(model.coupons.length).padStart(2, '0')}</strong><span className="replay-cover-label">KUPONY W KADRZE</span><div className="replay-ticket-perforation" /><div className="replay-cover-footer"><span>TWOJA GRA.<br />TWOJE EMOCJE.</span><span className="replay-cover-arrow" aria-hidden="true">↗</span></div><div className="replay-barcode" aria-hidden="true" /></div><span className="replay-art-stamp" aria-hidden="true">NIE DO PODROBIENIA.</span></div>
           </div>}
           {chapter === 1 && <BalanceScene model={model} />}
-          {chapter === 2 && <div className="replay-highlight"><div><p className="replay-eyebrow">03 / ZATRZYMAJ TEN KADR</p><h2>{model.highlight?.status === 'won' ? <>Ten kupon.<br /><em>Ten moment.</em></> : <>Każdy wynik<br /><em>to historia.</em>}</h2><p className="replay-copy">{model.highlight?.status === 'won' ? 'Największa wypłata z wygranego kuponu w tym zestawieniu. Oto szczegóły, nie tylko liczba.' : 'W tym zestawieniu nie ma jeszcze wygranej. Zamiast wymyślać rekord, wracamy do Twojego ostatniego kuponu.'}</p><p className="replay-note">Wypłata zawiera zwróconą stawkę. Bilans netto zobaczysz w rozdziale „Bilans”.</p></div>{model.highlight && <CouponTicket coupon={model.highlight} />}</div>}
+          {chapter === 2 && <div className="replay-highlight"><div><p className="replay-eyebrow">03 / ZATRZYMAJ TEN KADR</p><h2>{model.highlight?.status === 'won' ? <>Ten kupon.<br /><em>Ten moment.</em></> : <>Każdy wynik<br /><em>to historia.</em></>}</h2><p className="replay-copy">{model.highlight?.status === 'won' ? 'Największa wypłata z wygranego kuponu w tym zestawieniu. Oto szczegóły, nie tylko liczba.' : 'W tym zestawieniu nie ma jeszcze wygranej. Zamiast wymyślać rekord, wracamy do Twojego ostatniego kuponu.'}</p><p className="replay-note">Wypłata zawiera zwróconą stawkę. Bilans netto zobaczysz w rozdziale „Bilans”.</p></div>{model.highlight && <CouponTicket coupon={model.highlight} />}</div>}
           {chapter === 3 && <MapScene model={model} />}
           {chapter === 4 && <ReplayShare model={model} username={username} />}
         </div>

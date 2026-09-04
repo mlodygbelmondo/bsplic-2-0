@@ -72,7 +72,7 @@ export function ReplayShare({ model, username }: { model: ReplayModel; username:
           {poster ? (
             <a className="replay-button replay-button-primary" href={poster.url} download="bsplic-replay.png"><Download aria-hidden="true" size={18} /> Zapisz PNG</a>
           ) : (
-            <button type="button" className="replay-button replay-button-primary" disabled>Przygotowywanie…</button>
+            <button type="button" className="replay-button replay-button-primary" disabled>{error ? 'Plakat niedostępny' : 'Przygotowywanie…'}</button>
           )}
           <button type="button" className="replay-button" disabled={!poster || sharing} onClick={() => void handleShare()}><Share2 aria-hidden="true" size={18} /> Udostępnij</button>
         </div>

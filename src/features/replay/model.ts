@@ -76,7 +76,8 @@ export interface ReplayModel {
 }
 
 export function parseReplayHistory(input: unknown, capturedAt = Date.now()): ReplayHistory {
-  const rows = z.array(couponSchema).parse(input);
+  // Runtime validation above makes this safe even with the app's strictNullChecks disabled.
+  const rows = z.array(couponSchema).parse(input) as CouponHistoryEntry[];
   const unique = [...new Map(rows.map((row) => [row.id, row])).values()];
   unique.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || a.id.localeCompare(b.id));
   return {
