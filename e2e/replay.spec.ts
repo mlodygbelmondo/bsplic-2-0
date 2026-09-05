@@ -58,54 +58,44 @@ async function setup(page: Page, options: { signedIn?: boolean; rows?: unknown; 
   return state;
 }
 
-const chapter = (page: Page, index: number) => page.getByRole('button', { name: new RegExp(`^Rozdział ${index}:`) });
+const ready = (page: Page) => expect(page.getByRole('heading', { name: 'Wynik netto' })).toBeVisible();
+async function noOverflow(page: Page) {
+  expect(await page.locator('main.replay-page').evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+}
 async function capture(page: Page, info: TestInfo, name: string) {
-  await expect(page.locator('.replay-scene')).toHaveCSS('opacity', '1');
-  const poster = page.locator('.replay-poster-preview img');
-  if (await poster.count()) {
-    await expect.poll(() => poster.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth === 1080)).toBe(true);
-  }
   const path = info.outputPath(name);
   await page.screenshot({ path, fullPage: true, animations: 'disabled' });
   await info.attach(name, { path, contentType: 'image/png' });
 }
 
-async function noOverflow(page: Page) {
-  expect(await page.locator('main.replay-page').evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-}
-
-test('production app: five chapters, chart, map and real PNG export', async ({ page }, info) => {
+test('overview: result, chart, coupons and real PNG export', async ({ page }, info) => {
   const state = await setup(page);
   await page.goto('/replay');
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
-  await expect(page.getByRole('heading', { name: /Twoja gra/ })).toBeVisible();
+  await ready(page);
   expect(state.reads[0]).toEqual({ p_user_id: USER, p_limit: 201, p_offset: 0 });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await noOverflow(page);
-  await capture(page, info, 'replay-opening.png');
-  if (info.project.name === 'mobile-webkit') {
-    await page.locator('.replay-cover-ticket').scrollIntoViewIfNeeded();
-    await capture(page, info, 'replay-ticket-mobile.png');
-  }
-  await chapter(page, 2).click();
+  await capture(page, info, 'replay-overview.png');
   const slider = page.getByRole('slider');
   await slider.focus();
   const old = await slider.inputValue();
   await slider.press('ArrowLeft');
   expect(Number(await slider.inputValue())).toBe(Number(old) - 1);
-  await expect(chapter(page, 2)).toHaveAttribute('aria-current', 'step');
-  await capture(page, info, 'replay-balance.png');
-  await chapter(page, 3).click();
-  await page.getByText(/Szczegóły kuponu/).click();
-  await expect(page.locator('.replay-legs')).toBeVisible();
-  await chapter(page, 4).click();
+  await expect(slider).toBeFocused();
   await page.locator('.replay-map button').first().click();
   await expect(page.locator('.replay-map button').first()).toHaveAttribute('aria-pressed', 'true');
-  await capture(page, info, 'replay-map.png');
-  await chapter(page, 5).click();
-  await expect(page.getByRole('img', { name: /bez nicku/ })).toBeVisible();
-  await expect(page.getByRole('checkbox')).not.toBeChecked();
+  await page.getByText(/Szczegóły kuponu/).click();
+  await expect(page.locator('.replay-legs')).toBeVisible();
+  await capture(page, info, 'replay-coupons.png');
+  const trigger = page.getByRole('button', { name: 'Udostępnij Replay', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Udostępnij Replay' });
+  const image = dialog.getByRole('img', { name: /bez nicku/ });
+  await expect(image).toBeVisible();
+  await expect(dialog.getByRole('checkbox')).not.toBeChecked();
+  await image.evaluate((img: HTMLImageElement) => img.decode());
   const downloadEvent = page.waitForEvent('download');
-  await page.getByRole('link', { name: 'Zapisz PNG' }).click();
+  await dialog.getByRole('link', { name: 'Zapisz PNG' }).click();
   const download = await downloadEvent;
   const path = await download.path();
   expect(path).toBeTruthy();
@@ -115,14 +105,14 @@ test('production app: five chapters, chart, map and real PNG export', async ({ p
   expect(bytes.readUInt32BE(20)).toBe(1920);
   await download.saveAs(info.outputPath('bsplic-replay.png'));
   await info.attach('Exported PNG', { path: info.outputPath('bsplic-replay.png'), contentType: 'image/png' });
-  await page.getByRole('checkbox').check();
-  await expect(page.getByRole('img', { name: /gracza Astra Demo/ })).toBeVisible();
-  await noOverflow(page);
-  await capture(page, info, 'replay-finale.png');
-  if (info.project.name === 'mobile-webkit') {
-    await page.locator('.replay-poster-preview').scrollIntoViewIfNeeded();
-    await capture(page, info, 'replay-poster-mobile.png');
-  }
+  await dialog.getByRole('checkbox').check();
+  const named = dialog.getByRole('img', { name: /gracza Astra Demo/ });
+  await expect(named).toBeVisible();
+  await named.evaluate((img: HTMLImageElement) => img.decode());
+  await capture(page, info, 'replay-share.png');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
   expect(state.writes).toEqual([]);
   expect(state.errors).toEqual([]);
 });
@@ -140,13 +130,13 @@ test('signed-out visitors cannot fetch history or load the Replay route chunk', 
 test('own profile provides a working entry point; another profile does not', async ({ page }) => {
   const state = await setup(page);
   await page.goto('/profile');
-  await page.getByRole('link', { name: /BSPLIC Replay/ }).click();
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
+  await page.getByRole('link', { name: 'BSPLIC Replay', exact: true }).click();
+  await ready(page);
   await page.getByRole('link', { name: 'Do profilu' }).click();
-  await expect(page.getByRole('link', { name: /BSPLIC Replay/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'BSPLIC Replay', exact: true })).toBeVisible();
   await page.goto('/profile/22222222-2222-4222-8222-222222222222');
   await expect(page.getByRole('heading', { name: 'Inny Gracz' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /BSPLIC Replay/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'BSPLIC Replay', exact: true })).toHaveCount(0);
   expect(state.errors).toEqual([]);
 });
 
@@ -156,64 +146,68 @@ test('network failure is recoverable and a failed refresh preserves the last sna
   await expect(page.getByRole('alert')).toContainText('Nie udało się wczytać');
   state.fail = false;
   await page.getByRole('button', { name: 'Spróbuj ponownie' }).click();
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
+  await ready(page);
   state.fail = true;
   await page.getByRole('button', { name: 'Odśwież Replay' }).click();
   await expect(page.getByRole('alert')).toContainText('poprzedni zapis');
-  await expect(chapter(page, 1)).toBeVisible();
+  await ready(page);
 });
 
 test('empty history and old history have useful honest states', async ({ page }) => {
   const state = await setup(page, { rows: [] });
   await page.goto('/replay');
   await expect(page.getByRole('region', { name: 'Pusty Replay' })).toBeVisible();
-  state.rows = [{ ...fixtures(1)[0], created_at: '2026-01-01T00:00:00Z' }];
+  state.rows = [{ ...fixtures(1)[0], created_at: '2026-01-01T12:00:00Z' }];
   await page.getByRole('button', { name: 'Odśwież Replay' }).click();
-  await expect(page.getByRole('button', { name: 'Odśwież Replay' })).toBeEnabled();
+  await expect.poll(() => state.reads.length).toBe(2);
   await page.getByRole('button', { name: 'Zobacz ostatnie kupony' }).click();
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
+  await ready(page);
 });
 
-test('period filters are local and reduced motion disables autoplay', async ({ page }) => {
+test('period filters are local; reduced motion never introduces autoplay', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const state = await setup(page);
   await page.goto('/replay');
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
+  await ready(page);
   await page.getByRole('button', { name: '7 dni', exact: true }).click();
   await expect(page.getByRole('button', { name: '7 dni', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Odtwórz automatycznie' })).toHaveCount(0);
   expect(state.reads).toHaveLength(1);
-  await expect(page.getByRole('button', { name: 'Odtwórz automatycznie' })).toBeDisabled();
-  await expect(page.locator('.replay-scene')).toHaveCSS('animation-name', 'none');
+  await expect(page.locator('.replay-method')).not.toHaveAttribute('open', '');
+  await page.getByText('Jak liczymy wynik?', { exact: true }).click();
+  await expect(page.locator('.replay-method')).toHaveAttribute('open', '');
 });
 
-test('320px view and long user content remain usable across all chapters', async ({ page }) => {
+test('320px view and long coupon titles remain usable', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  const rows = fixtures(3).map((row) => ({ ...row, legs: row.legs.map((leg) => ({ ...leg, bet_title: 'BardzoDługiTytułBezSpacji'.repeat(12) })) }));
+  const rows = fixtures(2).map((row) => ({ ...row, legs: [{ ...row.legs[0], bet_title: 'Długitytuł'.repeat(35) }] }));
   const state = await setup(page, { rows });
   await page.goto('/replay');
-  for (let index = 1; index <= 5; index += 1) {
-    await chapter(page, index).click();
-    await noOverflow(page);
-  }
+  await ready(page);
+  await noOverflow(page);
+  await page.locator('.replay-map button').first().click();
+  await page.getByText(/Szczegóły kuponu/).click();
+  await noOverflow(page);
+  const tile = await page.locator('.replay-map button').first().boundingBox();
+  expect(tile!.width).toBeGreaterThanOrEqual(44);
+  expect(tile!.height).toBeGreaterThanOrEqual(44);
+  await page.getByRole('button', { name: 'Udostępnij Replay', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Zapisz PNG' })).toBeVisible();
+  expect(await page.getByRole('dialog').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   expect(state.errors).toEqual([]);
 });
 
-
-test('a dense period explicitly discloses the cap and all 200 coupons stay inspectable', async ({ page }) => {
+test('a dense period discloses the cap and all 200 coupons stay inspectable', async ({ page }) => {
   const rows = fixtures(201).map((row, index) => ({ ...row, created_at: new Date(NOW - (index + 1) * 60_000).toISOString() }));
   const state = await setup(page, { rows });
   await page.goto('/replay');
-  await expect(page.getByRole('status')).toContainText('zakres jest częściowy');
-  await chapter(page, 4).click();
+  await expect(page.locator('.replay-notice[role="status"]')).toContainText('zakres jest częściowy');
   await expect(page.locator('.replay-map button')).toHaveCount(40);
   await page.getByRole('button', { name: 'Pokaż wszystkie (200)' }).click();
   await expect(page.locator('.replay-map button')).toHaveCount(200);
   const button = page.locator('.replay-map button').first();
   await button.click();
   await expect(button).toHaveAttribute('aria-pressed', 'true');
-  const box = await button.boundingBox();
-  expect(box?.height).toBeGreaterThanOrEqual(44);
-  expect(box?.width).toBeGreaterThanOrEqual(44);
   expect(state.reads).toHaveLength(1);
   await noOverflow(page);
 });
@@ -222,15 +216,36 @@ test('losses and pending results stay truthful through a real refresh', async ({
   const rows = fixtures(2).map((row) => ({ ...row, status: 'lost', stake: 100, payout: 0 }));
   const state = await setup(page, { rows });
   await page.goto('/replay');
-  await chapter(page, 2).click();
   await expect(page.locator('.replay-big-money')).toContainText('-200,00');
-  await chapter(page, 3).click();
-  await expect(page.getByText(/nie ma jeszcze wygranej/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Największa wypłata' })).toHaveCount(0);
   state.rows = [{ ...fixtures(1)[0], status: 'pending', payout: 0 }];
   await page.getByRole('button', { name: 'Odśwież Replay' }).click();
-  await expect(chapter(page, 1)).toHaveAttribute('aria-current', 'step');
-  await chapter(page, 2).click();
-  await expect(page.getByText('Jeszcze w grze')).toBeVisible();
+  await expect(page.getByText('Kupony czekają na rozliczenie', { exact: true })).toBeVisible();
   await expect(page.getByRole('slider')).toHaveCount(0);
   expect(state.writes).toEqual([]);
+});
+
+test('inherits app colors and typography in both themes', async ({ page }, info) => {
+  await setup(page);
+  await page.goto('/replay');
+  await ready(page);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate((theme) => localStorage.setItem('bsplic.theme', theme), theme);
+    await page.reload();
+    await ready(page);
+    const colors = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const selected = getComputedStyle(document.querySelector('.replay-periods [aria-pressed="true"]')!);
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = `hsl(${root.getPropertyValue('--primary')})`;
+      document.body.append(probe);
+      const primary = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return { selected: selected.backgroundColor, primary, font: selected.fontFamily, bodyFont: getComputedStyle(document.body).fontFamily };
+    });
+    expect(colors.selected).toBe(colors.primary);
+    expect(colors.font).toBe(colors.bodyFont);
+    await noOverflow(page);
+    await capture(page, info, `replay-${theme}.png`);
+  }
 });

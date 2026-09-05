@@ -5,7 +5,8 @@ import { buildReplay, parseReplayHistory } from './model';
 import { ReplayShare } from './ReplayShare';
 import { coupon, REPLAY_TEST_NOW } from './testing/fixtures';
 
-const mocks = vi.hoisted(() => ({ poster: vi.fn(), info: vi.fn(), error: vi.fn() }));
+const mocks = vi.hoisted(() => ({ poster: vi.fn(), info: vi.fn(), error: vi.fn(), theme: 'dark' }));
+vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ theme: mocks.theme }) }));
 vi.mock('./poster', () => ({ createReplayPoster: mocks.poster }));
 vi.mock('sonner', () => ({ toast: { info: mocks.info, error: mocks.error } }));
 const model = buildReplay(parseReplayHistory([coupon()], REPLAY_TEST_NOW), 'all');
@@ -14,6 +15,7 @@ const revokeUrl = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.theme = 'dark';
   mocks.poster.mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   let index = 0;
   createUrl.mockImplementation(() => `blob:poster-${++index}`);
@@ -59,6 +61,14 @@ describe('private on-device poster sharing', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Udostępnij' })).toBeEnabled());
     expect(share).toHaveBeenCalledWith(expect.objectContaining({ files: [expect.any(File)] }));
     expect(mocks.error).not.toHaveBeenCalled();
+  });
+  it('regenerates for a different app theme', async () => {
+    const view = render(<ReplayShare model={model} username="Astra" />);
+    await screen.findByRole('link', { name: 'Zapisz PNG' });
+    mocks.theme = 'light';
+    view.rerender(<ReplayShare model={model} username="Astra" />);
+    await waitFor(() => expect(mocks.poster).toHaveBeenCalledTimes(2));
+    expect(revokeUrl).toHaveBeenCalledWith('blob:poster-1');
   });
   it('recovers from canvas failure via an explicit retry', async () => {
     mocks.poster.mockRejectedValueOnce(new Error('canvas unavailable'));

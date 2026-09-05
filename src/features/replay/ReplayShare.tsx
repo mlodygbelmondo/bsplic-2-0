@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Download, RefreshCw, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Button } from '@/components/ui/button';
+import { useTheme } from '@/contexts/ThemeContext';
+
 import type { ReplayModel } from './model';
 
 interface PreparedPoster {
@@ -9,16 +12,18 @@ interface PreparedPoster {
   url: string;
   name: string | undefined;
   model: ReplayModel;
+  theme: string;
 }
 
 export function ReplayShare({ model, username }: { model: ReplayModel; username: string }) {
+  const { theme } = useTheme();
   const [includeName, setIncludeName] = useState(false);
   const [prepared, setPrepared] = useState<PreparedPoster | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [sharing, setSharing] = useState(false);
   const name = includeName ? username : undefined;
-  const poster = prepared && prepared.name === name && prepared.model === model ? prepared : null;
+  const poster = prepared && prepared.name === name && prepared.model === model && prepared.theme === theme ? prepared : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -30,14 +35,14 @@ export function ReplayShare({ model, username }: { model: ReplayModel; username:
       .then((blob) => {
         if (cancelled) return;
         url = URL.createObjectURL(blob);
-        setPrepared({ url, file: new File([blob], 'bsplic-replay.png', { type: 'image/png' }), name, model });
+        setPrepared({ url, file: new File([blob], 'bsplic-replay.png', { type: 'image/png' }), name, model, theme });
       })
       .catch(() => { if (!cancelled) setError(true); });
     return () => {
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [model, name, attempt]);
+  }, [model, name, attempt, theme]);
 
   const handleShare = async () => {
     if (!poster || sharing) return;
@@ -60,27 +65,24 @@ export function ReplayShare({ model, username }: { model: ReplayModel; username:
 
   return (
     <div className="replay-share-layout">
-      <div>
-        <p className="replay-eyebrow">05 / KADR NA KONIEC</p>
-        <h2>Twoja historia.<br /><em>Twój plakat.</em></h2>
-        <p className="replay-copy">Niech liczby zostaną z Tobą. Pionowy plakat 1080 × 1920, gotowy do zapisania lub wysłania ekipie.</p>
+      <div className="replay-poster-preview" aria-busy={!poster && !error}>
+        {poster ? <img src={poster.url} alt={`Podgląd Replay${includeName ? ` gracza ${username}` : ' bez nicku'}`} width={1080} height={1920} /> : <p role="status">{error ? 'Podgląd niedostępny' : 'Przygotowywanie…'}</p>}
+      </div>
+      <div className="replay-share-controls">
         <label className="replay-consent">
           <input type="checkbox" checked={includeName} onChange={(event) => setIncludeName(event.target.checked)} />
-          Dodaj mój nick do plakatu
+          Dodaj mój nick
         </label>
         <div className="replay-actions">
           {poster ? (
-            <a className="replay-button replay-button-primary" href={poster.url} download="bsplic-replay.png"><Download aria-hidden="true" size={18} /> Zapisz PNG</a>
+            <Button asChild className="h-11"><a href={poster.url} download="bsplic-replay.png"><Download aria-hidden="true" /> Zapisz PNG</a></Button>
           ) : (
-            <button type="button" className="replay-button replay-button-primary" disabled>{error ? 'Plakat niedostępny' : 'Przygotowywanie…'}</button>
+            <Button type="button" className="h-11" disabled>{error ? 'Obraz niedostępny' : 'Przygotowywanie…'}</Button>
           )}
-          <button type="button" className="replay-button" disabled={!poster || sharing} onClick={() => void handleShare()}><Share2 aria-hidden="true" size={18} /> Udostępnij</button>
+          <Button type="button" variant="outline" className="h-11" disabled={!poster || sharing} onClick={() => void handleShare()}><Share2 aria-hidden="true" /> Udostępnij</Button>
         </div>
-        <p className="replay-note">Plakat zawiera pokazane statystyki. Powstaje tylko na Twoim urządzeniu. Nic nie publikujemy automatycznie.</p>
-        {error && <div role="alert" className="replay-notice">Nie udało się utworzyć plakatu. <button type="button" className="replay-button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw aria-hidden="true" size={16} /> Spróbuj ponownie</button></div>}
-      </div>
-      <div className="replay-poster-preview" aria-busy={!poster && !error}>
-        {poster ? <img src={poster.url} alt={`Podgląd plakatu BSPLIC Replay${includeName ? ` gracza ${username}` : ' bez nicku'}`} width={1080} height={1920} /> : <p role="status">{error ? 'Podgląd niedostępny' : 'Wywołujemy Twój kadr…'}</p>}
+        <p className="replay-muted">Udostępnisz tylko ten obraz.</p>
+        {error && <div role="alert" className="replay-notice">Nie udało się utworzyć plakatu. <Button type="button" variant="outline" className="h-11" onClick={() => setAttempt((value) => value + 1)}><RefreshCw aria-hidden="true" /> Spróbuj ponownie</Button></div>}
       </div>
     </div>
   );

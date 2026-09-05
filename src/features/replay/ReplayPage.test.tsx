@@ -7,6 +7,7 @@ import ReplayPage from './ReplayPage';
 import { coupon, REPLAY_TEST_NOW } from './testing/fixtures';
 
 const mocks = vi.hoisted(() => ({ history: vi.fn(), refetch: vi.fn() }));
+vi.mock('@/components/Navbar', () => ({ Navbar: () => <nav aria-label="Nawigacja aplikacji" /> }));
 vi.mock('./useReplayHistory', () => ({ useReplayHistory: mocks.history }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' }, profile: { username: 'Astra Demo' } }) }));
 vi.mock('./ReplayExperience', () => ({ ReplayExperience: ({ model }: { model: { periodLabel: string } }) => <div>Replay: {model.periodLabel}</div> }));
@@ -17,6 +18,11 @@ beforeEach(() => { vi.clearAllMocks(); mocks.history.mockReturnValue(ready); });
 afterEach(cleanup);
 
 describe('Replay page states', () => {
+  it('uses the app shell and keeps methodology collapsed', () => {
+    const { container } = show();
+    expect(screen.getByRole('navigation', { name: 'Nawigacja aplikacji' })).toBeInTheDocument();
+    expect(container.querySelector('details')).not.toHaveAttribute('open');
+  });
   it('changes periods without issuing an extra history request', () => {
     show();
     expect(screen.getByText('Replay: 30 dni')).toBeInTheDocument();
