@@ -26,7 +26,9 @@ async function setup(page: Page, options: { signedIn?: boolean; rows?: unknown; 
   await page.addInitScript((theme) => localStorage.setItem('bsplic.theme', theme), options.theme ?? 'dark');
   page.on('pageerror', (error) => state.errors.push(error.message));
   await page.routeWebSocket('**', (socket) => socket.close());
-  await page.route('**/*', async (route) => {
+  // Only intercept network traffic. WebKit also routes blob: images, which
+  // must remain browser-local rather than becoming an empty fixture response.
+  await page.route(/^https?:\/\//, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     if (url.pathname === '/api/maintenance') return route.fulfill({ json: { maintenanceMode: false } });
@@ -172,7 +174,7 @@ test('own profile links to the summary; another profile does not', async ({ page
   await page.goto('/profile');
   await page.getByRole('link', { name: /Replay Bilans/ }).click();
   await ready(page);
-  await page.getByRole('link', { name: 'Profil', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Do profilu', exact: true }).click();
   await expect(page.getByRole('link', { name: /Replay Bilans/ })).toBeVisible();
   await page.goto('/profile/22222222-2222-4222-8222-222222222222');
   await expect(page.getByRole('heading', { name: 'Inny Gracz' })).toBeVisible();

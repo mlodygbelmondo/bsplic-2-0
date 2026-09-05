@@ -21,13 +21,13 @@ export function ReplayShare({ model, username }: { model: ReplayModel; username:
   const { theme } = useTheme();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button type="button" variant="outline"><Share2 aria-hidden="true" /> Udostępnij</Button></DialogTrigger>
+      <DialogTrigger asChild><Button type="button" variant="outline" className="h-11 w-11 p-0 sm:w-auto sm:px-4" aria-label="Udostępnij" title="Udostępnij"><Share2 aria-hidden="true" /><span className="hidden sm:inline">Udostępnij</span></Button></DialogTrigger>
       <DialogContent hideCloseButton className="replay-share-dialog p-5 sm:p-6">
         <DialogHeader className="pr-10 text-left">
           <DialogTitle>Udostępnij podsumowanie</DialogTitle>
           <DialogDescription>PNG powstaje na tym urządzeniu. Nick jest opcjonalny.</DialogDescription>
         </DialogHeader>
-        <DialogClose asChild><Button type="button" variant="ghost" size="icon" className="absolute right-2 top-2" aria-label="Zamknij"><X aria-hidden="true" /></Button></DialogClose>
+        <DialogClose asChild><Button type="button" variant="ghost" size="icon" className="absolute right-2 top-2 h-11 w-11" aria-label="Zamknij"><X aria-hidden="true" /></Button></DialogClose>
         {open && <PosterPreview model={model} username={username} theme={theme} />}
       </DialogContent>
     </Dialog>
@@ -94,8 +94,8 @@ function PosterPreview({ model, username, theme }: { model: ReplayModel; usernam
         <Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}><RefreshCw aria-hidden="true" /> Spróbuj ponownie</Button>
       </div>}
       <div className="flex flex-wrap gap-2">
-        {poster ? <Button asChild variant="secondary"><a href={poster.url} download="bsplic-replay.png"><Download aria-hidden="true" /> Zapisz PNG</a></Button> : <Button type="button" variant="secondary" disabled>Zapisz PNG</Button>}
-        <Button type="button" variant="outline" disabled={!poster || sharing} onClick={() => void handleShare()}><Share2 aria-hidden="true" /> Wyślij</Button>
+        {poster ? <Button asChild variant="secondary" className="h-11"><a href={poster.url} download="bsplic-replay.png"><Download aria-hidden="true" /> Zapisz PNG</a></Button> : <Button type="button" variant="secondary" className="h-11" disabled>Zapisz PNG</Button>}
+        <Button type="button" variant="outline" className="h-11" disabled={!poster || sharing} onClick={() => void handleShare()}><Share2 aria-hidden="true" /> Wyślij</Button>
       </div>
     </>
   );

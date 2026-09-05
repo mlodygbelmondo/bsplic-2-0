@@ -29,11 +29,13 @@ export default function ReplayPage() {
       <Navbar />
       <main className="replay-page min-h-0 flex-1 overflow-y-auto" aria-label="Replay">
         <div className="replay-content mx-auto w-full max-w-5xl px-3 pt-4 sm:px-6 sm:pt-6">
-          <Link to="/profile" className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
-            <ArrowLeft size={16} aria-hidden="true" /> Profil
-          </Link>
           <header className="mb-5 flex items-center justify-between gap-3">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Replay</h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <Button asChild variant="ghost" size="icon" className="h-11 w-11 shrink-0">
+                <Link to="/profile" aria-label="Do profilu"><ArrowLeft aria-hidden="true" /></Link>
+              </Button>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Replay</h1>
+            </div>
             <div className="flex items-center gap-2">
               <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label="Odśwież Replay" title="Odśwież" disabled={history.isFetching} onClick={() => void history.refetch()}>
                 <RefreshCw aria-hidden="true" />
