@@ -1,41 +1,35 @@
 # BSPLIC Replay
 
-A private, read-only sportsbook overview for the web/PWA. Open **Profil → Replay**, or `/replay` while signed in. The entry card appears only on your own profile; the existing authentication guard protects the route. No demo mode or authentication bypass is shipped.
+Read-only sportsbook summary at **Profil → Replay** (`/replay`). Only your own profile has the entry point. The route uses the existing authentication guard. No demo mode or auth bypass is shipped, and public profile usernames are not reserved or shadowed by a new route.
 
 ## Design and walkthrough
 
-Replay uses the existing application navbar, Inter typography, theme tokens, card surfaces, buttons and dialogs. It follows the user's light/dark preference; there is no independent burgundy/cream/gold palette. The earlier receipt, orbit decoration, five chapters, autoplay and promotional captions have been removed.
+Replay is a summary-first profile feature, not a separate presentation. It reuses the existing Navbar, app surfaces, Inter typography, theme tokens and buttons in light and dark mode. No introduction, chapters, autoplay, decorative receipt, slogans or generated UI image.
 
-The result, chart and coupons are available immediately. Choose 7 days, 30 days or latest coupons. Scrub the chart with touch or keyboard to inspect cumulative results. Select a coupon in the status grid to inspect it; expand its details to see individual legs. The default selection is the largest actual winning payout, or the latest coupon when there is no win. Dense histories expand from 40 visible tiles to all 200 loaded coupons.
+The first card shows the settled net result, a scrubbable curve and four metrics. Below are the highest actual winning payout (or latest coupon when there is no win) and newest-first history. Outcome filters and native disclosure rows let users inspect actual coupon and leg details. History renders 20 at a time, up to all 200 loaded coupons. Filters and pagination make no extra requests. Chart selection is identity-based and survives replacement snapshots without stale offsets.
 
-**Udostępnij Replay** opens an explicit preview dialog. It prepares a real 1080 × 1920 PNG on-device, using the current app theme. Nickname inclusion is opt-in. Save the image or invoke native file sharing where supported; nothing is uploaded or posted automatically. Closing the dialog returns focus to the trigger. Calculation notes are available under **Jak liczymy wynik?**, not repeated around the main interface.
+**Jak liczymy?** discloses calculation details. Partial coverage and stale-data warnings remain visible. Empty states offer older history instead of encouraging new bets.
 
-## Data semantics and safety
+**Udostępnij** opens the app dialog and only then imports the PNG renderer. The real 1080 × 1920 image uses the current theme, with an optional bounded nickname, actual statistics, dates, coverage and a virtual-currency caveat. Closing the dialog revokes its object URL and resets nickname consent. Native file sharing requires an explicit click, with PNG download as fallback. Nothing is uploaded or published.
 
-`useReplayHistory` calls the existing permission-checked `get_user_coupon_history` RPC for the authenticated user. It requests 201 rows once: at most 200 enter Replay and the extra row detects truncation. This avoids unbounded fetching and inconsistent offset pages. The query is identity-keyed, cancellable, has no focus refetch, and drops unused cached history on unmount. Period changes are computed locally without another request.
+## Data semantics
 
-Periods use **coupon creation dates**, not settlement dates. The 7/30-day windows are rolling 24-hour periods relative to capture time; dates use `Europe/Warsaw`. The broadest choice is **Ostatnie kupony**, not lifetime statistics. Partial periods are disclosed in the overview and exported image.
+`useReplayHistory` calls the existing permission-checked `get_user_coupon_history` RPC for the authenticated user. A single request reads 201 rows: 200 are retained, with the extra row only detecting truncation. Queries are cancellable, identity-keyed, do not refetch on focus, and drop unused history on unmount.
 
-The existing validated model sums integer cents. Net result is recorded settled payout minus settled stake, including refunds and excluding pending coupons. Accuracy is wins / (wins + losses), excluding refunds and pending coupons. The chart applies settled results in coupon-placement order: **it is not a wallet-balance graph or a settlement-time ledger**. Casino results, top-ups and other balance movements are excluded. Pending-only history shows no settled result or invented zero-profit curve; losses do not produce a fictional winning highlight.
+Periods use coupon creation dates, not settlement dates. The 7/30-day choices are rolling 24-hour windows relative to capture time; dates use Europe/Warsaw. **Ostatnie kupony** is not lifetime statistics. Partial coverage is disclosed in the UI and export.
 
-Invalid response shapes, statuses, timestamps and monetary values fail visibly instead of being silently converted to an empty success. Loading, empty, retry and stale-refresh states remain supported. Chart and coupon selection use identity rather than a brittle position during refresh.
+The validated model sums money in integer cents. Net result is recorded settled payout minus settled stake, including refunds and excluding pending coupons. Accuracy is wins / (wins + losses), excluding refunds and pending coupons. The chart applies current settled results in placement order: it is not wallet history or a settlement-time ledger. Casino, top-ups and transfers are excluded. Pending-only histories show no invented settled zero or success rate.
 
-No database migration, balance mutation, paid service, new runtime dependency, global theme change or production authentication bypass is included. The feature is scoped to the web/PWA; the Expo app is unchanged. Route code/CSS and the poster renderer remain lazy-loaded. The profile entry does not fetch history.
+Invalid responses fail visibly. Loading, empty, retry and failed-refresh-with-preserved-snapshot states are explicit. No database migration, balance mutation, new dependency, paid service or global theme change is included. The Expo application and existing PWA precache behavior are unchanged.
 
-## Export and accessibility
-
-Only summary statistics, period/coverage and an optional bounded nickname are drawn. No account IDs, individual coupon details, external images or uploads are involved. The file is prepared before the share-button click to preserve user activation. Unsupported sharing and non-cancellation failures keep a PNG fallback; object URLs are revoked on regeneration/unmount. Changing the app theme regenerates the preview.
-
-Native range controls retain arrow-key behavior. Grid statuses combine symbols, text labels and color. Controls use at least 44px targets, the dialog has a visible close control, reduced-motion settings are respected, and narrow/long-content layouts are checked. This is not a claim of a complete accessibility certification or a physical-device test.
-
-## Reproducing verification
+## Verification
 
 ```sh
 npm ci --legacy-peer-deps
 export TZ=Europe/Warsaw
 export VITE_SUPABASE_URL=https://replay-test.supabase.co
 export VITE_SUPABASE_PUBLISHABLE_KEY=replay-test-public-key-not-a-secret
-npm test
+npm run test
 npm run lint
 node scripts/check-replay-types.mjs
 npm run perf:build
@@ -43,18 +37,16 @@ npx playwright install --with-deps chromium webkit
 npx playwright test --config playwright.replay.config.ts
 ```
 
-The dedicated Playwright configuration exercises the production build in desktop Chromium and mobile WebKit. Deterministic HTTP fixtures drive the real app/provider/router path; service workers and live outbound requests are blocked. There are no real account credentials or financial writes. Cases cover profile navigation, signed-out isolation, immediate overview, chart/grid interaction, dialog focus, PNG signature/dimensions, opt-in name, 320px layouts, both app themes, filters, empty/error/stale states, negative/pending results and the 200-coupon cap.
+Browser tests exercise the production build and real app/provider/router with deterministic intercepted HTTP fixtures. Live requests, writes and service workers are blocked. Desktop Chromium and iPhone-sized WebKit cover immediate results, profile entry/return, signed-out isolation, filters/pagination, keyboard disclosure and chart scrubbing, light/dark layouts, reduced motion, 320px/long-title handling, the 200-row cap, errors/retry/stale snapshots, loss/pending/replacement states, dialog focus and consent, and real PNG signature/dimensions/decoding.
 
-The `Replay quality` workflow runs the full Vitest suite, lint, scoped TypeScript check, production bundle report and browser suite. `replay-browser-evidence` contains the HTML report, screenshots, exported PNGs and unit results; `replay-build` contains the built application. Consult the latest run on the PR for actual outcomes, not this description of the checks.
+`Replay quality` runs the full unit suite, lint, the scoped type gate, production build and browser suite. Its `replay-browser-evidence` artifact contains screenshots, exported PNGs, reports, failure traces and unit results. Consult the actual run on the final PR SHA; this document does not imply that checks passed. Generated outputs must not be committed.
 
-Local visual review can also render the real Replay components and app navbar with fixture auth/history hooks. Those screenshots are explicitly sample data, not proof of the full hosted integration. CI browser runs remain the integration check.
+### Boundaries
 
-### Verification boundaries
+Full-project TypeScript already has diagnostics outside Replay. The scoped gate checks the complete program but blocks diagnostics only in Replay, App.tsx and ProfilePage.tsx, reporting the limitation explicitly. This is not a clean whole-project type check. Existing dependency-audit findings and unrelated lint warnings are not remediated; dependencies and lockfile are unchanged.
 
-Full-project TypeScript errors outside Replay already exist. The scoped gate checks the complete program but gates Replay, `App.tsx` and `ProfilePage.tsx` diagnostics and explicitly reports the remaining diagnostics. Existing dependency audit findings and unrelated lint warnings are not remediated by this design revision.
+HTTP fixtures do not verify a live Supabase account, a physical iPhone or native OS share sheet. An authorized signed-in deployment smoke test and physical-device sharing check remain manual. No test uses live balances or publishes data.
 
-HTTP-fixture browser checks do not verify a live Supabase account, a physical iPhone or its native operating-system share sheet. An authorized signed-in deployment smoke test and native sharing check remain manual. No green-check or deployment claim is implied by this document.
+## Rollout / rollback
 
-## Rollout and rollback
-
-No migration, secret, backfill or service configuration is required. Deploy through the normal application pipeline. Reverting the PR removes the profile card and route without changing stored user data. Keep the PR unmerged until design and normal code review are complete.
+Use normal review and deployment. No migration, secret or backfill is needed. Reverting the PR removes the entry point and summary without changing stored data. Keep the PR unmerged until normal code and design review.
