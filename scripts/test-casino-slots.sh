@@ -25,6 +25,7 @@ GRANT USAGE ON SCHEMA auth TO authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
 SQL
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907090000_casino_slots.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907180000_fix_casino_slot_state.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slots.sql"
 # Two simultaneous connections replay one request: exactly one debit and ledger row.
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'

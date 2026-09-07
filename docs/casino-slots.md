@@ -6,7 +6,9 @@ Dwie autorskie gry na wspólną wirtualną walutę: Midnight Bandit i Candy Casc
 
 Frontend używa `/casino/slots/bandit` i `/casino/slots/candy`. Mobilna zakładka „Gry” prowadzi do `/casino`, zawierającego również ruletkę i blackjacka.
 
-Przed publikacją frontendu zastosuj `supabase/migrations/20260907090000_casino_slots.sql` na docelowej bazie. Przed operacjami Supabase CLI wybierz `sbsw bsplic`, zgodnie z AGENTS.md. Migracja została sprawdzona na odizolowanym PostgreSQL z minimalnym modelem profilu i `auth.uid()`. Nie została zastosowana do produkcyjnego Supabase. Po wdrożeniu zweryfikuj RPC na istniejącym koncie testowym z `.test-credentials.local.md`.
+Migracje `20260907090000_casino_slots.sql` i `20260907180000_fix_casino_slot_state.sql` wdrożono 7 września 2026 do projektu Supabase `bsplic 2.0` (`imucpqgglvarpoezhbdb`). Druga migracja usuwa konflikt nazwy zmiennej z kolumną przy odczycie historii. Na istniejącym koncie testowym sprawdzono obie gry: odczyt stanu, obrót ze stawką 1, rozliczenie portfela, idempotentne ponowienie oraz zapis historii. Poza istniejącym kontem testowym nie zmieniano danych graczy.
+
+Przy kolejnych operacjach CLI należy wybrać token konta mającego dostęp do BSPLIC. Na tym Macu helper `sbsw` jest nieobecny; wdrożenie użyło `SUPABASE_ACCESS_TOKEN` przekazanego wyłącznie do środowiska procesu. Token nie trafił do repozytorium.
 
 Nie ma zmian zależności aplikacji. Trasa i CSS slotów są ładowane leniwie.
 

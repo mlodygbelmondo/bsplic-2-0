@@ -15,7 +15,10 @@ BEGIN
  b:=array_fill(7,ARRAY[30]);
  FOREACH n IN ARRAY ARRAY[1,3,5,8,10,12,15,17] LOOP b[n]:=0; END LOOP;
  IF jsonb_array_length(_slot_groups(b,'candy'))<>1 OR jsonb_array_length(_slot_groups(b,'bandit'))<>0 THEN RAISE EXCEPTION 'candy anywhere rule'; END IF;
+ IF jsonb_array_length(casino_slot_state('bandit')->'history')<>0 THEN RAISE EXCEPTION 'initial history'; END IF;
  first:=casino_slot_spin('bandit',5,request);
+ IF casino_slot_state('bandit')->'history'->0->>'id'<>request::text THEN RAISE EXCEPTION 'state history'; END IF;
+ IF (casino_slot_state('bandit')->>'boostRemaining')::integer<>9 THEN RAISE EXCEPTION 'state welcome count'; END IF;
  SELECT balance INTO wallet FROM profiles WHERE id=uid;
  again:=casino_slot_spin('bandit',5,request);
  IF first<>again OR (SELECT balance FROM profiles WHERE id=uid)<>wallet THEN RAISE EXCEPTION 'idempotency'; END IF;
