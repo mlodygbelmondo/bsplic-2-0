@@ -13,6 +13,7 @@ import { compressImageFile } from "@/features/social/images";
 import { ProfileBadgesSection } from "@/features/profile/components/ProfileBadgesSection";
 import { ProfileHistoryPanel } from "@/features/profile/components/ProfileHistoryPanel";
 import { useProfileHistory } from "@/features/profile/hooks/useProfileHistory";
+import { ReplayLaunchCard } from "@/features/replay/ReplayLaunchCard";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface UserStatsRow {
@@ -358,6 +359,7 @@ export default function ProfilePage() {
             profileName={displayName}
             profileUrl={shareableProfileUrl}
           />
+          {isOwnProfile && <ReplayLaunchCard />}
           <ProfileHistoryPanel history={history} />
 
           {targetUserId && <ProfileBadgesSection badges={badges} />}
