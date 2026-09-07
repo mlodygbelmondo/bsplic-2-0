@@ -91,14 +91,11 @@
 }
 .slots-layout {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(320px, 520px) minmax(
-      160px,
-      1fr
-    );
+  grid-template-columns: minmax(320px, 520px) 220px;
+  justify-content: center;
   gap: 28px;
   align-items: center;
 }
-.slots-sidecard,
 .slots-session {
   padding: 22px 16px;
   background: #0004;
@@ -106,42 +103,10 @@
   border-radius: 20px;
   backdrop-filter: blur(16px);
 }
-.slots-sidecard h2 {
-  font-family: Georgia, serif;
-  font-size: 26px;
-  line-height: 1.2;
-  margin: 16px 0;
-}
-.slots-sidecard p,
 .slots-session p {
   font-size: 12px;
   line-height: 1.7;
   color: #ffffffa6;
-}
-.slots-side-detail {
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid #ffffff1a;
-  margin: 22px 0 8px;
-  padding-top: 16px;
-  gap: 5px;
-}
-.slots-side-detail strong {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  color: var(--slot-accent);
-}
-.slots-side-detail span {
-  font-size: 24px;
-  font-family: Georgia, serif;
-}
-.slots-sidecard > a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-top: 24px;
-  color: var(--slot-accent);
 }
 .slot-machine {
   background: linear-gradient(145deg, #284039, #091a17 45%, #16322a);
@@ -467,14 +432,6 @@
   color: #ffffffa6;
   margin-top: 3px;
 }
-.slots-footnote {
-  text-align: center;
-  font-size: 10px;
-  color: #ffffff80;
-  margin: 20px auto 0;
-  max-width: 600px;
-  line-height: 1.6;
-}
 .slots-message {
   text-align: center;
   font-size: 13px;
@@ -526,9 +483,6 @@
     grid-template-columns: minmax(0, 600px) 190px;
     justify-content: center;
     gap: 22px;
-  }
-  .slots-sidecard {
-    display: none;
   }
 }
 @media (max-width: 700px) {

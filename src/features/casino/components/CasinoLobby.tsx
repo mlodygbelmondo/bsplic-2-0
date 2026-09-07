@@ -47,9 +47,6 @@ export function CasinoLobby({
 
         <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-amber-200/80">
-              Kasyno premium
-            </p>
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
               Ruletka
             </h1>

@@ -4,16 +4,12 @@ export type SlotGame = "bandit" | "candy";
 export const SLOT_GAMES = {
   bandit: {
     title: "Midnight Bandit",
-    eyebrow: "NAPAD PO ZMROKU",
-    description: "Łącz klejnoty. Odkrywaj złote pola.",
     rule: "5+ jednakowych symboli stykających się bokami",
     image: "/casino/slots/bandit.webp",
     offset: 0,
   },
   candy: {
     title: "Candy Cascade",
-    eyebrow: "SŁODKA LAWINA",
-    description: "Zbieraj słodycze. Łap mnożniki.",
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/candy.webp",
     offset: 8,

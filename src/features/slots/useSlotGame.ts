@@ -29,7 +29,7 @@ function readPending(key: string): PendingSpin | null {
   return null;
 }
 const errorMessages: Record<string, string> = {
-  INSUFFICIENT_BALANCE: "Za mało wirtualnych monet. Zmniejsz stawkę.",
+  INSUFFICIENT_BALANCE: "Za mało środków. Zmniejsz stawkę.",
   BONUS_STAKE_LOCKED:
     "Darmowe obroty zachowują stawkę z momentu zdobycia bonusu.",
   INVALID_STAKE: "Wybierz stawkę od 1 do 100.",

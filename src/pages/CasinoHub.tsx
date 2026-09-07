@@ -33,11 +33,8 @@ export default function CasinoHub() {
       <div className="relative z-10 mx-auto w-full max-w-7xl space-y-8">
         <div className="space-y-3 pt-4 text-center md:pt-10">
           <h1 className="text-4xl font-black uppercase tracking-wider text-white drop-shadow-lg md:text-6xl">
-            Wybierz swoją grę
+            Wybierz grę
           </h1>
-          <p className="mx-auto max-w-xl text-sm text-white/70 md:text-base">
-            Cztery gry. Jeden portfel. Wyłącznie wirtualne monety.
-          </p>
         </div>
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
@@ -45,14 +42,10 @@ export default function CasinoHub() {
             {
               id: "bandit",
               title: "Midnight Bandit",
-              tag: "KLEJNOTY · KASKADY · ZŁOTE POLA",
-              copy: "Nocny napad na skarbiec. Łącz symbole i odkrywaj mnożniki.",
             },
             {
               id: "candy",
               title: "Candy Cascade",
-              tag: "SŁODYCZE · MNOŻNIKI · DARMOWE OBROTY",
-              copy: "Kolorowe kaskady i słodkie bonusy. Zbieraj osiem pasujących symboli.",
             },
           ].map((game) => (
             <Link
@@ -66,17 +59,10 @@ export default function CasinoHub() {
                 className="absolute inset-0 h-full w-full object-cover object-[center_30%] transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-              <span className="absolute left-5 top-5 rounded-full border border-white/30 bg-black/40 px-3 py-1 text-[10px] font-bold tracking-widest text-white backdrop-blur">
-                NOWOŚĆ · BSPLIC ORIGINALS
-              </span>
               <div className="relative mt-auto p-6 text-white">
-                <p className="mb-2 text-[9px] font-bold tracking-[0.15em] text-amber-100">
-                  {game.tag}
-                </p>
                 <h2 className="mb-2 font-serif text-4xl font-black tracking-tight">
                   {game.title}
                 </h2>
-                <p className="max-w-xs text-sm text-white/80">{game.copy}</p>
                 <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur">
                   Zagraj →
                 </span>
@@ -104,10 +90,7 @@ export default function CasinoHub() {
                 <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
                   Ruletka
                 </h2>
-                <p className="text-sm leading-relaxed text-white">
-                  Klasyczna ruletka z mnożnikami. Obstawiaj kolory, parzyste lub
-                  swoje szczęśliwe numery.
-                </p>
+                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">Zagraj →</span>
               </div>
             </motion.div>
           </Link>
@@ -132,10 +115,7 @@ export default function CasinoHub() {
                 <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
                   Blackjack
                 </h2>
-                <p className="text-sm leading-relaxed text-white">
-                  Zagraj przeciwko krupierowi. Dobieraj karty, podwajaj stawki i
-                  zbierz 21 punktów.
-                </p>
+                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">Zagraj →</span>
               </div>
             </motion.div>
           </Link>

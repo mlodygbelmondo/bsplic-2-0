@@ -351,10 +351,10 @@ describe("BlackjackGame", () => {
 
     render(<BlackjackGame />);
 
-    expect(screen.getByText("Insurance?")).toBeInTheDocument();
-    expect(screen.getByText("Stawka insurance: 10.00 zł")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Insurance" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "No Insurance" })).toBeEnabled();
+    expect(screen.getByText("Ubezpieczenie")).toBeInTheDocument();
+    expect(screen.getByText("Koszt: 10.00 zł")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ubezpiecz" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pomiń" })).toBeEnabled();
     expect(
       screen.queryByRole("button", { name: "Hit" }),
     ).not.toBeInTheDocument();

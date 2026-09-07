@@ -358,7 +358,7 @@ export async function blackjackTakeInsurance({
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się postawić insurance');
+    throw new Error(error.message || 'Nie udało się ubezpieczyć zakładu');
   }
 
   return normalizeState(data);
@@ -374,7 +374,7 @@ export async function blackjackDeclineInsurance({
   });
 
   if (error) {
-    throw new Error(error.message || 'Nie udało się odrzucić insurance');
+    throw new Error(error.message || 'Nie udało się odrzucić ubezpieczenia');
   }
 
   return normalizeState(data);

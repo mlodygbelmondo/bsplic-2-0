@@ -415,7 +415,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : 'Nie udało się postawić insurance',
+        err instanceof Error ? err.message : 'Nie udało się ubezpieczyć zakładu',
       );
     } finally {
       setIsResolving(false);
@@ -447,7 +447,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : 'Nie udało się odrzucić insurance',
+        err instanceof Error ? err.message : 'Nie udało się odrzucić ubezpieczenia',
       );
     } finally {
       setIsResolving(false);

@@ -122,7 +122,7 @@ export function RouletteStatsCard({ spins }: RouletteStatsCardProps) {
               aria-hidden="true"
             />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">
-              Gorące
+              Najczęstsze
             </span>
             <div className="flex flex-wrap gap-1.5">
               {stats.hot.map(({ number, count }) => (

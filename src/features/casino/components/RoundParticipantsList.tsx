@@ -68,7 +68,7 @@ export function RoundParticipantsList({ participants }: RoundParticipantsListPro
 
       {participants.length === 0 ? (
         <p className="text-sm text-white/45">
-          Pierwszy zakład otworzy listę graczy tej rundy.
+          Brak zakładów w tej rundzie.
         </p>
       ) : (
         <div className="space-y-2">

@@ -89,9 +89,6 @@ export function WinBanner({ visible, amount, onShare, onDismiss }: WinBannerProp
             <p className="text-sm font-bold tabular-nums text-emerald-100">
               {`Wygrałeś ${displayedAmount.toFixed(2)} zł!`}
             </p>
-            <p className="text-xs text-emerald-300/75">
-              Gratulacje, trafiony zakład.
-            </p>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
             <Button

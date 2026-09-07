@@ -22,13 +22,12 @@ export function SlotRules({ game }: { game: SlotGame }) {
         <DialogHeader>
           <DialogTitle>{SLOT_GAMES[game].title} · zasady</DialogTitle>
           <DialogDescription>
-            Autorska gra BSPLIC. Stawki i wypłaty dotyczą wyłącznie wirtualnej
-            waluty.
+            {SLOT_GAMES[game].rule}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm leading-relaxed">
           <p>
-            {SLOT_GAMES[game].rule}. Wygrywające symbole znikają, a na ich
+            Wygrywające symbole znikają, a na ich
             miejsce spadają nowe. Jeden obrót obejmuje maksymalnie 12 układów.
             Łączna wypłata jest ograniczona do 500× stawki.
           </p>
@@ -43,11 +42,10 @@ export function SlotRules({ game }: { game: SlotGame }) {
             kolejnych bonusów. Niewykorzystane obroty zostają na koncie.
           </p>
           <div className="rounded-xl bg-amber-500/10 p-3">
-            <strong>Jawny bonus powitalny</strong>
+            <strong>Bonus startowy</strong>
             <p>
               Pierwsze 10 płatnych obrotów na koncie, łącznie w obu grach, ma
-              35% szansy na wstawienie jednej pasującej grupy. To nie gwarantuje
-              zysku. Później ten dodatek znika. Pozostałe zasady są identyczne.
+              35% szansy na wstawienie jednej pasującej grupy.
             </p>
           </div>
           <p>
@@ -77,8 +75,7 @@ export function SlotRules({ game }: { game: SlotGame }) {
           <p>
             Każdy dodatkowy symbol w grupie mnoży jej bazową wypłatę przez 1,35.
             Bazowa wypłata jest zaokrąglana do 0,01 przed mnożnikiem. Wynik
-            netto = wypłata − pobrana stawka. Wypłata mniejsza od stawki oznacza
-            stratę.
+            netto = wypłata − pobrana stawka.
           </p>
         </div>
       </DialogContent>

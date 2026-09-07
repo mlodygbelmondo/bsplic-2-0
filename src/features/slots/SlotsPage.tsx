@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  ArrowRight,
   AudioLines,
   Gift,
   History,
@@ -132,7 +131,6 @@ function SlotMachine({ game }: { game: SlotGame }) {
           <Link to="/casino" className="slot-back">
             <ArrowLeft size={17} /> Wszystkie gry
           </Link>
-          <span>BSPLIC ORIGINALS · WIRTUALNE MONETY</span>
           <div className="flex gap-2">
             <button
               className="slot-icon-button"
@@ -146,45 +144,13 @@ function SlotMachine({ game }: { game: SlotGame }) {
           </div>
         </div>
         <header className="slots-heading">
-          <p>{config.eyebrow}</p>
           <h1>{config.title}</h1>
-          <span>{config.description}</span>
         </header>
         <div className="slots-layout">
-          <aside className="slots-sidecard">
-            <span className="slots-kicker">JAK GRAMY</span>
-            <h2>
-              {game === "bandit"
-                ? "Mały napad. Wielka noc."
-                : "Jeszcze jedna kaskada."}
-            </h2>
-            <p>{config.rule}.</p>
-            <div className="slots-side-detail">
-              <strong>{game === "bandit" ? "ZŁOTE POLA" : "MNOŻNIKI"}</strong>
-              <span>do 5×</span>
-            </div>
-            <p>
-              {game === "bandit"
-                ? "Wygrywaj na tych samych polach i zwiększaj ich mnożniki."
-                : "Każda wygrywająca kaskada losuje nowy mnożnik."}
-            </p>
-            <div className="slots-side-detail">
-              <strong>4× BONUS</strong>
-              <span>8 obrotów</span>
-            </div>
-            <p>
-              Bezpłatne obroty zostają na Twoim koncie, także po wyjściu z gry.
-            </p>
-            <Link
-              to={`/casino/slots/${game === "bandit" ? "candy" : "bandit"}`}
-            >
-              Zmień klimat <ArrowRight size={16} />
-            </Link>
-          </aside>
           <section className="slot-machine" aria-label={config.title}>
             <div className="slot-machine-top">
               <span>
-                {freeSpins > 0 ? "DARMOWE OBROTY" : "KASKADY"}
+                {freeSpins > 0 ? "DARMOWE OBROTY" : "PLANSZA"}
                 <strong>{freeSpins > 0 ? freeSpins : "6 × 5"}</strong>
               </span>
               <span className="slot-round-status">
@@ -192,7 +158,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
                   ? "Losowanie…"
                   : animating
                     ? `Kaskada ${frameIndex + 1}`
-                    : "Twój ruch"}
+                    : ""}
               </span>
               <span>
                 MNOŻNIK<strong>×{frame.multiplier}</strong>
@@ -207,8 +173,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
             <div className="slot-result" role="status" aria-live="polite">
               {busy ? (
                 <>
-                  <span>Potwierdzamy obrót</span>
-                  <strong>Powodzenia!</strong>
+                  <span>Losowanie…</span>
                 </>
               ) : animating ? (
                 <>
@@ -240,7 +205,6 @@ function SlotMachine({ game }: { game: SlotGame }) {
               ) : (
                 <>
                   <span>{config.rule}</span>
-                  <strong>Gotowy na obrót?</strong>
                 </>
               )}
             </div>
@@ -343,18 +307,17 @@ function SlotMachine({ game }: { game: SlotGame }) {
               disabled={disabled || stopped}
               onClick={() => setStopped(true)}
             >
-              {stopped ? "Sesja zakończona" : "Kończę na dziś"}
+              {stopped ? "Sesja zakończona" : "Zakończ sesję"}
             </button>
             {stopped && (
               <div className="slot-session-ended" role="status">
-                Zatrzymujesz się z bilansem {money(session.net)}.{" "}
                 <Link to="/casino">Wróć do lobby</Link>
               </div>
             )}
             <div className="slots-history">
               <h3>Ostatnie obroty</h3>
               {history.length === 0 ? (
-                <p>Twój pierwszy obrót czeka.</p>
+                <p>Brak obrotów</p>
               ) : (
                 history.slice(0, 5).map((item) => (
                   <div key={item.id}>
@@ -383,7 +346,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
         </div>
         {state.isPending && (
           <p className="slots-message" role="status">
-            Ładowanie konta gry…
+            Ładowanie…
           </p>
         )}
         {state.isError && (
@@ -404,19 +367,11 @@ function SlotMachine({ game }: { game: SlotGame }) {
             <Gift size={19} />
             <p>
               <strong>
-                Bonus powitalny · pozostało {state.data?.boostRemaining}/10
+                Bonus startowy · pozostało {state.data?.boostRemaining}/10
               </strong>
-              <span>
-                35% szansy na dodatkową pasującą grupę. Wspólny dla obu gier.
-                Szczegóły w zasadach.
-              </span>
             </p>
           </div>
         )}
-        <p className="slots-footnote">
-          Wyłącznie wirtualna waluta. Wypłata to nie zawsze zysk. Bilans
-          pokazuje wynik po odjęciu stawki.
-        </p>
       </div>
     </div>
   );

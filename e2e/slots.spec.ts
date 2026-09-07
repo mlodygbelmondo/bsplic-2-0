@@ -153,7 +153,7 @@ for (const game of ["bandit", "candy"]) {
     await page.getByRole("button", { name: "Zasady i wypłaty" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();
-    await page.getByRole("button", { name: "Kończę na dziś" }).click();
+    await page.getByRole("button", { name: "Zakończ sesję" }).click();
     await expect(page.getByRole("button", { name: "ZAKRĘĆ" })).toBeDisabled();
     expect(state.errors).toEqual([]);
   });
@@ -196,7 +196,7 @@ test("lobby exposes all four games and one mobile Games tab", async ({
         .getByRole("navigation", { name: "Nawigacja aplikacji" })
         .getByRole("link")
         .count(),
-    ).toBe(4);
+    ).toBe(5);
   }
   await page.screenshot({ path: info.outputPath("lobby.png"), fullPage: true });
 });

@@ -82,9 +82,9 @@ describe("Slots", () => {
   });
   it("stops the session without offering another spin", () => {
     setup();
-    fireEvent.click(screen.getByRole("button", { name: "Kończę na dziś" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zakończ sesję" }));
     expect(screen.getByRole("button", { name: "ZAKRĘĆ" })).toBeDisabled();
-    expect(screen.getByText(/Zatrzymujesz się z bilansem/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Wróć do lobby" })).toBeVisible();
   });
   it("does not double-submit rapid clicks", async () => {
     mock.spin.mockReturnValue(new Promise(() => {}));

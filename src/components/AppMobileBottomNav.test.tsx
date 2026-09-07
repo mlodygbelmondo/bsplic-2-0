@@ -52,9 +52,15 @@ describe("AppMobileBottomNav", () => {
 
   it.each(["/casino", "/casino/roulette", "/casino/blackjack", "/casino/slots/bandit", "/casino/slots/candy"])("groups all casino routes under one Games tab: %s", (path) => {
     renderBottomNav(path);
-    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getAllByRole("link")).toHaveLength(5);
     expect(screen.getByRole("link", { name: "Gry" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Gry" })).toHaveAttribute("href", "/casino");
+  });
+
+  it("links to the profile and marks it active", () => {
+    renderBottomNav("/profile");
+    expect(screen.getByRole("link", { name: "Profil" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: "Profil" })).toHaveAttribute("aria-current", "page");
   });
 
   it("renders the mobile navigation through the liquid glass surface", () => {
