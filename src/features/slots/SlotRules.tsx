@@ -42,10 +42,12 @@ export function SlotRules({ game }: { game: SlotGame }) {
             kolejnych bonusów. Niewykorzystane obroty zostają na koncie.
           </p>
           <div className="rounded-xl bg-amber-500/10 p-3">
-            <strong>Bonus startowy</strong>
+            <strong>Bonus</strong>
             <p>
-              Pierwsze 10 płatnych obrotów na koncie, łącznie w obu grach, ma
-              35% szansy na wstawienie jednej pasującej grupy.
+              Bonus obejmuje losowe 5–15 płatnych obrotów, wspólnych dla obu gier.
+              Każdy ma 35% szans na dodatkową pasującą grupę. Po zużyciu
+              bonus odnawia się po losowych 12–36 godzinach. Darmowe obroty
+              go nie zużywają. Niewykorzystane obroty nie wygasają ani się nie kumulują.
             </p>
           </div>
           <p>

@@ -30,7 +30,7 @@ async function setup(
     if (rpc === "casino_slot_state")
       return route.fulfill({
         json: {
-          boostRemaining: 10,
+          boostRemaining: 15,
           freeSpins: options.free ? 3 : 0,
           bonusStake: 5,
           history: state.history,
@@ -54,7 +54,7 @@ async function setup(
         net: -3,
         balance: 997,
         boosted: true,
-        boostRemaining: 9,
+        boostRemaining: 14,
         freeSpins: 0,
         awardedFreeSpins: 0,
         createdAt: new Date().toISOString(),

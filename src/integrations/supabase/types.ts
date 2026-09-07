@@ -17,14 +17,20 @@ export type Database = {
       casino_slot_accounts: {
         Row: {
           user_id: string
+          boost_remaining: number
+          boost_resets_at: string | null
           paid_spins: number
         }
         Insert: {
           user_id: string
+          boost_remaining?: number
+          boost_resets_at?: string | null
           paid_spins?: number
         }
         Update: {
           user_id?: string
+          boost_remaining?: number
+          boost_resets_at?: string | null
           paid_spins?: number
         }
         Relationships: [{

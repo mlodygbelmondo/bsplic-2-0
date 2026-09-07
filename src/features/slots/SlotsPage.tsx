@@ -367,7 +367,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
             <Gift size={19} />
             <p>
               <strong>
-                Bonus startowy · pozostało {state.data?.boostRemaining}/10
+                Bonus · pozostało {state.data?.boostRemaining} obrotów
               </strong>
             </p>
           </div>

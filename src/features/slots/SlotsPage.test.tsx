@@ -102,10 +102,10 @@ describe("Slots", () => {
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
     await waitFor(() => expect(mock.spin).toHaveBeenCalledTimes(2));
   });
-  it("explains the welcome odds and net payout rules", () => {
+  it("explains the recurring bonus odds and net payout rules", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Zasady i wypłaty" }));
-    expect(screen.getByText(/Pierwsze 10 płatnych obrotów/)).toBeVisible();
+    expect(screen.getByText(/Bonus obejmuje losowe 5–15/)).toBeVisible();
     expect(screen.getByText(/Wynik netto = wypłata/)).toBeVisible();
   });
 });

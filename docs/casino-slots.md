@@ -12,6 +12,10 @@ Przy kolejnych operacjach CLI należy wybrać token konta mającego dostęp do B
 
 Nie ma zmian zależności aplikacji. Trasa i CSS slotów są ładowane leniwie.
 
+## Lokalna zmiana oczekująca na wdrożenie
+
+`20260907200000_recurring_slot_boost.sql` nie została wdrożona. Przed publikacją nowego frontendu należy zastosować tę migrację w Supabase. Istniejące konta otrzymają nową losową pulę przy pierwszym odczycie stanu lub obrocie po migracji; historia i saldo pozostają bez zmian. Testy lokalne obejmują granice puli i czasu, wspólny licznik, darmowe obroty, odnowienie po przerwie oraz równoczesne ponowienia ostatniego obrotu bonusowego.
+
 ## Mechanika i rozliczenia
 
 - Plansza 6 × 5. Bandit wymaga co najmniej pięciu jednakowych symboli połączonych bokami. Candy wymaga ośmiu w dowolnych miejscach.
@@ -19,7 +23,7 @@ Nie ma zmian zależności aplikacji. Trasa i CSS slotów są ładowane leniwie.
 - Bandit zwiększa mnożniki wygrywających pól do 5×. Grupa używa najwyższego mnożnika swoich pól. Pola zerują się przy nowym obrocie. Wskaźnik planszy pokazuje najwyższy zastosowany mnożnik.
 - Candy losuje wspólny mnożnik 1–5× dla każdej wygrywającej kaskady.
 - Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają osiem darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów.
-- Pierwsze dziesięć płatnych obrotów na koncie, łącznie w obu grach, ma jawne 35% szansy wstawienia minimalnej pasującej grupy. Odświeżenie, zmiana gry i wylogowanie nie odnawiają bonusu.
+- Bonus obejmuje losowe 5–15 płatnych obrotów na koncie, wspólnych dla obu gier. Każdy ma 35% szansy wstawienia minimalnej pasującej grupy. Po zużyciu ostatniego obrotu serwer losuje przerwę 12–36 godzin. Po jej upływie kolejny odczyt stanu lub obrót aktywuje nową pulę. Niewykorzystana pula nie wygasa, nie kumuluje się i nie jest zużywana przez darmowe obroty. Odświeżenie, zmiana gry i wylogowanie nie zmieniają losowania.
 - Losowanie używa `pgcrypto.gen_random_bytes`. BONUS ma prawdopodobieństwo 2,5% na pole; każdy pozostały symbol 97,5% / 7. Minimalna grupa płaci `stake × base × (1 + symbol × 0.25)`, gdzie base to 2.60 dla Bandita i 0.23 dla Candy. Każdy dodatkowy symbol zwiększa bazową wypłatę 1.35×. Zaokrąglenie do grosza następuje przed mnożnikiem.
 - Próbka po 20 tys. obrotów na grę, ze stawką 10 i wyłączonym bonusem powitalnym, dała obserwowany zwrot 93,61% w Bandicie i 99,88% w Candy. To wynik losowej próbki, nie dokładne RTP ani gwarancja. Próbka obejmowała darmowe obroty.
 - Serwer sprawdza użytkownika, stawkę 1–100, saldo i stawkę bonusu. Blokada wiersza profilu serializuje operacje portfela. Wynik, bonus i saldo są zapisywane w jednej transakcji.

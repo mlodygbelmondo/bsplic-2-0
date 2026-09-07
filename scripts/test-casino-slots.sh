@@ -27,9 +27,12 @@ SQL
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907090000_casino_slots.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907180000_fix_casino_slot_state.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slots.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907200000_recurring_slot_boost.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-boost.sql"
 # Two simultaneous connections replay one request: exactly one debit and ledger row.
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO profiles(id,balance) VALUES('11111111-1111-4111-8111-111111111111',500);
+INSERT INTO casino_slot_accounts(user_id,boost_remaining,boost_resets_at) VALUES('11111111-1111-4111-8111-111111111111',1,NULL);
 SQL
 for attempt in 1 2; do
   psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 >"$slots_test_dir/request-$attempt.log" <<'SQL' &
@@ -45,7 +48,8 @@ psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
  IF (SELECT count(*) FROM casino_slot_spins)<>1 THEN RAISE EXCEPTION 'concurrent duplicate'; END IF;
  IF (SELECT balance FROM profiles)<>495+(SELECT payout FROM casino_slot_spins) THEN RAISE EXCEPTION 'concurrent wallet'; END IF;
- RAISE NOTICE 'PASS: concurrent authenticated requests have one debit';
+ IF (SELECT boost_remaining FROM casino_slot_accounts)<>0 OR (SELECT paid_spins FROM casino_slot_accounts)<>1 OR (SELECT boost_resets_at FROM casino_slot_accounts) IS NULL THEN RAISE EXCEPTION 'concurrent boost consumption'; END IF;
+ RAISE NOTICE 'PASS: concurrent authenticated requests have one debit and one boost consumption';
 END; $$;
 SET ROLE authenticated;
 SET request.jwt.claim.sub='33333333-3333-4333-8333-333333333333';
