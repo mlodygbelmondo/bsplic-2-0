@@ -41,6 +41,7 @@ const CasinoRouletteDevPage = lazy(
   () => import("./pages/CasinoRouletteDevPage"),
 );
 const CasinoBlackjackPage = lazy(loadCasinoBlackjackPage);
+const SlotsPage = lazy(() => import("@/features/slots/SlotsPage"));
 const JackpotDrawPage = lazy(loadJackpotDrawPage);
 const JackpotDevFlowPage = import.meta.env.DEV
   ? lazy(() => import("@/features/jackpot/pages/JackpotDevFlowPage"))
@@ -200,6 +201,7 @@ const App = () => (
                     element={<CasinoRouletteDevPage />}
                   />
                   <Route path="blackjack" element={<CasinoBlackjackPage />} />
+                  <Route path="slots/:game" element={<SlotsPage />} />
                 </Route>
 
                 <Route

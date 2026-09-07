@@ -158,12 +158,12 @@ export function Navbar({
   return (
     <>
       <nav className="gradient-navbar safe-area-top fixed inset-x-0 top-0 z-50 shadow-md">
-        <div className="flex items-center justify-between px-4 h-11 max-w-[1600px] mx-auto">
+        <div className="flex items-center justify-between px-4 max-[360px]:px-2 h-11 max-w-[1600px] mx-auto">
           {/* Left */}
           <div className="flex items-center gap-5">
             <Link
               to="/"
-              className="brand-logo-pill rounded-md px-2 py-[5px] text-[16px] font-black italic tracking-tight text-white leading-none transition hover:brightness-110"
+              className="brand-logo-pill whitespace-nowrap max-[360px]:text-[13px] rounded-md px-2 py-[5px] text-[16px] font-black italic tracking-tight text-white leading-none transition hover:brightness-110"
             >
               BSPLIC 2.0
             </Link>
@@ -322,7 +322,7 @@ export function Navbar({
             {profile && !isDesktopNav && (
               <button
                 onClick={openTopupDialog}
-                className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full py-0 pl-1 pr-2.5 text-[12px] font-bold leading-none text-primary-foreground transition-colors"
+                className="press-scale navbar-chip flex h-8 items-center gap-1.5 rounded-full whitespace-nowrap py-0 pl-1 pr-2.5 text-[12px] max-[360px]:text-[10px] font-bold leading-none text-primary-foreground transition-colors"
                 title={walletButtonTitle}
                 aria-label={walletButtonLabel}
               >

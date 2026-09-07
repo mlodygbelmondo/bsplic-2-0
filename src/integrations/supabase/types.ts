@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      casino_slot_accounts: {
+        Row: {
+          user_id: string
+          paid_spins: number
+        }
+        Insert: {
+          user_id: string
+          paid_spins?: number
+        }
+        Update: {
+          user_id?: string
+          paid_spins?: number
+        }
+        Relationships: [{
+          foreignKeyName: "casino_slot_accounts_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: true
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }]
+      }
+      casino_slot_bonus: {
+        Row: {
+          user_id: string
+          game: string
+          remaining: number
+          stake: number
+        }
+        Insert: {
+          user_id: string
+          game: string
+          remaining?: number
+          stake?: number
+        }
+        Update: {
+          user_id?: string
+          game?: string
+          remaining?: number
+          stake?: number
+        }
+        Relationships: [{
+          foreignKeyName: "casino_slot_bonus_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }]
+      }
+      casino_slot_spins: {
+        Row: {
+          id: string
+          user_id: string
+          game: string
+          stake: number
+          charged: number
+          payout: number
+          result: Json
+          created_at: string
+        }
+        Insert: {
+          id: string
+          user_id: string
+          game: string
+          stake: number
+          charged: number
+          payout: number
+          result: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          game?: string
+          stake?: number
+          charged?: number
+          payout?: number
+          result?: Json
+          created_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "casino_slot_spins_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        }]
+      }
       badges: {
         Row: {
           badge_key: string
@@ -1257,6 +1344,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      casino_slot_state: { Args: { p_game: string }; Returns: Json }
+      casino_slot_spin: { Args: { p_game: string; p_stake: number; p_request_id: string }; Returns: Json }
       admin_get_dashboard_summary: {
         Args: Record<PropertyKey, never>
         Returns: Json

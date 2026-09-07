@@ -1,8 +1,7 @@
 import LiquidGlass from "liquid-glass-react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  CircleDot,
-  Club,
+  Gamepad2,
   House,
   MessageCircle,
   Trophy,
@@ -46,16 +45,10 @@ const MOBILE_NAV_ITEMS: MobileNavItem[] = [
     isActive: (pathname) => pathname.startsWith("/social"),
   },
   {
-    to: "/casino/roulette",
-    label: "Ruletka",
-    icon: CircleDot,
-    isActive: (pathname) => pathname.startsWith("/casino/roulette"),
-  },
-  {
-    to: "/casino/blackjack",
-    label: "Blackjack",
-    icon: Club,
-    isActive: (pathname) => pathname.startsWith("/casino/blackjack"),
+    to: "/casino",
+    label: "Gry",
+    icon: Gamepad2,
+    isActive: (pathname) => pathname === "/casino" || pathname.startsWith("/casino/"),
   },
   {
     to: "/rankings",
@@ -96,7 +89,7 @@ export function LiquidGlassMobileBottomNav({
         >
           <div
             className={cn(
-              "grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-5 overflow-hidden rounded-[1.75rem] border px-1.5 py-1.5 ring-1 backdrop-blur-2xl",
+              "grid h-[72px] w-[calc(100vw-1rem)] max-w-[430px] grid-cols-4 overflow-hidden rounded-[1.75rem] border px-1.5 py-1.5 ring-1 backdrop-blur-2xl",
               getLiquidGlassMobileNavShellClassName(theme, tone),
               getLiquidGlassMobileNavBorderClassName(theme, tone),
             )}

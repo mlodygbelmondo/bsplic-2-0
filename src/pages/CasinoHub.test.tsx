@@ -12,6 +12,8 @@ describe('CasinoHub', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole('link', { name: /Midnight Bandit/ })).toHaveAttribute('href', '/casino/slots/bandit');
+    expect(screen.getByRole('link', { name: /Candy Cascade/ })).toHaveAttribute('href', '/casino/slots/candy');
     expect(screen.getByTestId('casino-hub-page')).toHaveStyle({
       '--casino-bg-desktop': "url('/casino/hub-image.webp')",
       '--casino-bg-mobile': "url('/casino/hub-mobile-background.webp')",
