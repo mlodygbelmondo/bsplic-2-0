@@ -1,0 +1,30 @@
+/* Keep both hands above the decision controls on short phones. */
+@media (max-width: 767px) and (max-height: 700px) {
+  .blackjack-game[data-decision="true"] {
+    gap: 8px;
+  }
+
+  .blackjack-game[data-decision="true"] .blackjack-table-info {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+  }
+
+  .blackjack-game[data-decision="true"] .blackjack-table-info > span {
+    display: none;
+  }
+
+  .blackjack-game[data-decision="true"] [data-card-animation] {
+    height: 88px;
+    width: 64px;
+  }
+
+  .blackjack-game[data-decision="true"] [data-testid="blackjack-dealer-area"] {
+    min-height: 0;
+  }
+
+  .blackjack-game[data-decision="true"] [data-testid="dealer-hand"] {
+    padding-bottom: 0;
+  }
+}

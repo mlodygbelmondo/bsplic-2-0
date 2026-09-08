@@ -8,6 +8,7 @@ import { useRouletteTable } from '@/features/casino/hooks/useRouletteTable';
 import { createCasinoShare } from '@/features/social/api/social';
 import {
   getRoulettePayoutMultiplier,
+  getRouletteBetValueOptions,
   validateRouletteBetInput,
 } from '@/features/casino/lib/roulette';
 import {
@@ -438,7 +439,7 @@ export function RouletteGame({
             type="button"
             onClick={handleToggleSound}
             aria-label={soundMuted ? 'Włącz dźwięki' : 'Wycisz dźwięki'}
-            className="absolute right-1 top-20 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white md:top-1"
+            className="absolute right-1 top-20 z-30 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-black/45 text-white/60 backdrop-blur-sm transition-colors hover:border-white/25 hover:text-white md:top-1"
           >
             {soundMuted ? (
               <VolumeX className="h-4 w-4" aria-hidden="true" />
@@ -473,6 +474,8 @@ export function RouletteGame({
             roundId={table.currentRound?.id ?? null}
           />
 
+          {isMobile && bettingPanel}
+
           <MyBetsStrip
             liveBets={myLiveBets}
             settledBets={lastSettled?.bets ?? []}
@@ -498,7 +501,7 @@ export function RouletteGame({
         submitDisabled={submitDisabled}
         submitHint={submitHint}
         potentialWin={potentialWin}
-        betControls={isMobile ? bettingPanel : undefined}
+        betSummary={betType ? getRouletteBetValueOptions(betType).find((option) => option.value === betValue)?.label : undefined}
         onStakeChange={setStake}
         onSubmit={() => void handleSubmit()}
       />

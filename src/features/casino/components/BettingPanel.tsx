@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ChevronDown,
   Hash,
   Palette,
   ArrowUpDown,
@@ -8,11 +7,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   getRouletteBetTypeLabel,
   getRouletteBetValueOptions,
@@ -74,7 +68,7 @@ function getValueButtonClass(
   isWinning: boolean,
 ) {
   const base =
-    "rounded-lg border px-1 py-2 text-sm font-medium transition-all sm:px-2";
+    "min-h-11 touch-manipulation rounded-lg border px-1 py-2 text-base font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 sm:px-2";
 
   let palette: string;
   if (betType === "straight") {
@@ -126,6 +120,7 @@ export function BettingPanel({
           <button
             key={type}
             type="button"
+            aria-pressed={active}
             onClick={() => onBetTypeChange(type)}
             className={cn(
               "flex items-center gap-2 rounded-xl border p-2.5 transition-all duration-200 sm:gap-3 sm:p-3",
@@ -153,7 +148,7 @@ export function BettingPanel({
               >
                 {label}
               </p>
-              <p className="text-[10px] text-white/40">{desc}</p>
+              <p className="text-xs text-white/70">{desc}</p>
             </div>
           </button>
         );
@@ -163,31 +158,14 @@ export function BettingPanel({
 
   return (
     <div className="space-y-3" data-testid="roulette-bet-panel">
-      <div className="hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm md:block">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">
-          Typ zakładu
-        </p>
+      <div className="rounded-2xl bg-black/55 p-3 md:p-4">
+        <p className="mb-3 text-sm font-semibold text-white/80">Typ zakładu</p>
         {betTypeSelector}
       </div>
 
-      <Collapsible className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm md:hidden">
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 text-left">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
-            Typ zakładu
-          </span>
-          <span className="flex items-center gap-2 text-sm font-semibold text-amber-200">
-            {betType ? getRouletteBetTypeLabel(betType) : "Wybierz"}
-            <ChevronDown className="h-4 w-4 text-white/40" />
-          </span>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3">
-          {betTypeSelector}
-        </CollapsibleContent>
-      </Collapsible>
-
       <div className="overflow-hidden">
         {betType && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm">
+          <div className="rounded-2xl bg-black/55 p-3 md:p-4">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={betType}
@@ -197,10 +175,10 @@ export function BettingPanel({
                 transition={{ type: "spring", stiffness: 760, damping: 44 }}
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+                  <p className="text-sm font-semibold text-white/80">
                     Wartość
                   </p>
-                  <p className="text-[10px] font-bold text-amber-200/70">
+                  <p className="text-xs font-bold text-amber-200">
                     wypłata {betType === "straight" ? "x36" : "x2"}
                   </p>
                 </div>
@@ -217,6 +195,7 @@ export function BettingPanel({
                     <button
                       key={opt.value}
                       type="button"
+                      aria-pressed={betValue === opt.value}
                       onClick={() => onBetValueChange(opt.value)}
                       className={getValueButtonClass(
                         betType,

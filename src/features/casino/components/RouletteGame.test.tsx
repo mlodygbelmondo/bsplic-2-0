@@ -563,50 +563,23 @@ describe('RouletteGame', () => {
     expect(storeRouletteBetTypeMock).toHaveBeenCalledWith('parity');
   });
 
-  it('puts bet type selection inside the mobile stake drawer', () => {
+  it('shows mobile bet selection immediately and changes stake without placing a bet', () => {
     useIsMobileMock.mockReturnValue(true);
     useRouletteTableMock.mockReturnValue(baseTableMock);
-
-    render(
-      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
-    );
-
-    expect(screen.queryByTestId('roulette-bet-panel')).not.toBeInTheDocument();
-    const mobileTrigger = screen.getByRole('button', {
-      name: /Otwórz kupon ruletki/i,
-    });
-
-    expect(mobileTrigger.parentElement).toHaveClass(
-      'bottom-[var(--roulette-mobile-stake-nav-anchor)]',
-    );
-    expect(mobileTrigger.parentElement).toHaveStyle({
-      '--roulette-mobile-stake-nav-anchor':
-        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
-      '--roulette-mobile-stake-top-anchor':
-        'calc(2.75rem + env(safe-area-inset-top))',
-    });
-
-    fireEvent.click(mobileTrigger);
-
-    const drawer = screen.getByTestId('mobile-stake-drawer');
-    expect(drawer).toHaveTextContent('Typ zakładu');
-    expect(drawer).toHaveTextContent('Wybierz stawkę');
-    expect(drawer).toHaveClass(
-      'bottom-[var(--roulette-mobile-stake-nav-anchor)]',
-      'max-h-[calc(var(--app-viewport-height,100svh)-var(--roulette-mobile-stake-top-anchor)-var(--roulette-mobile-stake-nav-anchor))]',
-      'overflow-y-auto',
-      'overscroll-contain',
-    );
-    expect(drawer).toHaveStyle({
-      '--roulette-mobile-stake-nav-anchor':
-        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom))',
-      '--roulette-mobile-stake-top-anchor':
-        'calc(2.75rem + env(safe-area-inset-top))',
-    });
-    expect(screen.getByTestId('roulette-bet-value-grid')).toHaveClass(
-      'grid-cols-5',
-      'sm:grid-cols-6',
-    );
+    render(<RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />);
+    expect(screen.getByTestId('roulette-bet-panel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Postaw zakład' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Kolor x2/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Czerwone' }));
+    expect(screen.getByRole('button', { name: 'Czerwone' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Zmień stawkę ruletki' }));
+    const drawer = screen.getByRole('dialog');
+    fireEvent.change(within(drawer).getByLabelText('Własna kwota w zł'), { target: { value: '25' } });
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Gotowe' }));
+    expect(baseTableMock.placeBet).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Postaw zakład' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Postaw zakład' }));
+    expect(baseTableMock.placeBet).toHaveBeenCalledWith({ betType: 'color', betValue: 'red', stake: 25 });
   });
 
   it('reserves bottom scroll space for the mobile stake overlay and bottom nav', () => {

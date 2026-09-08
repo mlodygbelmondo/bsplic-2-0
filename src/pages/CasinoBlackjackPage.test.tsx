@@ -12,8 +12,8 @@ describe('CasinoBlackjackPage', () => {
     const { container } = render(<CasinoBlackjackPage />);
 
     expect(screen.getByTestId('casino-blackjack-shell')).toHaveStyle({
-      '--casino-bg-desktop': "url('/casino/blackjack-background.webp')",
-      '--casino-bg-mobile': "url('/casino/blackjack-mobile-background.webp')",
+      '--casino-bg-desktop': "url('/casino/blackjack-table.webp')",
+      '--casino-bg-mobile': "url('/casino/blackjack-table.webp')",
     });
     expect(screen.getByTestId('casino-blackjack-shell')).toHaveClass(
       'min-h-full',

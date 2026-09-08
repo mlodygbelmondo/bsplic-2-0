@@ -152,14 +152,13 @@ describe("BlackjackGame", () => {
     const { container } = render(<BlackjackGame />);
 
     expect(container.firstChild).toHaveClass(
-      "grid",
+      "flex",
       "flex-1",
       "min-h-0",
-      "grid-rows-[minmax(12rem,1fr)_minmax(7rem,auto)_minmax(13rem,1fr)]",
     );
     expect(
-      screen.getByRole("button", { name: "Hit" }).parentElement,
-    ).toHaveClass("flex-wrap");
+      screen.getByRole("button", { name: "Dobierz" }).parentElement,
+    ).toHaveClass("grid-cols-2");
     expect(container.querySelector('[data-testid="player-hand"]')).toHaveClass(
       "max-w-full",
       "overflow-visible",
@@ -204,11 +203,11 @@ describe("BlackjackGame", () => {
     render(<BlackjackGame />);
 
     expect(screen.getByText("Dobieranie karty...")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Hit" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Stand" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Dobierz" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Pas" })).toBeDisabled();
   });
 
-  it("reserves the playing action message slot to prevent layout jumps", () => {
+  it("keeps a stable action message slot with the current decision", () => {
     useBlackjackMock.mockReturnValue({
       ...baseBlackjackState,
       status: "playing",
@@ -238,7 +237,6 @@ describe("BlackjackGame", () => {
 
     expect(screen.getByTestId("blackjack-action-message-slot")).toHaveClass(
       "min-h-6",
-      "invisible",
     );
   });
 
@@ -308,10 +306,10 @@ describe("BlackjackGame", () => {
 
     render(<BlackjackGame />);
 
-    expect(screen.getByRole("button", { name: /Split/i })).toHaveClass(
+    expect(screen.getByRole("button", { name: /Podziel/i })).toHaveClass(
       "hover:text-white",
     );
-    expect(screen.getByRole("button", { name: /Double Down/i })).toHaveClass(
+    expect(screen.getByRole("button", { name: /Podwój/i })).toHaveClass(
       "hover:text-white",
     );
     expect(
@@ -356,10 +354,10 @@ describe("BlackjackGame", () => {
     expect(screen.getByRole("button", { name: "Ubezpiecz" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Pomiń" })).toBeEnabled();
     expect(
-      screen.queryByRole("button", { name: "Hit" }),
+      screen.queryByRole("button", { name: "Dobierz" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Stand" }),
+      screen.queryByRole("button", { name: "Pas" }),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("dealer-hidden-card")).toBeInTheDocument();
   });

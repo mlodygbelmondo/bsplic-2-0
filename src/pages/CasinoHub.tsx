@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { SLOT_GAMES } from "@/features/slots/model";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -97,59 +96,29 @@ export default function CasinoHub() {
             </Link>
           ))}
 
-          <Link to="/casino/roulette" className="group">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="relative flex min-h-[320px] overflow-hidden rounded-3xl border border-amber-300/20 bg-black/30 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl transition-colors md:aspect-[4/5] md:min-h-[460px] lg:aspect-[16/11] lg:min-h-[120px]"
+          {[
+            { id: "roulette", title: "Ruletka", image: "/casino/roulette-cover.webp" },
+            { id: "blackjack", title: "Blackjack", image: "/casino/blackjack-cover.webp" },
+          ].map((game) => (
+            <Link
+              key={game.id}
+              to={`/casino/${game.id}`}
+              className="group relative flex min-h-[290px] overflow-hidden rounded-2xl border border-amber-200/30 bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300 md:min-h-[380px]"
             >
-              <div
-                data-testid="casino-roulette-card-art"
-                className="casino-responsive-bg absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out md:bg-[center_center]"
-                style={getCasinoBackgroundStyle(
-                  "/casino/roulette-button.webp",
-                  "/casino/roulette-button.webp",
-                )}
+              <img
+                data-testid={`casino-${game.id}-card-art`}
+                src={game.image}
+                loading="lazy"
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover object-[center_35%] transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/48 to-black/10" />
-              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.28),transparent_54%)]" />
-
-              <div className="relative z-10 mt-auto max-w-sm">
-                <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
-                  Ruletka
-                </h2>
-                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">
-                  Zagraj →
-                </span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+              <div className="relative mt-auto p-6 text-white">
+                <h2 className="mb-2 font-serif text-4xl font-black tracking-tight">{game.title}</h2>
+                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold">Zagraj →</span>
               </div>
-            </motion.div>
-          </Link>
-
-          <Link to="/casino/blackjack" className="group">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="relative flex min-h-[320px] overflow-hidden rounded-3xl border border-sky-200/20 bg-black/30 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl transition-colors md:aspect-[4/5] md:min-h-[460px] lg:aspect-[16/11] lg:min-h-[120px]"
-            >
-              <div
-                data-testid="casino-blackjack-card-art"
-                className="casino-responsive-bg absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-out md:bg-[center_center]"
-                style={getCasinoBackgroundStyle(
-                  "/casino/blackjack-button.webp",
-                  "/casino/blackjack-button.webp",
-                )}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
-              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.24),transparent_54%)]" />
-
-              <div className="relative z-10 mt-auto max-w-sm">
-                <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
-                  Blackjack
-                </h2>
-                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">
-                  Zagraj →
-                </span>
-              </div>
-            </motion.div>
-          </Link>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

@@ -18,13 +18,7 @@ describe('CasinoHub', () => {
       '--casino-bg-desktop': "url('/casino/hub-image.webp')",
       '--casino-bg-mobile': "url('/casino/hub-mobile-background.webp')",
     });
-    expect(screen.getByTestId('casino-roulette-card-art')).toHaveStyle({
-      '--casino-bg-desktop': "url('/casino/roulette-button.webp')",
-      '--casino-bg-mobile': "url('/casino/roulette-button.webp')",
-    });
-    expect(screen.getByTestId('casino-blackjack-card-art')).toHaveStyle({
-      '--casino-bg-desktop': "url('/casino/blackjack-button.webp')",
-      '--casino-bg-mobile': "url('/casino/blackjack-button.webp')",
-    });
+    expect(screen.getByTestId('casino-roulette-card-art')).toHaveAttribute('src', '/casino/roulette-cover.webp');
+    expect(screen.getByTestId('casino-blackjack-card-art')).toHaveAttribute('src', '/casino/blackjack-cover.webp');
   });
 });

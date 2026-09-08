@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useId, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Zap } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface StakeDrawerProps {
@@ -14,7 +16,7 @@ interface StakeDrawerProps {
   submitDisabled: boolean;
   submitHint?: string | null;
   potentialWin?: number | null;
-  betControls?: ReactNode;
+  betSummary?: string;
   onStakeChange: (value: string) => void;
   onSubmit: () => void;
 }
@@ -37,10 +39,12 @@ export function StakeDrawer({
   submitDisabled,
   submitHint = null,
   potentialWin = null,
-  betControls,
+  betSummary,
   onStakeChange,
   onSubmit,
 }: StakeDrawerProps) {
+  const isMobile = useIsMobile();
+  const stakeInputId = useId();
   const [isDesktopOpen, setIsDesktopOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const parsedStake = Number(stake);
@@ -68,7 +72,7 @@ export function StakeDrawer({
   return (
     <>
       {/* Desktop floating bar */}
-      <div className="hidden md:block">
+      {!isMobile && <div className="hidden md:block">
         <AnimatePresence initial={false} mode="wait">
           {isDesktopOpen ? (
             <motion.div
@@ -111,6 +115,7 @@ export function StakeDrawer({
                   ))}
                 </div>
                 <Input
+                  aria-label="Stawka ruletki"
                   type="number"
                   inputMode="decimal"
                   min="0.01"
@@ -187,149 +192,80 @@ export function StakeDrawer({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </div>}
 
-      {/* Mobile swipe drawer */}
-      <div className="md:hidden">
-        {/* Collapsed handle */}
-        <AnimatePresence>
-          {!isMobileOpen && (
-            <motion.div
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              exit={{ y: 100 }}
-              style={MOBILE_STAKE_DRAWER_STYLE}
-              className="fixed inset-x-0 bottom-[var(--roulette-mobile-stake-nav-anchor)] z-50 transition-[bottom] duration-200 ease-out"
-            >
-              <button
-                type="button"
-                aria-label="Otwórz kupon ruletki"
-                onClick={() => setIsMobileOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-t-3xl border-t border-white/10 bg-black/90 pb-4 pt-4 text-white/70 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-              >
-                <ChevronUp className="h-5 w-5" />
-                <span className="text-sm font-semibold uppercase tracking-wider">
-                  Stawka
-                </span>
-                <span className="ml-2 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-200">
-                  {parsedStake > 0 ? `${parsedStake.toFixed(2)} zł` : '—'}
-                </span>
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Expanded drawer */}
-        <AnimatePresence>
-          {isMobileOpen && (
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              data-testid="mobile-stake-drawer"
-              style={MOBILE_STAKE_DRAWER_STYLE}
-              className="fixed inset-x-0 bottom-[var(--roulette-mobile-stake-nav-anchor)] z-50 max-h-[calc(var(--app-viewport-height,100svh)-var(--roulette-mobile-stake-top-anchor)-var(--roulette-mobile-stake-nav-anchor))] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-white/10 bg-black/95 p-5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-[bottom] duration-200 ease-out"
-            >
-              {/* Drag handle */}
-              <div className="mb-4 flex justify-center">
+      {isMobile && <div className="md:hidden">
+        <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
+          <div
+            style={MOBILE_STAKE_DRAWER_STYLE}
+            data-testid="roulette-mobile-controls"
+            className="fixed inset-x-0 bottom-[var(--roulette-mobile-stake-nav-anchor)] z-40 border-t border-white/15 bg-[#0b1713] px-3 py-2"
+          >
+            <div className="mx-auto flex max-w-lg items-center gap-3">
+              <SheetTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => setIsMobileOpen(false)}
-                  className="h-1.5 w-12 rounded-full bg-white/20"
-                />
-              </div>
-
-              {betControls && <div className="mb-4">{betControls}</div>}
-
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">
-                Wybierz stawkę
-              </p>
-
-              <div className="mb-3 grid grid-cols-4 gap-2">
-                {STAKE_PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => onStakeChange(String(preset))}
-                    className={cn(
-                      'rounded-lg border py-2.5 text-sm font-medium transition-all',
-                      parsedStake === preset
-                        ? 'border-amber-500/50 bg-amber-500/15 text-amber-200'
-                        : 'border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20',
-                    )}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-
-              <Input
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="0.01"
-                value={stake}
-                onChange={(e) => onStakeChange(e.target.value)}
-                className="mb-3 h-12 rounded-xl border-white/10 bg-white/[0.06] text-center text-lg font-bold text-white placeholder:text-white/20"
-              />
-
-              <div className="mb-3 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => adjustStake(0.5)}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-bold text-white/75 transition-colors active:border-amber-500/40 active:text-amber-200"
+                  aria-label="Zmień stawkę ruletki"
+                  className="flex min-h-12 min-w-24 items-center justify-between gap-3 rounded-xl border border-white/20 px-3 text-left text-white"
                 >
-                  1/2
+                  <span><span className="block text-xs text-white/70">Stawka</span><strong>{parsedStake > 0 ? `${parsedStake.toFixed(2)} zł` : 'Ustaw'}</strong></span>
+                  <ChevronUp className="h-4 w-4" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => adjustStake(2)}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-bold text-white/75 transition-colors active:border-amber-500/40 active:text-amber-200"
-                >
-                  2x
-                </button>
-                <button
-                  type="button"
-                  onClick={setMaxStake}
-                  className="rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-bold text-white/75 transition-colors active:border-amber-500/40 active:text-amber-200"
-                >
-                  MAX
-                </button>
-              </div>
-
+              </SheetTrigger>
               <Button
-                type="button"
-                onClick={() => {
-                  onSubmit();
-                  setIsMobileOpen(false);
-                }}
+                onClick={onSubmit}
                 disabled={loading || submitDisabled}
-                className="h-12 w-full rounded-xl bg-amber-500 font-bold text-base text-black transition-all hover:bg-amber-400 hover:shadow-[0_0_24px_rgba(245,158,11,0.3)] active:scale-[0.98] disabled:opacity-50"
+                className="h-12 min-w-0 flex-1 rounded-xl bg-amber-400 text-base font-bold text-black hover:bg-amber-300"
               >
-                {loading ? (
-                  'Przyjmowanie…'
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    Postaw zakład
-                  </span>
-                )}
+                {loading ? 'Przyjmowanie…' : 'Postaw zakład'}
               </Button>
-
-              {statusLine && (
-                <p className="mt-2 text-center text-xs text-white/45">
-                  {statusLine}
-                </p>
-              )}
-
-              <p className="mt-3 text-center text-[10px] text-white/30">
-                Saldo: {balance.toFixed(2)} zł
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            </div>
+            <p className="mx-auto mt-1 max-w-lg truncate text-center text-xs text-white/80" role="status">
+              {submitHint ?? `${betSummary ?? 'Zakład'} · wypłata ${potentialWin?.toFixed(2) ?? '0.00'} zł`}
+            </p>
+          </div>
+          <SheetContent
+            side="bottom"
+            data-testid="mobile-stake-drawer"
+            className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-white/15 bg-[#0b1713] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-white [&>button:last-child]:h-11 [&>button:last-child]:w-11 [&>button:last-child]:right-2 [&>button:last-child]:top-2 [&>button:last-child]:flex [&>button:last-child]:items-center [&>button:last-child]:justify-center"
+          >
+            <SheetTitle className="text-white">Wybierz stawkę</SheetTitle>
+            <SheetDescription className="mt-1 text-white/75">Saldo: {balance.toFixed(2)} zł. Kwota dotyczy jednego zakładu.</SheetDescription>
+            <div className="my-4 grid grid-cols-4 gap-2">
+              {STAKE_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={preset > balance || loading}
+                  aria-pressed={parsedStake === preset}
+                  onClick={() => onStakeChange(String(preset))}
+                  className={cn('min-h-12 rounded-xl border text-base font-semibold disabled:opacity-40', parsedStake === preset ? 'border-amber-300 bg-amber-400/15 text-amber-100' : 'border-white/20 text-white')}
+                >{preset}</button>
+              ))}
+            </div>
+            <label htmlFor={stakeInputId} className="mb-2 block text-sm text-white/80">Własna kwota w zł</label>
+            <Input
+              id={stakeInputId}
+              type="number"
+              inputMode="decimal"
+              min="0.01"
+              step="0.01"
+              value={stake}
+              disabled={loading}
+              onChange={(e) => onStakeChange(e.target.value)}
+              className="h-12 border-white/25 bg-black/30 text-center text-lg font-bold text-white"
+            />
+            <div className="my-3 grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => adjustStake(0.5)} className="min-h-11 rounded-xl border border-white/20 font-semibold">1/2</button>
+              <button type="button" onClick={() => adjustStake(2)} className="min-h-11 rounded-xl border border-white/20 font-semibold">2x</button>
+              <button type="button" onClick={setMaxStake} className="min-h-11 rounded-xl border border-white/20 font-semibold">MAX</button>
+            </div>
+            <SheetClose asChild>
+              <Button className="h-12 w-full rounded-xl bg-amber-400 text-base font-bold text-black hover:bg-amber-300">Gotowe</Button>
+            </SheetClose>
+          </SheetContent>
+        </Sheet>
+      </div>}
     </>
   );
 }

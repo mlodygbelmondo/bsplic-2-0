@@ -72,9 +72,11 @@ function CountUpAmount({ value, prefix = "" }: { value: number; prefix?: string 
 
 export function BlackjackGame() {
   const { user, profile, refreshProfile } = useAuth();
+  const reducedMotion = useReducedMotion();
   const [betInput, setBetInput] = useState(readLastStake);
   const [muted, setMuted] = useState(isSfxMuted);
   const hasCelebratedWinRef = useRef(false);
+  const gameRootRef = useRef<HTMLDivElement | null>(null);
   const handsRailRef = useRef<HTMLDivElement | null>(null);
   const handRefs = useRef(new Map<number, HTMLDivElement>());
 
@@ -121,15 +123,22 @@ export function BlackjackGame() {
     if (hasCelebratedWinRef.current) return;
     hasCelebratedWinRef.current = true;
     toast.success("Blackjack: wygrana!");
+    if (reducedMotion) return;
     confetti({
       particleCount: 110,
       spread: 64,
       origin: { y: 0.62 },
       colors: ["#22c55e", "#fbbf24", "#ffffff"],
     });
-  }, [status]);
+  }, [status, reducedMotion]);
 
   const isDecisionState = status === "playing" || status === "insurance";
+
+  useEffect(() => {
+    if (isDecisionState && !isLoading) {
+      gameRootRef.current?.scrollIntoView?.({ block: "start", behavior: "auto" });
+    }
+  }, [isDecisionState, isLoading]);
 
   // Keep the active split hand centered in the carousel.
   useEffect(() => {
@@ -142,11 +151,11 @@ export function BlackjackGame() {
       0,
     );
     if (typeof rail.scrollTo === "function") {
-      rail.scrollTo({ left: offset, behavior: "smooth" });
+      rail.scrollTo({ left: offset, behavior: reducedMotion ? "auto" : "smooth" });
     } else {
       rail.scrollLeft = offset;
     }
-  }, [activeHandIndex, playerHands.length, isDecisionState]);
+  }, [activeHandIndex, playerHands.length, isDecisionState, reducedMotion]);
 
   const toggleMute = useCallback(() => {
     setMuted((current) => {
@@ -270,12 +279,20 @@ export function BlackjackGame() {
   };
 
   return (
-    <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-rows-[minmax(12rem,1fr)_minmax(7rem,auto)_minmax(13rem,1fr)] gap-2 px-1 pb-2 sm:grid-rows-[minmax(13rem,1fr)_minmax(7.5rem,auto)_minmax(14rem,1fr)] sm:gap-3 sm:px-0">
-      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden">
+    <div
+      ref={gameRootRef}
+      data-testid="blackjack-game"
+      data-decision={isDecisionState}
+      className={cn(
+        "blackjack-game relative mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-4 px-1 pb-2 md:grid md:grid-rows-[auto_auto_auto] md:gap-5 md:px-0",
+        isDecisionState && "pb-44 md:pb-2",
+      )}
+    >
+      <div className="order-1 flex min-h-0 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden">
         {tableInfo && (
           <div
             data-testid="blackjack-shoe-info"
-            className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2 text-[11px] font-semibold text-white/45"
+            className="blackjack-table-info flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2 text-xs font-medium text-white/75"
           >
             <span>{tableInfo.deckCount} talie</span>
             <span aria-hidden className="text-white/25">
@@ -292,7 +309,7 @@ export function BlackjackGame() {
               type="button"
               onClick={toggleMute}
               aria-label={muted ? "Włącz dźwięki" : "Wycisz dźwięki"}
-              className="ml-1 rounded-full border border-white/10 bg-black/35 p-1.5 text-white/55 backdrop-blur-md transition-colors hover:text-white"
+              className="ml-1 flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/35 text-white/80 transition-colors hover:text-white"
             >
               {muted ? (
                 <VolumeX className="h-3.5 w-3.5" />
@@ -304,9 +321,10 @@ export function BlackjackGame() {
         )}
         {dealerHand.length > 0 && (
           <motion.div
+            data-testid="blackjack-dealer-area"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex min-h-[10.25rem] w-full max-w-full flex-col items-center justify-center gap-2 sm:min-h-[11.75rem] 2xl:min-h-[14.75rem]"
+            className="flex min-h-[9rem] w-full max-w-full flex-col items-center justify-center gap-2 sm:min-h-[11.75rem] 2xl:min-h-[14.75rem]"
           >
             <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-sm font-medium text-white/80 backdrop-blur-md">
               Krupier: {dealerValue}
@@ -331,7 +349,13 @@ export function BlackjackGame() {
         )}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center">
+      <div
+        data-testid="blackjack-controls"
+        className={cn(
+          "order-3 flex min-h-0 min-w-0 flex-col items-center justify-center md:order-2",
+          isDecisionState && "fixed inset-x-0 bottom-[calc(var(--mobile-floating-stack-offset,4.75rem)+env(safe-area-inset-bottom))] z-40 border-t border-white/15 bg-[#211014] px-3 py-3 md:static md:border-0 md:bg-transparent md:p-0",
+        )}
+      >
         <AnimatePresence mode="wait">
           {status === "betting" && (
             <motion.div
@@ -339,13 +363,13 @@ export function BlackjackGame() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-md sm:p-5"
+              className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl bg-[#211014]/95 p-4 sm:p-5"
             >
               <h2 className="text-xl font-bold text-white">
                 Rozpocznij rozdanie
               </h2>
               <div className="flex w-full flex-col gap-1.5">
-                <div className="flex w-full gap-1.5">
+                <div className="grid w-full grid-cols-3 gap-2 sm:grid-cols-6">
                   {QUICK_STAKES.map((amount) => (
                     <button
                       key={amount}
@@ -353,7 +377,7 @@ export function BlackjackGame() {
                       onClick={() => setBetInput(String(amount))}
                       disabled={amount > balance}
                       className={cn(
-                        "h-9 min-w-0 flex-1 basis-0 rounded-full border px-2 text-sm font-bold backdrop-blur-md transition-colors",
+                        "h-11 min-w-0 flex-1 basis-0 rounded-full border px-2 text-sm font-bold backdrop-blur-md transition-colors",
                         Number(betInput) === amount
                           ? "border-amber-300/70 bg-amber-400/20 text-amber-100"
                           : "border-white/15 bg-black/35 text-white/75 hover:border-white/30 hover:text-white",
@@ -364,12 +388,14 @@ export function BlackjackGame() {
                     </button>
                   ))}
                 </div>
-                <div className="flex w-full gap-1.5">
+                <details className="w-full">
+                  <summary className="flex min-h-11 cursor-pointer items-center justify-center text-sm font-semibold text-white/80">Więcej opcji stawki</summary>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   <button
                     type="button"
                     onClick={() => setBetInput("1")}
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     MIN
                   </button>
@@ -379,7 +405,7 @@ export function BlackjackGame() {
                       setBetInput(String(Math.max(1, Math.floor(balance / 4))))
                     }
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     1/4
                   </button>
@@ -389,7 +415,7 @@ export function BlackjackGame() {
                       setBetInput(String(Math.max(1, Math.floor(balance / 2))))
                     }
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     1/2
                   </button>
@@ -406,7 +432,7 @@ export function BlackjackGame() {
                       })
                     }
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     x2
                   </button>
@@ -423,7 +449,7 @@ export function BlackjackGame() {
                       })
                     }
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     x4
                   </button>
@@ -431,14 +457,17 @@ export function BlackjackGame() {
                     type="button"
                     onClick={() => setBetInput(String(maxStake))}
                     disabled={balance < 1}
-                    className="h-9 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
+                    className="h-11 min-w-0 flex-1 basis-0 rounded-full border border-white/15 bg-black/35 px-2 text-sm font-bold text-white/75 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white disabled:opacity-35"
                   >
                     MAX
                   </button>
-                </div>
+                  </div>
+                </details>
               </div>
               <div className="flex w-full flex-col items-stretch gap-3 min-[380px]:flex-row justify-center min-[380px]:items-center">
                 <Input
+                  aria-label="Stawka blackjacka"
+                  inputMode="decimal"
                   type="number"
                   value={betInput}
                   onChange={(e) => setBetInput(e.target.value)}
@@ -462,7 +491,7 @@ export function BlackjackGame() {
                   {actionMessage}
                 </p>
               )}
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-white/75">
                 Saldo: {balance.toFixed(2)} zł
               </p>
             </motion.div>
@@ -525,11 +554,11 @@ export function BlackjackGame() {
                   Wypłata z ubezpieczenia: {insurancePayout.toFixed(2)} zł.
                 </motion.p>
               )}
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex w-full flex-col items-stretch justify-center gap-2 sm:flex-row">
                 <Button
                   onClick={handlePlayAgain}
                   disabled={isDealing}
-                  className="rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-7 font-bold text-black shadow-[0_4px_18px_rgba(251,191,36,0.3)] hover:from-amber-500 hover:to-amber-600 hover:text-black focus-visible:text-black"
+                  className="h-12 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-7 font-bold text-black shadow-[0_4px_18px_rgba(251,191,36,0.3)] hover:from-amber-500 hover:to-amber-600 hover:text-black focus-visible:text-black"
                 >
                   {canRepeatStake
                     ? `Graj ponownie (${lastStake.toFixed(0)} zł)`
@@ -538,7 +567,7 @@ export function BlackjackGame() {
                 <Button
                   onClick={resetGame}
                   variant="outline"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white focus-visible:text-white rounded-xl px-5"
+                  className="h-12 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white focus-visible:text-white rounded-xl px-5"
                 >
                   Zmień stawkę
                 </Button>
@@ -562,7 +591,7 @@ export function BlackjackGame() {
                   {actionMessage}
                 </span>
               )}
-              <div className="flex w-full flex-wrap justify-center gap-2 sm:gap-3">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
                 <Button
                   onClick={takeInsurance}
                   disabled={
@@ -596,26 +625,25 @@ export function BlackjackGame() {
                 data-testid="blackjack-action-message-slot"
                 className={cn(
                   "min-h-6 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-semibold text-white/75 backdrop-blur-md",
-                  !actionMessage && "invisible",
                 )}
               >
-                {actionMessage ?? "Status akcji"}
+                {actionMessage ?? `Twoja decyzja · ${calculateHandValue(activeHand?.cards ?? playerHand)} pkt`}
               </span>
-              <div className="flex w-full flex-wrap justify-center gap-2 sm:gap-3">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
                 <Button
                   onClick={hit}
                   disabled={isResolving || isRevealing}
                   variant="secondary"
                   className="h-12 flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 text-base text-white hover:bg-white/20 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
                 >
-                  Hit
+                  Dobierz
                 </Button>
                 <Button
                   onClick={stand}
                   disabled={isResolving || isRevealing}
                   className="h-12 flex-1 rounded-2xl bg-gradient-to-b from-amber-400 to-amber-600 px-4 text-base font-bold text-black shadow-[0_4px_18px_rgba(251,191,36,0.3)] hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 sm:h-14 sm:flex-none sm:px-8 sm:text-lg"
                 >
-                  Stand
+                  Pas
                 </Button>
                 {canSplit && (
                   <Button
@@ -624,7 +652,7 @@ export function BlackjackGame() {
                     disabled={isResolving || isRevealing || activeStake > balance}
                     className="h-12 rounded-2xl border-white/20 bg-white/10 px-5 text-base text-white hover:bg-white/20 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
                   >
-                    Split
+                    Podziel
                   </Button>
                 )}
                 {canDoubleDown && (
@@ -634,7 +662,7 @@ export function BlackjackGame() {
                     disabled={isResolving || isRevealing || activeStake > balance}
                     className="h-12 rounded-2xl border-white/20 bg-white/10 px-5 text-base text-white hover:bg-white/20 hover:text-white focus-visible:text-white disabled:opacity-50 sm:h-14 sm:px-6 sm:text-lg"
                   >
-                    Double Down
+                    Podwój
                   </Button>
                 )}
               </div>
@@ -643,7 +671,7 @@ export function BlackjackGame() {
         </AnimatePresence>
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden">
+      <div className="order-2 flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden md:order-3">
         {handsToRender.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -757,7 +785,7 @@ export function BlackjackGame() {
                     >
                       Ty: {value}
                     </span>
-                    <span className="text-sm text-white/40">
+                    <span className="text-sm text-white/75">
                       Stawka: {hand.stake.toFixed(2)} zł
                     </span>
                   </div>
@@ -765,7 +793,7 @@ export function BlackjackGame() {
               })}
             </div>
             {handsToRender.length === 1 && (
-              <span className="text-white/40 text-sm mt-1">
+              <span className="text-white/75 text-sm mt-1">
                 Łączna stawka: {stake.toFixed(2)} zł
               </span>
             )}

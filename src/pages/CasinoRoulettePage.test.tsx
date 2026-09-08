@@ -24,8 +24,8 @@ describe('CasinoRoulettePage', () => {
     const { container } = render(<CasinoRoulettePage />);
 
     expect(screen.getByTestId('casino-roulette-shell')).toHaveStyle({
-      '--casino-bg-desktop': "url('/casino/roulette-background.webp')",
-      '--casino-bg-mobile': "url('/casino/roulette-mobile-background.webp')",
+      '--casino-bg-desktop': "url('/casino/roulette-table.webp')",
+      '--casino-bg-mobile': "url('/casino/roulette-table.webp')",
     });
     expect(
       container.querySelector('[data-testid="casino-roulette-shell"]'),
