@@ -1,20 +1,50 @@
 import { z } from "zod";
 
-export type SlotGame = "bandit" | "candy";
+export type SlotGame = "bandit" | "candy" | "ember" | "tide";
 export const SLOT_GAMES = {
   bandit: {
     title: "Midnight Bandit",
     rule: "5+ jednakowych symboli stykających się bokami",
     image: "/casino/slots/bandit.webp",
     offset: 0,
+    base: 2.6,
+    multiplierRule:
+      "Złote pola zwiększają mnożnik kolejnych trafień do ×5. Grupa używa najwyższego mnożnika swoich pól. Pola zerują się przed nowym obrotem.",
   },
   candy: {
     title: "Candy Cascade",
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/candy.webp",
     offset: 8,
+    base: 0.23,
+    multiplierRule:
+      "Każda wygrywająca kaskada losuje mnożnik od ×1 do ×5, z jednakową szansą na każdą wartość.",
+  },
+  ember: {
+    title: "Ember Forge",
+    rule: "5+ jednakowych symboli stykających się bokami",
+    image: "/casino/slots/ember.webp",
+    offset: 16,
+    base: 2.6,
+    multiplierRule:
+      "Pierwsza wygrywająca kaskada ma mnożnik ×1. Każda następna zwiększa go o 1, maksymalnie do ×5. Nowy obrót zaczyna od ×1.",
+  },
+  tide: {
+    title: "Pearl Tide",
+    rule: "8+ jednakowych symboli w dowolnych miejscach",
+    image: "/casino/slots/tide.webp",
+    offset: 24,
+    base: 0.23,
+    multiplierRule:
+      "Każda wygrywająca grupa ma stały mnożnik ×3, również podczas kolejnych kaskad i darmowych obrotów.",
   },
 } as const;
+export function isSlotGame(value: string | undefined): value is SlotGame {
+  return (
+    value !== undefined &&
+    Object.prototype.hasOwnProperty.call(SLOT_GAMES, value)
+  );
+}
 export const SYMBOL_NAMES = [
   "Szmaragd",
   "Moneta",
@@ -32,6 +62,22 @@ export const SYMBOL_NAMES = [
   "Arbuz",
   "Jabłko",
   "Lizak",
+  "Żar",
+  "Miedź",
+  "Rubin",
+  "Młot",
+  "Podkowa",
+  "Eliksir lawy",
+  "Smocze jajo",
+  "Smok",
+  "Perła",
+  "Muszla",
+  "Koral",
+  "Rozgwiazda",
+  "Akwamaryn",
+  "Kotwica",
+  "Trójząb",
+  "Łodzik",
 ];
 const frameSchema = z.object({
   board: z.array(z.number().int().min(0).max(7)).length(30),
@@ -47,7 +93,7 @@ const frameSchema = z.object({
 });
 export const spinSchema = z.object({
   id: z.string().uuid(),
-  game: z.enum(["bandit", "candy"]),
+  game: z.enum(["bandit", "candy", "ember", "tide"]),
   stake: z.number().finite().positive(),
   charged: z.number().finite().nonnegative(),
   payout: z.number().finite().nonnegative(),

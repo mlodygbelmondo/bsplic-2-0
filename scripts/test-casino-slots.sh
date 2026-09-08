@@ -29,6 +29,8 @@ psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/su
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slots.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260907200000_recurring_slot_boost.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-boost.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908090000_more_slots_player_odds.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-odds.sql"
 # Two simultaneous connections replay one request: exactly one debit and ledger row.
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO profiles(id,balance) VALUES('11111111-1111-4111-8111-111111111111',500);

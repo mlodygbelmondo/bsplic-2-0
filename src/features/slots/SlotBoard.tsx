@@ -13,13 +13,15 @@ export function SlotSymbol({
   symbol: number;
   game: SlotGame;
 }) {
-  const index = SLOT_GAMES[game].offset + symbol;
+  const globalIndex = SLOT_GAMES[game].offset + symbol;
+  const index = globalIndex % 16;
   return (
     <span
       role="img"
-      aria-label={SYMBOL_NAMES[index]}
+      aria-label={SYMBOL_NAMES[globalIndex]}
       className="slot-symbol"
       style={{
+        backgroundImage: `url(/casino/slots/${globalIndex >= 16 ? "symbols-forge-tide" : "symbols"}.webp)`,
         backgroundPosition: `${((index % 4) * 100) / 3}% ${(Math.floor(index / 4) * 100) / 3}%`,
       }}
     />

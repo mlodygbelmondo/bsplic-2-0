@@ -686,3 +686,14 @@
   .slot-board { min-height: 160px; }
   .slot-result > span { font-size: 9px; }
 }
+
+.slot-rules-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; white-space: nowrap; border-radius: 999px; width: auto; padding: 0 12px; gap: 6px; font-size: 12px; }
+.slots-ember { --slot-accent: #ffbd79; --slot-ink: #291209; background: #1c0e08; color: #fff0da; }
+.slots-tide { --slot-accent: #a8f4f0; --slot-ink: #08252c; background: #062128; color: #e9ffff; }
+.slots-ember .slots-atmosphere, .slots-tide .slots-atmosphere { background: linear-gradient(180deg,#0003,#0008),var(--slot-art) center top / cover; }
+.slots-ember .slot-machine { background: linear-gradient(145deg,#623421,#23120e 50%,#49251a); border-color: #dc9b59; box-shadow: 0 0 0 5px #261109,0 0 0 6px #f0b77b66,0 20px 70px #0008; }
+.slots-tide .slot-machine { background: linear-gradient(145deg,#25606a,#08262e 50%,#13434e); border-color: #9bd7da; box-shadow: 0 0 0 5px #08232b,0 0 0 6px #9bd7da66,0 20px 70px #0008; }
+.slots-ember .slot-spin { background: linear-gradient(145deg,#ffd0a0,#d77d38); }
+.slots-tide .slot-spin { background: linear-gradient(145deg,#dbffff,#70cdd4); }
+
+.slots-ember .slot-symbol, .slots-tide .slot-symbol { mix-blend-mode: screen; clip-path: inset(1%); }

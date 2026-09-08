@@ -14,28 +14,30 @@ export function SlotRules({ game }: { game: SlotGame }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="slot-icon-button" aria-label="Zasady i wypłaty">
-          <Info size={20} />
+        <button
+          className="slot-icon-button slot-rules-button"
+          aria-label="Zasady i wypłaty"
+        >
+          <Info size={18} />
+          <span>Zasady</span>
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{SLOT_GAMES[game].title} · zasady</DialogTitle>
-          <DialogDescription>
-            {SLOT_GAMES[game].rule}.
-          </DialogDescription>
+          <DialogDescription>{SLOT_GAMES[game].rule}.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm leading-relaxed">
           <p>
-            Wygrywające symbole znikają, a na ich
-            miejsce spadają nowe. Jeden obrót obejmuje maksymalnie 12 układów.
-            Łączna wypłata jest ograniczona do 500× stawki.
+            Ustaw stawkę i naciśnij „Zakręć”. Plansza ma 6 kolumn i 5 rzędów.
+            Wypłaty ze wszystkich kaskad sumują się w jednym obrocie.
           </p>
           <p>
-            {game === "bandit"
-              ? "Wygrane zostawiają złote pola. Każda kolejna wygrana na takim polu zwiększa jego mnożnik, do 5×. Grupa korzysta z najwyższego mnożnika swoich pól. Pola zerują się przed następnym obrotem."
-              : "Każdy wygrywający układ losuje równomiernie mnożnik od 1× do 5×, wspólny dla wszystkich grup tego układu."}
+            Wygrywające symbole znikają, a na ich miejsce spadają nowe. Jeden
+            obrót obejmuje maksymalnie 12 układów. Łączna wypłata jest
+            ograniczona do 500× stawki.
           </p>
+          <p>{SLOT_GAMES[game].multiplierRule}</p>
           <p>
             4 lub więcej symboli BONUS na pierwszej planszy płatnego obrotu daje
             8 darmowych obrotów z tą samą stawką. Darmowe obroty nie przyznają
@@ -44,16 +46,20 @@ export function SlotRules({ game }: { game: SlotGame }) {
           <div className="rounded-xl bg-amber-500/10 p-3">
             <strong>Bonus</strong>
             <p>
-              Bonus obejmuje losowe 5–15 płatnych obrotów, wspólnych dla obu gier.
-              Każdy ma 35% szans na dodatkową pasującą grupę. Po zużyciu
-              bonus odnawia się po losowych 12–36 godzinach. Darmowe obroty
-              go nie zużywają. Niewykorzystane obroty nie wygasają ani się nie kumulują.
+              Bonus obejmuje losowe 5–15 płatnych obrotów, wspólnych dla
+              wszystkich slotów. Podczas bonusu każdy płatny obrót ma 90% szans
+              na dodanie grupy dającej wypłatę większą od stawki. Po bonusie ta
+              szansa wynosi 60%. Pozostałe losowania też mogą wygrać naturalnie.
+              Po zużyciu bonus odnawia się po losowych 12–36 godzinach. Darmowe
+              obroty go nie zużywają. Niewykorzystane obroty nie wygasają ani
+              się nie kumulują.
             </p>
           </div>
           <p>
-            Każde pole losuje BONUS z szansą 2,5%. Każdy z pozostałych 7 symboli
-            ma szansę 97,5% ÷ 7. Poniżej wypłata za minimalną grupę przed
-            mnożnikiem.
+            Przed dodaniem grupy każde pole losuje BONUS z szansą 2,5%. Każdy z
+            pozostałych 7 symboli ma szansę 97,5% ÷ 7. Dodana grupa zastępuje 5
+            pól w Bandit i Ember albo 13 pól w Candy i Tide, także gdy był na
+            nich BONUS. Poniżej wypłata za minimalną grupę przed mnożnikiem.
           </p>
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 7 }, (_, symbol) => (
@@ -65,11 +71,7 @@ export function SlotRules({ game }: { game: SlotGame }) {
                   <SlotSymbol symbol={symbol} game={game} />
                 </div>
                 <span>
-                  {(
-                    (game === "bandit" ? 2.6 : 0.23) *
-                    (1 + symbol * 0.25)
-                  ).toFixed(3)}
-                  ×
+                  {(SLOT_GAMES[game].base * (1 + symbol * 0.25)).toFixed(3)}×
                 </span>
               </div>
             ))}

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { CSSProperties } from "react";
+import { SLOT_GAMES } from "@/features/slots/model";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 type CasinoBackgroundStyle = CSSProperties & {
@@ -38,23 +39,15 @@ export default function CasinoHub() {
         </div>
 
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-          {[
-            {
-              id: "bandit",
-              title: "Midnight Bandit",
-            },
-            {
-              id: "candy",
-              title: "Candy Cascade",
-            },
-          ].map((game) => (
+          {Object.entries(SLOT_GAMES).map(([id, game]) => (
             <Link
-              key={game.id}
-              to={`/casino/slots/${game.id}`}
+              key={id}
+              to={`/casino/slots/${id}`}
               className="group relative flex min-h-[290px] overflow-hidden rounded-3xl border border-amber-200/30 bg-black md:min-h-[380px]"
             >
               <img
-                src={`/casino/slots/${game.id}.webp`}
+                src={game.image}
+                loading="lazy"
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover object-[center_30%] transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
               />
@@ -90,7 +83,9 @@ export default function CasinoHub() {
                 <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
                   Ruletka
                 </h2>
-                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">Zagraj →</span>
+                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">
+                  Zagraj →
+                </span>
               </div>
             </motion.div>
           </Link>
@@ -115,7 +110,9 @@ export default function CasinoHub() {
                 <h2 className="mb-1 text-3xl font-black tracking-tight text-white md:text-4xl">
                   Blackjack
                 </h2>
-                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">Zagraj →</span>
+                <span className="mt-4 inline-block rounded-full bg-white/15 px-4 py-2 text-xs font-bold backdrop-blur text-white">
+                  Zagraj →
+                </span>
               </div>
             </motion.div>
           </Link>

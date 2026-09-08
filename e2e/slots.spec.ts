@@ -121,7 +121,7 @@ async function setup(
   );
   return state;
 }
-for (const game of ["bandit", "candy"]) {
+for (const game of ["bandit", "candy", "ember", "tide"]) {
   test(`${game}: layout, spin, net loss and stop`, async ({ page }, info) => {
     const state = await setup(page);
     await page.goto(`/casino/slots/${game}`);
@@ -147,6 +147,10 @@ for (const game of ["bandit", "candy"]) {
         .locator(".slots-page")
         .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
     ).toBe(true);
+    await page.getByRole("button", { name: "Zasady i wypłaty" }).click();
+    await expect(page.getByRole("dialog")).toContainText("90%");
+    await expect(page.getByRole("dialog")).toContainText("60%");
+    await page.getByRole("button", { name: "Close" }).click();
     await page.getByRole("button", { name: "ZAKRĘĆ" }).click();
     await expect(page.getByText("Strata netto · wypłata 2,00")).toBeVisible();
     expect(state.requests).toHaveLength(1);
@@ -173,7 +177,7 @@ test("retries the same request after lost response, including after reload", asy
   expect(state.requests).toHaveLength(2);
   expect(state.requests[0]).toEqual(state.requests[1]);
 });
-test("lobby exposes all four games and one mobile Games tab", async ({
+test("lobby exposes all six games and one mobile Games tab", async ({
   page,
 }, info) => {
   await setup(page);
@@ -181,6 +185,8 @@ test("lobby exposes all four games and one mobile Games tab", async ({
   for (const name of [
     "Midnight Bandit",
     "Candy Cascade",
+    "Ember Forge",
+    "Pearl Tide",
     "Ruletka",
     "Blackjack",
   ])

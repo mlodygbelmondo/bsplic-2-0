@@ -17,6 +17,7 @@ import { SlotBoard } from "./SlotBoard";
 import { SlotRules } from "./SlotRules";
 import {
   INITIAL_FRAME,
+  isSlotGame,
   money,
   resultLabel,
   SLOT_GAMES,
@@ -28,7 +29,7 @@ import "./slots.css";
 
 export default function SlotsPage() {
   const { game } = useParams();
-  if (game !== "bandit" && game !== "candy")
+  if (!isSlotGame(game))
     return (
       <div className="p-8 text-white">
         Nie ma takiej gry. <Link to="/casino">Wróć do lobby</Link>
@@ -62,7 +63,10 @@ function SlotMachine({ game }: { game: SlotGame }) {
   const actualStake =
     pending?.stake ?? (freeSpins > 0 ? state.data!.bonusStake : stake);
   const disabled = busy || animating;
-  const frame = result?.frames[frameIndex] ?? INITIAL_FRAME;
+  const frame = result?.frames[frameIndex] ?? {
+    ...INITIAL_FRAME,
+    multiplier: game === "tide" ? 3 : 1,
+  };
   const history = state.data?.history ?? [];
   const tone = (frequency: number) => {
     if (!sound) return;
