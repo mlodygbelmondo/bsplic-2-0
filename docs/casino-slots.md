@@ -85,3 +85,5 @@ Weryfikacja nowej migracji: izolowane testy PostgreSQL potwierdzają granice 60%
 `20260908130000_slot_inactivity_lucky_shot.sql` usuwa wymuszanie grup 90%/60% i licznik boosta. Dodaje blokowany transakcyjnie wspólny czas ostatniego płatnego obrotu. Równoczesne żądania różnych graczy nie mogą dostać więcej niż jednej próby lucky shot. Testy SQL obejmują granice czasu i prawdopodobieństwa, wypłatę ×200, darmowe obroty, idempotencję, brak podmieniania symboli i równoczesne zgłoszenia. Testy slotów: 9; scenariusze przeglądarkowe: 14.
 
 Próba przed korektą tabel, po usunięciu wymuszania wygranych: 10 tys. płatnych obrotów na grę plus darmowe, stawka 10. Obserwowany zwrot: Bandit 90,25%, Candy 100,42%, Ember 89,98%, Tide 102,45%. Odsetek płatnych obrotów z zyskiem: 12,63%, 25,51%, 12,82%, 28,92%. To wyniki próbki, nie dokładne RTP. W odpowiedzi baza wypłat Candy/Tide spada z 0,23 do 0,21 w `20260908131000_slot_anywhere_payout_balance.sql`.
+
+Aktualny pomiar przed i po obniżeniu zwykłych wypłat o około 15%: [kalibracja z 8 września](slot-payout-calibration-2026-09-08.md). Próbka obejmuje 160 tys. płatnych obrotów i przyznane darmowe obroty.

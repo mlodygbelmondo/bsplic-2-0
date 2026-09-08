@@ -68,7 +68,13 @@ psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/su
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908140000_reduced_slot_payouts.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-payouts.sql"
 if [ "${SLOT_SIMULATE:-0}" = 1 ]; then
+  if [ "${SLOT_SIMULATION_BASELINE:-0}" = 1 ]; then
+    psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908131000_slot_anywhere_payout_balance.sql"
+  fi
   psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-simulation.sql"
+  if [ "${SLOT_SIMULATION_BASELINE:-0}" = 1 ]; then
+    psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908140000_reduced_slot_payouts.sql"
+  fi
 fi
 # Two users, two games, one shared inactivity opportunity.
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
