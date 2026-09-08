@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SlotsPage from "./SlotsPage";
 import { INITIAL_FRAME, spinSchema, stateSchema, type SlotSpin } from "./model";
 
@@ -57,6 +57,8 @@ beforeEach(() => {
   mock.balance = 100;
   mock.busy = false;
   mock.state.isError = false;
+  mock.error = null;
+  mock.pending = null;
 });
 describe("Slots", () => {
   it("shows a payout below the stake as a net loss", async () => {
@@ -65,14 +67,14 @@ describe("Slots", () => {
     await screen.findByText("Strata netto · wypłata 2,00");
     expect(screen.getAllByText("-3,00")).toHaveLength(2);
   });
-  it("accepts and displays the ten-spin award from the server", async () => {
-    const awarded = { ...result, freeSpins: 10, awardedFreeSpins: 10 };
-    expect(spinSchema.parse(awarded).awardedFreeSpins).toBe(10);
-    expect(stateSchema.parse({ ...mock.state.data, freeSpins: 10, history: [awarded] }).freeSpins).toBe(10);
+  it("accepts and displays the fifteen-spin award from the server", async () => {
+    const awarded = { ...result, freeSpins: 15, awardedFreeSpins: 15 };
+    expect(spinSchema.parse(awarded).awardedFreeSpins).toBe(15);
+    expect(stateSchema.parse({ ...mock.state.data, freeSpins: 15, history: [awarded] }).freeSpins).toBe(15);
     mock.spin.mockResolvedValue(awarded);
     setup();
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
-    expect(await screen.findByText("+10 darmowych obrotów")).toBeVisible();
+    expect(await screen.findByText("+15 darmowych obrotów")).toBeVisible();
   });
   it("labels the lucky shot separately from the board payout", async () => {
     mock.spin.mockResolvedValue({ ...result, luckyShot: true, payout: 1000, net: 995, balance: 1095 });
@@ -88,7 +90,7 @@ describe("Slots", () => {
     setup("candy");
     expect(screen.getByLabelText("STAWKA")).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "DARMOWY OBRÓT" }));
-    await waitFor(() => expect(mock.spin).toHaveBeenCalledWith(20));
+    await waitFor(() => expect(mock.spin).toHaveBeenCalledWith(20, true));
   });
   it("prevents betting beyond the wallet and while account data is unavailable", () => {
     mock.balance = 0;
@@ -109,7 +111,7 @@ describe("Slots", () => {
       target: { value: "250" },
     });
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
-    await waitFor(() => expect(mock.spin).toHaveBeenCalledWith(250));
+    await waitFor(() => expect(mock.spin).toHaveBeenCalledWith(250, false));
   });
   it("stops the session without offering another spin", () => {
     setup();
@@ -138,5 +140,79 @@ describe("Slots", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zasady i wypłaty" }));
     expect(screen.getByText(/Pierwszy płatny obrót po co najmniej 6 godzinach/)).toBeVisible();
     expect(screen.getByText(/Wynik netto = wypłata/)).toBeVisible();
+  });
+});
+
+describe("automatic bonus", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+  async function advance(ms: number) {
+    for (let elapsed = 0; elapsed < ms; elapsed += 100) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(Math.min(100, ms - elapsed)); });
+    }
+  }
+  it("plays a newly awarded bonus and never starts a paid spin afterwards despite stale state", async () => {
+    mock.spin.mockResolvedValueOnce({ ...result, freeSpins: 2, awardedFreeSpins: 15 })
+      .mockResolvedValueOnce({ ...result, charged: 0, freeSpins: 1 })
+      .mockResolvedValueOnce({ ...result, charged: 0, freeSpins: 0 });
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
+    await advance(100);
+    mock.state.data.freeSpins = 2;
+    await advance(5000);
+    expect(mock.spin.mock.calls).toEqual([[5, false], [5, true], [5, true]]);
+    expect(screen.getByRole("button", { name: "ZAKRĘĆ" })).toBeEnabled();
+    await advance(5000);
+    expect(mock.spin).toHaveBeenCalledTimes(3);
+  });
+  it("starts saved free spins automatically and supports pause and resume", async () => {
+    mock.state.data.freeSpins = 2;
+    mock.spin.mockResolvedValueOnce({ ...result, charged: 0, freeSpins: 1 })
+      .mockResolvedValueOnce({ ...result, charged: 0, freeSpins: 0 });
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Pauza bonusu" }));
+    await advance(3000);
+    expect(mock.spin).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Wznów bonus" }));
+    await advance(900);
+    expect(mock.spin).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Pauza bonusu" }));
+    await advance(3000);
+    expect(mock.spin).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Wznów bonus" }));
+    await advance(3000);
+    expect(mock.spin.mock.calls).toEqual([[5, true], [5, true]]);
+  });
+  it("pauses on a failed request instead of retrying indefinitely", async () => {
+    mock.state.data.freeSpins = 2;
+    mock.spin.mockResolvedValue(null);
+    setup();
+    await advance(5000);
+    expect(mock.spin).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Bonus wstrzymany")).toBeVisible();
+  });
+  it("pauses when the tab is hidden", async () => {
+    mock.state.data.freeSpins = 2;
+    setup();
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    fireEvent(document, new Event("visibilitychange"));
+    await advance(3000);
+    expect(mock.spin).not.toHaveBeenCalled();
+    expect(screen.getByText("Bonus wstrzymany")).toBeVisible();
+    hidden.mockRestore();
+  });
+  it("cancels the scheduled bonus when the page is left", async () => {
+    mock.state.data.freeSpins = 2;
+    const view = setup();
+    view.unmount();
+    await advance(3000);
+    expect(mock.spin).not.toHaveBeenCalled();
+  });
+  it("does not autoplay after ending the session", async () => {
+    mock.state.data.freeSpins = 2;
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Zakończ sesję" }));
+    await advance(3000);
+    expect(mock.spin).not.toHaveBeenCalled();
   });
 });

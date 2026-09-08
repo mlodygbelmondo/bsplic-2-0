@@ -26,11 +26,11 @@ Testy lokalne obejmują granice puli i czasu, wspólny licznik, darmowe obroty, 
 - Candy losuje wspólny mnożnik 1–5× dla każdej wygrywającej kaskady.
 - Ember wymaga 5 sąsiadujących symboli i zwiększa mnożnik całej kaskady od ×1 do ×5; nowy obrót resetuje mnożnik.
 - Tide wymaga 8 symboli w dowolnych miejscach i zawsze używa ×3.
-- Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają dziesięć darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów.
+- Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają piętnaście darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów. Migracja `20260908160000_slot_bonus_autoplay.sql` ustawia wypłatę darmowej kaskady na 75% zwykłej wypłaty przed limitem ×200. Darmowy bonus rozgrywa się automatycznie z możliwością pauzy. [Pomiar bonusów i status wdrożenia](slot-bonus-autoplay.md).
 - Wymuszanie wygrywających grup i odnawialne pule 90%/60% zostały usunięte. Plansza losuje symbole bez podmian. Pierwszy płatny obrót po 6 godzinach bez płatnej gry we wszystkich slotach ma 1% szans na lucky shot. Lucky shot daje łączną wypłatę ×200 stawki zamiast wypłaty z planszy. Każdy płatny obrót zeruje wspólny czas bezczynności; darmowe obroty i ponowienia żądań go nie zmieniają.
 - Losowanie używa `pgcrypto.gen_random_bytes`. BONUS ma prawdopodobieństwo 2,5% na pole; każdy pozostały symbol 97,5% / 7. Minimalna grupa płaci `stake × base × (1 + symbol × 0.25)`, gdzie base to 2.5654 dla Bandita, 0.2111 dla Candy, 2.532 dla Embera i 0.2108 dla Tide. Każdy dodatkowy symbol zwiększa bazową wypłatę 1.35×. Zaokrąglenie do grosza następuje przed mnożnikiem.
 - Historyczny pomiar sprzed zmiany szans (nie opisuje obecnej wersji): próbka po 20 tys. obrotów na grę, ze stawką 10 i wyłączonym bonusem powitalnym, dała obserwowany zwrot 93,61% w Bandicie i 99,88% w Candy. To wynik losowej próbki, nie dokładne RTP ani gwarancja. Próbka obejmowała darmowe obroty.
-- Serwer sprawdza użytkownika, stawkę 1–100, saldo i stawkę bonusu. Blokada wiersza profilu serializuje operacje portfela. Wynik, bonus i saldo są zapisywane w jednej transakcji.
+- Serwer sprawdza użytkownika, stawkę co najmniej 1 z maksymalnie dwoma miejscami po przecinku, saldo i stawkę bonusu. Blokada wiersza profilu serializuje operacje portfela. Wynik, bonus i saldo są zapisywane w jednej transakcji.
 - UUID żądania zapewnia idempotencję, również przy równoczesnych żądaniach. Nierozstrzygnięte żądanie pozostaje w localStorage pod kluczem użytkownika i gry. Ponowienie po błędzie używa tego samego UUID i stawki.
 - RLS udostępnia historię i bonusy tylko właścicielowi. Klient nie może pisać bezpośrednio do tabel ani wywoływać wewnętrznych funkcji losujących.
 - Wypłata i wynik netto są prezentowane oddzielnie. Dźwięk jest domyślnie wyłączony; dodatni sygnał jest zarezerwowany dla dodatniego wyniku netto. System ograniczenia animacji jest respektowany.
@@ -88,4 +88,4 @@ Próba przed korektą tabel, po usunięciu wymuszania wygranych: 10 tys. płatny
 
 Aktualny pomiar przed i po obniżeniu zwykłych wypłat o około 15%: [kalibracja z 8 września](slot-payout-calibration-2026-09-08.md). Próbka obejmuje 160 tys. płatnych obrotów i przyznane darmowe obroty.
 
-Aktualny cel zwrotu zwykłej gry wynosi około 90%, z darmowymi obrotami i bez dodatkowego lucky shota. Kalibrację 800 tys. oraz niezależną walidację 400 tys. płatnych obrotów opisuje [raport celu 90%](slot-target-return-90.md).
+Przed wydłużeniem bonusu do 15 obrotów cel zwrotu zwykłej gry wynosił około 90%, z darmowymi obrotami i bez dodatkowego lucky shota. Nowa migracja wydłuża bonus i zmniejsza pojedyncze darmowe wypłaty do 75%, więc wcześniejsza kalibracja nie opisuje dokładnie obecnej wersji. Kalibrację 800 tys. oraz niezależną walidację 400 tys. płatnych obrotów opisuje [raport celu 90%](slot-target-return-90.md).

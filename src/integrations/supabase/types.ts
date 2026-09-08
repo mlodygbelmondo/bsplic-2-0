@@ -1352,6 +1352,7 @@ export type Database = {
     }
     Functions: {
       casino_slot_state: { Args: { p_game: string }; Returns: Json }
+      casino_slot_bonus_spin: { Args: { p_game: string; p_stake: number; p_request_id: string }; Returns: Json }
       casino_slot_spin: { Args: { p_game: string; p_stake: number; p_request_id: string }; Returns: Json }
       admin_get_dashboard_summary: {
         Args: Record<PropertyKey, never>

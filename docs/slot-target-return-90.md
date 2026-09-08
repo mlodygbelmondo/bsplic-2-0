@@ -1,5 +1,7 @@
 # Cel zwrotu slotów: około 90%
 
+Raport historyczny, sprzed [wydłużenia bonusu do 15 mniejszych obrotów](slot-bonus-autoplay.md). Nie opisuje zwrotu po zastosowaniu migracji `20260908160000_slot_bonus_autoplay.sql`.
+
 Migracja `20260908150000_slot_target_return_90.sql` ustawia osobny współczynnik wypłat dla każdej gry. Mnożniki, losowanie symboli, 10 darmowych obrotów i limit ×200 pozostają bez zmian.
 
 ## Kalibracja

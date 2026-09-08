@@ -69,15 +69,23 @@ psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/su
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-payouts.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908150000_slot_target_return_90.sql"
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-target-return.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908154500_remove_slot_max_stake.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908160000_slot_bonus_autoplay.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-bonus-autoplay.sql"
 if [ "${SLOT_SIMULATE:-0}" = 1 ]; then
   if [ "${SLOT_SIMULATION_BASELINE:-0}" = 1 ]; then
     psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908131000_slot_anywhere_payout_balance.sql"
+  fi
+  if [ "${SLOT_SIMULATION_ORIGINAL_BONUS:-0}" = 1 ]; then
+    psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908154500_remove_slot_max_stake.sql"
   fi
   psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -v paid_target="${SLOT_SIMULATION_SPINS:-20000}" -v simulation_seed="${SLOT_SIMULATION_SEED:-0.314159}" -f "$slots_test_root/scripts/tests/casino-slot-simulation.sql"
   if [ "${SLOT_SIMULATION_BASELINE:-0}" = 1 ]; then
     psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908150000_slot_target_return_90.sql"
   fi
 fi
+# Restore the current implementation after optional historical simulations.
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908160000_slot_bonus_autoplay.sql"
 # Two users, two games, one shared inactivity opportunity.
 psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 CREATE OR REPLACE FUNCTION public._slot_random() RETURNS double precision LANGUAGE sql AS $$ SELECT 0::double precision $$;
@@ -103,5 +111,33 @@ psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
  IF (SELECT count(*) FROM casino_slot_spins WHERE (result->>'luckyShot')::boolean)<>1 THEN RAISE EXCEPTION 'concurrent jackpot'; END IF;
  RAISE NOTICE 'PASS: concurrent players claim exactly one global lucky shot';
+END; $$;
+SQL
+# Distinct requests race for the final free spin: one succeeds, neither pays a stake.
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+INSERT INTO profiles(id,balance) VALUES('88888888-8888-4888-8888-888888888888',500);
+INSERT INTO casino_slot_bonus(user_id,game,remaining,stake) VALUES('88888888-8888-4888-8888-888888888888','candy',1,5);
+SQL
+for attempt in 1 2; do
+  psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 >"$slots_test_dir/bonus-$attempt.log" <<'SQL' &
+SET ROLE authenticated;
+SET request.jwt.claim.sub='88888888-8888-4888-8888-888888888888';
+DO $$ BEGIN
+ PERFORM casino_slot_bonus_spin('candy',5,gen_random_uuid());
+EXCEPTION WHEN raise_exception THEN
+ IF SQLERRM<>'BONUS_FINISHED' THEN RAISE; END IF;
+END; $$;
+SQL
+  if [ "$attempt" = 1 ]; then slots_pid_one=$!; else slots_pid_two=$!; fi
+done
+wait "$slots_pid_one"
+wait "$slots_pid_two"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+ IF (SELECT count(*) FROM casino_slot_spins WHERE user_id='88888888-8888-4888-8888-888888888888')<>1 THEN RAISE EXCEPTION 'bonus race ledger'; END IF;
+ IF (SELECT balance FROM profiles WHERE id='88888888-8888-4888-8888-888888888888')<>500 THEN RAISE EXCEPTION 'bonus race debit'; END IF;
+ IF (SELECT remaining FROM casino_slot_bonus WHERE user_id='88888888-8888-4888-8888-888888888888' AND game='candy')<>0 THEN RAISE EXCEPTION 'bonus race remaining'; END IF;
+ IF has_function_privilege('anon','casino_slot_bonus_spin(text,numeric,uuid)','EXECUTE') THEN RAISE EXCEPTION 'anonymous bonus access'; END IF;
+ RAISE NOTICE 'PASS: concurrent final free spins cannot charge a paid stake; anonymous access denied';
 END; $$;
 SQL

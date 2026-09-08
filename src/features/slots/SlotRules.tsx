@@ -40,7 +40,11 @@ export function SlotRules({ game }: { game: SlotGame }) {
           <p>{SLOT_GAMES[game].multiplierRule}</p>
           <p>
             4 lub więcej symboli BONUS na pierwszej planszy płatnego obrotu daje
-            10 darmowych obrotów z tą samą stawką. Darmowe obroty nie przyznają
+            15 darmowych obrotów z tą samą stawką. Każda darmowa kaskada płaci
+            75% zwykłej wypłaty, po zaokrągleniu do 0,01. Bonus rozgrywa się
+            automatycznie, a przycisk pauzy zatrzymuje go przed następnym obrotem.
+            Po zakończeniu bonusu gra czeka na Twoje kliknięcie. Limit wypłaty
+            wynosi 200× stawki na obrót. Darmowe obroty nie przyznają
             kolejnych bonusów. Niewykorzystane obroty zostają na koncie.
           </p>
           <div className="rounded-xl bg-amber-500/10 p-3">

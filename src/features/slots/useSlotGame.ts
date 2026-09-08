@@ -10,6 +10,7 @@ import { spinSchema, stateSchema, type SlotGame, type SlotSpin } from "./model";
 interface PendingSpin {
   id: string;
   stake: number;
+  bonusOnly: boolean;
 }
 const pendingKey = (userId: string, game: SlotGame) =>
   `bsplic:slot-pending:v1:${userId}:${game}`;
@@ -20,9 +21,10 @@ function readPending(key: string): PendingSpin | null {
       .object({
         id: z.string().uuid(),
         stake: z.number().finite().min(1),
+        bonusOnly: z.boolean().default(false),
       })
       .safeParse(raw);
-    if (parsed.success) return { id: parsed.data.id, stake: parsed.data.stake };
+    if (parsed.success) return { id: parsed.data.id, stake: parsed.data.stake, bonusOnly: parsed.data.bonusOnly };
   } catch {
     /* Storage can be unavailable in private browsing. */
   }
@@ -33,6 +35,7 @@ const errorMessages: Record<string, string> = {
   BONUS_STAKE_LOCKED:
     "Darmowe obroty zachowują stawkę z momentu zdobycia bonusu.",
   INVALID_STAKE: "Wpisz poprawną stawkę minimum 1 zł.",
+  BONUS_FINISHED: "Bonus został już rozegrany. Odśwież grę.",
   AUTH_REQUIRED: "Zaloguj się ponownie.",
 };
 export function useSlotGame(game: SlotGame) {
@@ -66,12 +69,12 @@ export function useSlotGame(game: SlotGame) {
     },
   });
   const spin = useCallback(
-    async (stake: number): Promise<SlotSpin | null> => {
+    async (stake: number, bonusOnly = false): Promise<SlotSpin | null> => {
       if (lock.current || !user) return null;
       lock.current = true;
       setBusy(true);
       setError(null);
-      const request = pending ?? { id: crypto.randomUUID(), stake };
+      const request = pending ?? { id: crypto.randomUUID(), stake, bonusOnly };
       setPending(request);
       try {
         localStorage.setItem(key, JSON.stringify(request));
@@ -80,7 +83,7 @@ export function useSlotGame(game: SlotGame) {
       }
       try {
         const { data, error: rpcError } = await supabase.rpc(
-          "casino_slot_spin",
+          request.bonusOnly ? "casino_slot_bonus_spin" : "casino_slot_spin",
           { p_game: game, p_stake: request.stake, p_request_id: request.id },
         );
         if (rpcError) {

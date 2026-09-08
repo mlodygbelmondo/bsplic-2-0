@@ -4,7 +4,9 @@ async function setup(
   page: Page,
   options: { failFirst?: boolean; free?: boolean } = {},
 ) {
+  let freeRemaining = options.free ? 3 : 0;
   const state = {
+    endpoints: [] as string[],
     requests: [] as { p_request_id: string; p_game: string; p_stake: number }[],
     errors: [] as string[],
     history: [] as unknown[],
@@ -30,16 +32,19 @@ async function setup(
     if (rpc === "casino_slot_state")
       return route.fulfill({
         json: {
-          freeSpins: options.free ? 3 : 0,
+          freeSpins: freeRemaining,
           bonusStake: 5,
           history: state.history,
         },
       });
-    if (rpc === "casino_slot_spin") {
+    if (rpc === "casino_slot_spin" || rpc === "casino_slot_bonus_spin") {
       const request = route.request().postDataJSON();
       state.requests.push(request);
+      state.endpoints.push(rpc);
       if (options.failFirst && state.requests.length === 1)
         return route.abort("failed");
+      const isFree = rpc === "casino_slot_bonus_spin";
+      if (isFree) freeRemaining = Math.max(0, freeRemaining - 1);
       const board = Array.from(
         { length: 30 },
         (_, i) => (i * 3 + Math.floor(i / 6)) % 7,
@@ -48,12 +53,12 @@ async function setup(
         id: request.p_request_id,
         game: request.p_game,
         stake: request.p_stake,
-        charged: 5,
+        charged: isFree ? 0 : 5,
         payout: 2,
-        net: -3,
+        net: isFree ? 2 : -3,
         balance: 997,
         luckyShot: false,
-        freeSpins: 0,
+        freeSpins: freeRemaining,
         awardedFreeSpins: 0,
         createdAt: new Date().toISOString(),
         frames: [
@@ -216,4 +221,30 @@ test("spin remains reachable on a compact phone", async ({ page }, info) => {
   expect(spinBox!.y + spinBox!.height).toBeLessThan(navBox!.y);
   expect(await page.locator('.slots-page').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   await page.screenshot({ path: info.outputPath('compact-phone.png'), animations: 'disabled' });
+});
+
+test("saved bonus plays automatically, pauses, resumes and stops before a paid spin", async ({ page }) => {
+  const state = await setup(page, { free: true });
+  await page.goto("/casino/slots/candy");
+  await page.getByRole("button", { name: "Pauza bonusu" }).click();
+  await page.waitForTimeout(1600);
+  expect(state.requests).toHaveLength(0);
+  await page.getByRole("button", { name: "Wznów bonus" }).click();
+  await expect.poll(() => state.requests.length).toBe(3);
+  await expect(page.getByRole("button", { name: "ZAKRĘĆ" })).toBeEnabled();
+  await page.waitForTimeout(1600);
+  expect(state.endpoints).toEqual(Array(3).fill("casino_slot_bonus_spin"));
+  expect(state.errors).toEqual([]);
+});
+test("a failed automatic bonus keeps its free-only request after reload", async ({ page }) => {
+  const state = await setup(page, { free: true, failFirst: true });
+  await page.goto("/casino/slots/bandit");
+  await expect(page.getByRole("button", { name: "SPRAWDŹ OBRÓT" })).toBeEnabled();
+  await page.reload();
+  await page.getByRole("button", { name: "Pauza bonusu" }).click();
+  await page.getByRole("button", { name: "SPRAWDŹ OBRÓT" }).click();
+  await expect.poll(() => state.requests.length).toBe(2);
+  expect(state.requests[0]).toEqual(state.requests[1]);
+  expect(state.endpoints).toEqual(["casino_slot_bonus_spin", "casino_slot_bonus_spin"]);
+  expect(state.errors).toEqual([]);
 });

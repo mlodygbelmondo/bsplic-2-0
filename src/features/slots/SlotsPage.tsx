@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -57,6 +57,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
   const [animating, setAnimating] = useState(false);
   const [sound, setSound] = useState(false);
   const [session, setSession] = useState({ spins: 0, net: 0 });
+  const [bonusPaused, setBonusPaused] = useState(() => document.hidden);
   const [stopped, setStopped] = useState(false);
   const audio = useRef<AudioContext | null>(null);
   const localLock = useRef(false);
@@ -68,10 +69,12 @@ function SlotMachine({ game }: { game: SlotGame }) {
       void audio.current?.close();
     };
   }, []);
-  const freeSpins = state.data?.freeSpins ?? 0;
+  // The last confirmed spin takes precedence over an older state refetch.
+  const freeSpins = result?.freeSpins ?? state.data?.freeSpins ?? 0;
+  const bonusStake = result?.stake ?? state.data?.bonusStake;
   const parsedStake = parseStakeInput(stakeInput);
   const actualStake =
-    pending?.stake ?? (freeSpins > 0 ? state.data!.bonusStake : parsedStake);
+    pending?.stake ?? (freeSpins > 0 ? bonusStake ?? null : parsedStake);
   const stakeValue = actualStake ?? 0;
   const stakeInputInvalid = freeSpins === 0 && !pending && parsedStake === null;
   const disabled = busy || animating;
@@ -80,7 +83,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
     multiplier: game === "tide" ? 3 : 1,
   };
   const history = state.data?.history ?? [];
-  const tone = (frequency: number) => {
+  const tone = useCallback((frequency: number) => {
     if (!sound) return;
     try {
       audio.current ??= new AudioContext();
@@ -101,7 +104,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
     } catch {
       /* Audio is optional; some browsers suspend it in background tabs. */
     }
-  };
+  }, [sound]);
   useEffect(() => {
     if (!animating || !result) return;
     const timeout = window.setTimeout(
@@ -117,17 +120,18 @@ function SlotMachine({ game }: { game: SlotGame }) {
     );
     return () => window.clearTimeout(timeout);
   }, [animating, frameIndex, frame.groups.length, reduced, result]);
-  async function handleSpin() {
-    if (disabled || localLock.current) return;
+  const handleSpin = useCallback(async () => {
+    if (disabled || stopped || localLock.current) return;
     if (actualStake === null) {
       toast.error("Wpisz poprawną stawkę minimum 1 zł.");
       return;
     }
     localLock.current = true;
     tone(260);
-    const next = await spin(actualStake);
+    const next = await spin(actualStake, freeSpins > 0);
     if (!mounted.current) return;
     if (!next) {
+      setBonusPaused(true);
       localLock.current = false;
       return;
     }
@@ -139,7 +143,22 @@ function SlotMachine({ game }: { game: SlotGame }) {
       net: Math.round((previous.net + next.net) * 100) / 100,
     }));
     if (next.net > 0) tone(660);
-  }
+  }, [actualStake, disabled, freeSpins, spin, stopped, tone]);
+  useEffect(() => {
+    const pauseWhenHidden = () => {
+      if (document.hidden) setBonusPaused(true);
+    };
+    document.addEventListener("visibilitychange", pauseWhenHidden);
+    return () => document.removeEventListener("visibilitychange", pauseWhenHidden);
+  }, []);
+  useEffect(() => {
+    if (freeSpins === 0 || bonusPaused || stopped || disabled || pending ||
+      error || !state.data || state.isError) return;
+    const timer = window.setTimeout(() => {
+      if (!document.hidden) void handleSpin();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [bonusPaused, disabled, error, freeSpins, handleSpin, pending, state.data, state.isError, stopped]);
   return (
     <div
       className={`slots-page slots-${game}`}
@@ -190,6 +209,21 @@ function SlotMachine({ game }: { game: SlotGame }) {
               spinning={busy}
               step={result ? frameIndex + session.spins * 12 : 0}
             />
+            {freeSpins > 0 && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-amber-300">
+                <span>{bonusPaused ? "Bonus wstrzymany" : "Bonus gra automatycznie"}</span>
+                <button
+                  className="slot-icon-button px-3"
+                  disabled={stopped}
+                  onClick={() => {
+                    setBonusPaused((paused) => !paused);
+                    if (bonusPaused && (error || pending)) void handleSpin();
+                  }}
+                >
+                  {bonusPaused ? "Wznów bonus" : "Pauza bonusu"}
+                </button>
+              </div>
+            )}
             <div className="slot-result" role="status" aria-live="polite">
               {busy ? (
                 <>
