@@ -128,7 +128,7 @@ export function LiquidGlassMobileBottomNav({
                   />
                   <span
                     className={cn(
-                      "w-full truncate pb-0.5 text-center leading-[1.15]",
+                      "w-full truncate text-center leading-[1.15]",
                       active && "font-bold",
                     )}
                   >

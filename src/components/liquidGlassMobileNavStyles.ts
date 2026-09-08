@@ -8,6 +8,7 @@ export const LIQUID_GLASS_MOBILE_NAV_STYLE: CSSProperties = {
   top: "50%",
   left: "50%",
   width: "100%",
+  transform: "translate(-50%, -50%)",
 };
 
 export const LIQUID_GLASS_MOBILE_NAV_ITEM_CLASS_NAME =
