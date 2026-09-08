@@ -7,7 +7,7 @@ export const SLOT_GAMES = {
     rule: "5+ jednakowych symboli stykających się bokami",
     image: "/casino/slots/bandit.webp",
     offset: 0,
-    base: 2.2,
+    base: 2.5654,
     multiplierRule:
       "Złote pola zwiększają mnożnik kolejnych trafień do ×5. Grupa używa najwyższego mnożnika swoich pól. Pola zerują się przed nowym obrotem.",
   },
@@ -16,7 +16,7 @@ export const SLOT_GAMES = {
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/candy.webp",
     offset: 8,
-    base: 0.18,
+    base: 0.2111,
     multiplierRule:
       "Każda wygrywająca kaskada losuje mnożnik od ×1 do ×5, z jednakową szansą na każdą wartość.",
   },
@@ -25,7 +25,7 @@ export const SLOT_GAMES = {
     rule: "5+ jednakowych symboli stykających się bokami",
     image: "/casino/slots/ember.webp",
     offset: 16,
-    base: 2.2,
+    base: 2.532,
     multiplierRule:
       "Pierwsza wygrywająca kaskada ma mnożnik ×1. Każda następna zwiększa go o 1, maksymalnie do ×5. Nowy obrót zaczyna od ×1.",
   },
@@ -34,7 +34,7 @@ export const SLOT_GAMES = {
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/tide.webp",
     offset: 24,
-    base: 0.18,
+    base: 0.2108,
     multiplierRule:
       "Każda wygrywająca grupa ma stały mnożnik ×3, również podczas kolejnych kaskad i darmowych obrotów.",
   },

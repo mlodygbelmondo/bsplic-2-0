@@ -4,7 +4,12 @@
 \else
 \set paid_target 20000
 \endif
+\if :{?simulation_seed}
+\else
+\set simulation_seed 0.314159
+\endif
 SELECT set_config('test.paid_target', :'paid_target', false);
+SELECT set_config('test.simulation_seed', :'simulation_seed', false);
 CREATE TEMP TABLE original_slot_random AS SELECT pg_get_functiondef('public._slot_random()'::regprocedure) AS definition;
 CREATE OR REPLACE FUNCTION public._slot_random() RETURNS double precision LANGUAGE sql VOLATILE AS $$ SELECT random() $$;
 CREATE PROCEDURE pg_temp.measure_slot_payouts() LANGUAGE plpgsql AS $$
@@ -16,7 +21,7 @@ BEGIN
  INSERT INTO profiles(id,balance) VALUES(uid,100000000);
  PERFORM set_config('request.jwt.claim.sub',uid::text,false);
  FOREACH v_game IN ARRAY ARRAY['bandit','candy','ember','tide'] LOOP
-  PERFORM setseed(0.314159);
+  PERFORM setseed(current_setting('test.simulation_seed')::double precision);
   paid_count:=0; wins:=0; total_payout:=0; max_payout:=0; squared_payout:=0;
   session_payout:=0; profitable_sessions:=0;
   WHILE paid_count<target LOOP

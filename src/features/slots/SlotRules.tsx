@@ -56,7 +56,7 @@ export function SlotRules({ game }: { game: SlotGame }) {
             Każde pole losuje BONUS z szansą 2,5%. Każdy z pozostałych 7 symboli
             ma szansę 97,5% ÷ 7. Poniżej wypłata za minimalną grupę przed mnożnikiem.
           </p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {Array.from({ length: 7 }, (_, symbol) => (
               <div
                 key={symbol}
@@ -65,8 +65,8 @@ export function SlotRules({ game }: { game: SlotGame }) {
                 <div className="mx-auto h-12 w-12">
                   <SlotSymbol symbol={symbol} game={game} />
                 </div>
-                <span>
-                  {(SLOT_GAMES[game].base * (1 + symbol * 0.25)).toFixed(3)}×
+                <span className="text-xs tabular-nums">
+                  {(SLOT_GAMES[game].base * (1 + symbol * 0.25)).toLocaleString("pl-PL", { maximumFractionDigits: 6 })}×
                 </span>
               </div>
             ))}
