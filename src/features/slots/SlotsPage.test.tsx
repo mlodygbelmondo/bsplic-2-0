@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SlotsPage from "./SlotsPage";
-import { INITIAL_FRAME, type SlotSpin } from "./model";
+import { INITIAL_FRAME, spinSchema, stateSchema, type SlotSpin } from "./model";
 
 const mock = vi.hoisted(() => ({
   spin: vi.fn(),
@@ -65,6 +65,15 @@ describe("Slots", () => {
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
     await screen.findByText("Strata netto · wypłata 2,00");
     expect(screen.getAllByText("-3,00")).toHaveLength(2);
+  });
+  it("accepts and displays the ten-spin award from the server", async () => {
+    const awarded = { ...result, freeSpins: 10, awardedFreeSpins: 10 };
+    expect(spinSchema.parse(awarded).awardedFreeSpins).toBe(10);
+    expect(stateSchema.parse({ ...mock.state.data, freeSpins: 10, history: [awarded] }).freeSpins).toBe(10);
+    mock.spin.mockResolvedValue(awarded);
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
+    expect(await screen.findByText("+10 darmowych obrotów")).toBeVisible();
   });
   it("locks bonus stake and permits free spins with an empty wallet", async () => {
     mock.state.data.freeSpins = 3;

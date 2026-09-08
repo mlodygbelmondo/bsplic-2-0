@@ -40,7 +40,7 @@ export function SlotRules({ game }: { game: SlotGame }) {
           <p>{SLOT_GAMES[game].multiplierRule}</p>
           <p>
             4 lub więcej symboli BONUS na pierwszej planszy płatnego obrotu daje
-            8 darmowych obrotów z tą samą stawką. Darmowe obroty nie przyznają
+            10 darmowych obrotów z tą samą stawką. Darmowe obroty nie przyznają
             kolejnych bonusów. Niewykorzystane obroty zostają na koncie.
           </p>
           <div className="rounded-xl bg-amber-500/10 p-3">

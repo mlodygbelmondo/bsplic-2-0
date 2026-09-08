@@ -12,9 +12,11 @@ Przy kolejnych operacjach CLI należy wybrać token konta mającego dostęp do B
 
 Nie ma zmian zależności aplikacji. Trasa i CSS slotów są ładowane leniwie.
 
-## Zmiany oczekujące na wdrożenie
+## Wdrożenie 8 września 2026
 
-`20260907200000_recurring_slot_boost.sql` oraz `20260908090000_more_slots_player_odds.sql` oczekują na wdrożenie. Przed publikacją nowego frontendu należy zastosować obie migracje w Supabase. Istniejące konta otrzymają nową losową pulę przy pierwszym odczycie stanu lub obrocie po migracji; historia i saldo pozostają bez zmian. Testy lokalne obejmują granice puli i czasu, wspólny licznik, darmowe obroty, odnowienie po przerwie oraz równoczesne ponowienia ostatniego obrotu bonusowego.
+Migracje `20260907200000_recurring_slot_boost.sql`, `20260908090000_more_slots_player_odds.sql` i `20260908093000_ten_slot_free_spins.sql` wdrożono na Supabase `bsplic 2.0`. Historia migracji potwierdza zgodność lokalnej i zdalnej bazy. Istniejące konta otrzymują nową losową pulę przy pierwszym odczycie stanu lub obrocie; historia i saldo pozostają bez zmian. Nowo zdobyty bonus przyznaje 10 darmowych obrotów zamiast 8; wcześniej zapisane obroty zachowują swój licznik.
+
+Testy lokalne obejmują granice puli i czasu, wspólny licznik, darmowe obroty, odnowienie po przerwie oraz równoczesne ponowienia ostatniego obrotu bonusowego. Test SQL dodatkowo potwierdza przyznanie i zużycie dziesięciu darmowych obrotów we wszystkich czterech grach, bez ponownego naliczania bonusu i bez pobierania stawki.
 
 ## Mechanika i rozliczenia
 
@@ -24,7 +26,7 @@ Nie ma zmian zależności aplikacji. Trasa i CSS slotów są ładowane leniwie.
 - Candy losuje wspólny mnożnik 1–5× dla każdej wygrywającej kaskady.
 - Ember wymaga 5 sąsiadujących symboli i zwiększa mnożnik całej kaskady od ×1 do ×5; nowy obrót resetuje mnożnik.
 - Tide wymaga 8 symboli w dowolnych miejscach i zawsze używa ×3.
-- Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają osiem darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów.
+- Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają dziesięć darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów.
 - Bonus obejmuje losowe 5–15 płatnych obrotów na koncie, wspólnych dla obu gier. Każdy ma 90% szansy wstawienia grupy dającej zysk netto. Po zużyciu bonusu każdy płatny obrót ma 60% szans na taką grupę. Pozostałe losowania mogą wygrać naturalnie. Grupa ma 5 symboli dla Bandit/Ember i 13 dla Candy/Tide. Dla Candy/Tide nawet najtańszy symbol płaci przed mnożnikiem `0.23 × 1.35^5 ≈ 1.0313 × stawka`, więc także najniższy mnożnik daje dodatni wynik po zaokrągleniu. Darmowe obroty nie dostają dodatkowej grupy. Po zużyciu ostatniego obrotu serwer losuje przerwę 12–36 godzin. Po jej upływie kolejny odczyt stanu lub obrót aktywuje nową pulę. Niewykorzystana pula nie wygasa, nie kumuluje się i nie jest zużywana przez darmowe obroty. Odświeżenie, zmiana gry i wylogowanie nie zmieniają losowania.
 - Losowanie używa `pgcrypto.gen_random_bytes`. BONUS ma prawdopodobieństwo 2,5% na pole; każdy pozostały symbol 97,5% / 7. Minimalna grupa płaci `stake × base × (1 + symbol × 0.25)`, gdzie base to 2.60 dla Bandit/Ember i 0.23 dla Candy/Tide. Każdy dodatkowy symbol zwiększa bazową wypłatę 1.35×. Zaokrąglenie do grosza następuje przed mnożnikiem.
 - Historyczny pomiar sprzed zmiany szans (nie opisuje obecnej wersji): próbka po 20 tys. obrotów na grę, ze stawką 10 i wyłączonym bonusem powitalnym, dała obserwowany zwrot 93,61% w Bandicie i 99,88% w Candy. To wynik losowej próbki, nie dokładne RTP ani gwarancja. Próbka obejmowała darmowe obroty.
@@ -76,4 +78,4 @@ Nazwa robocza w prompcie nie jest używana w aplikacji; finalna nazwa to Candy C
 
 Ember Forge: bazaltowa kuźnia z miedzianym łukiem, lawą i smokiem. Pearl Tide: podwodny pałac z perłowym łukiem. Osobny atlas 16 symboli kuźni i oceanu. Wszystkie trzy grafiki wygenerowane przez imagegen, zapisane jako WebP w `public/casino/slots/`.
 
-Weryfikacja nowej migracji: izolowane testy PostgreSQL potwierdzają granice 60%/90%, dodatni wynik przy minimalnej stawce, historię, ponowienia i mnożniki obu nowych gier. Dry-run Supabase wskazuje wyłącznie dwie oczekujące migracje wymienione powyżej; token ma dostęp do właściwego projektu.
+Weryfikacja nowej migracji: izolowane testy PostgreSQL potwierdzają granice 60%/90%, dodatni wynik przy minimalnej stawce, historię, ponowienia i mnożniki obu nowych gier. Wdrożenie wszystkich trzech migracji potwierdzono w historii zdalnej bazy.

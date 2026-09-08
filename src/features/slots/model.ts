@@ -101,14 +101,14 @@ export const spinSchema = z.object({
   balance: z.number().finite().nonnegative(),
   boosted: z.boolean(),
   boostRemaining: z.number().int().min(0).max(15),
-  freeSpins: z.number().int().min(0).max(8),
-  awardedFreeSpins: z.number().int().min(0).max(8),
+  freeSpins: z.number().int().min(0).max(10),
+  awardedFreeSpins: z.number().int().min(0).max(10),
   frames: z.array(frameSchema).min(1).max(12),
   createdAt: z.string(),
 });
 export const stateSchema = z.object({
   boostRemaining: z.number().int().min(0).max(15),
-  freeSpins: z.number().int().min(0).max(8),
+  freeSpins: z.number().int().min(0).max(10),
   bonusStake: z.number().positive(),
   history: z.array(spinSchema).max(10),
 });

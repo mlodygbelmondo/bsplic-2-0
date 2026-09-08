@@ -203,7 +203,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
                     {money(result.net)}
                   </strong>
                   {result.awardedFreeSpins > 0 && (
-                    <small>+8 darmowych obrotów</small>
+                    <small>+{result.awardedFreeSpins} darmowych obrotów</small>
                   )}
                 </>
               ) : (
