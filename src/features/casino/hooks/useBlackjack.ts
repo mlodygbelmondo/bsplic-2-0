@@ -71,6 +71,8 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   const reducedMotion = useReducedMotion();
   // Bumping this id cancels any in-flight reveal sequence.
   const revealRunRef = useRef(0);
+  const [resumeVersion, setResumeVersion] = useState(0);
+  const appliedResumeRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -212,6 +214,33 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   useEffect(() => {
     void loadSnapshot();
   }, [loadSnapshot]);
+
+  useEffect(() => {
+    const resume = () => {
+      if (document.visibilityState === 'visible') {
+        setResumeVersion((version) => version + 1);
+      }
+    };
+    window.addEventListener('focus', resume);
+    document.addEventListener('visibilitychange', resume);
+    return () => {
+      window.removeEventListener('focus', resume);
+      document.removeEventListener('visibilitychange', resume);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Wait for an action and its reveal to finish so an older response cannot
+    // overwrite the snapshot fetched on return to the page.
+    if (
+      !userId || document.visibilityState !== 'visible' ||
+      isLoading || isDealing || isResolving || isRevealing ||
+      resumeVersion === appliedResumeRef.current
+    ) return;
+    appliedResumeRef.current = resumeVersion;
+    void loadSnapshot();
+    void refreshProfile().catch(() => toast.error('Nie udało się odświeżyć salda.'));
+  }, [resumeVersion, userId, isLoading, isDealing, isResolving, isRevealing, loadSnapshot, refreshProfile]);
 
   const startGame = useCallback(
     async (betAmount: number) => {

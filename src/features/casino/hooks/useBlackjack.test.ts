@@ -107,6 +107,48 @@ describe('useBlackjack resume flow', () => {
     getCurrentBlackjackGameMock.mockResolvedValue(null);
   });
 
+  it('refreshes the table and wallet when the page regains focus', async () => {
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useBlackjack({ userId: 'user-1', refreshProfile }),
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    getBlackjackTableInfoMock.mockResolvedValue({
+      deckCount: 2, cardsRemaining: 80, shoeNumber: 2,
+      handsPlayed: 4, needsShuffle: false,
+    });
+    act(() => window.dispatchEvent(new Event('focus')));
+    await waitFor(() => expect(result.current.tableInfo?.cardsRemaining).toBe(80));
+    expect(refreshProfile).toHaveBeenCalledOnce();
+  });
+
+  it('ignores hidden focus events and refreshes on becoming visible', async () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    try {
+      visibility.mockReturnValue('visible');
+      const refreshProfile = vi.fn().mockResolvedValue(undefined);
+      const { result, unmount } = renderHook(() =>
+        useBlackjack({ userId: 'user-1', refreshProfile }),
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      visibility.mockReturnValue('hidden');
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.dispatchEvent(new Event('focus'));
+      });
+      expect(getCurrentBlackjackGameMock).toHaveBeenCalledTimes(1);
+      visibility.mockReturnValue('visible');
+      act(() => document.dispatchEvent(new Event('visibilitychange')));
+      await waitFor(() => expect(getCurrentBlackjackGameMock).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      unmount();
+      act(() => window.dispatchEvent(new Event('focus')));
+      expect(getCurrentBlackjackGameMock).toHaveBeenCalledTimes(2);
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it('loads table info and resumes an active game on mount', async () => {
     getCurrentBlackjackGameMock.mockResolvedValue({
       id: 'game-1',
@@ -183,7 +225,7 @@ describe('useBlackjack resume flow', () => {
     });
   });
 
-  it('sets an action message immediately while resolving a hit', async () => {
+  it('shows the hit action message and defers a resume refresh until it completes', async () => {
     getCurrentBlackjackGameMock.mockResolvedValue({
       id: 'game-1',
       stake: 10,
@@ -245,8 +287,9 @@ describe('useBlackjack resume flow', () => {
       }),
     );
 
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
-      useBlackjack({ userId: 'user-1', refreshProfile: vi.fn() }),
+      useBlackjack({ userId: 'user-1', refreshProfile }),
     );
 
     await waitFor(() => {
@@ -261,11 +304,17 @@ describe('useBlackjack resume flow', () => {
       expect(result.current.actionMessage).toBe('Dobieranie karty...');
     });
 
+    act(() => window.dispatchEvent(new Event('focus')));
+    expect(getCurrentBlackjackGameMock).toHaveBeenCalledTimes(1);
+    getCurrentBlackjackGameMock.mockResolvedValue(nextHitState);
+
     await act(async () => {
       resolveHit(nextHitState);
     });
 
     expect(result.current.actionMessage).toBeNull();
+    await waitFor(() => expect(getCurrentBlackjackGameMock).toHaveBeenCalledTimes(2));
+    expect(result.current.playerHand).toHaveLength(3);
   });
 
   it('stages the dealer reveal before landing a settled result', async () => {

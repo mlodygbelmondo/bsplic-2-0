@@ -104,8 +104,22 @@ async function setup(page: Page, mode: 'betting' | 'playing' | 'insurance' | 'sp
     },
     { user: USER, token },
   );
-  return state;
+  return { ...state, game };
 }
+
+test('blackjack refreshes a changed hand when the page regains focus', async ({ page }) => {
+  const state = await setup(page, 'playing');
+  await page.goto('/casino/blackjack');
+  await expect(page.getByRole('button', { name: 'Dobierz', exact: true })).toBeEnabled();
+  state.game.status = 'lost';
+  state.game.player_hands[0].status = 'lost';
+  state.game.dealer_hidden_count = 0;
+  state.game.dealer_hand.push({ id: 'd2', suit: 'hearts', rank: '10', value: 10 });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('button', { name: 'Zmień stawkę' })).toBeVisible();
+  expect(state.requests).toHaveLength(0);
+  expect(state.errors).toEqual([]);
+});
 
 async function reachable(page: Page, locator: Locator) {
   await expect(locator).toBeVisible();
