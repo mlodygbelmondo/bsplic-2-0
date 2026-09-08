@@ -696,4 +696,4 @@
 .slots-ember .slot-spin { background: linear-gradient(145deg,#ffd0a0,#d77d38); }
 .slots-tide .slot-spin { background: linear-gradient(145deg,#dbffff,#70cdd4); }
 
-.slots-ember .slot-symbol, .slots-tide .slot-symbol { mix-blend-mode: screen; clip-path: inset(1%); }
+.slots-ember .slot-symbol-wrap, .slots-tide .slot-symbol-wrap { mix-blend-mode: screen; }
