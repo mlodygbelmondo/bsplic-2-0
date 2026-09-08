@@ -21,13 +21,13 @@ Testy lokalne obejmują granice puli i czasu, wspólny licznik, darmowe obroty, 
 ## Mechanika i rozliczenia
 
 - Plansza 6 × 5. Bandit wymaga co najmniej pięciu jednakowych symboli połączonych bokami. Candy wymaga ośmiu w dowolnych miejscach.
-- Wygrywające symbole znikają, pozostałe opadają w kolumnach, nowe są losowane u góry. Maksymalnie 12 układów na obrót, maksymalna wypłata 500 × stawka.
+- Wygrywające symbole znikają, pozostałe opadają w kolumnach, nowe są losowane u góry. Maksymalnie 12 układów na obrót, maksymalna wypłata 200 × stawka.
 - Bandit zwiększa mnożniki wygrywających pól do 5×. Grupa używa najwyższego mnożnika swoich pól. Pola zerują się przy nowym obrocie. Wskaźnik planszy pokazuje najwyższy zastosowany mnożnik.
 - Candy losuje wspólny mnożnik 1–5× dla każdej wygrywającej kaskady.
 - Ember wymaga 5 sąsiadujących symboli i zwiększa mnożnik całej kaskady od ×1 do ×5; nowy obrót resetuje mnożnik.
 - Tide wymaga 8 symboli w dowolnych miejscach i zawsze używa ×3.
 - Cztery symbole BONUS na pierwszej planszy płatnego obrotu przyznają dziesięć darmowych obrotów, ze stawką utrwaloną w bazie. Darmowe obroty nie przyznają następnych bonusów.
-- Bonus obejmuje losowe 5–15 płatnych obrotów na koncie, wspólnych dla obu gier. Każdy ma 90% szansy wstawienia grupy dającej zysk netto. Po zużyciu bonusu każdy płatny obrót ma 60% szans na taką grupę. Pozostałe losowania mogą wygrać naturalnie. Grupa ma 5 symboli dla Bandit/Ember i 13 dla Candy/Tide. Dla Candy/Tide nawet najtańszy symbol płaci przed mnożnikiem `0.23 × 1.35^5 ≈ 1.0313 × stawka`, więc także najniższy mnożnik daje dodatni wynik po zaokrągleniu. Darmowe obroty nie dostają dodatkowej grupy. Po zużyciu ostatniego obrotu serwer losuje przerwę 12–36 godzin. Po jej upływie kolejny odczyt stanu lub obrót aktywuje nową pulę. Niewykorzystana pula nie wygasa, nie kumuluje się i nie jest zużywana przez darmowe obroty. Odświeżenie, zmiana gry i wylogowanie nie zmieniają losowania.
+- Wymuszanie wygrywających grup i odnawialne pule 90%/60% zostały usunięte. Plansza losuje symbole bez podmian. Pierwszy płatny obrót po 6 godzinach bez płatnej gry we wszystkich slotach ma 1% szans na lucky shot. Lucky shot daje łączną wypłatę ×200 stawki zamiast wypłaty z planszy. Każdy płatny obrót zeruje wspólny czas bezczynności; darmowe obroty i ponowienia żądań go nie zmieniają.
 - Losowanie używa `pgcrypto.gen_random_bytes`. BONUS ma prawdopodobieństwo 2,5% na pole; każdy pozostały symbol 97,5% / 7. Minimalna grupa płaci `stake × base × (1 + symbol × 0.25)`, gdzie base to 2.60 dla Bandit/Ember i 0.23 dla Candy/Tide. Każdy dodatkowy symbol zwiększa bazową wypłatę 1.35×. Zaokrąglenie do grosza następuje przed mnożnikiem.
 - Historyczny pomiar sprzed zmiany szans (nie opisuje obecnej wersji): próbka po 20 tys. obrotów na grę, ze stawką 10 i wyłączonym bonusem powitalnym, dała obserwowany zwrot 93,61% w Bandicie i 99,88% w Candy. To wynik losowej próbki, nie dokładne RTP ani gwarancja. Próbka obejmowała darmowe obroty.
 - Serwer sprawdza użytkownika, stawkę 1–100, saldo i stawkę bonusu. Blokada wiersza profilu serializuje operacje portfela. Wynik, bonus i saldo są zapisywane w jednej transakcji.
@@ -79,3 +79,7 @@ Nazwa robocza w prompcie nie jest używana w aplikacji; finalna nazwa to Candy C
 Ember Forge: bazaltowa kuźnia z miedzianym łukiem, lawą i smokiem. Pearl Tide: podwodny pałac z perłowym łukiem. Osobny atlas 16 symboli kuźni i oceanu. Wszystkie trzy grafiki wygenerowane przez imagegen, zapisane jako WebP w `public/casino/slots/`.
 
 Weryfikacja nowej migracji: izolowane testy PostgreSQL potwierdzają granice 60%/90%, dodatni wynik przy minimalnej stawce, historię, ponowienia i mnożniki obu nowych gier. Wdrożenie wszystkich trzech migracji potwierdzono w historii zdalnej bazy.
+
+## Poprawka nadmiernych wypłat
+
+`20260908130000_slot_inactivity_lucky_shot.sql` usuwa wymuszanie grup 90%/60% i licznik boosta. Dodaje blokowany transakcyjnie wspólny czas ostatniego płatnego obrotu. Równoczesne żądania różnych graczy nie mogą dostać więcej niż jednej próby lucky shot. Testy SQL obejmują granice czasu i prawdopodobieństwa, wypłatę ×200, darmowe obroty, idempotencję, brak podmieniania symboli i równoczesne zgłoszenia. Testy slotów: 9; scenariusze przeglądarkowe: 14.

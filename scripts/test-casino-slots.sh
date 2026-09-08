@@ -62,3 +62,35 @@ DO $$ BEGIN
  RAISE NOTICE 'PASS: RLS hides other accounts';
 END; $$;
 SQL
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/supabase/migrations/20260908130000_slot_inactivity_lucky_shot.sql"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-lucky-shot.sql"
+if [ "${SLOT_SIMULATE:-0}" = 1 ]; then
+  psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 -f "$slots_test_root/scripts/tests/casino-slot-simulation.sql"
+fi
+# Two users, two games, one shared inactivity opportunity.
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+CREATE OR REPLACE FUNCTION public._slot_random() RETURNS double precision LANGUAGE sql AS $$ SELECT 0::double precision $$;
+CREATE OR REPLACE FUNCTION public._slot_symbol() RETURNS integer LANGUAGE sql AS $$ SELECT 7 $$;
+INSERT INTO profiles(id,balance) VALUES('44444444-4444-4444-8444-444444444444',500),('55555555-5555-4555-8555-555555555555',500);
+UPDATE casino_slot_activity SET last_spin_at=clock_timestamp()-interval '7 hours';
+SQL
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 >"$slots_test_dir/lucky-one.log" <<'SQL' &
+SET ROLE authenticated;
+SET request.jwt.claim.sub='44444444-4444-4444-8444-444444444444';
+SELECT casino_slot_spin('bandit',1,'66666666-6666-4666-8666-666666666666');
+SQL
+slots_pid_one=$!
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 >"$slots_test_dir/lucky-two.log" <<'SQL' &
+SET ROLE authenticated;
+SET request.jwt.claim.sub='55555555-5555-4555-8555-555555555555';
+SELECT casino_slot_spin('tide',1,'77777777-7777-4777-8777-777777777777');
+SQL
+slots_pid_two=$!
+wait "$slots_pid_one"
+wait "$slots_pid_two"
+psql -h "$slots_test_dir" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+ IF (SELECT count(*) FROM casino_slot_spins WHERE (result->>'luckyShot')::boolean)<>1 THEN RAISE EXCEPTION 'concurrent jackpot'; END IF;
+ RAISE NOTICE 'PASS: concurrent players claim exactly one global lucky shot';
+END; $$;
+SQL

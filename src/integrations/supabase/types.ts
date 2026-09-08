@@ -14,23 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      casino_slot_activity: {
+        Row: { id: boolean; last_spin_at: string }
+        Insert: { id?: boolean; last_spin_at: string }
+        Update: { id?: boolean; last_spin_at?: string }
+        Relationships: []
+      }
+
       casino_slot_accounts: {
         Row: {
           user_id: string
-          boost_remaining: number
-          boost_resets_at: string | null
           paid_spins: number
         }
         Insert: {
           user_id: string
-          boost_remaining?: number
-          boost_resets_at?: string | null
           paid_spins?: number
         }
         Update: {
           user_id?: string
-          boost_remaining?: number
-          boost_resets_at?: string | null
           paid_spins?: number
         }
         Relationships: [{

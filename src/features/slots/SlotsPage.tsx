@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   AudioLines,
-  Gift,
   History,
   Minus,
   Plus,
@@ -202,6 +201,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
                     {result.net > 0 ? "+" : ""}
                     {money(result.net)}
                   </strong>
+                  {result.luckyShot && <small>Lucky shot · wypłata ×200</small>}
                   {result.awardedFreeSpins > 0 && (
                     <small>+{result.awardedFreeSpins} darmowych obrotów</small>
                   )}
@@ -366,16 +366,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
             {error}
           </p>
         )}
-        {(state.data?.boostRemaining ?? 0) > 0 && (
-          <div className="slots-welcome">
-            <Gift size={19} />
-            <p>
-              <strong>
-                Bonus · pozostało {state.data?.boostRemaining} obrotów
-              </strong>
-            </p>
-          </div>
-        )}
+
       </div>
     </div>
   );

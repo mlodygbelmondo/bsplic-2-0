@@ -30,8 +30,7 @@ const result: SlotSpin = {
   payout: 2,
   net: -3,
   balance: 97,
-  boosted: true,
-  boostRemaining: 9,
+  luckyShot: false,
   freeSpins: 0,
   awardedFreeSpins: 0,
   frames: [INITIAL_FRAME],
@@ -75,6 +74,13 @@ describe("Slots", () => {
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
     expect(await screen.findByText("+10 darmowych obrotów")).toBeVisible();
   });
+  it("labels the lucky shot separately from the board payout", async () => {
+    mock.spin.mockResolvedValue({ ...result, luckyShot: true, payout: 1000, net: 995, balance: 1095 });
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
+    expect(await screen.findByText("Lucky shot · wypłata ×200")).toBeVisible();
+    expect(screen.getByText("Zysk netto · wypłata 1000,00")).toBeVisible();
+  });
   it("locks bonus stake and permits free spins with an empty wallet", async () => {
     mock.state.data.freeSpins = 3;
     mock.state.data.bonusStake = 20;
@@ -111,10 +117,10 @@ describe("Slots", () => {
     fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
     await waitFor(() => expect(mock.spin).toHaveBeenCalledTimes(2));
   });
-  it("explains the recurring bonus odds and net payout rules", () => {
+  it("explains the lucky shot odds and net payout rules", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Zasady i wypłaty" }));
-    expect(screen.getByText(/Bonus obejmuje losowe 5–15/)).toBeVisible();
+    expect(screen.getByText(/Pierwszy płatny obrót po co najmniej 6 godzinach/)).toBeVisible();
     expect(screen.getByText(/Wynik netto = wypłata/)).toBeVisible();
   });
 });

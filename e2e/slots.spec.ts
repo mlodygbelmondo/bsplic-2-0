@@ -30,7 +30,6 @@ async function setup(
     if (rpc === "casino_slot_state")
       return route.fulfill({
         json: {
-          boostRemaining: 15,
           freeSpins: options.free ? 3 : 0,
           bonusStake: 5,
           history: state.history,
@@ -53,8 +52,7 @@ async function setup(
         payout: 2,
         net: -3,
         balance: 997,
-        boosted: true,
-        boostRemaining: 14,
+        luckyShot: false,
         freeSpins: 0,
         awardedFreeSpins: 0,
         createdAt: new Date().toISOString(),
@@ -148,8 +146,8 @@ for (const game of ["bandit", "candy", "ember", "tide"]) {
         .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
     ).toBe(true);
     await page.getByRole("button", { name: "Zasady i wypłaty" }).click();
-    await expect(page.getByRole("dialog")).toContainText("90%");
-    await expect(page.getByRole("dialog")).toContainText("60%");
+    await expect(page.getByRole("dialog")).toContainText("1%");
+    await expect(page.getByRole("dialog")).toContainText("6 godzinach");
     await page.getByRole("button", { name: "Close" }).click();
     await page.getByRole("button", { name: "ZAKRĘĆ" }).click();
     await expect(page.getByText("Strata netto · wypłata 2,00")).toBeVisible();
