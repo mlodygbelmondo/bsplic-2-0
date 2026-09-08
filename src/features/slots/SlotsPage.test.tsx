@@ -95,6 +95,22 @@ describe("Slots", () => {
     setup();
     expect(screen.getByRole("button", { name: "ZAKRĘĆ" })).toBeDisabled();
   });
+  it("lets users clear the stake input before typing a replacement", () => {
+    setup();
+    const input = screen.getByLabelText("STAWKA");
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: "ZAKRĘĆ" })).toBeDisabled();
+  });
+  it("allows slot stakes above 100 when the wallet covers them", async () => {
+    mock.balance = 500;
+    setup();
+    fireEvent.change(screen.getByLabelText("STAWKA"), {
+      target: { value: "250" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "ZAKRĘĆ" }));
+    await waitFor(() => expect(mock.spin).toHaveBeenCalledWith(250));
+  });
   it("stops the session without offering another spin", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Zakończ sesję" }));

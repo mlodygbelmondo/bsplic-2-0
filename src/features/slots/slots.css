@@ -297,6 +297,9 @@
   appearance: textfield;
   -moz-appearance: textfield;
 }
+.slot-stake input[aria-invalid="true"] {
+  color: #ffb1b7;
+}
 .slot-stake input::-webkit-inner-spin-button {
   display: none;
 }

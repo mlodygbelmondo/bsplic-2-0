@@ -10,6 +10,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
+import { toast } from "sonner";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { SlotBoard } from "./SlotBoard";
@@ -26,6 +27,15 @@ import {
 import { useSlotGame } from "./useSlotGame";
 import "./slots.css";
 
+const STAKE_PATTERN = /^\d+(?:[.,]\d{1,2})?$/;
+
+function parseStakeInput(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (!STAKE_PATTERN.test(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : null;
+}
+
 export default function SlotsPage() {
   const { game } = useParams();
   if (!isSlotGame(game))
@@ -41,7 +51,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
   usePageTitle(config.title);
   const { state, spin, busy, pending, error, balance } = useSlotGame(game);
   const reduced = useReducedMotion();
-  const [stake, setStake] = useState(5);
+  const [stakeInput, setStakeInput] = useState("5");
   const [result, setResult] = useState<SlotSpin | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -59,8 +69,11 @@ function SlotMachine({ game }: { game: SlotGame }) {
     };
   }, []);
   const freeSpins = state.data?.freeSpins ?? 0;
+  const parsedStake = parseStakeInput(stakeInput);
   const actualStake =
-    pending?.stake ?? (freeSpins > 0 ? state.data!.bonusStake : stake);
+    pending?.stake ?? (freeSpins > 0 ? state.data!.bonusStake : parsedStake);
+  const stakeValue = actualStake ?? 0;
+  const stakeInputInvalid = freeSpins === 0 && !pending && parsedStake === null;
   const disabled = busy || animating;
   const frame = result?.frames[frameIndex] ?? {
     ...INITIAL_FRAME,
@@ -106,6 +119,10 @@ function SlotMachine({ game }: { game: SlotGame }) {
   }, [animating, frameIndex, frame.groups.length, reduced, result]);
   async function handleSpin() {
     if (disabled || localLock.current) return;
+    if (actualStake === null) {
+      toast.error("Wpisz poprawną stawkę minimum 1 zł.");
+      return;
+    }
     localLock.current = true;
     tone(260);
     const next = await spin(actualStake);
@@ -222,28 +239,29 @@ function SlotMachine({ game }: { game: SlotGame }) {
                       disabled ||
                       freeSpins > 0 ||
                       Boolean(pending) ||
-                      stake <= 1
+                      parsedStake === null ||
+                      parsedStake <= 1
                     }
-                    onClick={() => setStake(Math.max(1, stake - 1))}
+                    onClick={() =>
+                      setStakeInput(String(Math.max(1, (parsedStake ?? 1) - 1)))
+                    }
                   >
                     <Minus size={16} />
                   </button>
                   <input
                     id="slot-stake"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     min="1"
-                    max="100"
                     step="1"
-                    value={actualStake}
-                    disabled={disabled || freeSpins > 0 || Boolean(pending)}
-                    onChange={(event) =>
-                      setStake(
-                        Math.max(
-                          1,
-                          Math.min(100, Number(event.target.value) || 1),
-                        ),
-                      )
+                    value={
+                      pending || freeSpins > 0
+                        ? String(stakeValue)
+                        : stakeInput
                     }
+                    aria-invalid={stakeInputInvalid}
+                    disabled={disabled || freeSpins > 0 || Boolean(pending)}
+                    onChange={(event) => setStakeInput(event.target.value)}
                   />
                   <button
                     aria-label="Zwiększ stawkę"
@@ -251,9 +269,11 @@ function SlotMachine({ game }: { game: SlotGame }) {
                       disabled ||
                       freeSpins > 0 ||
                       Boolean(pending) ||
-                      stake >= 100
+                      parsedStake === null
                     }
-                    onClick={() => setStake(Math.min(100, stake + 1))}
+                    onClick={() =>
+                      setStakeInput(String(Math.max(1, (parsedStake ?? 0) + 1)))
+                    }
                   >
                     <Plus size={16} />
                   </button>
@@ -267,6 +287,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
                   stopped ||
                   !state.data ||
                   state.isError ||
+                  actualStake === null ||
                   (!pending && freeSpins === 0 && balance < actualStake)
                 }
               >
@@ -290,7 +311,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
               </span>
               <span>
                 Koszt obrotu{" "}
-                <strong>{money(freeSpins > 0 ? 0 : actualStake)}</strong>
+                <strong>{money(freeSpins > 0 ? 0 : stakeValue)}</strong>
               </span>
             </div>
           </section>

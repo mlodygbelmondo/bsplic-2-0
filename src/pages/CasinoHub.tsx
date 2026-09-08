@@ -9,6 +9,11 @@ type CasinoBackgroundStyle = CSSProperties & {
   "--casino-bg-mobile": string;
 };
 
+type SlotCardSymbolStyle = CSSProperties & {
+  "--slot-symbol-sheet": string;
+  "--slot-symbol-position": string;
+};
+
 function getCasinoBackgroundStyle(
   desktopImage: string,
   mobileImage: string,
@@ -16,6 +21,23 @@ function getCasinoBackgroundStyle(
   return {
     "--casino-bg-desktop": `url('${desktopImage}')`,
     "--casino-bg-mobile": `url('${mobileImage}')`,
+  };
+}
+
+function getSlotCardSymbolStyle(gameId: string, index: number): SlotCardSymbolStyle {
+  const game = SLOT_GAMES[gameId as keyof typeof SLOT_GAMES];
+  const globalIndex = game.offset + index;
+  const sheet =
+    globalIndex >= 16
+      ? "/casino/slots/symbols-forge-tide.webp"
+      : "/casino/slots/symbols.webp";
+  const spriteIndex = globalIndex % 16;
+
+  return {
+    "--slot-symbol-sheet": `url('${sheet}')`,
+    "--slot-symbol-position": `${((spriteIndex % 4) * 100) / 3}% ${
+      (Math.floor(spriteIndex / 4) * 100) / 3
+    }%`,
   };
 }
 
@@ -44,6 +66,7 @@ export default function CasinoHub() {
               key={id}
               to={`/casino/slots/${id}`}
               className="group relative flex min-h-[290px] overflow-hidden rounded-3xl border border-amber-200/30 bg-black md:min-h-[380px]"
+              data-slot-card={id}
             >
               <img
                 src={game.image}
@@ -51,7 +74,18 @@ export default function CasinoHub() {
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover object-[center_30%] transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-[12%] top-[24%] flex items-center justify-center gap-3 opacity-90 transition-transform duration-500 group-hover:scale-105 sm:top-[22%]">
+                {[1, 2, 6].map((symbol, index) => (
+                  <span
+                    key={symbol}
+                    className="slot-lobby-symbol"
+                    data-size={index === 1 ? "large" : "small"}
+                    style={getSlotCardSymbolStyle(id, symbol)}
+                  />
+                ))}
+              </div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.16),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.72)_78%,rgba(0,0,0,0.92))]" />
               <div className="relative mt-auto p-6 text-white">
                 <h2 className="mb-2 font-serif text-4xl font-black tracking-tight">
                   {game.title}

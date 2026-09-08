@@ -19,7 +19,7 @@ function readPending(key: string): PendingSpin | null {
     const parsed = z
       .object({
         id: z.string().uuid(),
-        stake: z.number().finite().min(1).max(100),
+        stake: z.number().finite().min(1),
       })
       .safeParse(raw);
     if (parsed.success) return { id: parsed.data.id, stake: parsed.data.stake };
@@ -32,7 +32,7 @@ const errorMessages: Record<string, string> = {
   INSUFFICIENT_BALANCE: "Za mało środków. Zmniejsz stawkę.",
   BONUS_STAKE_LOCKED:
     "Darmowe obroty zachowują stawkę z momentu zdobycia bonusu.",
-  INVALID_STAKE: "Wybierz stawkę od 1 do 100.",
+  INVALID_STAKE: "Wpisz poprawną stawkę minimum 1 zł.",
   AUTH_REQUIRED: "Zaloguj się ponownie.",
 };
 export function useSlotGame(game: SlotGame) {

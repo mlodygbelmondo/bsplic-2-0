@@ -452,6 +452,31 @@
   .safe-area-bottom {
     padding-bottom: var(--safe-area-bottom);
   }
+
+  .slot-lobby-symbol {
+    display: block;
+    width: clamp(4.5rem, 17vw, 8rem);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2), transparent 62%),
+      var(--slot-symbol-sheet);
+    background-position:
+      center,
+      var(--slot-symbol-position);
+    background-size:
+      100% 100%,
+      400% 400%;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.72))
+      drop-shadow(0 0 18px rgba(255, 219, 132, 0.24));
+  }
+
+  .slot-lobby-symbol[data-size="small"] {
+    width: clamp(3.35rem, 12vw, 5.8rem);
+    opacity: 0.78;
+  }
   .navbar-offset {
     height: calc(2.75rem + var(--safe-area-top));
   }
