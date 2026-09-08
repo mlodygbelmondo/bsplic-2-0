@@ -16,7 +16,7 @@ export const SLOT_GAMES = {
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/candy.webp",
     offset: 8,
-    base: 0.23,
+    base: 0.21,
     multiplierRule:
       "Każda wygrywająca kaskada losuje mnożnik od ×1 do ×5, z jednakową szansą na każdą wartość.",
   },
@@ -34,7 +34,7 @@ export const SLOT_GAMES = {
     rule: "8+ jednakowych symboli w dowolnych miejscach",
     image: "/casino/slots/tide.webp",
     offset: 24,
-    base: 0.23,
+    base: 0.21,
     multiplierRule:
       "Każda wygrywająca grupa ma stały mnożnik ×3, również podczas kolejnych kaskad i darmowych obrotów.",
   },
