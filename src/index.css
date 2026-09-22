@@ -1717,6 +1717,18 @@
       transform: rotate(360deg);
     }
   }
+  /* Quick loads finish before the spinner ever shows, so there's no flash. */
+  .brand-loader-delayed {
+    animation: brand-loader-appear 0.2s ease 0.35s both;
+  }
+  @keyframes brand-loader-appear {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .brand-spinner {
       animation: none;
@@ -1760,4 +1772,19 @@
   html {
     scroll-behavior: auto !important;
   }
+}
+
+/* Battery-saver mode (html.perf-lite, set by src/lib/perf-mode.ts when the
+   device caps rendering at 30fps). Stops decorative infinite animations: they
+   sit under blurred glass surfaces, which forces the blur to be recomputed on
+   every frame. Layers keep their resting position, so nothing disappears. */
+.perf-lite .h-safe-screen.bg-background::before,
+.perf-lite .h-safe-screen.bg-background::after,
+.perf-lite .daily-jackpot-card__embers,
+.perf-lite .daily-jackpot-card__art,
+.perf-lite .bsplicboost-card::after,
+.perf-lite .player-card-hero::after,
+.perf-lite .propose-cta-button::after,
+.perf-lite .pulse-live {
+  animation: none;
 }

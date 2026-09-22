@@ -1,3 +1,4 @@
+import { useBootHold } from "@/hooks/useBootSplash";
 import { cn } from "@/lib/utils";
 
 interface SectionLoaderProps {
@@ -8,13 +9,16 @@ interface SectionLoaderProps {
 
 /**
  * Branded in-content loader used wherever a panel waits for data.
- * Replaces the old gray skeleton placeholders.
+ * Replaces the old gray skeleton placeholders. During boot it keeps the
+ * splash up, so the first screen appears with its data already loaded.
  */
 export function SectionLoader({
   label = "Ładowanie...",
   size = "md",
   className,
 }: SectionLoaderProps) {
+  useBootHold();
+
   return (
     <div
       role="status"

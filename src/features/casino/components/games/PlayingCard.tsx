@@ -26,7 +26,7 @@ const suitColors = {
   spades: "text-zinc-800",
 };
 
-const cardReverseSrc = "/casino/blackjack-card-reverse.png?v=20260503";
+const cardReverseSrc = "/casino/blackjack-card-reverse.webp";
 
 export const PlayingCard = memo(function PlayingCard({
   card,

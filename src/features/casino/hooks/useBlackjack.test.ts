@@ -5,6 +5,8 @@ import { calculateHandValue } from './useBlackjack';
 import type { Card } from '@/features/casino/api/blackjack';
 
 import { useBlackjack } from './useBlackjack';
+import { blackjackSnapshotQuery } from '@/features/casino/api/casinoQueries';
+import { queryClient } from '@/lib/query-client';
 
 const getBlackjackTableInfoMock = vi.fn();
 const getCurrentBlackjackGameMock = vi.fn();
@@ -91,6 +93,59 @@ describe('calculateHandValue', () => {
 
   it('returns a busted total when no aces can save the hand', () => {
     expect(calculateHandValue([c('K', 10), c('Q', 10), c('5', 5)])).toBe(25);
+  });
+});
+
+describe('useBlackjack cached table', () => {
+  const cachedTableInfo = {
+    deckCount: 2,
+    cardsRemaining: 90,
+    shoeNumber: 1,
+    handsPlayed: 3,
+    needsShuffle: false,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getBlackjackTableInfoMock.mockResolvedValue({
+      ...cachedTableInfo,
+      cardsRemaining: 88,
+    });
+    getCurrentBlackjackGameMock.mockResolvedValue(null);
+  });
+
+  it('shows a cached idle table at once and holds dealing until it is fresh', async () => {
+    queryClient.setQueryData(blackjackSnapshotQuery('user-1').queryKey, {
+      tableInfo: cachedTableInfo,
+      currentGame: null,
+    });
+    const refreshProfile = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useBlackjack({ userId: 'user-1', refreshProfile }),
+    );
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isSyncing).toBe(true);
+    expect(result.current.tableInfo?.cardsRemaining).toBe(90);
+
+    await act(() => result.current.startGame(10));
+    expect(placeBlackjackBetMock).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(result.current.isSyncing).toBe(false));
+    expect(result.current.tableInfo?.cardsRemaining).toBe(88);
+  });
+
+  it('loads a table with a game in progress fresh', async () => {
+    queryClient.setQueryData(blackjackSnapshotQuery('user-1').queryKey, {
+      tableInfo: cachedTableInfo,
+      currentGame: { id: 'game-1' } as never,
+    });
+    const { result } = renderHook(() =>
+      useBlackjack({ userId: 'user-1', refreshProfile: vi.fn() }),
+    );
+
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 });
 

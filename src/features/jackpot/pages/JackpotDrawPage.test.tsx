@@ -223,7 +223,7 @@ describe('JackpotDrawPage', () => {
     });
 
     expect(
-      container.querySelector('img[src="/jackpot/jackpot-draw-stage.png"]'),
+      container.querySelector('img[src="/jackpot/jackpot-draw-stage.webp"]'),
     ).toBeInTheDocument();
     expect(
       container.querySelector('img[src="/jackpot/jackpot-ticket-stage.svg"]'),
@@ -237,13 +237,13 @@ describe('JackpotDrawPage', () => {
     );
 
     expect(
-      container.querySelectorAll('img[src="/jackpot/jackpot-ticket.png"]').length,
+      container.querySelectorAll('img[src="/jackpot/jackpot-ticket.webp"]').length,
     ).toBeGreaterThan(0);
 
     await advanceThroughReplay();
 
     expect(
-      container.querySelector('img[src="/jackpot/jackpot-winning-ticket.png"]'),
+      container.querySelector('img[src="/jackpot/jackpot-winning-ticket.webp"]'),
     ).toBeInTheDocument();
 
     vi.useRealTimers();

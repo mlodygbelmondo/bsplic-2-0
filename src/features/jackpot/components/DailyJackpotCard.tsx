@@ -304,7 +304,7 @@ export function DailyJackpotCard({
 
       <img
         className="daily-jackpot-card__art"
-        src="/jackpot/daily-jackpot-prizes.png"
+        src="/jackpot/daily-jackpot-prizes.webp"
         alt=""
         aria-hidden="true"
       />

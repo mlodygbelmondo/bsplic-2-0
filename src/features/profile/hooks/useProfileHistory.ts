@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import {
+  casinoHistoryPreviewQuery,
+  HISTORY_PREVIEW_SIZE,
+  sportsbookHistoryPreviewQuery,
+  toCasinoHistoryEntries,
+} from "@/features/profile/api/profileQueries";
 import { supabase } from "@/integrations/supabase/client";
 import type { CasinoHistoryEntry, CouponHistoryEntry } from "@/types/database";
+
+export { HISTORY_PREVIEW_SIZE };
 
 export type ProfileHistoryType = "sportsbook" | "casino";
 export type SportsbookHistoryFilter =
@@ -12,17 +21,17 @@ export type SportsbookHistoryFilter =
   | "pending"
   | "refund";
 
-export const HISTORY_PREVIEW_SIZE = 10;
-const HISTORY_PREVIEW_FETCH_LIMIT = HISTORY_PREVIEW_SIZE + 1;
 const HISTORY_BATCH_SIZE = 30;
 const HISTORY_BATCH_FETCH_LIMIT = HISTORY_BATCH_SIZE + 1;
 
-function toCasinoHistoryEntries(data: unknown): CasinoHistoryEntry[] {
-  return ((data as CasinoHistoryEntry[] | null) ?? []).map((entry) => ({
-    ...entry,
-    stake: Number(entry.stake),
-    payout: Number(entry.payout),
-  }));
+// The preview is refreshed in the background, so an entry loaded with "show
+// more" can shift into it; keep the first occurrence.
+function mergeById<Entry extends { id: string }>(
+  preview: Entry[],
+  more: Entry[],
+): Entry[] {
+  const seen = new Set(preview.map((entry) => entry.id));
+  return [...preview, ...more.filter((entry) => !seen.has(entry.id))];
 }
 
 export interface ProfileHistoryState {
@@ -53,134 +62,90 @@ export interface ProfileHistoryState {
 export function useProfileHistory(
   targetUserId: string | null,
 ): ProfileHistoryState {
-  const [coupons, setCoupons] = useState<CouponHistoryEntry[]>([]);
-  const [casinoHistory, setCasinoHistory] = useState<CasinoHistoryEntry[]>([]);
   const [filter, setFilter] = useState<SportsbookHistoryFilter>("all");
   const [historyType, setHistoryType] =
     useState<ProfileHistoryType>("sportsbook");
-  const [loadingCoupons, setLoadingCoupons] = useState(true);
-  const [loadingCasinoHistory, setLoadingCasinoHistory] = useState(false);
+  const [moreCoupons, setMoreCoupons] = useState<CouponHistoryEntry[]>([]);
+  const [moreCasinoHistory, setMoreCasinoHistory] = useState<
+    CasinoHistoryEntry[]
+  >([]);
+  // null until "show more" loads a batch; before that the preview decides.
+  const [moreCouponsAvailable, setMoreCouponsAvailable] = useState<
+    boolean | null
+  >(null);
+  const [moreCasinoHistoryAvailable, setMoreCasinoHistoryAvailable] =
+    useState<boolean | null>(null);
   const [loadingMoreCoupons, setLoadingMoreCoupons] = useState(false);
   const [loadingMoreCasinoHistory, setLoadingMoreCasinoHistory] =
     useState(false);
-  const [sportsbookPreviewLoaded, setSportsbookPreviewLoaded] = useState(false);
-  const [casinoPreviewLoaded, setCasinoPreviewLoaded] = useState(false);
   const [sportsbookHistoryExpanded, setSportsbookHistoryExpanded] =
     useState(false);
   const [casinoHistoryExpanded, setCasinoHistoryExpanded] = useState(false);
-  const [hasMoreCoupons, setHasMoreCoupons] = useState(false);
-  const [hasMoreCasinoHistory, setHasMoreCasinoHistory] = useState(false);
-  const [sportsbookHistoryError, setSportsbookHistoryError] = useState<
-    string | null
-  >(null);
-  const [casinoHistoryError, setCasinoHistoryError] = useState<string | null>(
-    null,
-  );
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(
     new Set(),
   );
 
   useEffect(() => {
-    setLoadingCoupons(false);
-    setLoadingCasinoHistory(false);
-    setCoupons([]);
-    setCasinoHistory([]);
-    setHasMoreCoupons(false);
-    setHasMoreCasinoHistory(false);
-    setSportsbookPreviewLoaded(false);
-    setCasinoPreviewLoaded(false);
+    setMoreCoupons([]);
+    setMoreCasinoHistory([]);
+    setMoreCouponsAvailable(null);
+    setMoreCasinoHistoryAvailable(null);
     setSportsbookHistoryExpanded(false);
     setCasinoHistoryExpanded(false);
-    setSportsbookHistoryError(null);
-    setCasinoHistoryError(null);
     setExpandedCoupons(new Set());
   }, [targetUserId]);
 
-  useEffect(() => {
-    if (
-      !targetUserId ||
-      historyType !== "sportsbook" ||
-      sportsbookPreviewLoaded
-    ) {
-      return;
-    }
-    let cancelled = false;
-
-    setLoadingCoupons(true);
-    setSportsbookHistoryError(null);
-
-    const loadSportsbookHistoryPreview = async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_user_coupon_history", {
-          p_user_id: targetUserId,
-          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
-          p_offset: 0,
-        });
-        if (error) throw error;
-        const entries = (data as CouponHistoryEntry[] | null) ?? [];
-        if (cancelled) return;
-        setCoupons(entries.slice(0, HISTORY_PREVIEW_SIZE));
-        setHasMoreCoupons(entries.length > HISTORY_PREVIEW_SIZE);
-        setSportsbookPreviewLoaded(true);
-      } catch (error) {
-        console.error("Failed to load sportsbook history", error);
-        if (cancelled) return;
-        setHasMoreCoupons(false);
-        setSportsbookHistoryError("Nie udało się załadować historii zakładów");
-      } finally {
-        if (!cancelled) {
-          setLoadingCoupons(false);
-        }
-      }
-    };
-
-    void loadSportsbookHistoryPreview();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [historyType, sportsbookPreviewLoaded, targetUserId]);
+  const sportsbookPreview = useQuery({
+    ...sportsbookHistoryPreviewQuery(targetUserId ?? ""),
+    enabled: Boolean(targetUserId),
+  });
+  const casinoPreview = useQuery({
+    ...casinoHistoryPreviewQuery(targetUserId ?? ""),
+    enabled: Boolean(targetUserId) && historyType === "casino",
+  });
 
   useEffect(() => {
-    if (!targetUserId || historyType !== "casino" || casinoPreviewLoaded) {
-      return;
+    if (sportsbookPreview.error) {
+      console.error(
+        "Failed to load sportsbook history",
+        sportsbookPreview.error,
+      );
     }
-    let cancelled = false;
+  }, [sportsbookPreview.error]);
 
-    setLoadingCasinoHistory(true);
-    setCasinoHistoryError(null);
+  useEffect(() => {
+    if (casinoPreview.error) {
+      console.error("Failed to load casino history", casinoPreview.error);
+    }
+  }, [casinoPreview.error]);
 
-    const loadCasinoHistoryPreview = async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_user_casino_history", {
-          p_user_id: targetUserId,
-          p_limit: HISTORY_PREVIEW_FETCH_LIMIT,
-          p_offset: 0,
-        });
-        if (error) throw error;
-        const entries = toCasinoHistoryEntries(data);
-        if (cancelled) return;
-        setCasinoHistory(entries.slice(0, HISTORY_PREVIEW_SIZE));
-        setHasMoreCasinoHistory(entries.length > HISTORY_PREVIEW_SIZE);
-        setCasinoPreviewLoaded(true);
-      } catch (error) {
-        console.error("Failed to load casino history", error);
-        if (cancelled) return;
-        setHasMoreCasinoHistory(false);
-        setCasinoHistoryError("Nie udało się załadować historii kasyna");
-      } finally {
-        if (!cancelled) {
-          setLoadingCasinoHistory(false);
-        }
-      }
-    };
-
-    void loadCasinoHistoryPreview();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [casinoPreviewLoaded, historyType, targetUserId]);
+  const coupons = useMemo(
+    () => mergeById(sportsbookPreview.data?.entries ?? [], moreCoupons),
+    [moreCoupons, sportsbookPreview.data],
+  );
+  const casinoHistory = useMemo(
+    () => mergeById(casinoPreview.data?.entries ?? [], moreCasinoHistory),
+    [casinoPreview.data, moreCasinoHistory],
+  );
+  const hasMoreCoupons =
+    moreCouponsAvailable ?? sportsbookPreview.data?.hasMore ?? false;
+  const hasMoreCasinoHistory =
+    moreCasinoHistoryAvailable ?? casinoPreview.data?.hasMore ?? false;
+  // Cached data stays on screen during a background refresh; only a first
+  // load without data shows the loader or the error.
+  const loadingCoupons = Boolean(targetUserId) && sportsbookPreview.isPending;
+  const loadingCasinoHistory =
+    Boolean(targetUserId) &&
+    historyType === "casino" &&
+    casinoPreview.isPending;
+  const sportsbookHistoryError =
+    sportsbookPreview.isError && !sportsbookPreview.data
+      ? "Nie udało się załadować historii zakładów"
+      : null;
+  const casinoHistoryError =
+    casinoPreview.isError && !casinoPreview.data
+      ? "Nie udało się załadować historii kasyna"
+      : null;
 
   const toggleCoupon = (couponId: string) => {
     setExpandedCoupons((prev) => {
@@ -202,9 +167,12 @@ export function useProfileHistory(
         p_offset: coupons.length,
       });
       if (error) throw error;
-      const entries = (data as CouponHistoryEntry[] | null) ?? [];
-      setCoupons((prev) => [...prev, ...entries.slice(0, HISTORY_BATCH_SIZE)]);
-      setHasMoreCoupons(entries.length > HISTORY_BATCH_SIZE);
+      const entries = (data as unknown as CouponHistoryEntry[] | null) ?? [];
+      setMoreCoupons((prev) => [
+        ...prev,
+        ...entries.slice(0, HISTORY_BATCH_SIZE),
+      ]);
+      setMoreCouponsAvailable(entries.length > HISTORY_BATCH_SIZE);
       setSportsbookHistoryExpanded(true);
     } catch (error) {
       console.error("Failed to load more sportsbook history", error);
@@ -235,11 +203,11 @@ export function useProfileHistory(
       });
       if (error) throw error;
       const entries = toCasinoHistoryEntries(data);
-      setCasinoHistory((prev) => [
+      setMoreCasinoHistory((prev) => [
         ...prev,
         ...entries.slice(0, HISTORY_BATCH_SIZE),
       ]);
-      setHasMoreCasinoHistory(entries.length > HISTORY_BATCH_SIZE);
+      setMoreCasinoHistoryAvailable(entries.length > HISTORY_BATCH_SIZE);
       setCasinoHistoryExpanded(true);
     } catch (error) {
       console.error("Failed to load more casino history", error);

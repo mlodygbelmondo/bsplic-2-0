@@ -3,10 +3,9 @@ import { BrandedLoader } from '@/components/BrandedLoader';
 import { LoginPage } from '@/components/LoginPage';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { loadAuthenticatedHome } from '@/lib/boot/route-modules';
 
-const AuthenticatedHome = lazy(
-  () => import('@/features/home/components/AuthenticatedHome'),
-);
+const AuthenticatedHome = lazy(loadAuthenticatedHome);
 
 function HomeLoadingFallback() {
   return <BrandedLoader />;

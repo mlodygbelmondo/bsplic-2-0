@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
+import { queryClient } from '@/lib/query-client';
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -69,3 +70,8 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
   rect: vi.fn(),
   clip: vi.fn(),
 })) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+// Pages read the shared app query cache directly; start every test empty.
+afterEach(() => {
+  queryClient.clear();
+});

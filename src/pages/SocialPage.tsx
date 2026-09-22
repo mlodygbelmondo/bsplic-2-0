@@ -27,8 +27,12 @@ import {
   createPost,
   createSocialStory,
   fetchComments,
-  fetchActiveSocialStories,
 } from '@/features/social/api/social';
+import {
+  SOCIAL_FEED_PAGE_SIZE,
+  socialFeedQuery,
+  socialStoriesQuery,
+} from '@/features/social/api/socialQueries';
 import {
   useFeedInteractions,
   type FeedInteractionsStore,
@@ -37,12 +41,12 @@ import { useSocialRealtimeFeed } from '@/features/social/hooks/useSocialRealtime
 import { triggerEniuBotReply } from '@/features/social/lib/eniuTrigger';
 import { getSocialItemPath } from '@/features/social/routes';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { queryClient } from '@/lib/query-client';
 import {
   getNextScrollChromeState,
   type ScrollChromeState,
 } from '@/lib/scroll-chrome';
 
-const SOCIAL_FEED_PAGE_SIZE = 50;
 const SOCIAL_FEED_PREFETCH_ROOT_MARGIN = '1200px 0px';
 const EMPTY_COMMENTS: SocialComment[] = [];
 
@@ -79,12 +83,25 @@ function mergeFeedItem(
 
 export default function SocialPage() {
   usePageTitle('Social');
-  const [feedItems, setFeedItems] = useState<SocialFeedItem[]>([]);
-  const [stories, setStories] = useState<SocialStory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
+  // Start from the cached first page (warmed during boot or kept from the
+  // last visit) and refresh it quietly instead of showing a loader.
+  const [cachedFeed] = useState(() =>
+    queryClient.getQueryData(socialFeedQuery(user?.id).queryKey),
+  );
+  const [feedItems, setFeedItems] = useState<SocialFeedItem[]>(
+    () => cachedFeed ?? [],
+  );
+  const [stories, setStories] = useState<SocialStory[]>(
+    () => queryClient.getQueryData(socialStoriesQuery().queryKey) ?? [],
+  );
+  const [loading, setLoading] = useState(!cachedFeed);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(
+    () => !cachedFeed || cachedFeed.length === SOCIAL_FEED_PAGE_SIZE,
+  );
+  const [offset, setOffset] = useState(() => cachedFeed?.length ?? 0);
+  const refreshFeedQuietlyRef = useRef(Boolean(cachedFeed));
   const [expandedCoupons, setExpandedCoupons] = useState<Set<string>>(
     new Set(),
   );
@@ -99,7 +116,6 @@ export default function SocialPage() {
   >({});
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, profile } = useAuth();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileChromeStateRef = useRef<ScrollChromeState>();
   const [mobileChromeHidden, setMobileChromeHidden] = useState(false);
@@ -171,12 +187,17 @@ export default function SocialPage() {
     ? 'Zmień filtr, aby zobaczyć pozostałe wpisy.'
     : 'Nikt jeszcze nic nie opublikował.';
 
-  const loadFeed = useCallback(async () => {
-    setLoading(true);
-    setOffset(0);
-    setHasMore(true);
+  const loadFeed = useCallback(async ({ quiet = false } = {}) => {
+    if (!quiet) {
+      setLoading(true);
+      setOffset(0);
+      setHasMore(true);
+    }
     try {
-      const data = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, 0, user?.id);
+      const data = await queryClient.fetchQuery({
+        ...socialFeedQuery(user?.id),
+        staleTime: 0,
+      });
       setFeedItems((currentItems) => {
         if (!targetItemType || !targetItemId) return data;
 
@@ -204,7 +225,10 @@ export default function SocialPage() {
 
   const loadStories = useCallback(async () => {
     try {
-      const data = await fetchActiveSocialStories();
+      const data = await queryClient.fetchQuery({
+        ...socialStoriesQuery(),
+        staleTime: 0,
+      });
       setStories(data);
     } catch (error) {
       const message =
@@ -255,8 +279,20 @@ export default function SocialPage() {
   );
 
   useEffect(() => {
-    void loadFeed();
+    const quiet = refreshFeedQuietlyRef.current;
+    refreshFeedQuietlyRef.current = false;
+    void loadFeed({ quiet });
   }, [loadFeed]);
+
+  // Keep the cached first page in step with realtime updates and reactions,
+  // so coming back to the feed shows exactly what was last seen.
+  useEffect(() => {
+    if (loading) return;
+    queryClient.setQueryData(
+      socialFeedQuery(user?.id).queryKey,
+      feedItems.slice(0, SOCIAL_FEED_PAGE_SIZE),
+    );
+  }, [feedItems, loading, user?.id]);
 
   useEffect(() => {
     if (!user?.id) {

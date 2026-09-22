@@ -566,7 +566,7 @@ export function JackpotDrawExperience({
             </div>
             <img
               className="jackpot-stage-asset"
-              src="/jackpot/jackpot-draw-stage.png"
+              src="/jackpot/jackpot-draw-stage.webp"
               alt=""
               aria-hidden="true"
             />
@@ -606,7 +606,7 @@ export function JackpotDrawExperience({
                       >
                         <img
                           className="jackpot-flight-ticket__asset"
-                          src="/jackpot/jackpot-ticket.png"
+                          src="/jackpot/jackpot-ticket.webp"
                           alt=""
                           aria-hidden="true"
                         />
@@ -635,7 +635,7 @@ export function JackpotDrawExperience({
                 <div className="jackpot-stage-reveal__ticket-wrap">
                   <img
                     className="jackpot-stage-reveal__ticket-art"
-                    src="/jackpot/jackpot-winning-ticket.png"
+                    src="/jackpot/jackpot-winning-ticket.webp"
                     alt=""
                     aria-hidden="true"
                   />

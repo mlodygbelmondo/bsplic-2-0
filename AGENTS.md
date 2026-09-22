@@ -124,6 +124,12 @@
 - Home data hooks that fetch active bets/categories or open realtime channels should live under the lazy authenticated home surface so they are not imported or run on the logged-out root path.
 - Realtime subscriptions should be opened only for visible/useful surfaces and must always be cleaned up.
 - Service-worker registration should stay off the critical first-render path while preserving PWA auto-update behavior.
+- Boot: the `#initial-splash` in `index.html` is the only full-screen loader. `src/lib/boot/boot-splash.ts` keeps it up while anything holds it (`useBootHold`; `BrandedLoader` and `SectionLoader` hold automatically), so the first screen appears once with its data loaded. Do not add other full-page boot loaders.
+- After a signed-in boot (and right after login), `src/lib/boot/preload.ts` warms every route chunk in `src/lib/boot/route-modules.ts` plus casino/jackpot artwork, then (once the first screen has its data) prefetches each section's first-screen data into the shared React Query cache (`src/lib/query-client.ts`). Register new route loaders there and add new first-screen artwork and queries to the preload lists. Logged-out users get no preloading; signing out clears the cache.
+- Page data uses query factories (`socialQueries.ts`, `profileQueries.ts`, `rankings/queries.ts`, `casinoQueries.ts`) with `PAGE_DATA_QUERY_OPTIONS`: cached data shows instantly and refreshes in the background. Pages that keep local state (Social feed, roulette, blackjack) seed it from the cache and write updates back. Never show a cached live round or an in-progress blackjack game; those always load fresh.
+- The router uses `v7_startTransition`, so navigation keeps the current screen while a chunk loads. Layouts that stay mounted across child routes must reset their own scroll position.
+- `html.perf-lite` (`src/lib/perf-mode.ts`) turns on when the device renders at 30fps (Low Power Mode or battery saver). New decorative infinite animations must be stopped under it, and heavy glass or filter effects need a plain fallback (`usePerfLite`).
+- The splash (roulette wheel around the wordmark) lives in `index.html`. After changing the splash wordmark, run `node scripts/generate-ios-splash.mjs` to regenerate the iOS startup images in `public/splash/`.
 - When changing bundle shape, run `npm run perf:build` and compare the largest JS chunk and gzip sizes with the previous output.
 
 ## Supabase and Data Access

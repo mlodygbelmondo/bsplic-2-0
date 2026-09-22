@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { toast } from "sonner";
+import { BootController } from "@/components/BootController";
 import { BrandedLoader } from "@/components/BrandedLoader";
 import { LoginPage } from "@/components/LoginPage";
 import { PwaUpdateModal } from "@/components/PwaUpdateModal";
@@ -9,22 +10,24 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CouponProvider } from "@/contexts/CouponContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import {
+  loadAdminPage,
+  loadCasinoBlackjackPage,
+  loadCasinoHub,
+  loadCasinoLayout,
+  loadCasinoRoulettePage,
+  loadJackpotDrawPage,
+  loadNotFound,
+  loadProfilePage,
+  loadRankingsPage,
+  loadReplayPage,
+  loadResetPasswordPage,
+  loadSlotsPage,
+  loadSocialItemPage,
+  loadSocialPage,
+} from "@/lib/boot/route-modules";
+import { queryClient } from "@/lib/query-client";
 import Index from "./pages/Index";
-
-const loadProfilePage = () => import("./pages/ProfilePage");
-const loadReplayPage = () => import("@/features/replay/ReplayPage");
-const loadRankingsPage = () => import("./pages/RankingsPage");
-const loadSocialPage = () => import("./pages/SocialPage");
-const loadSocialItemPage = () => import("./pages/SocialItemPage");
-const loadAdminPage = () => import("./pages/AdminPage");
-const loadResetPasswordPage = () => import("./pages/ResetPasswordPage");
-const loadNotFound = () => import("./pages/NotFound");
-const loadCasinoLayout = () => import("./pages/CasinoLayout");
-const loadCasinoHub = () => import("./pages/CasinoHub");
-const loadCasinoRoulettePage = () => import("./pages/CasinoRoulettePage");
-const loadCasinoBlackjackPage = () => import("./pages/CasinoBlackjackPage");
-const loadJackpotDrawPage = () =>
-  import("@/features/jackpot/pages/JackpotDrawPage");
 
 const ProfilePage = lazy(loadProfilePage);
 const ReplayPage = lazy(loadReplayPage);
@@ -41,7 +44,7 @@ const CasinoRouletteDevPage = lazy(
   () => import("./pages/CasinoRouletteDevPage"),
 );
 const CasinoBlackjackPage = lazy(loadCasinoBlackjackPage);
-const SlotsPage = lazy(() => import("@/features/slots/SlotsPage"));
+const SlotsPage = lazy(loadSlotsPage);
 const JackpotDrawPage = lazy(loadJackpotDrawPage);
 const JackpotDevFlowPage = import.meta.env.DEV
   ? lazy(() => import("@/features/jackpot/pages/JackpotDevFlowPage"))
@@ -56,23 +59,6 @@ const FeaturePollSurface = lazy(() =>
     (module) => ({ default: module.FeaturePollSurface }),
   ),
 );
-
-// Fade out the static splash from index.html once React has painted the
-// first frame (which is the visually identical BrandedLoader or the app).
-function SplashScreenRemover() {
-  useEffect(() => {
-    const splash = document.getElementById("initial-splash");
-    if (!splash) {
-      return;
-    }
-
-    splash.classList.add("splash-done");
-    const timeoutId = window.setTimeout(() => splash.remove(), 600);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
-  return null;
-}
 
 function ConnectionToasts() {
   useEffect(() => {
@@ -97,16 +83,6 @@ function ConnectionToasts() {
 
   return null;
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 function AppLoadingFallback() {
   return <BrandedLoader />;
@@ -158,11 +134,13 @@ const App = () => (
   <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <Sonner richColors />
-      <SplashScreenRemover />
       <ConnectionToasts />
       <PwaUpdateModal />
-      <BrowserRouter>
+      {/* startTransition keeps the current screen up while the next route's
+          chunk loads, instead of flashing the full-page fallback. */}
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <AuthProvider>
+          <BootController />
           <AuthenticatedBonusCampaignSurface />
           <AuthenticatedFeaturePollSurface />
           <CouponProvider>

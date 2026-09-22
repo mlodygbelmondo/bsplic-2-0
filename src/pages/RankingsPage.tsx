@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/Navbar";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  rankingsQuery,
+  type RankEntry,
+  type RankingType,
+} from "@/features/rankings/queries";
 import { cn } from "@/lib/utils";
 import { SectionLoader } from "@/components/SectionLoader";
 import { Link } from "react-router-dom";
@@ -12,31 +16,7 @@ import {
   type ScrollChromeState,
 } from "@/lib/scroll-chrome";
 
-interface RankEntry {
-  id: string;
-  username: string;
-  total_profit: number;
-  win_rate: number;
-  total_bets: number;
-  won_bets: number;
-  lost_bets: number;
-  balance: number;
-}
-
 type SortKey = "total_profit" | "win_rate" | "total_bets";
-type RankingType = "sportsbook" | "casino";
-
-function normalizeRankingRows(data: unknown): RankEntry[] {
-  return ((data ?? []) as RankEntry[]).map((r) => ({
-    ...r,
-    total_profit: Number(r.total_profit),
-    win_rate: Number(r.win_rate),
-    total_bets: Number(r.total_bets),
-    won_bets: Number(r.won_bets),
-    lost_bets: Number(r.lost_bets),
-    balance: Number(r.balance),
-  }));
-}
 
 export default function RankingsPage() {
   usePageTitle("Rankingi");
@@ -52,22 +32,7 @@ export default function RankingsPage() {
     isLoading: loading,
     isFetching,
     refetch,
-  } = useQuery({
-    queryKey: ["rankings", rankingType],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc(
-        rankingType === "sportsbook"
-          ? "get_user_rankings"
-          : "get_casino_rankings",
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      return normalizeRankingRows(data);
-    },
-  });
+  } = useQuery(rankingsQuery(rankingType));
 
   useEffect(() => {
     if (error) {

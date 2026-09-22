@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { renderWithQueryClient as render } from '@/test/renderWithQueryClient';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProfilePage from '@/pages/ProfilePage';
@@ -172,7 +173,7 @@ describe('ProfilePage username route', () => {
 
     const hero = await screen.findByRole('region', { name: 'Karta gracza' });
 
-    expect(within(hero).getByText('Na plusie')).toBeInTheDocument();
+    expect(await within(hero).findByText('Na plusie')).toBeInTheDocument();
     expect(within(hero).getByText('Zysk')).toBeInTheDocument();
     expect(within(hero).getByText('+146.50 zł')).toBeInTheDocument();
     expect(within(hero).getByText('Win rate')).toBeInTheDocument();
@@ -219,7 +220,7 @@ describe('ProfilePage username route', () => {
     expect(rpcMock).toHaveBeenCalledWith('get_public_badges', { p_user_id: 'current-user-id' });
     expect(fromMock).not.toHaveBeenCalledWith('badges');
     expect(within(debutantBadge).getByText('Pierwszy postawiony zakład')).toBeInTheDocument();
-    expect(within(debutantBadge).getByText('Odblokowano: 01.05.2026')).toBeInTheDocument();
+    expect(await within(debutantBadge).findByText('Odblokowano: 01.05.2026')).toBeInTheDocument();
     expect(within(debutantBadge).getByRole('img', { name: 'Odznaka Debiutant' })).toHaveAttribute(
       'src',
       '/badges/debiutant.png',

@@ -10,6 +10,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SocialPage from './SocialPage';
+import { socialFeedQuery } from '@/features/social/api/socialQueries';
+import { queryClient } from '@/lib/query-client';
 import type { SocialFeedItem, SocialStory } from '@/types/database';
 import {
   makeCasinoFeedItem,
@@ -243,6 +245,34 @@ describe('SocialPage', () => {
     // While loading, the branded loader is shown; after the feed resolves
     // the item should appear.
     expect(await screen.findByText('Typster')).toBeInTheDocument();
+  });
+
+  it('shows the cached feed at once and refreshes it without a loader', async () => {
+    queryClient.setQueryData(socialFeedQuery('user-1').queryKey, [
+      makePostFeedItem({ id: 'cached-post', content: 'Wpis z pamięci' }),
+    ]);
+    let resolveFeed: (items: SocialFeedItem[]) => void = () => undefined;
+    fetchSocialFeedMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveFeed = resolve;
+      }),
+    );
+
+    renderSocialPage();
+
+    expect(screen.getByText('Wpis z pamięci')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('status', { name: 'Wczytywanie aktywności...' }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveFeed([
+        makePostFeedItem({ id: 'fresh-post', content: 'Świeży wpis' }),
+      ]);
+    });
+
+    expect(await screen.findByText('Świeży wpis')).toBeInTheDocument();
+    expect(screen.queryByText('Wpis z pamięci')).not.toBeInTheDocument();
   });
 
   it('hides mobile bottom nav on deliberate downward feed scroll', async () => {

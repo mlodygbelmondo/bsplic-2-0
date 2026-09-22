@@ -1,8 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge, PublicProfile } from "@/types/database";
 import { Navigate, useParams } from "react-router-dom";
 import { SectionLoader } from "@/components/SectionLoader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,29 +10,17 @@ import { toast } from "sonner";
 import { PlayerCardHero } from "@/features/player-card/components/PlayerCardHero";
 import { derivePlayerCardDisplayModel } from "@/features/player-card/displayModel";
 import { compressImageFile } from "@/features/social/images";
+import {
+  profileBadgesQuery,
+  profileStatsQuery,
+  publicProfileQuery,
+  type RankingStats,
+} from "@/features/profile/api/profileQueries";
 import { ProfileBadgesSection } from "@/features/profile/components/ProfileBadgesSection";
 import { ProfileHistoryPanel } from "@/features/profile/components/ProfileHistoryPanel";
 import { useProfileHistory } from "@/features/profile/hooks/useProfileHistory";
 import { ReplayLaunchCard } from "@/features/replay/ReplayLaunchCard";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-interface UserStatsRow {
-  total_bets: number;
-  won_bets: number;
-  lost_bets: number;
-  win_rate: number;
-  total_profit: number;
-}
-
-function toRankingStats(stats: UserStatsRow) {
-  return {
-    totalBets: Number(stats.total_bets),
-    wins: Number(stats.won_bets),
-    losses: Number(stats.lost_bets),
-    winRate: Number(stats.win_rate),
-    totalProfit: Number(stats.total_profit),
-  };
-}
 
 function getShareableProfileUrl() {
   return new URL(window.location.pathname, window.location.origin).toString();
@@ -111,79 +99,47 @@ export default function ProfilePage() {
   const isOwnProfile =
     !normalizedUserRef || (targetUserId !== null && targetUserId === user?.id);
 
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(
-    null,
-  );
-  const [rankingStats, setRankingStats] = useState<{
-    totalBets: number;
-    wins: number;
-    losses: number;
-    winRate: number;
-    totalProfit: number;
-  } | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
   const [avatarUploadLoading, setAvatarUploadLoading] = useState(false);
   const [avatarOverrideUrl, setAvatarOverrideUrl] = useState<string | null>(
     null,
   );
   const history = useProfileHistory(targetUserId);
 
+  const badgesQuery = useQuery({
+    ...profileBadgesQuery(targetUserId ?? ""),
+    enabled: Boolean(targetUserId),
+  });
+  // Own stats come from a cheap per-user RPC; other players need the public
+  // profile RPC, which also carries their name and avatar.
+  const ownStatsQuery = useQuery({
+    ...profileStatsQuery(targetUserId ?? ""),
+    enabled: Boolean(targetUserId) && isOwnProfile,
+  });
+  const publicQuery = useQuery({
+    ...publicProfileQuery(targetUserId ?? ""),
+    enabled: Boolean(targetUserId) && !isOwnProfile,
+  });
+
   useEffect(() => {
-    if (!targetUserId) return;
-    let cancelled = false;
-
-    setBadges([]);
-    setPublicProfile(null);
-    setRankingStats(null);
-    setLoadingProfile(false);
-
-    supabase
-      .rpc("get_public_badges", { p_user_id: targetUserId })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error("Failed to load profile badges", error);
-          setBadges([]);
-          return;
-        }
-        setBadges((data as unknown as Badge[] | null) ?? []);
-      });
-
-    if (isOwnProfile) {
-      // Fetch only this user's stats instead of recomputing the full leaderboard.
-      supabase
-        .rpc("get_user_stats", { p_user_id: targetUserId })
-        .then(({ data, error }) => {
-          if (cancelled || error || !data?.[0]) return;
-          setRankingStats(toRankingStats(data[0]));
-        });
-    } else {
-      // Use get_public_profile RPC for other users
-      setLoadingProfile(true);
-      supabase
-        .rpc("get_public_profile", { p_user_id: targetUserId })
-        .then(({ data }) => {
-          if (cancelled) return;
-          if (data) {
-            const pp = data as unknown as PublicProfile;
-            setPublicProfile(pp);
-            setRankingStats({
-              totalBets: Number(pp.total_bets),
-              wins: Number(pp.won_bets),
-              losses: Number(pp.lost_bets),
-              winRate: Number(pp.win_rate),
-              totalProfit: Number(pp.total_profit),
-            });
-          }
-          setLoadingProfile(false);
-        });
+    if (badgesQuery.error) {
+      console.error("Failed to load profile badges", badgesQuery.error);
     }
+  }, [badgesQuery.error]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [targetUserId, isOwnProfile]);
+  const badges = badgesQuery.data ?? [];
+  const publicProfile = isOwnProfile ? null : (publicQuery.data ?? null);
+  const loadingProfile = !isOwnProfile && publicQuery.isPending;
+  const rankingStats: RankingStats | null = isOwnProfile
+    ? (ownStatsQuery.data ?? null)
+    : publicProfile
+      ? {
+          totalBets: Number(publicProfile.total_bets),
+          wins: Number(publicProfile.won_bets),
+          losses: Number(publicProfile.lost_bets),
+          winRate: Number(publicProfile.win_rate),
+          totalProfit: Number(publicProfile.total_profit),
+        }
+      : null;
 
   // Own profile requires auth
   if (resolvingTarget) return null;

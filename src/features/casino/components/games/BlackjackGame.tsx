@@ -92,6 +92,7 @@ export function BlackjackGame() {
     gameId,
     tableInfo,
     isLoading,
+    isSyncing,
     isDealing,
     isResolving,
     isRevealing,
@@ -264,7 +265,7 @@ export function BlackjackGame() {
   ];
 
   const handleStartGame = (amount: number) => {
-    if (isDealing || isResolving || isRevealing) return;
+    if (isSyncing || isDealing || isResolving || isRevealing) return;
     storeLastStake(amount);
     setBetInput(String(amount));
     void startGame(amount);
@@ -480,7 +481,7 @@ export function BlackjackGame() {
                     if (!isBetValid) return;
                     handleStartGame(parsedBet);
                   }}
-                  disabled={isDealing || !isBetValid}
+                  disabled={isSyncing || isDealing || !isBetValid}
                   className="h-12 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 px-8 min-[380px]:w-32 font-bold text-black shadow-[0_4px_18px_rgba(251,191,36,0.3)] hover:from-amber-500 hover:to-amber-600"
                 >
                   {isDealing ? "Rozdawanie..." : "Graj"}

@@ -1,10 +1,14 @@
 import { createRoot } from "react-dom/client";
+import { initBootSplash } from "@/lib/boot/boot-splash";
 import { bindMaintenanceModeChecks } from "@/lib/maintenance-mode";
+import { startPerfModeDetection } from "@/lib/perf-mode";
 import { bindServiceWorkerUpdateChecks } from "@/lib/pwa-registration";
 import { showPwaUpdateModal } from "@/lib/pwa-update";
 import App from "./App.tsx";
 import "./index.css";
 
+initBootSplash();
+startPerfModeDetection();
 bindMaintenanceModeChecks();
 
 createRoot(document.getElementById("root")!).render(<App />);

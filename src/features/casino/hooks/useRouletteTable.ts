@@ -7,10 +7,15 @@ import {
   subscribeToRouletteRounds,
 } from '@/features/casino/api/roulette';
 import {
+  ROULETTE_RECENT_SPINS_LIMIT,
+  rouletteSnapshotQuery,
+} from '@/features/casino/api/casinoQueries';
+import {
   formatRouletteCountdown,
   getRouletteNextSyncDelayMs,
   getRouletteCountdownTargetMs,
 } from '@/features/casino/lib/roulette';
+import { queryClient } from '@/lib/query-client';
 import type {
   RouletteBetRecord,
   RouletteBetType,
@@ -41,11 +46,21 @@ export function useRouletteTable({
   avatarUrl = null,
   refreshProfile,
 }: UseRouletteTableArgs) {
+  // Past spins and wins from the cache (warmed during boot or kept from the
+  // last visit) show straight away. The live round always waits for a fresh
+  // snapshot, so a stale round can never be bet on or animated.
+  const [cachedSnapshot] = useState(() =>
+    queryClient.getQueryData(rouletteSnapshotQuery().queryKey),
+  );
   const [currentRound, setCurrentRound] = useState<RouletteTableRound | null>(
     null,
   );
-  const [recentSpins, setRecentSpins] = useState<RouletteTableRound[]>([]);
-  const [recentWins, setRecentWins] = useState<RouletteRecentWin[]>([]);
+  const [recentSpins, setRecentSpins] = useState<RouletteTableRound[]>(
+    () => cachedSnapshot?.recentSpins ?? [],
+  );
+  const [recentWins, setRecentWins] = useState<RouletteRecentWin[]>(
+    () => cachedSnapshot?.recentWins ?? [],
+  );
   const [activeBets, setActiveBets] = useState<RouletteBetRecord[]>([]);
   const [roundParticipants, setRoundParticipants] = useState<
     RouletteRoundParticipant[]
@@ -79,8 +94,11 @@ export function useRouletteTable({
       }
 
       const snapshotPromise = (async () => {
-        // 50 spins of history feed the hot/cold + color distribution stats.
-        const snapshot = await getRouletteTableSnapshot('main', 50);
+        const snapshot = await getRouletteTableSnapshot(
+          'main',
+          ROULETTE_RECENT_SPINS_LIMIT,
+        );
+        queryClient.setQueryData(rouletteSnapshotQuery().queryKey, snapshot);
 
         currentRoundRef.current = snapshot.currentRound;
         setCurrentRound(snapshot.currentRound);

@@ -19,6 +19,7 @@ import {
   blackjackDeclineInsurance,
   type BlackjackInsuranceStatus,
 } from '@/features/casino/api/blackjack';
+import { blackjackSnapshotQuery } from '@/features/casino/api/casinoQueries';
 import {
   buildFinaleSteps,
   calculateHandValue,
@@ -32,6 +33,7 @@ import {
   playResultSound,
   vibrate,
 } from '@/features/casino/lib/blackjackSfx';
+import { queryClient } from '@/lib/query-client';
 
 export { calculateHandValue };
 
@@ -46,7 +48,22 @@ function isSettledStatus(status: BlackjackGameState['status']): boolean {
   return SETTLED_STATUSES.includes(status);
 }
 
+const GAME_IN_PROGRESS_STATUSES: BlackjackGameStatus[] = [
+  'playing',
+  'insurance',
+];
+
 export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
+  // A cached table with no game in progress (warmed during boot or kept from
+  // the last visit) shows straight away while a fresh snapshot loads; dealing
+  // waits for that snapshot. A game in progress always loads fresh.
+  const [cachedTable] = useState(() => {
+    if (!userId) return null;
+    const cached = queryClient.getQueryData(
+      blackjackSnapshotQuery(userId).queryKey,
+    );
+    return cached && cached.currentGame === null ? cached.tableInfo : null;
+  });
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
   const [playerHands, setPlayerHands] = useState<BlackjackHandState[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
@@ -55,8 +72,11 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
   const [status, setStatus] = useState<BlackjackGameStatus>('betting');
   const [stake, setStake] = useState(0);
   const [gameId, setGameId] = useState<string | null>(null);
-  const [tableInfo, setTableInfo] = useState<BlackjackTableInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [tableInfo, setTableInfo] = useState<BlackjackTableInfo | null>(
+    cachedTable,
+  );
+  const [isLoading, setIsLoading] = useState(!cachedTable);
+  const [isSyncing, setIsSyncing] = useState(Boolean(cachedTable));
   const [isDealing, setIsDealing] = useState(false);
   // Guards against rapid double-clicks calling action RPCs concurrently.
   const [isResolving, setIsResolving] = useState(false);
@@ -168,19 +188,24 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     [applyState, applyTableInfoFromState, reducedMotion, refreshProfile],
   );
 
-  const loadSnapshot = useCallback(async () => {
+  const loadSnapshot = useCallback(async ({ quiet = false } = {}) => {
     if (!userId) {
       setIsLoading(false);
+      setIsSyncing(false);
       return;
     }
 
-    setIsLoading(true);
+    if (!quiet) setIsLoading(true);
     try {
       const [nextTableInfo, currentGame] = await Promise.all([
         getBlackjackTableInfo({ userId }),
         getCurrentBlackjackGame({ userId }),
       ]);
 
+      queryClient.setQueryData(blackjackSnapshotQuery(userId).queryKey, {
+        tableInfo: nextTableInfo,
+        currentGame,
+      });
       setTableInfo(nextTableInfo);
 
       if (currentGame) {
@@ -208,12 +233,44 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       );
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   }, [userId, applyState, applyTableInfoFromState]);
 
+  const quietFirstLoadRef = useRef(Boolean(cachedTable));
   useEffect(() => {
-    void loadSnapshot();
+    const quiet = quietFirstLoadRef.current;
+    quietFirstLoadRef.current = false;
+    void loadSnapshot({ quiet });
   }, [loadSnapshot]);
+
+  // Leave the cache describing what the next visit may show instantly: the
+  // table when no game is running, nothing when one is mid-play.
+  const latestTableRef = useRef({ status, tableInfo, busy: false });
+  latestTableRef.current = {
+    status,
+    tableInfo,
+    busy: isDealing || isResolving || isRevealing,
+  };
+  useEffect(() => {
+    if (!userId) return;
+    return () => {
+      const latest = latestTableRef.current;
+      const key = blackjackSnapshotQuery(userId).queryKey;
+      if (
+        latest.busy ||
+        !latest.tableInfo ||
+        GAME_IN_PROGRESS_STATUSES.includes(latest.status)
+      ) {
+        queryClient.removeQueries({ queryKey: key });
+        return;
+      }
+      queryClient.setQueryData(key, {
+        tableInfo: latest.tableInfo,
+        currentGame: null,
+      });
+    };
+  }, [userId]);
 
   useEffect(() => {
     const resume = () => {
@@ -234,17 +291,17 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     // overwrite the snapshot fetched on return to the page.
     if (
       !userId || document.visibilityState !== 'visible' ||
-      isLoading || isDealing || isResolving || isRevealing ||
+      isLoading || isSyncing || isDealing || isResolving || isRevealing ||
       resumeVersion === appliedResumeRef.current
     ) return;
     appliedResumeRef.current = resumeVersion;
     void loadSnapshot();
     void refreshProfile().catch(() => toast.error('Nie udało się odświeżyć salda.'));
-  }, [resumeVersion, userId, isLoading, isDealing, isResolving, isRevealing, loadSnapshot, refreshProfile]);
+  }, [resumeVersion, userId, isLoading, isSyncing, isDealing, isResolving, isRevealing, loadSnapshot, refreshProfile]);
 
   const startGame = useCallback(
     async (betAmount: number) => {
-      if (isDealing || isResolving || isRevealing) return;
+      if (isSyncing || isDealing || isResolving || isRevealing) return;
       setIsDealing(true);
       setActionMessage('Rozdawanie kart...');
       playChipSound();
@@ -273,6 +330,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
       applyState,
       applyTableInfoFromState,
       playFinale,
+      isSyncing,
       isDealing,
       isResolving,
       isRevealing,
@@ -544,6 +602,7 @@ export function useBlackjack({ userId, refreshProfile }: UseBlackjackArgs) {
     gameId,
     tableInfo,
     isLoading,
+    isSyncing,
     isDealing,
     isResolving,
     isRevealing,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { CouponItem } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -67,7 +67,7 @@ export function CouponProvider({ children }: { children: ReactNode }) {
     writeStoredItems(items);
   }, [items]);
 
-  const addItem = (item: CouponItem) => {
+  const addItem = useCallback((item: CouponItem) => {
     setItems(prev => {
       const exists = prev.find(i => i.bet.id === item.bet.id);
       if (exists) {
@@ -76,9 +76,9 @@ export function CouponProvider({ children }: { children: ReactNode }) {
       return [...prev, item];
     });
     toast.success('Dodano do kuponu');
-  };
+  }, []);
 
-  const addItems = (incomingItems: CouponItem[]) => {
+  const addItems = useCallback((incomingItems: CouponItem[]) => {
     if (incomingItems.length === 0) {
       return;
     }
@@ -92,34 +92,35 @@ export function CouponProvider({ children }: { children: ReactNode }) {
 
       return Array.from(nextByBetId.values());
     });
-  };
+  }, []);
 
-  const removeItem = (betId: string) => {
+  const removeItem = useCallback((betId: string) => {
     setItems(prev => prev.filter(i => i.bet.id !== betId));
-  };
+  }, []);
 
-  const clearCoupon = () => {
+  const clearCoupon = useCallback(() => {
     setItems([]);
     setPreferredCouponType(null);
-  };
+  }, []);
 
-  const totalOdds = items.reduce((acc, item) => acc * item.odds, 1);
-  const couponType = items.length > 1 ? 'ako' : 'single';
+  // Memoized so memoized consumers (every BetCard) skip unrelated re-renders.
+  const value = useMemo<CouponContextType>(
+    () => ({
+      items,
+      addItem,
+      addItems,
+      removeItem,
+      clearCoupon,
+      preferredCouponType,
+      setPreferredCouponType,
+      totalOdds: items.reduce((acc, item) => acc * item.odds, 1),
+      couponType: items.length > 1 ? 'ako' : 'single',
+    }),
+    [addItem, addItems, clearCoupon, items, preferredCouponType, removeItem],
+  );
 
   return (
-    <CouponContext.Provider
-      value={{
-        items,
-        addItem,
-        addItems,
-        removeItem,
-        clearCoupon,
-        preferredCouponType,
-        setPreferredCouponType,
-        totalOdds,
-        couponType,
-      }}
-    >
+    <CouponContext.Provider value={value}>
       {children}
     </CouponContext.Provider>
   );

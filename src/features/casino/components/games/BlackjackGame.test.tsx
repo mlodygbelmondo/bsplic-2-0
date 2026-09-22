@@ -700,7 +700,7 @@ describe("BlackjackGame", () => {
       within(hiddenSlot).getByRole("img", { name: "Rewers karty" }),
     ).toHaveAttribute(
       "src",
-      "/casino/blackjack-card-reverse.png?v=20260503",
+      "/casino/blackjack-card-reverse.webp",
     );
     expect(hiddenSlot).not.toHaveClass(
       "border",

@@ -36,8 +36,17 @@ export default defineConfig(({ mode }) => ({
           /^\/api\//,
           /^\/maintenance\.html$/,
         ],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
-        globIgnores: ["badges/**/*"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,webmanifest}"],
+        globIgnores: [
+          "badges/**/*",
+          // iOS reads startup images itself; they never go through the SW.
+          "splash/**/*",
+          // Artwork no screen uses anymore.
+          "casino/blackjack-background.webp",
+          "casino/blackjack-button.webp",
+          "casino/blackjack-mobile-background.webp",
+          "casino/roulette-button.webp",
+        ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
       },
