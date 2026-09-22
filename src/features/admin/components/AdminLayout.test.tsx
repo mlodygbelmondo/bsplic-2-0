@@ -139,12 +139,6 @@ describe('AdminLayout', () => {
     const mobileNav = screen.getByRole('navigation', {
       name: 'Nawigacja admina',
     });
-    const tabGrid = screen.getByTestId('admin-liquid-glass').firstElementChild;
-
-    expect(tabGrid).toHaveStyle({
-      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    });
-
     const navButtons = within(mobileNav).getAllByRole('button');
     expect(
       navButtons.map((button) => button.getAttribute('aria-label')),
@@ -155,76 +149,6 @@ describe('AdminLayout', () => {
       'Bonusy',
       'Więcej',
     ]);
-    expect(navButtons[2]).toHaveClass('h-[58px]');
-  });
-
-  it('uses centered, accessible mobile admin navigation targets', () => {
-    mockIsAdmin = true;
-
-    renderAdminLayout();
-
-    const mobileNav = screen.getByRole('navigation', {
-      name: 'Nawigacja admina',
-    });
-    const tabGrid = screen.getByTestId('admin-liquid-glass').firstElementChild;
-    const navButtons = within(mobileNav).getAllByRole('button');
-
-    expect(screen.getByTestId('admin-liquid-glass')).toBeInTheDocument();
-    expect(tabGrid).toHaveClass('rounded-[1.75rem]');
-    navButtons.forEach((button) => {
-      expect(button).toHaveClass('items-center', 'justify-center');
-    });
-    expect(navButtons[0]).toHaveClass(
-      'h-[58px]',
-      'gap-1',
-      'rounded-[1.35rem]',
-      'text-[12px]',
-      'font-bold',
-    );
-    expect(navButtons[1]).toHaveClass(
-      'h-[58px]',
-      'text-[12px]',
-      'font-medium',
-    );
-    expect(navButtons[2]).toHaveClass(
-      'h-[58px]',
-      'gap-1',
-      'rounded-[1.35rem]',
-      'text-[12px]',
-    );
-    expect(navButtons[2]).not.toHaveClass('relative', 'min-h-[50px]');
-    expect(navButtons[0].firstElementChild).toHaveClass('h-5', 'w-5');
-    expect(navButtons[2].firstElementChild).toHaveClass('h-5', 'w-5');
-    expect(within(navButtons[0]).getByText('Bety')).toHaveClass('leading-[1.15]');
-    expect(within(navButtons[1]).getByText('Propozycje')).toHaveClass('leading-[1.15]');
-    expect(within(navButtons[2]).getByText('Dodaj')).toHaveClass('leading-[1.15]');
-  });
-
-  it('uses the same liquid glass mobile surface for admin navigation', () => {
-    mockIsAdmin = true;
-
-    renderAdminLayout();
-
-    const mobileNav = screen.getByRole('navigation', {
-      name: 'Nawigacja admina',
-    });
-
-    expect(liquidGlassMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'standard',
-        overLight: false,
-      }),
-      undefined,
-    );
-    expect(mobileNav).toHaveClass('px-2');
-    expect(screen.getByTestId('admin-liquid-glass').firstElementChild).toHaveClass(
-      'bg-white/[0.86]',
-      'backdrop-blur-2xl',
-      'rounded-[1.75rem]',
-    );
-    expect(within(mobileNav).getByRole('button', { name: 'Zarządzaj' })).not.toHaveClass(
-      'bg-primary/10',
-    );
   });
 
   it('hides the mobile admin navigation on deliberate downward scroll', () => {
@@ -253,21 +177,6 @@ describe('AdminLayout', () => {
 
     expect(mobileNav).toHaveClass('translate-y-full', 'opacity-0');
   });
-
-  it('does not reserve a fixed gray spacer above the mobile admin navigation', () => {
-    mockIsAdmin = true;
-
-    renderAdminLayout();
-
-    const main = screen.getByRole('main');
-
-    expect(main).not.toHaveClass('pb-[calc(5rem+env(safe-area-inset-bottom))]');
-    expect(main.firstElementChild).toHaveClass(
-      'pb-[calc(5rem+env(safe-area-inset-bottom))]',
-      'md:pb-0',
-    );
-  });
-
   it('renders lower-frequency admin sections inside the mobile More area', async () => {
     mockIsAdmin = true;
 

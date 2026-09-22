@@ -230,70 +230,7 @@ describe("Navbar", () => {
         expect.objectContaining({ userId: "user-1" }),
       ),
     );
-  });
-
-  it("dims inactive desktop navigation links more clearly", () => {
-    renderNavbar("/");
-
-    expect(screen.getAllByRole("link", { name: "Zakłady" })[0]).toHaveClass(
-      "text-navbar-foreground",
-    );
-    expect(screen.getAllByRole("link", { name: "Rankingi" })[0]).toHaveClass(
-      "text-navbar-foreground/60",
-    );
-  });
-
-  it("keeps desktop navbar actions on a consistent center line", async () => {
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(min-width: 1024px)",
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => {},
-    }));
-
-    try {
-      renderNavbar();
-
-      await waitFor(() => {
-        expect(screen.getByTitle("Doładuj portfel")).toHaveClass(
-          "h-8",
-          "leading-none",
-        );
-      });
-      expect(screen.getByTitle("Menu użytkownika")).toHaveClass(
-        "h-8",
-        "leading-none",
-      );
-      expect(notificationsBellMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: expect.stringContaining("h-8 w-8"),
-        }),
-      );
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
-  });
-
-  it("uses a smaller notification bell icon on mobile", async () => {
-    renderNavbar();
-
-    await waitFor(() => {
-      expect(
-        notificationsBellMock.mock.calls.some(([props]) =>
-          typeof props.className === "string" &&
-          props.className.includes("[&>svg]:h-5 [&>svg]:w-5") &&
-          !props.className.includes("p-0"),
-        ),
-      ).toBe(true);
-    });
-  });
-
-  // ── Topup — canClaimTopup is true ─────────────────────
+  }); // ── Topup — canClaimTopup is true ─────────────────────
 
   it("opens topup dialog when canClaimTopup returns true", async () => {
     canClaimTopupMock.mockReturnValue(true);

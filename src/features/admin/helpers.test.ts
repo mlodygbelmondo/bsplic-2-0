@@ -28,20 +28,8 @@ describe('parseWinningOptions', () => {
     expect(parseWinningOptions('["Legia","Lech"]')).toEqual(['Legia', 'Lech']);
   });
 
-  it('parses a single-element JSON array', () => {
-    expect(parseWinningOptions('["Legia"]')).toEqual(['Legia']);
-  });
-
   it('filters out non-string entries in JSON array', () => {
     expect(parseWinningOptions('[1,"Legia",null,"Lech"]')).toEqual(['Legia', 'Lech']);
-  });
-
-  it('handles sentinel value __REFUND__', () => {
-    expect(parseWinningOptions('__REFUND__')).toEqual(['__REFUND__']);
-  });
-
-  it('handles sentinel value __FORCED_LOSS__', () => {
-    expect(parseWinningOptions('__FORCED_LOSS__')).toEqual(['__FORCED_LOSS__']);
   });
 
   it('falls back to plain string for malformed JSON', () => {

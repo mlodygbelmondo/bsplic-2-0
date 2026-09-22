@@ -101,37 +101,6 @@ describe("RankingsPage", () => {
     expect(screen.queryAllByText("Tester")).toHaveLength(0);
   });
 
-  it("renders a mobile ranking list while preserving the desktop table from sm up", async () => {
-    const { container } = renderWithProviders(<RankingsPage />);
-
-    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
-
-    expect(container.querySelector("[data-testid='rankings-mobile-list']")).toHaveClass(
-      "sm:hidden",
-    );
-    expect(container.querySelector("[data-testid='rankings-mobile-row']")).toHaveClass(
-      "grid",
-      "grid-cols-[auto_minmax(0,1fr)_auto]",
-    );
-    expect(container.querySelector("[data-testid='rankings-desktop-table']")).toHaveClass(
-      "hidden",
-      "sm:block",
-    );
-  });
-
-  it("keeps the desktop table shell around the loading state", () => {
-    rpcMock.mockReturnValue(new Promise(() => {}));
-
-    const { container } = renderWithProviders(<RankingsPage />);
-
-    const desktopTable = container.querySelector("[data-testid='rankings-desktop-table']");
-
-    expect(desktopTable).toHaveClass("hidden", "sm:block");
-    expect(desktopTable).toHaveTextContent("#");
-    expect(desktopTable).toHaveTextContent("Profit");
-    expect(screen.getAllByText("Wczytywanie rankingu...").length).toBeGreaterThan(0);
-  });
-
   it("shows a retry action when rankings fail to load", async () => {
     rpcMock.mockRejectedValueOnce(new Error("network down")).mockResolvedValueOnce({
       data: [
@@ -148,15 +117,11 @@ describe("RankingsPage", () => {
       ],
     });
 
-    const { container } = renderWithProviders(<RankingsPage />);
+    renderWithProviders(<RankingsPage />);
 
     expect(
       (await screen.findAllByText("Nie udało się wczytać rankingu")).length,
     ).toBeGreaterThan(0);
-    expect(container.querySelector("[data-testid='rankings-desktop-table']")).toHaveClass(
-      "hidden",
-      "sm:block",
-    );
 
     fireEvent.click(screen.getAllByRole("button", { name: "Spróbuj ponownie" })[0]);
 
@@ -187,12 +152,4 @@ describe("RankingsPage", () => {
     );
   });
 
-  it("reserves bottom scroll space for the mobile nav", async () => {
-    const { container } = renderWithProviders(<RankingsPage />);
-
-    expect((await screen.findAllByText("Tester")).length).toBeGreaterThan(0);
-    expect(
-      container.querySelector("[data-testid='rankings-scroll-container']"),
-    ).toHaveClass("pb-[var(--mobile-bottom-nav-scroll-padding)]");
-  });
 });

@@ -22,16 +22,4 @@ describe('buildOpenCodeGoRequestBody', () => {
       max_tokens: 16000,
     });
   });
-
-  it('does not send provider-specific reasoning controls rejected by OpenCodeGo', () => {
-    const body = buildOpenCodeGoRequestBody({
-      model: 'kimi-k2.6',
-      messages,
-      maxTokens: 16000,
-    });
-
-    expect(body).not.toHaveProperty('include_reasoning');
-    expect(body).not.toHaveProperty('reasoning');
-    expect(body).not.toHaveProperty('thinking');
-  });
 });

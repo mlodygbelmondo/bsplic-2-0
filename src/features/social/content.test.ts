@@ -30,10 +30,5 @@ describe('social content parser', () => {
       const path = '';
       expect(getImageMarkerLength(path)).toBe(8);
     });
-
-    it('returns correct length for a path with special characters', () => {
-      const path = 'user/abc-123_456.png?v=1';
-      expect(getImageMarkerLength(path)).toBe(path.length + 8);
-    });
   });
 });

@@ -47,7 +47,7 @@ describe('HomeShell jackpot banner composition', () => {
   });
 
   it('owns jackpot loading and renders the card through the BetList banner slot', () => {
-    const { container } = render(
+    render(
       <HomeShell
         selectedCategory={null}
         onSelectCategory={vi.fn()}
@@ -59,10 +59,6 @@ describe('HomeShell jackpot banner composition', () => {
     );
 
     expect(screen.getByTestId('daily-jackpot-card')).toBeInTheDocument();
-    expect(container.querySelector('.max-w-\\[1600px\\]')).toHaveClass(
-      'pt-2',
-      'lg:py-3',
-    );
     expect(useDailyJackpotMock).toHaveBeenCalledTimes(1);
     expect(dailyJackpotCardMock).toHaveBeenCalledWith(
       expect.objectContaining({

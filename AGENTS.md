@@ -61,15 +61,15 @@
 ## Single-Test Commands (Important)
 
 - Run one test file:
-  - `npm run test -- src/test/example.test.ts`
+  - `npm run test -- src/features/coupons/akoExclusions.test.ts`
 - Run one test by name pattern:
-  - `npm run test -- -t "should pass"`
+  - `npm run test -- -t "treats exclusion pairs as unordered"`
 - Run one file and one test name together:
-  - `npm run test -- src/test/example.test.ts -t "should pass"`
+  - `npm run test -- src/features/coupons/akoExclusions.test.ts -t "treats exclusion pairs as unordered"`
 - Watch a single file:
-  - `npm run test:watch -- src/test/example.test.ts`
+  - `npm run test:watch -- src/features/coupons/akoExclusions.test.ts`
 - Direct Vitest fallback:
-  - `npx vitest run src/test/example.test.ts`
+  - `npx vitest run src/features/coupons/akoExclusions.test.ts`
 
 ## Optional/Ancillary Commands
 
@@ -185,6 +185,10 @@
 - Keep tests near source under `src/` with `.test.ts`/`.test.tsx` or `.spec.ts`/`.spec.tsx`.
 - Use `src/test/setup.ts` defaults (`jest-dom`, `matchMedia` polyfill).
 - Test behavior and outcomes, not implementation details.
+- Never write tautological tests. Each test must fail for a plausible wrong behavior. Use expected values from requirements or independent fixtures, not the production constant or helper being tested.
+- Make mocks observe inputs and return fixed fixtures. Do not build a mock's answer from the same value the assertion checks.
+- Check rendered behavior or public outputs. Use browser tests for layout and database contract tests for effective SQL permissions; source text and CSS class checks do not prove those behaviors.
+- Before adding a test, identify the regression it catches and check whether an existing test already catches it.
 
 ## Lint and Formatting
 

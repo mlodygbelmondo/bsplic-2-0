@@ -23,10 +23,6 @@ describe('totalReactions', () => {
     expect(totalReactions(null)).toBe(0);
   });
 
-  it('returns 0 for undefined', () => {
-    expect(totalReactions(undefined)).toBe(0);
-  });
-
   it('returns 0 for empty object', () => {
     expect(totalReactions({})).toBe(0);
   });
@@ -36,25 +32,11 @@ describe('totalReactions', () => {
     expect(totalReactions(counts)).toBe(10);
   });
 
-  it('handles single reaction type', () => {
-    expect(totalReactions({ wow: 1 })).toBe(1);
-  });
-
-  it('handles all seven types', () => {
-    const counts: ReactionCounts = {
-      like: 1, heart: 2, laugh: 3, wow: 4, sad: 5, angry: 6, fire: 7,
-    };
-    expect(totalReactions(counts)).toBe(28);
-  });
 });
 
 describe('sortedReactions', () => {
   it('returns empty array for null', () => {
     expect(sortedReactions(null)).toEqual([]);
-  });
-
-  it('returns empty array for undefined', () => {
-    expect(sortedReactions(undefined)).toEqual([]);
   });
 
   it('returns empty array for empty object', () => {

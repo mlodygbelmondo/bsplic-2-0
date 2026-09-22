@@ -1,31 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { DailyJackpotSnapshot } from '../types';
 
 import { DailyJackpotCard } from './DailyJackpotCard';
-
-const readJackpotCss = () =>
-  readFileSync(
-    join(process.cwd(), 'src/features/jackpot/styles/dailyJackpotCard.css'),
-    'utf8',
-  );
-
-function getMediaCss(query: string) {
-  const css = readJackpotCss();
-  const mediaStart = css.indexOf(`@media ${query}`);
-  const nextMediaStart = css.indexOf('@media ', mediaStart + 1);
-
-  expect(mediaStart).toBeGreaterThanOrEqual(0);
-
-  return css.slice(
-    mediaStart,
-    nextMediaStart === -1 ? undefined : nextMediaStart,
-  );
-}
 
 const snapshot: DailyJackpotSnapshot = {
   poolId: 'pool-1',
@@ -185,72 +163,6 @@ describe('DailyJackpotCard', () => {
     expect(
       screen.getByText(/kupionych ticketów w aktualnym losowaniu/i),
     ).toBeInTheDocument();
-  });
-
-  it('keeps the pool label and info icon visually quiet and centered', () => {
-    const css = readJackpotCss();
-
-    expect(css).toMatch(
-      /\.daily-jackpot-card__amount-heading\s*\{[^}]*align-items:\s*center;[^}]*gap:\s*0\.25rem;/,
-    );
-    expect(css).toMatch(
-      /\.daily-jackpot-card__amount-label\s*\{[^}]*margin-top:\s*0;/,
-    );
-    expect(css).toMatch(
-      /\.daily-jackpot-card__info-trigger\s*\{[^}]*border:\s*1px solid hsl\(0 0% 82% \/ 0\.34\);[^}]*color:\s*hsl\(0 0% 86%\);[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/,
-    );
-    expect(css).toMatch(
-      /\.daily-jackpot-card__info-trigger:hover,\s*\.daily-jackpot-card__info-trigger:focus-visible\s*\{[^}]*border-color:\s*hsl\(0 0% 88% \/ 0\.48\);[^}]*color:\s*hsl\(0 0% 92%\);[^}]*background:\s*hsl\(0 0% 100% \/ 0\.06\);/,
-    );
-  });
-
-  it('keeps the mobile jackpot card compact with horizontal stat tiles', () => {
-    const mobileCss = getMediaCss('(max-width: 820px)');
-    const smallMobileCss = getMediaCss('(max-width: 560px)');
-    const css = readJackpotCss();
-
-    expect(mobileCss).toMatch(/\.daily-jackpot-card\s*\{[^}]*min-height:\s*12\.1rem;/);
-    expect(mobileCss).toMatch(/\.daily-jackpot-card\s*\{[^}]*max-height:\s*12\.1rem;/);
-    expect(css).toMatch(
-      /\.daily-jackpot-card__state\s*\{[^}]*align-items:\s*center;/,
-    );
-    expect(css).toMatch(
-      /\.daily-jackpot-card__state strong\s*\{[^}]*font-weight:\s*inherit;/,
-    );
-    expect(css).toMatch(
-      /\.daily-jackpot-card__state svg,\s*\.daily-jackpot-card__state-label,\s*\.daily-jackpot-card__state-dot,\s*\.daily-jackpot-card__state strong\s*\{[^}]*line-height:\s*1;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__state\s*\{[^}]*top:\s*0\.92rem;[^}]*right:\s*0\.82rem;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__state\s*\{[^}]*display:\s*inline-grid;[^}]*grid-auto-flow:\s*column;[^}]*place-items:\s*center;[^}]*height:\s*1\.56rem;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__state--countdown\s+\.daily-jackpot-card__state-label\s*\{[^}]*display:\s*none;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__state--countdown\s+\.daily-jackpot-card__state-dot\s*\{[^}]*display:\s*none;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__stats\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__stats\s*\{[^}]*bottom:\s*3\.28rem;/,
-    );
-    expect(mobileCss).toMatch(
-      /\.daily-jackpot-card__stat\s*\{[^}]*border-right:\s*1px solid/,
-    );
-    expect(smallMobileCss).toMatch(/\.daily-jackpot-card\s*\{[^}]*min-height:\s*12\.1rem;/);
-    expect(smallMobileCss).toMatch(
-      /\.daily-jackpot-card__art\s*\{[^}]*top:\s*3\.15rem;[^}]*max-height:\s*5\.8rem;/,
-    );
-    expect(smallMobileCss).toMatch(
-      /\.daily-jackpot-card__price-label-desktop\s*\{[^}]*display:\s*none;/,
-    );
-    expect(smallMobileCss).toMatch(
-      /\.daily-jackpot-card__price-label-mobile\s*\{[^}]*display:\s*inline;/,
-    );
   });
 
   it('shows a draw CTA for a participated finished round without spoiling the winner', () => {

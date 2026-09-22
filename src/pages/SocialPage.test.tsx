@@ -301,48 +301,7 @@ describe('SocialPage', () => {
     expect(navbarMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ mobileBottomNavHidden: true }),
     );
-    expect(scrollContainer).toHaveClass(
-      'pb-[var(--mobile-bottom-nav-scroll-padding)]',
-    );
     expect(filterBar).toHaveAttribute('data-hidden', 'true');
-  });
-
-  it('uses an edge-to-edge mobile feed shell while restoring desktop spacing from sm up', async () => {
-    fetchSocialFeedMock.mockResolvedValue([makePostFeedItem()]);
-    const { container } = renderSocialPage();
-
-    expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
-
-    const feedContent = container.querySelector(
-      "[data-testid='social-feed-content']",
-    );
-    expect(feedContent).toHaveClass(
-      'social-facebook-feed',
-      'w-full',
-      'max-w-3xl',
-      'mx-auto',
-      'px-0',
-      'pt-0',
-      'sm:px-4',
-      'sm:py-4',
-    );
-    expect(container.querySelector('.social-mobile-page')).toBeInTheDocument();
-
-    expect(screen.getByRole('heading', { name: 'Social' })).toHaveClass(
-      'sr-only',
-      'sm:not-sr-only',
-    );
-
-    expect(container.querySelector("[data-testid='social-filter-bar']")).toHaveClass(
-      'sticky',
-      'top-0',
-      'z-20',
-      'grid',
-      'grid-cols-4',
-      'overflow-hidden',
-      'rounded-none',
-      'sm:rounded-lg',
-    );
   });
 
   it('renders a Facebook-style stories strip below the composer on mobile and desktop', async () => {
@@ -362,8 +321,6 @@ describe('SocialPage', () => {
     expect(await screen.findByText('Cześć, to mój pierwszy post!')).toBeInTheDocument();
 
     const stories = screen.getByTestId('social-stories-strip');
-    expect(stories).toHaveClass('social-facebook-stories');
-    expect(stories).not.toHaveClass('sm:hidden');
     expect(
       within(stories).getByRole('button', { name: 'Utwórz relację' }),
     ).toBeInTheDocument();
@@ -504,12 +461,6 @@ describe('SocialPage', () => {
     const postContent = await screen.findByText('Cześć, to mój pierwszy post!');
     expect(postContent).toBeInTheDocument();
     expect(postContent.closest('.app-surface')).not.toBeNull();
-    expect(postContent.closest("[data-testid='social-feed-card']")).toHaveClass(
-      'social-facebook-card',
-      'social-edge-surface',
-      'rounded-none',
-      'sm:rounded-xl',
-    );
     expect(screen.getByText('Poster')).toBeInTheDocument();
     // No copy-coupon button for posts
     expect(

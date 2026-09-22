@@ -8,25 +8,10 @@ vi.mock('@/features/casino/components/games/BlackjackGame', () => ({
 }));
 
 describe('CasinoBlackjackPage', () => {
-  it('uses the blackjack background art on the page shell', () => {
-    const { container } = render(<CasinoBlackjackPage />);
-
-    expect(screen.getByTestId('casino-blackjack-shell')).toHaveStyle({
-      '--casino-bg-desktop': "url('/casino/blackjack-table.webp')",
-      '--casino-bg-mobile': "url('/casino/blackjack-table.webp')",
-    });
-    expect(screen.getByTestId('casino-blackjack-shell')).toHaveClass(
-      'min-h-full',
-      'overflow-visible',
-    );
-    expect(
-      container.querySelector('[data-testid="casino-blackjack-shell"]'),
-    ).toBeTruthy();
-  });
-
   it('renders blackjack without the top marketing header', () => {
     render(<CasinoBlackjackPage />);
 
+    expect(screen.getByTestId('blackjack-game-stub')).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Blackjack' }),
     ).not.toBeInTheDocument();
@@ -38,13 +23,5 @@ describe('CasinoBlackjackPage', () => {
       ),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Split działa/)).not.toBeInTheDocument();
-  });
-
-  it('reserves bottom scroll space for the mobile nav', () => {
-    render(<CasinoBlackjackPage />);
-
-    expect(screen.getByTestId('casino-blackjack-content')).toHaveClass(
-      'pb-[var(--mobile-bottom-nav-scroll-padding)]',
-    );
   });
 });

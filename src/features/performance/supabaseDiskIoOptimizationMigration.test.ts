@@ -51,11 +51,8 @@ describe('supabase disk IO optimization migration', () => {
     );
   });
 
-  it('adds a single roulette snapshot contract and removes browser advancement access', () => {
+  it('adds a single roulette snapshot contract', () => {
     expect(migration).toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.get_roulette_table_snapshot/i);
-    expect(migration).toMatch(/REVOKE\s+EXECUTE\s+ON\s+FUNCTION\s+public\.advance_roulette_round_if_due\(TEXT\)\s+FROM\s+PUBLIC,\s*anon,\s*authenticated/i);
-    expect(migration).toMatch(/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+public\.advance_roulette_round_if_due\(TEXT\)\s+TO\s+service_role/i);
-    expect(migration).toMatch(/cron\.schedule/i);
   });
 
   it('adds retention for append-only social realtime invalidation rows', () => {

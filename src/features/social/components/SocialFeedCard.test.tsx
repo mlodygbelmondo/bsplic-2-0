@@ -58,20 +58,15 @@ function renderCard(overrides = {}) {
 
 describe('SocialFeedCard', () => {
   it('uses Facebook-style mobile engagement instead of the full reaction picker', () => {
-    const { container } = renderCard();
+    renderCard();
 
     const actionRow = screen.getByTestId('social-mobile-action-row');
-    expect(actionRow).toHaveClass('sm:hidden');
     expect(within(actionRow).getByRole('button', { name: 'Lubię to' })).toBeInTheDocument();
     expect(within(actionRow).getByRole('button', { name: 'Komentarz' })).toBeInTheDocument();
     expect(within(actionRow).getByRole('button', { name: 'Udostępnij' })).toBeInTheDocument();
     expect(within(actionRow.parentElement!).getByText('9')).toBeInTheDocument();
     expect(within(actionRow.parentElement!).getByText('3 komentarze')).toBeInTheDocument();
 
-    expect(container.querySelector('.social-desktop-reaction-bar')).toHaveClass(
-      'hidden',
-      'sm:block',
-    );
   });
 
   it('toggles the comment input from the engagement comment action', () => {

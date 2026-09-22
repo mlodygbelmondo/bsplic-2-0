@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.1";
 
 import { ENIU_PERSONA_PROMPT } from "./eniuPersona.ts";
+import { looksLikeMetaResponse, sanitizeGeneratedText } from "./eniuTextGuard.ts";
 import { buildOpenCodeGoRequestBody } from "./openCodeGoRequest.ts";
 import {
   describeOpenCodeGoShape,
@@ -87,42 +88,6 @@ export function getAgentToken() {
   const token = Deno.env.get("SOCIAL_BOT_AGENT_TOKEN");
   if (!token) throw new Error("Missing SOCIAL_BOT_AGENT_TOKEN");
   return token;
-}
-
-export function sanitizeGeneratedText(value: string) {
-  return value
-    .replace(/\s+/g, " ")
-    .replace(/^["'`]+|["'`]+$/g, "")
-    .trim()
-    .slice(0, 700);
-}
-
-function looksLikeMetaResponse(value: string) {
-  const lower = value.toLowerCase();
-  const metaPhrases = [
-    "the user wants me",
-    "key constraints",
-    "must not reveal",
-    "system prompt",
-    "hidden instructions",
-    "persona/prompt",
-    "i need to write",
-    "i should respond",
-    "thinking:",
-    "reasoning:",
-    "analysis:",
-  ];
-  const reasoningBlockPatterns = [
-    /<\s*thinking\b/i,
-    /<\s*\/\s*thinking\s*>/i,
-    /<\s*think\b/i,
-    /<\s*\/\s*think\s*>/i,
-  ];
-
-  return (
-    metaPhrases.some((pattern) => lower.includes(pattern)) ||
-    reasoningBlockPatterns.some((pattern) => pattern.test(value))
-  );
 }
 
 function stringifyContext(value: unknown) {

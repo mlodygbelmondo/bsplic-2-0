@@ -165,20 +165,6 @@ describe('NotificationsBell', () => {
     ).toBeInTheDocument();
   });
 
-  it('uses a menu-sized bell icon', async () => {
-    render(
-      <MemoryRouter>
-        <NotificationsBell userId="user-1" />
-      </MemoryRouter>,
-    );
-
-    const bellButton = await screen.findByRole('button', {
-      name: /^Powiadomienia/,
-    });
-
-    expect(bellButton.querySelector('svg')).toHaveClass('h-6', 'w-6');
-  });
-
   it('centers the opened notifications panel in the mobile viewport and keeps desktop aligned to the end', async () => {
     const { unmount } = render(
       <MemoryRouter>

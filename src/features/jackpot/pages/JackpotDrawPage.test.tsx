@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import type { ComponentProps, ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -16,44 +13,7 @@ const claimDailyJackpotRewardMock = vi.fn();
 const refreshProfileMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
-const readJackpotCss = () =>
-  readFileSync(
-    join(process.cwd(), 'src/features/jackpot/styles/jackpotDrawPage.css'),
-    'utf8',
-  );
 const drawingFlightMs = 3300;
-
-function getMobileJackpotDrawCss() {
-  const css = readJackpotCss();
-  const mobileStart = css.indexOf('@media (max-width: 560px)');
-  const nextMediaStart = css.indexOf('@media (prefers-reduced-motion: reduce)', mobileStart);
-
-  expect(mobileStart).toBeGreaterThanOrEqual(0);
-  expect(nextMediaStart).toBeGreaterThan(mobileStart);
-
-  return css.slice(mobileStart, nextMediaStart);
-}
-
-function getMobileFlightTravel(name: 'start' | 'end') {
-  const mobileCss = getMobileJackpotDrawCss();
-  const match = mobileCss.match(
-    new RegExp(`--jackpot-ticket-flight-${name}:\\s*(-?\\d+(?:\\.\\d+)?)vw;`),
-  );
-
-  expect(match).not.toBeNull();
-
-  return Number(match?.[1]);
-}
-
-function getCssRule(selector: string) {
-  const css = readJackpotCss();
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = css.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
-
-  expect(match).not.toBeNull();
-
-  return match?.[1] ?? '';
-}
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -249,18 +209,6 @@ describe('JackpotDrawPage', () => {
     vi.useRealTimers();
   });
 
-  it('keeps mobile ticket flight traveling from off-screen left to off-screen right', () => {
-    const viewportWidth = 390;
-    const minTravelPixels = 210;
-
-    expect((getMobileFlightTravel('start') / 100) * viewportWidth).toBeLessThanOrEqual(
-      -minTravelPixels,
-    );
-    expect((getMobileFlightTravel('end') / 100) * viewportWidth).toBeGreaterThanOrEqual(
-      minTravelPixels,
-    );
-  });
-
   it('uses Polish count labels in the draw summary and participant list', async () => {
     renderPage();
 
@@ -433,38 +381,11 @@ describe('JackpotDrawPage', () => {
     vi.useRealTimers();
   });
 
-  it('centers ticket numbers on the flying ticket artwork', () => {
-    const numberRule = getCssRule('.jackpot-flight-ticket__number');
-
-    expect(numberRule).toMatch(/position:\s*absolute;/);
-    expect(numberRule).toMatch(/left:\s*50%;/);
-    expect(numberRule).toMatch(/top:\s*50%;/);
-    expect(numberRule).toMatch(/transform:\s*translate\(-50%,\s*-50%\);/);
-    expect(numberRule).toMatch(/text-align:\s*center;/);
-  });
-
   it('shows the current user ticket numbers on the draw page', async () => {
     renderPage();
 
     expect(await screen.findByText('Twoje tickety')).toBeInTheDocument();
     expect(screen.getByText('#04')).toBeInTheDocument();
-  });
-
-  it('balances the reveal spacing around the winning ticket', () => {
-    const revealRule = getCssRule('.jackpot-stage-reveal');
-    const ticketWrapRule = getCssRule('.jackpot-stage-reveal__ticket-wrap');
-    const titleRule = getCssRule('.jackpot-stage-reveal h2');
-
-    expect(revealRule).toMatch(/top:\s*50%;/);
-    expect(revealRule).toMatch(/padding:\s*clamp\(0\.7rem,\s*1\.7vw,\s*1rem\)\s*0\s*clamp\(0\.7rem,\s*1\.7vw,\s*1rem\);/);
-    expect(ticketWrapRule).toMatch(/width:\s*min\(25\.5rem,\s*90%\);/);
-    expect(titleRule).toMatch(/margin-bottom:\s*0\.34rem;/);
-  });
-
-  it('keeps breathing room under the claimed reward state', () => {
-    expect(readJackpotCss()).toMatch(
-      /\.jackpot-draw-claimed\s*\{[^}]*margin-bottom:\s*clamp\(1rem,\s*2\.4vh,\s*1\.45rem\);/,
-    );
   });
 
   it('expands and collapses the participant roster in place', async () => {

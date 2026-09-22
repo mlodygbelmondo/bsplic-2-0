@@ -18,10 +18,7 @@ describe("computeRouletteBallRotation", () => {
     const rotation = computeRouletteBallRotation(0, targetIndex);
 
     expect(rotation).toBeGreaterThan(360 * 3);
-    expect(normalizeRotation(rotation)).toBeCloseTo(
-      getRouletteBallPocketAngle(targetIndex),
-      4,
-    );
+    expect(normalizeRotation(rotation)).toBeCloseTo(116.7568, 4);
   });
 
   it("maps known PNG pocket centers clockwise from zero at the top", () => {
@@ -41,13 +38,10 @@ describe("computeRouletteBallRotation", () => {
     const rotation = computeRouletteBallSettledRotation(1700, targetIndex);
 
     expect(rotation).toBeGreaterThanOrEqual(1700);
-    expect(normalizeRotation(rotation)).toBeCloseTo(
-      getRouletteBallPocketAngle(targetIndex),
-      4,
-    );
+    expect(normalizeRotation(rotation)).toBeCloseTo(116.7568, 4);
   });
 
-  it("lands every roulette number on its exact PNG pocket angle", () => {
+  it("keeps spin and settle rotation aligned for every wheel pocket", () => {
     ROULETTE_WHEEL_NUMBERS.forEach((number, targetIndex) => {
       const spinRotation = computeRouletteBallRotation(731.25, targetIndex);
       const settledRotation = computeRouletteBallSettledRotation(

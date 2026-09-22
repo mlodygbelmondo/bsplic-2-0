@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReplay, formatReplayDate, formatReplayMoney, parseReplayHistory, REPLAY_LIMIT, replayChart } from './model';
+import { buildReplay, formatReplayDate, formatReplayMoney, parseReplayHistory, replayChart } from './model';
 import { coupon, REPLAY_TEST_NOW } from './testing/fixtures';
 
 const parse = (rows: unknown) => parseReplayHistory(rows, REPLAY_TEST_NOW);
@@ -22,7 +22,7 @@ describe('Replay history contract', () => {
   });
   it('uses the sentinel to disclose a capped history', () => {
     const history = parse(Array.from({ length: 201 }, (_, index) => coupon({ id: String(index) })));
-    expect(history.coupons).toHaveLength(REPLAY_LIMIT);
+    expect(history.coupons).toHaveLength(200);
     expect(history.hasMore).toBe(true);
     expect(buildReplay(history, 'all').limited).toBe(true);
     expect(buildReplay(history, '30').coverageLabel).toContain('limit 200');

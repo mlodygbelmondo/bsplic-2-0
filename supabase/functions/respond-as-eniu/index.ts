@@ -8,6 +8,7 @@ import {
   jsonResponse,
   type SocialBotContext,
 } from '../_shared/eniu.ts';
+import { resolveReplyActorId } from '../_shared/eniuRetryAuthorization.ts';
 
 type SourceType = 'post' | 'comment';
 
@@ -53,28 +54,25 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    let actorUserId = authData.user.id;
-    if (payload.retry === true) {
-      try {
-        await assertAdmin(request.headers.get('Authorization'));
-      } catch {
-        return jsonResponse({ error: 'Forbidden' }, 403);
-      }
+    const actor = await resolveReplyActorId({
+      retry: payload.retry === true,
+      authenticatedUserId: authData.user.id,
+      assertAdmin: () => assertAdmin(request.headers.get('Authorization')),
+      loadSourceUserId: async () => {
+        const table =
+          payload.sourceType === 'post' ? 'social_posts' : 'social_comments';
+        const { data: source, error: sourceError } = await serviceClient
+          .from(table)
+          .select('user_id')
+          .eq('id', payload.sourceId)
+          .maybeSingle();
 
-      const table =
-        payload.sourceType === 'post' ? 'social_posts' : 'social_comments';
-      const { data: source, error: sourceError } = await serviceClient
-        .from(table)
-        .select('user_id')
-        .eq('id', payload.sourceId)
-        .maybeSingle();
-
-      if (sourceError) throw sourceError;
-      if (!source?.user_id) {
-        throw new Error('Social bot source not found');
-      }
-
-      actorUserId = source.user_id;
+        if (sourceError) throw sourceError;
+        return source?.user_id ?? null;
+      },
+    });
+    if (actor.status === 'forbidden') {
+      return jsonResponse({ error: 'Forbidden' }, 403);
     }
 
     const { data: claim, error: claimError } = await serviceClient.rpc(
@@ -83,7 +81,7 @@ Deno.serve(async (request) => {
         p_token: token,
         p_source_type: payload.sourceType,
         p_source_id: payload.sourceId,
-        p_actor_user_id: actorUserId,
+        p_actor_user_id: actor.userId,
       },
     );
 

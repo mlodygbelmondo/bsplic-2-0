@@ -410,18 +410,9 @@ describe('RouletteGame', () => {
 
     const mobileCountdown = screen.getByTestId('roulette-mobile-countdown');
 
-    expect(mobileCountdown).toHaveClass('md:hidden');
     expect(mobileCountdown).toHaveTextContent('Spin za');
     expect(mobileCountdown).toHaveTextContent('00:08');
     expect(mobileCountdown).toHaveTextContent('#125');
-    expect(screen.getByRole('button', { name: 'Wycisz dźwięki' })).toHaveClass(
-      'top-20',
-      'md:top-1',
-    );
-    expect(screen.getByTestId('roulette-center-stage')).toHaveClass(
-      'space-y-2',
-      'md:space-y-5',
-    );
   });
 
   it('does not render a separate active bets container', () => {
@@ -513,26 +504,6 @@ describe('RouletteGame', () => {
       leftRailText.indexOf('Ostatnie wygrane'),
     );
   });
-
-  it('uses the desktop width with left, center, and right table zones', () => {
-    useRouletteTableMock.mockReturnValue(baseTableMock);
-
-    render(
-      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
-    );
-
-    expect(screen.getByTestId('roulette-table-layout')).toHaveClass(
-      'xl:grid-cols-[360px_minmax(520px,1fr)_360px]',
-    );
-    expect(screen.getByTestId('roulette-left-rail')).toHaveTextContent(
-      'Ostatnie wygrane',
-    );
-    expect(screen.getByTestId('roulette-center-stage')).toBeInTheDocument();
-    expect(screen.getByTestId('roulette-right-rail')).toHaveTextContent(
-      'Typ zakładu',
-    );
-  });
-
   it('defaults bet type to Numer on first load', () => {
     useRouletteTableMock.mockReturnValue(baseTableMock);
 
@@ -580,44 +551,6 @@ describe('RouletteGame', () => {
     expect(screen.getByRole('button', { name: 'Postaw zakład' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Postaw zakład' }));
     expect(baseTableMock.placeBet).toHaveBeenCalledWith({ betType: 'color', betValue: 'red', stake: 25 });
-  });
-
-  it('reserves bottom scroll space for the mobile stake overlay and bottom nav', () => {
-    useIsMobileMock.mockReturnValue(true);
-    useRouletteTableMock.mockReturnValue(baseTableMock);
-
-    render(
-      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
-    );
-
-    const root = screen.getByTestId('roulette-game-root');
-
-    expect(root).toHaveClass(
-      'pb-[var(--roulette-mobile-content-bottom-padding)]',
-      'md:pb-0',
-    );
-    expect(root).toHaveStyle({
-      '--roulette-mobile-content-bottom-padding':
-        'calc(max(0rem, calc(var(--mobile-floating-stack-offset, 4.75rem) - 0.375rem)) + env(safe-area-inset-bottom) + 4.75rem)',
-    });
-  });
-
-  it('keeps desktop stake presets on equal fixed widths', () => {
-    useRouletteTableMock.mockReturnValue(baseTableMock);
-
-    render(
-      <RouletteGame userId="user-1" balance={100} refreshProfile={vi.fn()} />,
-    );
-
-    const presetGroup = within(screen.getByTestId('desktop-stake-presets'));
-
-    for (const preset of ['10', '25', '50', '100']) {
-      expect(presetGroup.getByRole('button', { name: preset })).toHaveClass(
-        'h-10',
-        'w-16',
-        'tabular-nums',
-      );
-    }
   });
 
   it('supports halving and doubling the stake from the floating bar', () => {

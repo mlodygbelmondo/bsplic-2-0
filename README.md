@@ -75,7 +75,7 @@ npm run test:watch  # vitest watch mode
 Run a single test file:
 
 ```bash
-npm run test -- src/test/example.test.ts
+npm run test -- src/features/coupons/akoExclusions.test.ts
 ```
 
 ## Project Structure

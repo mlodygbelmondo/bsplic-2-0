@@ -31,13 +31,9 @@ vi.mock("@/features/casino/components/RouletteWheel", () => ({
 }));
 
 describe("CasinoRouletteDevPage", () => {
-  it("renders the roulette dev shell and number controls", () => {
+  it("renders roulette number controls", () => {
     render(<CasinoRouletteDevPage />);
 
-    expect(screen.getByTestId("casino-roulette-dev-shell")).toHaveStyle({
-      "--casino-bg-desktop": "url('/casino/roulette-background.webp')",
-      "--casino-bg-mobile": "url('/casino/roulette-mobile-background.webp')",
-    });
     expect(
       screen.getByTestId("roulette-dev-selected-number"),
     ).toHaveTextContent("0");

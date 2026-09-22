@@ -119,59 +119,6 @@ describe("BlackjackGame", () => {
       screen.getByRole("button", { name: "Rozdawanie..." }),
     ).toBeDisabled();
   });
-
-  it("uses mobile-safe wrapping classes for blackjack actions and card rows", () => {
-    useBlackjackMock.mockReturnValue({
-      ...baseBlackjackState,
-      status: "playing",
-      playerHand: [
-        { suit: "hearts", rank: "10", value: 10 },
-        { suit: "spades", rank: "9", value: 9 },
-        { suit: "clubs", rank: "2", value: 2 },
-      ],
-      playerHands: [
-        {
-          id: "hand-1",
-          cards: [
-            { id: "p-1", suit: "hearts", rank: "10", value: 10 },
-            { id: "p-2", suit: "spades", rank: "9", value: 9 },
-            { id: "p-3", suit: "clubs", rank: "2", value: 2 },
-          ],
-          stake: 10,
-          payout: 0,
-          status: "playing",
-          doubleDownUsed: false,
-          isSplitAces: false,
-        },
-      ],
-      dealerHand: [{ id: "d-1", suit: "diamonds", rank: "8", value: 8 }],
-      dealerHiddenCount: 1,
-      canDoubleDown: true,
-    });
-
-    const { container } = render(<BlackjackGame />);
-
-    expect(container.firstChild).toHaveClass(
-      "flex",
-      "flex-1",
-      "min-h-0",
-    );
-    expect(
-      screen.getByRole("button", { name: "Dobierz" }).parentElement,
-    ).toHaveClass("grid-cols-2");
-    expect(container.querySelector('[data-testid="player-hand"]')).toHaveClass(
-      "max-w-full",
-      "overflow-visible",
-    );
-    expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
-      "max-w-full",
-      "overflow-x-auto",
-      "[scrollbar-width:none]",
-    );
-    expect(screen.getByTestId("dealer-hidden-card")).toBeInTheDocument();
-    expect(container.querySelector('[data-card-id="p-1"]')).toBeInTheDocument();
-  });
-
   it("shows a resolving message and keeps actions disabled during a server action", () => {
     useBlackjackMock.mockReturnValue({
       ...baseBlackjackState,
@@ -207,72 +154,6 @@ describe("BlackjackGame", () => {
     expect(screen.getByRole("button", { name: "Pas" })).toBeDisabled();
   });
 
-  it("keeps a stable action message slot with the current decision", () => {
-    useBlackjackMock.mockReturnValue({
-      ...baseBlackjackState,
-      status: "playing",
-      playerHand: [
-        { id: "p-1", suit: "hearts", rank: "10", value: 10 },
-        { id: "p-2", suit: "spades", rank: "9", value: 9 },
-      ],
-      playerHands: [
-        {
-          id: "hand-1",
-          cards: [
-            { id: "p-1", suit: "hearts", rank: "10", value: 10 },
-            { id: "p-2", suit: "spades", rank: "9", value: 9 },
-          ],
-          stake: 10,
-          payout: 0,
-          status: "playing",
-          doubleDownUsed: false,
-          isSplitAces: false,
-        },
-      ],
-      dealerHand: [{ id: "d-1", suit: "diamonds", rank: "8", value: 8 }],
-      dealerHiddenCount: 1,
-    });
-
-    render(<BlackjackGame />);
-
-    expect(screen.getByTestId("blackjack-action-message-slot")).toHaveClass(
-      "min-h-6",
-    );
-  });
-
-  it("keeps card animation timing short enough for mobile actions", () => {
-    useBlackjackMock.mockReturnValue({
-      ...baseBlackjackState,
-      status: "playing",
-      playerHand: [
-        { id: "p-1", suit: "hearts", rank: "10", value: 10 },
-        { id: "p-2", suit: "spades", rank: "9", value: 9 },
-      ],
-      playerHands: [
-        {
-          id: "hand-1",
-          cards: [
-            { id: "p-1", suit: "hearts", rank: "10", value: 10 },
-            { id: "p-2", suit: "spades", rank: "9", value: 9 },
-          ],
-          stake: 10,
-          payout: 0,
-          status: "playing",
-          doubleDownUsed: false,
-          isSplitAces: false,
-        },
-      ],
-      dealerHand: [{ id: "d-1", suit: "diamonds", rank: "8", value: 8 }],
-      dealerHiddenCount: 1,
-    });
-
-    const { container } = render(<BlackjackGame />);
-
-    expect(
-      container.querySelector('[data-card-animation="quick"]'),
-    ).toBeInTheDocument();
-  });
-
   it("shows split and a double down action for eligible active hands", () => {
     useBlackjackMock.mockReturnValue({
       ...baseBlackjackState,
@@ -306,12 +187,8 @@ describe("BlackjackGame", () => {
 
     render(<BlackjackGame />);
 
-    expect(screen.getByRole("button", { name: /Podziel/i })).toHaveClass(
-      "hover:text-white",
-    );
-    expect(screen.getByRole("button", { name: /Podwój/i })).toHaveClass(
-      "hover:text-white",
-    );
+    expect(screen.getByRole("button", { name: /Podziel/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Podwój/i })).toBeEnabled();
     expect(
       screen.queryByRole("button", { name: "x2" }),
     ).not.toBeInTheDocument();
@@ -391,14 +268,10 @@ describe("BlackjackGame", () => {
       ],
     });
 
-    const { container } = render(<BlackjackGame />);
+    render(<BlackjackGame />);
 
     expect(screen.queryByText("Ręka 1")).not.toBeInTheDocument();
     expect(screen.queryByText("Aktywna")).not.toBeInTheDocument();
-    expect(
-      container.querySelector('[data-testid="player-hand"]')?.parentElement
-        ?.parentElement,
-    ).toHaveClass("justify-center");
   });
 
   it("renders split hands with an active hand marker and per-hand stakes", () => {
@@ -448,10 +321,6 @@ describe("BlackjackGame", () => {
     expect(screen.getByText("Ręka 1")).toBeInTheDocument();
     expect(screen.getByText("Ręka 2")).toBeInTheDocument();
     expect(screen.getByText("Aktywna")).toBeInTheDocument();
-    const handsRail =
-      screen.getByText("Ręka 1").parentElement?.parentElement?.parentElement;
-    expect(handsRail).toHaveClass("xl:justify-center");
-    expect(handsRail).not.toHaveClass("lg:justify-center");
     expect(screen.getAllByText("Stawka: 20.00 zł")).toHaveLength(2);
   });
 
@@ -516,12 +385,8 @@ describe("BlackjackGame", () => {
     expect(
       screen.getByText("Wygrane: 1 • Przegrane: 1 • Remisy: 1"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Graj ponownie/i })).toHaveClass(
-      "hover:text-black",
-    );
-    expect(
-      screen.getByRole("button", { name: "Zmień stawkę" }),
-    ).toHaveClass("hover:text-white");
+    expect(screen.getByRole("button", { name: /Graj ponownie/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Zmień stawkę" })).toBeEnabled();
   });
 
   it("shows only the win title when blackjack resolves as won", async () => {
@@ -562,14 +427,12 @@ describe("BlackjackGame", () => {
       } else {
         expect(button).toBeDisabled();
       }
-      expect(button).toHaveClass("flex-1", "basis-0");
     }
     expect(screen.queryByRole("button", { name: "5" })).not.toBeInTheDocument();
 
     for (const label of ["MIN", "1/4", "1/2", "x2", "x4", "MAX"]) {
       const button = screen.getByRole("button", { name: label });
       expect(button).toBeEnabled();
-      expect(button).toHaveClass("flex-1", "basis-0");
     }
     expect(
       screen.getByRole("button", { name: "Wycisz dźwięki" }),
@@ -690,23 +553,11 @@ describe("BlackjackGame", () => {
     const hiddenSlot = screen.getByTestId("dealer-hidden-card");
     const dealerOpenCard = container.querySelector('[data-card-id="d-1"]');
 
-    expect(container.querySelector('[data-testid="dealer-hand"]')).toHaveClass(
-      "isolate",
-      "-space-x-7",
-      "[&::-webkit-scrollbar]:hidden",
-    );
-    expect(hiddenSlot).toHaveClass("h-28", "w-20", "bg-transparent");
     expect(
       within(hiddenSlot).getByRole("img", { name: "Rewers karty" }),
     ).toHaveAttribute(
       "src",
       "/casino/blackjack-card-reverse.webp",
-    );
-    expect(hiddenSlot).not.toHaveClass(
-      "border",
-      "border-2",
-      "bg-indigo-900",
-      "shadow-xl",
     );
     expect(Number(hiddenSlot.getAttribute("data-card-delay"))).toBeGreaterThan(
       Number(dealerOpenCard?.getAttribute("data-card-delay")),

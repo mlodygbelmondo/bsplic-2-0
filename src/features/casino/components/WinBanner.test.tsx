@@ -43,7 +43,7 @@ describe('WinBanner', () => {
     expect(screen.queryByText(/Wygrałeś/)).not.toBeInTheDocument();
   });
 
-  it('auto-dismisses after 6.5 seconds and stays outside page layout', () => {
+  it('auto-dismisses after 6.5 seconds', () => {
     vi.useFakeTimers();
     const onDismiss = vi.fn();
 
@@ -55,16 +55,6 @@ describe('WinBanner', () => {
         onDismiss={onDismiss}
       />,
     );
-
-    expect(screen.getByTestId('win-toast')).toHaveClass(
-      'fixed',
-      'pointer-events-none',
-      'top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)]',
-      'justify-center',
-      'sm:left-1/2',
-      'sm:-translate-x-1/2',
-    );
-    expect(screen.getByRole('status')).toHaveClass('pointer-events-auto');
 
     act(() => {
       vi.advanceTimersByTime(6499);

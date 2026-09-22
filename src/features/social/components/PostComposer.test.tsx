@@ -66,8 +66,6 @@ describe('PostComposer', () => {
     const textarea = screen.getByLabelText('Treść posta');
 
     expect(textarea).toHaveAttribute('rows', '5');
-    expect(textarea).toHaveClass('text-base');
-    expect(textarea).not.toHaveClass('text-sm');
   });
 
   it('keeps a mobile draft when the sheet closes before publishing', async () => {
@@ -108,7 +106,6 @@ describe('PostComposer', () => {
     const textarea = screen.getByLabelText('Treść posta');
 
     expect(textarea).toHaveAttribute('rows', '3');
-    expect(textarea).toHaveClass('text-sm');
 
     fireEvent.blur(textarea);
 
