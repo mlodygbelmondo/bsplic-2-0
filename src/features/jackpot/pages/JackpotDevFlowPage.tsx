@@ -10,7 +10,10 @@ import { cn } from '@/lib/utils';
 import type { Bet, Category } from '@/types/database';
 
 import { DailyJackpotCard } from '../components/DailyJackpotCard';
-import { JackpotDrawExperience } from './JackpotDrawPage';
+import {
+  JackpotDevOverlay,
+  type DeviceViewportMode,
+} from '../components/JackpotDevOverlay';
 import type {
   DailyJackpotClaimResult,
   DailyJackpotDraw,
@@ -19,6 +22,7 @@ import type {
   DailyJackpotSnapshot,
   DailyJackpotStatus,
 } from '../types';
+import { JackpotDrawExperience } from './JackpotDrawPage';
 
 const DEV_USER_ID = 'dev-user';
 const DEV_POOL_ID = 'dev-active-jackpot-pool';
@@ -127,11 +131,12 @@ function makeParticipant(
   userId: string,
   username: string,
   ticketNumbers: number[],
+  avatarUrl: string | null = null,
 ): DailyJackpotParticipant {
   return {
     userId,
     username,
-    avatarUrl: null,
+    avatarUrl: avatarUrl ?? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`,
     ticketNumbers,
     ticketCount: ticketNumbers.length,
   };
@@ -177,20 +182,25 @@ function buildOtherParticipants(
 function buildSnapshot(
   status: DailyJackpotStatus,
   currentUserTicketCount: number,
+  prizeAmount: number,
+  isUserWinner: boolean,
 ): DailyJackpotSnapshot {
-  const userWinsDraw = status === 'drawn' && currentUserTicketCount > 0;
-  const otherUserWinsDraw = status === 'drawn' && currentUserTicketCount === 0;
+  const userWinsDraw = status === 'drawn' && isUserWinner && currentUserTicketCount > 0;
+  const otherUserWinsDraw = status === 'drawn' && !userWinsDraw;
   const userTickets = [14, 22].slice(0, currentUserTicketCount);
+  const participantCount =
+    buildOtherParticipants(isUserWinner && currentUserTicketCount > 0).length +
+    (currentUserTicketCount > 0 ? 1 : 0);
 
   return {
     poolId: DEV_POOL_ID,
     poolDate: '2026-06-20',
     status,
-    prizeAmount: 2480.75,
+    prizeAmount,
     ticketPrice: 100,
     maxTicketsPerPlayer: 2,
     minUniqueUsers: 3,
-    participantCount: 18,
+    participantCount,
     ticketCount: 31 + currentUserTicketCount,
     drawScheduledAt: DEV_DRAW_AT,
     currentUserHasTicket: currentUserTicketCount > 0,
@@ -218,13 +228,17 @@ function buildDraw({
   currentUserTicketCount,
   resultViewedAt,
   rewardCreditStatus,
+  prizeAmount,
+  isUserWinner,
 }: {
   currentUserTicketCount: number;
   resultViewedAt: string | null;
   rewardCreditStatus: DailyJackpotRewardCreditStatus;
+  prizeAmount: number;
+  isUserWinner: boolean;
 }): DailyJackpotDraw {
   const userTickets = [14, 22].slice(0, currentUserTicketCount);
-  const userWinsDraw = currentUserTicketCount > 0;
+  const userWinsDraw = isUserWinner && currentUserTicketCount > 0;
   const otherParticipants = buildOtherParticipants(userWinsDraw);
   const currentUserParticipant =
     userTickets.length > 0
@@ -238,10 +252,10 @@ function buildDraw({
     poolId: DEV_POOL_ID,
     poolDate: '2026-06-20',
     status: 'drawn',
-    prizeAmount: 2480.75,
+    prizeAmount,
     ticketPrice: 100,
     minUniqueUsers: 3,
-    participantCount: 18,
+    participantCount: participants.length,
     ticketCount: 31 + currentUserTicketCount,
     drawScheduledAt: DEV_DRAW_AT,
     drawnAt: '2026-06-20T18:01:12.000Z',
@@ -265,39 +279,65 @@ function buildDraw({
 }
 
 export default function JackpotDevFlowPage() {
-  const [screen, setScreen] = useState<DevScreen>('home');
+  const queryParams =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : null;
+
+  const initialScreen: DevScreen =
+    queryParams?.get('screen') === 'draw' ? 'draw' : 'home';
+  const [screen, setScreen] = useState<DevScreen>(initialScreen);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sort, setSort] = useState<'newest' | 'popular' | 'ending_soon'>(
     'newest',
   );
   const [activeOnly, setActiveOnly] = useState(true);
-  const [status, setStatus] = useState<DailyJackpotStatus>('collecting');
-  const [ticketCount, setTicketCount] = useState(0);
+
+  const [status, setStatus] = useState<DailyJackpotStatus>(
+    initialScreen === 'draw' ? 'drawn' : 'collecting',
+  );
+  const [ticketCount, setTicketCount] = useState(() => {
+    const requestedTickets = Number(queryParams?.get('tickets') ?? 0);
+    return Number.isFinite(requestedTickets)
+      ? Math.min(Math.max(Math.trunc(requestedTickets), 0), 2)
+      : 0;
+  });
+  const [prizeAmount, setPrizeAmount] = useState(2480.75);
+  const [isUserWinner, setIsUserWinner] = useState(true);
   const [resultViewedAt, setResultViewedAt] = useState<string | null>(null);
   const [rewardCreditStatus, setRewardCreditStatus] =
     useState<DailyJackpotRewardCreditStatus>('pending');
+  const [viewportMode, setViewportMode] =
+    useState<DeviceViewportMode>('responsive');
 
   const snapshot = useMemo(
-    () => buildSnapshot(status, ticketCount),
-    [status, ticketCount],
+    () => buildSnapshot(status, ticketCount, prizeAmount, isUserWinner),
+    [status, ticketCount, prizeAmount, isUserWinner],
   );
+
   const draw = useMemo(
     () =>
       buildDraw({
         currentUserTicketCount: ticketCount,
         resultViewedAt,
         rewardCreditStatus,
+        prizeAmount,
+        isUserWinner,
       }),
-    [resultViewedAt, rewardCreditStatus, ticketCount],
+    [resultViewedAt, rewardCreditStatus, ticketCount, prizeAmount, isUserWinner],
   );
 
-  const buyTicket = useCallback(() => {
-    if (status !== 'collecting') {
-      return;
-    }
+  const buyTickets = useCallback(
+    (count: number) => {
+      if (status !== 'collecting') {
+        return false;
+      }
 
-    setTicketCount((current) => Math.min(current + 1, 2));
-  }, [status]);
+      setTicketCount((current) => Math.min(current + count, 2));
+      return true;
+    },
+    [status],
+  );
 
   const openDraw = useCallback(() => {
     setStatus('drawn');
@@ -313,22 +353,24 @@ export default function JackpotDevFlowPage() {
       currentUserTicketCount: ticketCount,
       resultViewedAt: viewedAt,
       rewardCreditStatus,
+      prizeAmount,
+      isUserWinner,
     });
-  }, [rewardCreditStatus, ticketCount]);
+  }, [rewardCreditStatus, ticketCount, prizeAmount, isUserWinner]);
 
   const claimDrawReward = useCallback(async (): Promise<DailyJackpotClaimResult> => {
     const claimedAt = '2026-06-20T18:03:40.000Z';
     setRewardCreditStatus('claimed');
     return {
       poolId: DEV_POOL_ID,
-      amount: 2480.75,
+      amount: prizeAmount,
       balanceAfter: 7480.75,
       rewardCreditStatus: 'claimed',
       rewardClaimedAt: claimedAt,
       rewardAutoCreditedAt: null,
       alreadyCredited: false,
     };
-  }, []);
+  }, [prizeAmount]);
 
   const resetFlow = () => {
     setScreen('home');
@@ -336,6 +378,7 @@ export default function JackpotDevFlowPage() {
     setTicketCount(0);
     setResultViewedAt(null);
     setRewardCreditStatus('pending');
+    setIsUserWinner(true);
   };
 
   const filteredBets = useMemo(() => {
@@ -346,93 +389,128 @@ export default function JackpotDevFlowPage() {
   }, [activeOnly, selectedCategory]);
 
   return (
-    <div className="h-safe-screen bg-background overflow-hidden flex flex-col">
-      {screen === 'home' && <Navbar />}
+    <div className="h-safe-screen bg-background overflow-hidden flex flex-col relative">
+      {/* Viewport Frame wrapper for Mobile / Tablet / Desktop testing */}
+      <div
+        className={cn(
+          'w-full flex-1 flex flex-col min-h-0 transition-all duration-300',
+          viewportMode === 'mobile' &&
+            'max-w-[390px] max-h-[844px] my-auto mx-auto rounded-[40px] border-8 border-zinc-800 shadow-2xl overflow-y-auto bg-black',
+          viewportMode === 'tablet' &&
+            'max-w-[768px] max-h-[920px] my-auto mx-auto rounded-[32px] border-8 border-zinc-800 shadow-2xl overflow-y-auto bg-black',
+        )}
+      >
+        {screen === 'home' && <Navbar />}
 
-      {screen === 'home' ? (
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="h-full max-w-[1600px] mx-auto px-3 pb-0 pt-0 lg:py-3 flex flex-col gap-3">
-            <div className="flex-1 min-h-0 flex lg:gap-3">
-              <CategorySidebar
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                categories={categories}
-                loading={false}
-              />
-
-              <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-                <BetListView
+        {screen === 'home' ? (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="h-full max-w-[1600px] mx-auto px-3 pb-0 pt-0 lg:py-3 flex flex-col gap-3">
+              <div className="flex-1 min-h-0 flex lg:gap-3">
+                <CategorySidebar
                   selectedCategory={selectedCategory}
                   onSelectCategory={setSelectedCategory}
                   categories={categories}
-                  categoryMap={categoryMap}
-                  onProposeClick={() => undefined}
-                  bets={{
-                    loading: false,
-                    loadingMore: false,
-                    hasMore: false,
-                    loadMore: () => undefined,
-                    liveBets: [],
-                    sortedBets: filteredBets,
-                  }}
-                  topBanner={
-                    <DailyJackpotCard
-                      snapshot={snapshot}
-                      loading={false}
-                      buying={false}
-                      balance={5000}
-                      onBuy={buyTicket}
-                      onOpenDraw={openDraw}
-                    />
-                  }
-                  sort={sort}
-                  onSortChange={setSort}
-                  activeOnly={activeOnly}
-                  onActiveOnlyChange={setActiveOnly}
+                  loading={false}
                 />
-              </main>
 
-              <CouponDrawer categoryMap={categoryMap} />
+                <main className="flex-1 min-w-0 min-h-0 flex flex-col">
+                  <BetListView
+                    selectedCategory={selectedCategory}
+                    onSelectCategory={setSelectedCategory}
+                    categories={categories}
+                    categoryMap={categoryMap}
+                    onProposeClick={() => undefined}
+                    bets={{
+                      loading: false,
+                      loadingMore: false,
+                      hasMore: false,
+                      loadMore: () => undefined,
+                      liveBets: [],
+                      sortedBets: filteredBets,
+                    }}
+                    topBanner={
+                      <DailyJackpotCard
+                        snapshot={snapshot}
+                        loading={false}
+                        buying={false}
+                        balance={5000}
+                        onBuy={buyTickets}
+                        onOpenDraw={openDraw}
+                      />
+                    }
+                    sort={sort}
+                    onSortChange={setSort}
+                    activeOnly={activeOnly}
+                    onActiveOnlyChange={setActiveOnly}
+                  />
+                </main>
+
+                <CouponDrawer categoryMap={categoryMap} />
+              </div>
             </div>
           </div>
+        ) : (
+          <JackpotDrawExperience
+            // Remount when dev controls change the mocked round.
+            key={`${ticketCount}-${isUserWinner}-${prizeAmount}`}
+            roundId={DEV_POOL_ID}
+            currentUserId={DEV_USER_ID}
+            initialDraw={draw}
+            loadDraw={loadDraw}
+            revealDraw={revealDraw}
+            claimDrawReward={claimDrawReward}
+            onBack={() => setScreen('home')}
+          />
+        )}
+      </div>
+
+      {/* Original Floating Controls for Fast Simulator (only on home screen) */}
+      {screen === 'home' && (
+        <div className="fixed bottom-16 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-2 py-2 shadow-xl backdrop-blur">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 rounded-full px-3 text-xs font-bold"
+            onClick={resetFlow}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className={cn(
+              'h-8 rounded-full px-3 text-xs font-bold',
+              status === 'drawn' && 'opacity-70',
+            )}
+            disabled={status === 'drawn'}
+            onClick={() => setStatus('drawn')}
+          >
+            <SkipForward className="h-3.5 w-3.5" />
+            Symuluj godzinę 20:00
+          </Button>
         </div>
-      ) : (
-        <JackpotDrawExperience
-          roundId={DEV_POOL_ID}
-          currentUserId={DEV_USER_ID}
-          initialDraw={draw}
-          loadDraw={loadDraw}
-          revealDraw={revealDraw}
-          claimDrawReward={claimDrawReward}
-          onBack={() => setScreen('home')}
-        />
       )}
 
-      <div className="fixed bottom-4 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/95 px-2 py-2 shadow-xl backdrop-blur">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 rounded-full px-3 text-xs font-bold"
-          onClick={resetFlow}
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Reset
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          className={cn(
-            'h-8 rounded-full px-3 text-xs font-bold',
-            status === 'drawn' && 'opacity-70',
-          )}
-          disabled={status === 'drawn'}
-          onClick={() => setStatus('drawn')}
-        >
-          <SkipForward className="h-3.5 w-3.5" />
-          Symuluj godzinę 20:00
-        </Button>
-      </div>
+      <JackpotDevOverlay
+        activeScreen={screen}
+        onSetScreen={(nextScreen) => {
+          if (nextScreen === 'draw') {
+            setStatus('drawn');
+          }
+          setScreen(nextScreen);
+        }}
+        viewportMode={viewportMode}
+        onSetViewportMode={setViewportMode}
+        userTicketCount={ticketCount}
+        onSetUserTicketCount={setTicketCount}
+        prizeAmount={prizeAmount}
+        onSetPrizeAmount={setPrizeAmount}
+        isUserWinner={isUserWinner}
+        onSetIsUserWinner={setIsUserWinner}
+        onResetAll={resetFlow}
+      />
     </div>
   );
 }

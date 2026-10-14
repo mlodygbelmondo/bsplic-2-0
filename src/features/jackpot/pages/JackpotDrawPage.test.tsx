@@ -1,5 +1,11 @@
-import type { ComponentProps, ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,18 +43,6 @@ vi.mock('sonner', () => ({
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
   },
-}));
-
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: ComponentProps<'div'>) => (
-      <div {...props}>{children}</div>
-    ),
-    section: ({ children, ...props }: ComponentProps<'section'>) => (
-      <section {...props}>{children}</section>
-    ),
-  },
-  AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 const draw: DailyJackpotDraw = {
@@ -175,7 +169,7 @@ describe('JackpotDrawPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('uses generated PNG assets for the stage, flying tickets, and winning ticket reveal', async () => {
+  it('draws on a drum of ticket art and pops the winning ticket out of it', async () => {
     const { container } = renderPage();
 
     await screen.findByRole('button', {
@@ -183,11 +177,11 @@ describe('JackpotDrawPage', () => {
     });
 
     expect(
-      container.querySelector('img[src="/jackpot/jackpot-draw-stage.webp"]'),
-    ).toBeInTheDocument();
-    expect(
-      container.querySelector('img[src="/jackpot/jackpot-ticket-stage.svg"]'),
-    ).not.toBeInTheDocument();
+      container.querySelectorAll(
+        '.jackpot-cylinder__face img[src="/jackpot/jackpot-winning-ticket.webp"]',
+      ).length,
+    ).toBe(12);
+    expect(container.querySelector('.jackpot-cylinder__winner')).not.toBeInTheDocument();
 
     vi.useFakeTimers();
     fireEvent.click(
@@ -195,15 +189,12 @@ describe('JackpotDrawPage', () => {
         name: /Rozpocznij losowanie|Obejrzyj losowanie/i,
       }),
     );
-
-    expect(
-      container.querySelectorAll('img[src="/jackpot/jackpot-ticket.webp"]').length,
-    ).toBeGreaterThan(0);
-
     await advanceThroughReplay();
 
     expect(
-      container.querySelector('img[src="/jackpot/jackpot-winning-ticket.webp"]'),
+      container.querySelector(
+        '.jackpot-cylinder__winner img[src="/jackpot/jackpot-winning-ticket.webp"]',
+      ),
     ).toBeInTheDocument();
 
     vi.useRealTimers();
@@ -276,15 +267,15 @@ describe('JackpotDrawPage', () => {
 
     expect(revealDailyJackpotDrawMock).toHaveBeenCalledWith('pool-1');
     expect(screen.getByText(/Wygrywa LuckyWinner/i)).toBeInTheDocument();
-    expect(screen.getByText('Ticket #4')).toBeInTheDocument();
+    expect(screen.getByText('Ticket #04')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Odbierz nagrodę/i })).toBeInTheDocument();
     expect(screen.queryByText(/Wygrywa zwycięzca/i)).not.toBeInTheDocument();
 
     vi.useRealTimers();
   });
 
-  it('keeps the winning ticket in the normal flight stream until the result reveal', async () => {
-    const { container } = renderPage();
+  it('reveals the winner only when the drawing finishes', async () => {
+    renderPage();
 
     const startButton = await screen.findByRole('button', {
       name: /Rozpocznij losowanie|Obejrzyj losowanie/i,
@@ -294,13 +285,7 @@ describe('JackpotDrawPage', () => {
     fireEvent.click(startButton);
 
     expect(revealDailyJackpotDrawMock).toHaveBeenCalledWith('pool-1');
-    expect(container.querySelector('.jackpot-final-ticket')).not.toBeInTheDocument();
-    expect(container.querySelector('.jackpot-flight-ticket--settling')).not.toBeInTheDocument();
-    expect(container.querySelector('.jackpot-ticket-flight--finalizing')).not.toBeInTheDocument();
-    expect(container.querySelector('.jackpot-flight-ticket__badge')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Zwycięski ticket zatrzymany/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Twój/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Zatrzymujemy ticket/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Losowanie trwa')).toBeInTheDocument();
     expect(screen.queryByText(/Wygrywa LuckyWinner/i)).not.toBeInTheDocument();
 
     await act(async () => {
@@ -338,7 +323,7 @@ describe('JackpotDrawPage', () => {
     vi.useRealTimers();
   });
 
-  it('shows ticket numbers flying during the drawing before reveal', async () => {
+  it('spins only real pool tickets and hides the winner until the reveal', async () => {
     revealDailyJackpotDrawMock.mockReturnValue(
       new Promise<DailyJackpotDraw>(() => undefined),
     );
@@ -348,44 +333,81 @@ describe('JackpotDrawPage', () => {
       name: /Rozpocznij losowanie|Obejrzyj losowanie/i,
     });
 
+    const faceLabels = () =>
+      Array.from(container.querySelectorAll('.jackpot-cylinder__face span')).map(
+        (face) => face.textContent,
+      );
+
+    expect(faceLabels()[0]).toBe('?');
+    expect(new Set(faceLabels().slice(1))).toEqual(
+      new Set(['#01', '#02', '#03', '#04']),
+    );
+
     vi.useFakeTimers();
     fireEvent.click(startButton);
 
-    const ticketFlight = screen.getByRole('list', {
-      name: /Animowane tickety w puli/i,
-    });
-
-    expect(ticketFlight).toBeInTheDocument();
-    expect(screen.getByText('Losowanie ticketów')).toBeInTheDocument();
-    expect(screen.getAllByText('#04')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('#01')[0]).toBeInTheDocument();
-    expect(
-      container.querySelector('.jackpot-flight-ticket__owner'),
-    ).not.toBeInTheDocument();
-    expect(ticketFlight).not.toHaveTextContent('LuckyWinner');
-    expect(ticketFlight).not.toHaveTextContent('Mati');
-    expect(ticketFlight).not.toHaveTextContent('Twój');
-    expect(
-      container.querySelector('.jackpot-flight-ticket__badge'),
-    ).not.toBeInTheDocument();
-    expect(
-      container.querySelector('.jackpot-flight-ticket--settling'),
-    ).not.toBeInTheDocument();
-    expect(
-      container.querySelector('.jackpot-ticket-flight__spotlight')?.textContent,
-    ).toBeUndefined();
-    expect(screen.queryByText(/Skanujemy pulę/i)).not.toBeInTheDocument();
+    for (const label of faceLabels()) {
+      expect(['?', '#01', '#02', '#03', '#04']).toContain(label);
+    }
+    expect(screen.getByText('Losowanie trwa')).toBeInTheDocument();
     expect(screen.queryByText(/Wygrywa LuckyWinner/i)).not.toBeInTheDocument();
-    expect(revealDailyJackpotDrawMock).toHaveBeenCalledWith('pool-1');
 
     vi.useRealTimers();
+  });
+
+  it('replays a revealed draw without asking the server again', async () => {
+    revealDailyJackpotDrawMock.mockResolvedValue({
+      ...draw,
+      resultViewedAt: '2026-06-17T18:05:00.000Z',
+    });
+    renderPage();
+
+    const startButton = await screen.findByRole('button', {
+      name: /Rozpocznij losowanie|Obejrzyj losowanie/i,
+    });
+
+    vi.useFakeTimers();
+    fireEvent.click(startButton);
+    await advanceThroughReplay();
+
+    fireEvent.click(screen.getByRole('button', { name: /Obejrzyj ponownie/i }));
+
+    expect(screen.getByText('Losowanie trwa')).toBeInTheDocument();
+    expect(screen.queryByText(/Wygrywa LuckyWinner/i)).not.toBeInTheDocument();
+
+    await advanceThroughReplay();
+
+    expect(screen.getByText(/Wygrywa LuckyWinner/i)).toBeInTheDocument();
+    expect(revealDailyJackpotDrawMock).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it('remembers when the player mutes the draw sounds', async () => {
+    window.localStorage.removeItem('bsplic:jackpot-sound-muted');
+    renderPage();
+
+    const soundButton = await screen.findByRole('button', {
+      name: 'Dźwięki losowania',
+    });
+    expect(soundButton).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(soundButton);
+
+    expect(soundButton).toHaveAttribute('aria-pressed', 'false');
+    expect(window.localStorage.getItem('bsplic:jackpot-sound-muted')).toBe('1');
+
+    fireEvent.click(soundButton);
+    expect(window.localStorage.getItem('bsplic:jackpot-sound-muted')).toBe('0');
   });
 
   it('shows the current user ticket numbers on the draw page', async () => {
     renderPage();
 
     expect(await screen.findByText('Twoje tickety')).toBeInTheDocument();
-    expect(screen.getByText('#04')).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText('Twoje numery ticketów')).getByText('#04'),
+    ).toBeInTheDocument();
   });
 
   it('expands and collapses the participant roster in place', async () => {
@@ -424,12 +446,14 @@ describe('JackpotDrawPage', () => {
     expect(screen.queryByText('Gracz 11')).not.toBeInTheDocument();
   });
 
-  it('does not show a claim button to a non-winner after replay', async () => {
-    const nonWinnerDraw = {
+  it('does not show the winner reward state to a non-winner after replay', async () => {
+    const nonWinnerDraw: DailyJackpotDraw = {
       ...draw,
       currentUserIsWinner: false,
       currentUserHasTicket: true,
       currentUserTicketCount: 1,
+      rewardCreditStatus: 'claimed',
+      rewardClaimedAt: '2026-06-17T18:06:00.000Z',
     };
     getDailyJackpotDrawMock.mockResolvedValue(nonWinnerDraw);
     revealDailyJackpotDrawMock.mockResolvedValue(nonWinnerDraw);
@@ -446,6 +470,7 @@ describe('JackpotDrawPage', () => {
 
     expect(screen.getByText(/Wygrywa LuckyWinner/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Odbierz nagrodę/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Nagroda odebrana')).not.toBeInTheDocument();
   });
 
   it('does not replay or reveal a rolled-over jackpot pool', async () => {

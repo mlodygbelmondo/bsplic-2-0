@@ -81,7 +81,7 @@ describe('useDailyJackpot', () => {
     });
 
     await act(async () => {
-      await result.current.buyTicket();
+      await result.current.buyTickets();
     });
 
     expect(buyDailyJackpotTicketMock).toHaveBeenCalledWith('pool-1');
@@ -148,7 +148,7 @@ describe('useDailyJackpot', () => {
       await vi.advanceTimersByTimeAsync(45_000);
     });
     await act(async () => {
-      await result.current.buyTicket();
+      await result.current.buyTickets();
     });
     await act(async () => {
       resolvePoll(snapshot);

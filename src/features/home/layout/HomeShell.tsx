@@ -53,7 +53,7 @@ export function HomeShell({
                   loading={jackpot.loading}
                   buying={jackpot.buying}
                   balance={jackpot.balance}
-                  onBuy={jackpot.buyTicket}
+                  onBuy={jackpot.buyTickets}
                 />
               }
             />
