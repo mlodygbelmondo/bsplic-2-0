@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/categoryTree';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { EditableBetType } from '../constants';
@@ -198,8 +199,8 @@ export default function CreateBetTab() {
                     <SelectValue placeholder="Wybierz kategorię" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.emoji} {c.name}</SelectItem>
+                    {getCategoryOptions(categories).map(({ category: c, parent }) => (
+                      <SelectItem key={c.id} value={c.id}>{c.emoji} {getCategoryLabel(c, parent)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

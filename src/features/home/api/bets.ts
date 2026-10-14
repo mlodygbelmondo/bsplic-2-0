@@ -9,8 +9,9 @@ type BetRow = Database["public"]["Tables"]["bets"]["Row"];
 
 export const ACTIVE_BETS_PAGE_SIZE = 80;
 
+/** `categoryIds` null (or empty) means every category. */
 export async function fetchActiveBets(
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   sort: SortMode = "newest",
   limit = ACTIVE_BETS_PAGE_SIZE,
   offset = 0,
@@ -22,8 +23,8 @@ export async function fetchActiveBets(
     query = query.gt("ends_at", new Date().toISOString());
   }
 
-  if (selectedCategory) {
-    query = query.eq("category_id", selectedCategory);
+  if (categoryIds && categoryIds.length > 0) {
+    query = query.in("category_id", [...categoryIds]);
   }
 
   if (sort === "popular") {

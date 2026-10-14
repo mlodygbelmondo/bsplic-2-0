@@ -4,6 +4,7 @@ import { Category } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Pagination,
@@ -15,13 +16,23 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { buildCategoryTree, getCategoryOptions } from '@/features/home/categoryTree';
+import { NO_CATEGORY_VALUE } from '../constants';
 import { getErrorMessage } from '../helpers';
 
 const PAGE_SIZE = 10;
 
+interface CategoryForm {
+  name: string;
+  emoji: string;
+  color: string;
+  sort_order: number;
+  parent_id: string | null;
+}
+
 export default function CategoriesTab() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newCat, setNewCat] = useState({ name: '', emoji: '⚽', color: '#dc2626', sort_order: 0 });
+  const [newCat, setNewCat] = useState<CategoryForm>({ name: '', emoji: '⚽', color: '#dc2626', sort_order: 0, parent_id: null });
   const [adding, setAdding] = useState(false);
 
   // Pagination
@@ -29,7 +40,7 @@ export default function CategoriesTab() {
 
   // Edit modal
   const [editingCat, setEditingCat] = useState<Category | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', emoji: '', color: '', sort_order: 0 });
+  const [editForm, setEditForm] = useState<CategoryForm>({ name: '', emoji: '', color: '', sort_order: 0, parent_id: null });
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
 
@@ -40,14 +51,27 @@ export default function CategoriesTab() {
 
   useEffect(() => { fetchCats(); }, []);
 
+  // Hierarchy: each sport is listed with its leagues right below it. Only
+  // top-level categories can be parents (max two levels).
+  const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
+  const orderedCategories = useMemo(() => getCategoryOptions(categories), [categories]);
+  const topLevelCategories = useMemo(() => categoryTree.map((node) => node.category), [categoryTree]);
+  const editingHasChildren = Boolean(
+    editingCat && categoryTree.some((node) => node.category.id === editingCat.id && node.children.length > 0)
+  );
+  const editParentOptions = useMemo(
+    () => (editingHasChildren ? [] : topLevelCategories.filter((cat) => cat.id !== editingCat?.id)),
+    [editingCat, editingHasChildren, topLevelCategories]
+  );
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(categories.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(orderedCategories.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const paginated = useMemo(
-    () => categories.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE),
-    [categories, safePage]
+    () => orderedCategories.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE),
+    [orderedCategories, safePage]
   );
-  const showPagination = categories.length > PAGE_SIZE;
+  const showPagination = orderedCategories.length > PAGE_SIZE;
 
   const addCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -55,7 +79,7 @@ export default function CategoriesTab() {
     try {
       const { error } = await supabase.from('categories').insert(newCat);
       if (error) throw error;
-      setNewCat({ name: '', emoji: '⚽', color: '#dc2626', sort_order: categories.length + 1 });
+      setNewCat({ name: '', emoji: '⚽', color: '#dc2626', sort_order: categories.length + 1, parent_id: null });
       fetchCats();
       toast.success('Kategoria dodana');
     } catch (err: unknown) {
@@ -89,6 +113,7 @@ export default function CategoriesTab() {
       emoji: cat.emoji,
       color: cat.color,
       sort_order: cat.sort_order,
+      parent_id: cat.parent_id ?? null,
     });
     setEditOpen(true);
   };
@@ -106,6 +131,7 @@ export default function CategoriesTab() {
           emoji: editForm.emoji,
           color: editForm.color,
           sort_order: editForm.sort_order,
+          parent_id: editForm.parent_id,
         })
         .eq('id', editingCat.id);
       if (error) throw error;
@@ -143,6 +169,15 @@ export default function CategoriesTab() {
               value={newCat.name}
               onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
               aria-label="Nazwa nowej kategorii"
+            />
+          </div>
+          <div className="col-span-4 space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Kategoria nadrzędna</label>
+            <ParentCategorySelect
+              value={newCat.parent_id}
+              onChange={(parentId) => setNewCat({ ...newCat, parent_id: parentId })}
+              options={topLevelCategories}
+              ariaLabel="Kategoria nadrzędna nowej kategorii"
             />
           </div>
           <div className="col-span-1 space-y-1.5">
@@ -188,7 +223,7 @@ export default function CategoriesTab() {
               aria-label="Emoji nowej kategorii"
             />
           </div>
-          <div className="col-span-5 space-y-1.5">
+          <div className="col-span-3 space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Nazwa</label>
             <Input
               value={newCat.name}
@@ -196,7 +231,16 @@ export default function CategoriesTab() {
               aria-label="Nazwa nowej kategorii"
             />
           </div>
-          <div className="col-span-2 space-y-1.5">
+          <div className="col-span-3 space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Kategoria nadrzędna</label>
+            <ParentCategorySelect
+              value={newCat.parent_id}
+              onChange={(parentId) => setNewCat({ ...newCat, parent_id: parentId })}
+              options={topLevelCategories}
+              ariaLabel="Kategoria nadrzędna nowej kategorii"
+            />
+          </div>
+          <div className="col-span-1 space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Kolor</label>
             <label
               className="h-9 w-9 rounded-lg border-2 border-border block shadow-sm cursor-pointer relative overflow-hidden"
@@ -236,8 +280,9 @@ export default function CategoriesTab() {
 
       {/* Mobile card list */}
       <div className="space-y-2 md:hidden">
-        {paginated.map((cat) => (
-          <div key={cat.id} className="bg-card rounded-xl p-3 card-shadow flex items-center gap-3">
+        {paginated.map(({ category: cat, parent }) => (
+          <div key={cat.id} className={cn('bg-card rounded-xl p-3 card-shadow flex items-center gap-3', parent && 'ml-5')}>
+            {parent && <span className="text-muted-foreground" aria-hidden="true">↳</span>}
             <span className="text-lg">{cat.emoji}</span>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{cat.name}</p>
@@ -247,6 +292,7 @@ export default function CategoriesTab() {
                   style={{ backgroundColor: cat.color }}
                 />
                 <span className="text-[10px] text-muted-foreground">#{cat.sort_order}</span>
+                {parent && <span className="text-[10px] text-muted-foreground truncate">{parent.name}</span>}
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -274,10 +320,16 @@ export default function CategoriesTab() {
             </tr>
           </thead>
           <tbody>
-            {paginated.map((cat) => (
+            {paginated.map(({ category: cat, parent }) => (
               <tr key={cat.id} className="border-b hover:bg-muted/30 transition-colors">
-                <td className="px-3 py-2">{cat.emoji}</td>
-                <td className="px-3 py-2 font-medium">{cat.name}</td>
+                <td className={cn('px-3 py-2', parent && 'pl-8')}>
+                  {parent && <span className="mr-1.5 text-muted-foreground" aria-hidden="true">↳</span>}
+                  {cat.emoji}
+                </td>
+                <td className="px-3 py-2 font-medium">
+                  {cat.name}
+                  {parent && <span className="ml-2 text-xs font-normal text-muted-foreground">{parent.name}</span>}
+                </td>
                 <td className="px-3 py-2">
                   <span
                     className="inline-block w-5 h-5 rounded-md border border-border/50 shadow-sm"
@@ -333,6 +385,22 @@ export default function CategoriesTab() {
               </div>
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-cat-parent">Kategoria nadrzędna</Label>
+              <ParentCategorySelect
+                id="edit-cat-parent"
+                value={editForm.parent_id}
+                onChange={(parentId) => setEditForm((f) => ({ ...f, parent_id: parentId }))}
+                options={editParentOptions}
+                disabled={editingHasChildren}
+              />
+              {editingHasChildren && (
+                <p className="text-xs text-muted-foreground">
+                  Ta kategoria ma podkategorie, więc sama nie może mieć kategorii nadrzędnej.
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3 items-end">
               <div className="space-y-1.5">
                 <Label>Kolor</Label>
@@ -368,6 +436,43 @@ export default function CategoriesTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Parent picker: "Brak" (top-level category) or one of the given sports. */
+function ParentCategorySelect({
+  id,
+  value,
+  onChange,
+  options,
+  disabled = false,
+  ariaLabel,
+}: {
+  id?: string;
+  value: string | null;
+  onChange: (parentId: string | null) => void;
+  options: Category[];
+  disabled?: boolean;
+  ariaLabel?: string;
+}) {
+  return (
+    <Select
+      value={value ?? NO_CATEGORY_VALUE}
+      onValueChange={(next) => onChange(next === NO_CATEGORY_VALUE ? null : next)}
+      disabled={disabled}
+    >
+      <SelectTrigger id={id} aria-label={ariaLabel} className="bg-background">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NO_CATEGORY_VALUE}>Brak</SelectItem>
+        {options.map((cat) => (
+          <SelectItem key={cat.id} value={cat.id}>
+            {cat.emoji} {cat.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

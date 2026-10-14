@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -7,11 +8,16 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { ChevronDown, Lightbulb } from "lucide-react";
+import { ChevronDown, ChevronRight, Lightbulb } from "lucide-react";
 import { BetCard } from "./BetCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SectionLoader } from "@/components/SectionLoader";
+import {
+  getCategoryFilterIds,
+  getVisibleCategoryRows,
+  type CategoryPickerRow,
+} from "@/features/home/categoryTree";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
 import {
   getNextScrollChromeState,
@@ -109,7 +115,15 @@ export function BetList({
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>(readStoredSort);
   const [activeOnly, setActiveOnly] = useState<boolean>(readStoredActiveOnly);
-  const bets = useBets(selectedCategory, sort, !activeOnly);
+  const categoryIds = useMemo(
+    () => getCategoryFilterIds(categories, selectedCategory),
+    [categories, selectedCategory],
+  );
+  // A remembered sport needs the category list to know its leagues; wait for
+  // it instead of loading the sport alone and then reloading.
+  const categoryIdsReady =
+    !selectedCategory || Boolean(categoryMap[selectedCategory]);
+  const bets = useBets(categoryIds, sort, !activeOnly, categoryIdsReady);
 
   return (
     <BetListView
@@ -157,9 +171,24 @@ export function BetListView({
   const [actionsHidden, setActionsHidden] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
+  const categoryRows = useMemo(
+    () => getVisibleCategoryRows(categories, selectedCategory),
+    [categories, selectedCategory],
+  );
 
   const toggleMobilePanel = (panel: MobilePanelKind) => {
     setMobilePanel((previous) => (previous === panel ? null : panel));
+  };
+
+  // A sport with leagues keeps the panel open on the first tap so one of its
+  // leagues can be picked next; anything else (or a second tap on the
+  // already selected sport) closes it.
+  const handleSelectMobileCategory = (row: CategoryPickerRow) => {
+    const keepOpen = row.hasChildren && selectedCategory !== row.category.id;
+    onSelectCategory?.(row.category.id);
+    if (!keepOpen) {
+      setMobilePanel(null);
+    }
   };
 
   const handleSelectSort = (value: SortMode) => {
@@ -439,6 +468,7 @@ export function BetListView({
                 <div className="relative z-30 min-w-0 flex-1">
                   <button
                     type="button"
+                    data-testid="bet-list-category-trigger"
                     onClick={() => toggleMobilePanel("category")}
                     aria-expanded={mobilePanel === "category"}
                     className={cn(
@@ -478,25 +508,47 @@ export function BetListView({
                     >
                       🌐 Wszystkie
                     </button>
-                    {categories.map((cat, index) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => {
-                          onSelectCategory(cat.id);
-                          setMobilePanel(null);
-                        }}
-                        className={cn(
-                          "press-scale flex h-11 w-full shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                          mobilePanel === "category" && "filter-option-enter",
-                          selectedCategory === cat.id
-                            ? "bg-foreground text-background shadow-md"
-                            : "bg-card text-foreground border border-border hover:border-foreground/30",
-                        )}
-                        style={{ "--stagger": index + 1 } as CSSProperties}
-                      >
-                        {cat.emoji} {cat.name}
-                      </button>
-                    ))}
+                    {categoryRows.map((row, index) => {
+                      const { category: cat } = row;
+                      const isChild = row.depth === 1;
+                      const selected = selectedCategory === cat.id;
+                      const GroupChevron = row.expanded
+                        ? ChevronDown
+                        : ChevronRight;
+
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleSelectMobileCategory(row)}
+                          aria-expanded={
+                            row.hasChildren ? row.expanded : undefined
+                          }
+                          className={cn(
+                            "press-scale flex shrink-0 items-center gap-1 rounded-full px-3.5 leading-none transition-all duration-200",
+                            isChild
+                              ? "ml-5 h-10 w-[calc(100%-1.25rem)] text-[13px] font-medium"
+                              : "h-11 w-full text-sm font-semibold",
+                            mobilePanel === "category" && "filter-option-enter",
+                            selected
+                              ? "bg-foreground text-background shadow-md"
+                              : isChild
+                                ? "bg-card text-muted-foreground border border-border/70 hover:text-foreground hover:border-foreground/30"
+                                : "bg-card text-foreground border border-border hover:border-foreground/30",
+                          )}
+                          style={{ "--stagger": index + 1 } as CSSProperties}
+                        >
+                          <span className="truncate">
+                            {cat.emoji} {cat.name}
+                          </span>
+                          {row.hasChildren && (
+                            <GroupChevron
+                              className="ml-auto h-4 w-4 shrink-0 opacity-60"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </MobileFilterPanel>
                 </div>
               )}

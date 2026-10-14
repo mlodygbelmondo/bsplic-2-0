@@ -99,7 +99,7 @@ describe('applyBetsRealtimePayloads', () => {
       oldRow: { id: 'bet-1', category_id: 'cat-1' },
     });
 
-    const result = applyBetsRealtimePayloads(initial, [payload], 'cat-1');
+    const result = applyBetsRealtimePayloads(initial, [payload], ['cat-1']);
 
     expect(result).toEqual([]);
   });
@@ -110,9 +110,22 @@ describe('applyBetsRealtimePayloads', () => {
       newRow: { id: 'bet-2', category_id: 'cat-2' },
     });
 
-    const result = applyBetsRealtimePayloads([], [payload], 'cat-1');
+    const result = applyBetsRealtimePayloads([], [payload], ['cat-1']);
 
     expect(result).toEqual([]);
+  });
+
+  it('accepts inserts in any of the selected categories and ignores the rest', () => {
+    const payloads = [
+      createPayload({ eventType: 'INSERT', newRow: { id: 'bet-sport', category_id: 'sport' } }),
+      createPayload({ eventType: 'INSERT', newRow: { id: 'bet-league', category_id: 'league-a' } }),
+      createPayload({ eventType: 'INSERT', newRow: { id: 'bet-other', category_id: 'league-b' } }),
+      createPayload({ eventType: 'INSERT', newRow: { id: 'bet-none', category_id: null } }),
+    ];
+
+    const result = applyBetsRealtimePayloads([], payloads, ['sport', 'league-a']);
+
+    expect(result.map((bet) => bet.id).sort()).toEqual(['bet-league', 'bet-sport']);
   });
 
   it('ignores already expired inserts', () => {

@@ -7,10 +7,12 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Category } from "@/types/database";
+
 import { BetList } from "./BetList";
 
 const useBetsMock = vi.fn(
-  (_selectedCategory: string | null, _sort: string) => ({
+  (_categoryIds: readonly string[] | null, _sort: string, _enabled: boolean) => ({
     loading: false,
     liveBets: [],
     sortedBets: [],
@@ -18,9 +20,42 @@ const useBetsMock = vi.fn(
 );
 
 vi.mock("@/features/home/hooks/useBets", () => ({
-  useBets: (selectedCategory: string | null, sort: string) =>
-    useBetsMock(selectedCategory, sort),
+  useBets: (
+    categoryIds: readonly string[] | null,
+    sort: string,
+    _includeInProgress?: boolean,
+    enabled = true,
+  ) => useBetsMock(categoryIds, sort, enabled),
 }));
+
+function category(
+  id: string,
+  name: string,
+  sortOrder: number,
+  parentId: string | null = null,
+): Category {
+  return {
+    id,
+    name,
+    emoji: "🏷️",
+    color: "#000000",
+    sort_order: sortOrder,
+    created_at: "2026-10-01T00:00:00.000Z",
+    parent_id: parentId,
+    slug: null,
+  };
+}
+
+const HIERARCHY: Category[] = [
+  category("football", "Piłka nożna", 1),
+  category("ekstraklasa", "Ekstraklasa", 2, "football"),
+  category("premier", "Premier League", 1, "football"),
+  category("ufc", "UFC", 2),
+];
+
+const HIERARCHY_MAP = Object.fromEntries(
+  HIERARCHY.map((entry) => [entry.id, entry]),
+) as Record<string, Category>;
 
 describe("BetList tabs", () => {
   beforeEach(() => {
@@ -42,13 +77,13 @@ describe("BetList tabs", () => {
     const labels = new Set(tabButtons.map((button) => button.textContent));
     expect(labels).toEqual(new Set(["Najnowsze", "Popularne", "Kończące się"]));
 
-    expect(useBetsMock).toHaveBeenCalledWith(null, "newest");
+    expect(useBetsMock).toHaveBeenCalledWith(null, "newest", true);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Popularne" })[0]);
-    expect(useBetsMock).toHaveBeenLastCalledWith(null, "popular");
+    expect(useBetsMock).toHaveBeenLastCalledWith(null, "popular", true);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Kończące się" })[0]);
-    expect(useBetsMock).toHaveBeenLastCalledWith(null, "ending_soon");
+    expect(useBetsMock).toHaveBeenLastCalledWith(null, "ending_soon", true);
   });
   it("renders an optional top banner before the bet cards", () => {
     render(
@@ -102,6 +137,8 @@ describe("BetList tabs", () => {
             color: "#16a34a",
             sort_order: 1,
             created_at: "2026-06-22T00:00:00.000Z",
+            parent_id: null,
+            slug: null,
           },
         ]}
         categoryMap={{}}
@@ -169,5 +206,135 @@ describe("BetList tabs", () => {
       "-translate-y-full",
       "opacity-0",
     );
+  });
+});
+
+describe("BetList category hierarchy", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useBetsMock.mockClear();
+  });
+
+  it("loads bets of the sport and all its leagues when a sport is selected", () => {
+    render(
+      <BetList
+        selectedCategory="football"
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    const [ids, , enabled] = useBetsMock.mock.lastCall ?? [];
+    expect([...(ids ?? [])].sort()).toEqual([
+      "ekstraklasa",
+      "football",
+      "premier",
+    ]);
+    expect(enabled).toBe(true);
+  });
+
+  it("loads only the league when a league is selected", () => {
+    render(
+      <BetList
+        selectedCategory="premier"
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    expect(useBetsMock).toHaveBeenLastCalledWith(["premier"], "newest", true);
+  });
+
+  it("holds off loading a remembered category until categories are known", () => {
+    const { rerender } = render(
+      <BetList selectedCategory="football" categories={[]} categoryMap={{}} />,
+    );
+
+    expect(useBetsMock.mock.lastCall?.[2]).toBe(false);
+
+    rerender(
+      <BetList
+        selectedCategory="football"
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    expect(useBetsMock.mock.lastCall?.[2]).toBe(true);
+  });
+
+  it("keeps the mobile panel open after picking a sport so a league can be picked next", () => {
+    const onSelectCategory = vi.fn();
+    const { rerender } = render(
+      <BetList
+        selectedCategory={null}
+        onSelectCategory={onSelectCategory}
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    // Selecting a category remounts the list, so look elements up again.
+    const getToolbar = () => screen.getByTestId("bet-list-mobile-toolbar");
+    const getCategoryTrigger = () =>
+      screen.getByTestId("bet-list-category-trigger");
+
+    fireEvent.click(getCategoryTrigger());
+    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(getToolbar()).queryByRole("button", { name: /Ekstraklasa/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(getToolbar()).getByRole("button", {
+        name: /Piłka nożna/,
+        expanded: false,
+      }),
+    );
+    expect(onSelectCategory).toHaveBeenLastCalledWith("football");
+
+    rerender(
+      <BetList
+        selectedCategory="football"
+        onSelectCategory={onSelectCategory}
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    expect(getCategoryTrigger()).toHaveTextContent("Piłka nożna");
+    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "true");
+    const leagueNames = within(getToolbar())
+      .getAllByRole("button", { name: /Premier League|Ekstraklasa/ })
+      .map((button) => button.textContent?.trim());
+    expect(leagueNames).toEqual(["🏷️ Premier League", "🏷️ Ekstraklasa"]);
+
+    fireEvent.click(
+      within(getToolbar()).getByRole("button", { name: /Ekstraklasa/ }),
+    );
+    expect(onSelectCategory).toHaveBeenLastCalledWith("ekstraklasa");
+    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes the mobile panel after picking a sport without leagues", () => {
+    const onSelectCategory = vi.fn();
+    render(
+      <BetList
+        selectedCategory={null}
+        onSelectCategory={onSelectCategory}
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+
+    const toolbar = screen.getByTestId("bet-list-mobile-toolbar");
+    const trigger = screen.getByTestId("bet-list-category-trigger");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(within(toolbar).getByRole("button", { name: /UFC/ }));
+
+    expect(onSelectCategory).toHaveBeenLastCalledWith("ufc");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });

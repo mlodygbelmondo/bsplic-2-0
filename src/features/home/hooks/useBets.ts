@@ -15,6 +15,7 @@ export type { SortMode } from "@/features/home/hooks/sortBets";
 type BetRow = Database["public"]["Tables"]["bets"]["Row"];
 
 const REALTIME_BATCH_MS = 150;
+const CATEGORY_KEY_SEPARATOR = "|";
 
 function getBetId(input: unknown): string | null {
   if (!input || typeof input !== "object") {
@@ -40,7 +41,7 @@ function isBetOpenForPlacement(row: Pick<BetRow, "ends_at" | "is_active">) {
 
 function isBetVisible(
   row: BetRow,
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   includeInProgress = false,
 ): boolean {
   if (includeInProgress) {
@@ -51,11 +52,11 @@ function isBetVisible(
     return false;
   }
 
-  if (!selectedCategory) {
+  if (!categoryIds || categoryIds.length === 0) {
     return true;
   }
 
-  return row.category_id === selectedCategory;
+  return row.category_id !== null && categoryIds.includes(row.category_id);
 }
 
 function upsertBet(previous: Bet[], nextBet: Bet): Bet[] {
@@ -88,7 +89,7 @@ function removeBet(previous: Bet[], betId: string): Bet[] {
 export function applyBetsRealtimePayloads(
   previous: Bet[],
   payloads: RealtimePostgresChangesPayload<BetRow>[],
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   includeInProgress = false,
 ): Bet[] {
   let next = previous;
@@ -98,7 +99,7 @@ export function applyBetsRealtimePayloads(
       const row = payload.new;
       if (
         !getBetId(row) ||
-        !isBetVisible(row, selectedCategory, includeInProgress)
+        !isBetVisible(row, categoryIds, includeInProgress)
       ) {
         continue;
       }
@@ -118,7 +119,7 @@ export function applyBetsRealtimePayloads(
         continue;
       }
 
-      if (isBetVisible(newRow, selectedCategory, includeInProgress)) {
+      if (isBetVisible(newRow, categoryIds, includeInProgress)) {
         next = upsertBet(next, toBet(newRow));
         continue;
       }
@@ -140,11 +141,25 @@ export function applyBetsRealtimePayloads(
   return next;
 }
 
+/**
+ * Active bets in the given categories (`null` = all). The id list may be a new
+ * array on every render; only its contents trigger a reload. While `enabled`
+ * is false nothing is fetched and the list stays in its loading state.
+ */
 export function useBets(
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   sort: SortMode,
   includeInProgress = false,
+  enabled = true,
 ) {
+  const categoryKey =
+    categoryIds && categoryIds.length > 0
+      ? categoryIds.join(CATEGORY_KEY_SEPARATOR)
+      : null;
+  const stableCategoryIds = useMemo(
+    () => (categoryKey === null ? null : categoryKey.split(CATEGORY_KEY_SEPARATOR)),
+    [categoryKey],
+  );
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -154,15 +169,23 @@ export function useBets(
   );
   const flushTimeoutRef = useRef<number | null>(null);
   const betsRef = useRef<Bet[]>([]);
-  const criteriaRef = useRef({ selectedCategory, sort, includeInProgress });
+  const criteriaRef = useRef({
+    categoryIds: stableCategoryIds,
+    sort,
+    includeInProgress,
+  });
 
   useEffect(() => {
     betsRef.current = bets;
   }, [bets]);
 
   useEffect(() => {
-    criteriaRef.current = { selectedCategory, sort, includeInProgress };
-  }, [selectedCategory, sort, includeInProgress]);
+    criteriaRef.current = {
+      categoryIds: stableCategoryIds,
+      sort,
+      includeInProgress,
+    };
+  }, [stableCategoryIds, sort, includeInProgress]);
 
   const loadBetsPage = useCallback(
     async ({
@@ -179,7 +202,7 @@ export function useBets(
       const criteria = criteriaRef.current;
       const limit = Math.max(minimumWindowSize, ACTIVE_BETS_PAGE_SIZE) + 1;
       const data = await fetchActiveBets(
-        criteria.selectedCategory,
+        criteria.categoryIds,
         criteria.sort,
         limit,
         offset,
@@ -200,6 +223,10 @@ export function useBets(
   );
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     let mounted = true;
 
     const load = async () => {
@@ -222,7 +249,7 @@ export function useBets(
     return () => {
       mounted = false;
     };
-  }, [loadBetsPage, selectedCategory, sort, includeInProgress]);
+  }, [enabled, loadBetsPage, stableCategoryIds, sort, includeInProgress]);
 
   useEffect(() => {
     let mounted = true;
@@ -244,7 +271,7 @@ export function useBets(
           applyBetsRealtimePayloads(
             previous,
             queuedPayloads,
-            criteria.selectedCategory,
+            criteria.categoryIds,
             criteria.includeInProgress,
           ),
         );

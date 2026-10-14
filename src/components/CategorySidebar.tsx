@@ -1,14 +1,24 @@
 import { useMemo, useState } from 'react';
 import { Category } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Search, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { SectionLoader } from '@/components/SectionLoader';
+import { getCategoryOptions, getVisibleCategoryRows } from '@/features/home/categoryTree';
 
 interface CategorySidebarProps {
   selectedCategory: string | null;
   onSelectCategory: (id: string | null) => void;
   categories: Category[];
   loading: boolean;
+}
+
+interface SidebarRow {
+  category: Category;
+  depth: 0 | 1;
+  hasChildren: boolean;
+  expanded: boolean;
+  /** Shown before a league's name in search results ("Piłka nożna"). */
+  parentName: string | null;
 }
 
 const normalize = (value: string) =>
@@ -21,11 +31,23 @@ const normalize = (value: string) =>
 export function CategorySidebar({ selectedCategory, onSelectCategory, categories, loading }: CategorySidebarProps) {
   const [search, setSearch] = useState('');
 
-  const filteredCategories = useMemo(() => {
+  // Browsing shows sports with the selected sport's leagues; searching shows
+  // a flat list of every matching sport or league.
+  const rows = useMemo<SidebarRow[]>(() => {
     const query = normalize(search);
-    if (!query) return categories;
-    return categories.filter((category) => normalize(category.name).includes(query));
-  }, [categories, search]);
+    if (!query) {
+      return getVisibleCategoryRows(categories, selectedCategory).map((row) => ({ ...row, parentName: null }));
+    }
+    return getCategoryOptions(categories)
+      .filter(({ category }) => normalize(category.name).includes(query))
+      .map(({ category, parent }) => ({
+        category,
+        depth: 0,
+        hasChildren: false,
+        expanded: false,
+        parentName: parent?.name ?? null,
+      }));
+  }, [categories, search, selectedCategory]);
 
   return (
     <aside className="w-[250px] hidden lg:block shrink-0 h-full">
@@ -69,21 +91,38 @@ export function CategorySidebar({ selectedCategory, onSelectCategory, categories
           {loading && <SectionLoader size="sm" label="Wczytywanie..." />}
 
           {!loading &&
-            filteredCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => onSelectCategory(category.id)}
-                className={cn(
-                   'w-full text-left px-2.5 py-2 rounded-lg text-[14px] font-medium transition-colors flex items-center gap-2.5',
-                  selectedCategory === category.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-foreground'
-                )}
-              >
-                <span className="text-sm">{category.emoji}</span>
-                {category.name}
-              </button>
-            ))}
+            rows.map(({ category, depth, hasChildren, expanded, parentName }) => {
+              const GroupChevron = expanded ? ChevronDown : ChevronRight;
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => onSelectCategory(category.id)}
+                  aria-expanded={hasChildren ? expanded : undefined}
+                  className={cn(
+                    'w-full text-left rounded-lg font-medium transition-colors flex items-center',
+                    depth === 1
+                      ? 'pl-8 pr-2.5 py-1.5 text-[13px] gap-2'
+                      : 'px-2.5 py-2 text-[14px] gap-2.5',
+                    selectedCategory === category.id
+                      ? 'bg-primary/10 text-primary'
+                      : depth === 1
+                        ? 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                        : 'hover:bg-muted text-foreground'
+                  )}
+                >
+                  <span className={depth === 1 ? 'text-xs' : 'text-sm'}>{category.emoji}</span>
+                  <span className="min-w-0 truncate">
+                    {parentName && <span className="text-muted-foreground">{parentName} › </span>}
+                    {category.name}
+                  </span>
+                  {hasChildren && (
+                    <GroupChevron className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
+                </button>
+              );
+            })}
 
-          {!loading && filteredCategories.length === 0 && (
+          {!loading && rows.length === 0 && (
             <p className="text-xs text-muted-foreground px-2 py-4 text-center">Brak kategorii dla tej frazy</p>
           )}
         </div>

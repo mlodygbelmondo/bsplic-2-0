@@ -96,6 +96,8 @@ export interface Category {
   color: string;
   sort_order: number;
   created_at: string;
+  parent_id: string | null;
+  slug: string | null;
 }
 
 export interface BetOption {

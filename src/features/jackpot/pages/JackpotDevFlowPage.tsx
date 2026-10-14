@@ -39,6 +39,8 @@ const categories: Category[] = [
     color: '#16a34a',
     sort_order: 1,
     created_at: DEV_NOW,
+    parent_id: null,
+    slug: null,
   },
   {
     id: 'youtube',
@@ -47,6 +49,8 @@ const categories: Category[] = [
     color: '#dc2626',
     sort_order: 2,
     created_at: DEV_NOW,
+    parent_id: null,
+    slug: null,
   },
   {
     id: 'darts',
@@ -55,6 +59,8 @@ const categories: Category[] = [
     color: '#7c3aed',
     sort_order: 3,
     created_at: DEV_NOW,
+    parent_id: null,
+    slug: null,
   },
 ];
 
