@@ -60,7 +60,12 @@ const HIERARCHY_MAP = Object.fromEntries(
 describe("BetList tabs", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useBetsMock.mockClear();
+    useBetsMock.mockReset();
+    useBetsMock.mockReturnValue({
+      loading: false,
+      liveBets: [],
+      sortedBets: [],
+    });
   });
 
   it("defaults to newest and supports ending-soon sort tab", () => {
@@ -125,62 +130,79 @@ describe("BetList tabs", () => {
     );
   });
 
-  it("closes mobile dropdowns from outside taps without a click-capturing backdrop", async () => {
+  it("changes the sort from the bottom sheet, remembers it and closes the sheet", async () => {
     render(
+      <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
+    );
+
+    const trigger = screen.getByTestId("bet-list-sort-trigger");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    const sheet = screen.getByRole("dialog", { name: "Sortowanie" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(sheet).getByRole("radio", { name: /Najnowsze/ }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(within(sheet).getByRole("radio", { name: /Popularne/ }));
+
+    expect(useBetsMock).toHaveBeenLastCalledWith(null, "popular", true);
+    expect(window.localStorage.getItem("bsplic.home.sort")).toBe("popular");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveTextContent("Popularne");
+  });
+
+  it("closes the sort sheet with Escape", async () => {
+    render(
+      <BetList selectedCategory={null} categories={[]} categoryMap={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("bet-list-sort-trigger"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(useBetsMock).toHaveBeenLastCalledWith(null, "newest", true);
+  });
+
+  it("keeps the filters and the previous bets on screen while the next category loads", () => {
+    const { rerender } = render(
       <BetList
         selectedCategory={null}
-        categories={[
-          {
-            id: "sport",
-            name: "Sport",
-            emoji: "⚽",
-            color: "#16a34a",
-            sort_order: 1,
-            created_at: "2026-06-22T00:00:00.000Z",
-            parent_id: null,
-            slug: null,
-          },
-        ]}
-        categoryMap={{}}
         onSelectCategory={vi.fn()}
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
+      />,
+    );
+    const toolbar = screen.getByTestId("bet-list-mobile-toolbar");
+
+    useBetsMock.mockReturnValue({
+      loading: true,
+      liveBets: [],
+      sortedBets: [],
+    });
+    rerender(
+      <BetList
+        selectedCategory="ufc"
+        onSelectCategory={vi.fn()}
+        categories={HIERARCHY}
+        categoryMap={HIERARCHY_MAP}
       />,
     );
 
-    const mobileToolbar = screen.getByTestId("bet-list-mobile-toolbar");
-    const sortTrigger = within(mobileToolbar).getByRole("button", {
-      expanded: false,
-      name: "Najnowsze",
-    });
-
-    fireEvent.click(sortTrigger);
-
-    await waitFor(() => {
-      expect(sortTrigger).toHaveAttribute("aria-expanded", "true");
-    });
-    expect(document.querySelector(".fixed.inset-0")).toBeNull();
-
-    fireEvent.pointerDown(document.body);
-
-    await waitFor(() => {
-      expect(sortTrigger).toHaveAttribute("aria-expanded", "false");
-    });
-
-    const categoryTrigger = within(mobileToolbar).getByRole("button", {
-      expanded: false,
-      name: /Wszystkie/,
-    });
-
-    fireEvent.click(categoryTrigger);
-
-    await waitFor(() => {
-      expect(categoryTrigger).toHaveAttribute("aria-expanded", "true");
-    });
-
-    fireEvent.pointerDown(document.body);
-
-    await waitFor(() => {
-      expect(categoryTrigger).toHaveAttribute("aria-expanded", "false");
-    });
+    expect(screen.getByTestId("bet-list-mobile-toolbar")).toBe(toolbar);
+    expect(screen.queryByText("Wczytywanie zakładów...")).not.toBeInTheDocument();
+    expect(screen.getByTestId("bet-list-results")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
   });
 
   it("hides the desktop action toolbar with transform on downward scroll", () => {
@@ -212,7 +234,12 @@ describe("BetList tabs", () => {
 describe("BetList category hierarchy", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    useBetsMock.mockClear();
+    useBetsMock.mockReset();
+    useBetsMock.mockReturnValue({
+      loading: false,
+      liveBets: [],
+      sortedBets: [],
+    });
   });
 
   it("loads bets of the sport and all its leagues when a sport is selected", () => {
@@ -263,78 +290,76 @@ describe("BetList category hierarchy", () => {
     expect(useBetsMock.mock.lastCall?.[2]).toBe(true);
   });
 
-  it("keeps the mobile panel open after picking a sport so a league can be picked next", () => {
+  it("picks sports from the rail and leagues from the tabs under the selected sport", () => {
     const onSelectCategory = vi.fn();
-    const { rerender } = render(
+    const renderList = (selectedCategory: string | null) => (
       <BetList
-        selectedCategory={null}
+        selectedCategory={selectedCategory}
         onSelectCategory={onSelectCategory}
         categories={HIERARCHY}
         categoryMap={HIERARCHY_MAP}
-      />,
+      />
+    );
+    const { rerender } = render(renderList(null));
+    const rail = () => screen.getByTestId("category-rail");
+
+    expect(
+      within(rail()).getByRole("button", { name: "Wszystko" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("league-tabs")).not.toBeInTheDocument();
+
+    fireEvent.click(within(rail()).getByRole("button", { name: "Piłka nożna" }));
+    expect(onSelectCategory).toHaveBeenLastCalledWith("football");
+
+    rerender(renderList("football"));
+    const tabs = screen.getByTestId("league-tabs");
+    expect(
+      within(tabs).getAllByRole("button").map((tab) => tab.textContent),
+    ).toEqual(["Wszystkie", "Premier League", "Ekstraklasa"]);
+    expect(within(tabs).getByRole("button", { name: "Wszystkie" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
 
-    // Selecting a category remounts the list, so look elements up again.
-    const getToolbar = () => screen.getByTestId("bet-list-mobile-toolbar");
-    const getCategoryTrigger = () =>
-      screen.getByTestId("bet-list-category-trigger");
+    fireEvent.click(within(tabs).getByRole("button", { name: "Ekstraklasa" }));
+    expect(onSelectCategory).toHaveBeenLastCalledWith("ekstraklasa");
 
-    fireEvent.click(getCategoryTrigger());
-    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "true");
+    rerender(renderList("ekstraklasa"));
     expect(
-      within(getToolbar()).queryByRole("button", { name: /Ekstraklasa/ }),
-    ).not.toBeInTheDocument();
+      within(rail()).getByRole("button", { name: "Piłka nożna" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(screen.getByTestId("league-tabs")).getByRole("button", {
+        name: "Ekstraklasa",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(
-      within(getToolbar()).getByRole("button", {
-        name: /Piłka nożna/,
-        expanded: false,
+      within(screen.getByTestId("league-tabs")).getByRole("button", {
+        name: "Wszystkie",
       }),
     );
     expect(onSelectCategory).toHaveBeenLastCalledWith("football");
 
-    rerender(
-      <BetList
-        selectedCategory="football"
-        onSelectCategory={onSelectCategory}
-        categories={HIERARCHY}
-        categoryMap={HIERARCHY_MAP}
-      />,
-    );
-
-    expect(getCategoryTrigger()).toHaveTextContent("Piłka nożna");
-    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "true");
-    const leagueNames = within(getToolbar())
-      .getAllByRole("button", { name: /Premier League|Ekstraklasa/ })
-      .map((button) => button.textContent?.trim());
-    expect(leagueNames).toEqual(["🏷️ Premier League", "🏷️ Ekstraklasa"]);
-
-    fireEvent.click(
-      within(getToolbar()).getByRole("button", { name: /Ekstraklasa/ }),
-    );
-    expect(onSelectCategory).toHaveBeenLastCalledWith("ekstraklasa");
-    expect(getCategoryTrigger()).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(within(rail()).getByRole("button", { name: "Wszystko" }));
+    expect(onSelectCategory).toHaveBeenLastCalledWith(null);
   });
 
-  it("closes the mobile panel after picking a sport without leagues", () => {
-    const onSelectCategory = vi.fn();
+  it("shows no league tabs under a sport without leagues", () => {
     render(
       <BetList
-        selectedCategory={null}
-        onSelectCategory={onSelectCategory}
+        selectedCategory="ufc"
+        onSelectCategory={vi.fn()}
         categories={HIERARCHY}
         categoryMap={HIERARCHY_MAP}
       />,
     );
 
-    const toolbar = screen.getByTestId("bet-list-mobile-toolbar");
-    const trigger = screen.getByTestId("bet-list-category-trigger");
-    fireEvent.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-
-    fireEvent.click(within(toolbar).getByRole("button", { name: /UFC/ }));
-
-    expect(onSelectCategory).toHaveBeenLastCalledWith("ufc");
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(
+      within(screen.getByTestId("category-rail")).getByRole("button", {
+        name: "UFC",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("league-tabs")).not.toBeInTheDocument();
   });
 });

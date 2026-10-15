@@ -145,6 +145,9 @@ export function applyBetsRealtimePayloads(
  * Active bets in the given categories (`null` = all). The id list may be a new
  * array on every render; only its contents trigger a reload. While `enabled`
  * is false nothing is fetched and the list stays in its loading state.
+ *
+ * `loading` is true from the very render in which the criteria change until
+ * their first page arrives; the previous bets stay available meanwhile.
  */
 export function useBets(
   categoryIds: readonly string[] | null,
@@ -160,8 +163,12 @@ export function useBets(
     () => (categoryKey === null ? null : categoryKey.split(CATEGORY_KEY_SEPARATOR)),
     [categoryKey],
   );
+  const criteriaKey = `${categoryKey ?? "*"}#${sort}#${includeInProgress ? 1 : 0}`;
   const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedCriteriaKey, setLoadedCriteriaKey] = useState<string | null>(
+    null,
+  );
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const pendingPayloadsRef = useRef<RealtimePostgresChangesPayload<BetRow>[]>(
@@ -240,6 +247,7 @@ export function useBets(
       } finally {
         if (mounted) {
           setLoading(false);
+          setLoadedCriteriaKey(criteriaKey);
         }
       }
     };
@@ -249,7 +257,14 @@ export function useBets(
     return () => {
       mounted = false;
     };
-  }, [enabled, loadBetsPage, stableCategoryIds, sort, includeInProgress]);
+  }, [
+    enabled,
+    loadBetsPage,
+    stableCategoryIds,
+    sort,
+    includeInProgress,
+    criteriaKey,
+  ]);
 
   useEffect(() => {
     let mounted = true;
@@ -341,7 +356,7 @@ export function useBets(
   }, [regularBets, sortByMode]);
 
   return {
-    loading,
+    loading: loading || loadedCriteriaKey !== criteriaKey,
     loadingMore,
     hasMore,
     loadMore,

@@ -132,4 +132,57 @@ describe("useBets", () => {
 
     unmount();
   });
+
+  it("reports loading from the render that changes the category and keeps the previous bets until the new ones arrive", async () => {
+    const footballBet = {
+      id: "bet-football",
+      title: "Legia – Lech",
+      is_live: false,
+      is_active: true,
+      bet_count: 3,
+      category_id: "football",
+      created_at: "2026-10-14T10:00:00.000Z",
+      ends_at: "2026-10-20T18:00:00.000Z",
+    };
+    const ufcBet = { ...footballBet, id: "bet-ufc", category_id: "ufc" };
+    let resolveUfc: (bets: unknown[]) => void = () => {};
+    fetchActiveBetsMock
+      .mockResolvedValueOnce([footballBet])
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveUfc = resolve;
+        }),
+      );
+
+    const renders: { ids: string[]; loading: boolean; betIds: string[] }[] =
+      [];
+    const { result, rerender, unmount } = renderHook(
+      ({ ids }) => {
+        const bets = useBets(ids, "newest");
+        renders.push({
+          ids,
+          loading: bets.loading,
+          betIds: bets.sortedBets.map((bet) => bet.id),
+        });
+        return bets;
+      },
+      { initialProps: { ids: ["football"] } },
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    rerender({ ids: ["ufc"] });
+
+    // No render may present the football bets as the finished UFC list.
+    const ufcRendersWithOldBets = renders.filter(
+      (entry) => entry.ids[0] === "ufc" && entry.betIds[0] === "bet-football",
+    );
+    expect(ufcRendersWithOldBets.length).toBeGreaterThan(0);
+    expect(ufcRendersWithOldBets.every((entry) => entry.loading)).toBe(true);
+
+    resolveUfc([ufcBet]);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.sortedBets.map((bet) => bet.id)).toEqual(["bet-ufc"]);
+
+    unmount();
+  });
 });
