@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { CouponSheet } from '@/features/coupon/CouponSheet';
 
-export default function Screen() {
-  return <RoutePlaceholder name="coupon" />;
+export default function CouponRoute() {
+  return <CouponSheet />;
 }
