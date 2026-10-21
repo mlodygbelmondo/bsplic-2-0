@@ -4,63 +4,63 @@ Status per surface: `complete` (meets the contract's definition of done and was 
 
 | # | Area | Surface | Native route / module | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | Shell | Boot splash (native splash → roulette overlay, holds, min/max timing) | `features/boot` | partial | Cold start verified on the simulator; login re-show not yet verified |
-| 2 | Shell | Theme (light default, dark toggle, stored) | `theme`, `lib/preferences` | partial | |
-| 3 | Shell | Mobile navbar (wordmark, balance chip, bell, menu) | `features/shell/AppHeader` | not started | |
-| 4 | Shell | Header menu sheet | `sheets/menu` | not started | |
-| 5 | Shell | Daily top-up | `sheets/topup` | not started | |
-| 6 | Shell | Bottom tabs (Zakłady, Social, Gry, Rankingi, Profil; minimize on scroll) | `(tabs)/_layout` | partial | NativeTabs wired; not yet exercised |
-| 7 | Shell | Connectivity toasts, offline write blocking | `features/shell/ConnectivityWatcher`, `lib/connectivity` | partial | |
-| 8 | Shell | Maintenance mode | `features/shell/MaintenanceGate` | not started | |
-| 9 | Shell | 404 | `+not-found` | not started | |
-| 10 | Auth | Login | `sign-in` | not started | |
-| 11 | Auth | Registration | `sign-in` | not started | |
-| 12 | Auth | Forgot password | `sign-in` | not started | |
-| 13 | Auth | Password recovery via universal link | `reset-password` | not started | Needs AASA + Team ID to activate links |
-| 14 | Auth | Persistent session, logout, cache clear | `features/auth/auth-store` | partial | |
-| 15 | Sportsbook | Bet list, categories, live/boost, sorting | `(tabs)/(home)` | not started | |
-| 16 | Sportsbook | Bet card odds selection | `features/home` | not started | |
-| 17 | Sportsbook | Propose bet | `sheets/propose-bet` | not started | |
-| 18 | Coupon | Coupon bar | `features/coupon/CouponBar` | not started | |
-| 19 | Coupon | Coupon sheet, single/AKO, stake, AKO exclusions, placement | `sheets/coupon` | not started | Store and pure helpers ported with tests |
-| 20 | Jackpot | Daily jackpot card, ticket purchase | `features/jackpot` | not started | |
-| 21 | Jackpot | Jackpot draw | `jackpot/draw/[roundId]` | not started | |
-| 22 | Wallet | Money transfer send | `sheets/wallet` | not started | |
-| 23 | Wallet | Transfer history | `sheets/wallet` | not started | |
-| 24 | Profile | Own profile (player card, stats, badges, histories) | `(tabs)/profile` | not started | |
-| 25 | Profile | Public profile | `profile/[userId]` | not started | |
-| 26 | Profile | Avatar upload | `features/profile` | not started | |
-| 27 | Replay | Replay page, chart, history, coupon details | `replay` | not started | |
-| 28 | Replay | Replay poster share | `features/replay` | not started | |
-| 29 | Rankings | Rankings tabs and stats | `(tabs)/rankings` | not started | |
-| 30 | Social | Feed, pagination, realtime, new-items pill | `(tabs)/social` | not started | |
-| 31 | Social | Feed cards (posts, coupon, casino activity) | `features/social` | not started | |
-| 32 | Social | Reactions, reactors | `sheets/reactors` | not started | |
-| 33 | Social | Images, image viewer | `sheets/image-viewer` | not started | |
-| 34 | Social | YouTube/Spotify embeds | `features/social` | not started | |
-| 35 | Social | Coupon copying, sharing, deep links | `features/social` | not started | |
-| 36 | Social | Post composer (text, image, mentions) | `sheets/compose-post` | not started | |
-| 37 | Social | Stories strip, composer, viewer | `sheets/compose-story`, `sheets/story-viewer` | not started | |
-| 38 | Social | Comments, replies, mentions autocomplete | `features/social/comments` | not started | |
-| 39 | Social | Eniu bot replies | `features/social/eniu` | not started | |
-| 40 | Social | Social item page | `social/[itemType]/[itemId]` | not started | |
-| 41 | Casino | Casino hub | `(tabs)/casino` | not started | |
-| 42 | Casino | Roulette live table, wheel, bets, stake drawer | `(tabs)/casino/roulette`, `sheets/roulette-stake` | not started | |
-| 43 | Casino | Blackjack | `(tabs)/casino/blackjack` | not started | |
-| 44 | Casino | Slots | `(tabs)/casino/slots/[game]`, `sheets/slot-rules` | not started | |
-| 45 | Engagement | In-app notifications (bell, sheet, realtime, sound) | `features/notifications`, `sheets/notifications` | not started | |
-| 46 | Engagement | Bonus campaigns | `features/bonus-campaigns` | not started | |
-| 47 | Engagement | Feature polls | `features/feature-polls` | not started | |
-| 48 | Admin | Shell, role gating, mobile nav | `admin` | not started | |
-| 49 | Admin | Dashboard | `features/admin` | not started | |
-| 50 | Admin | Manage bets (edit, settle, delete, AKO) | `features/admin` | not started | |
-| 51 | Admin | Create bet | `features/admin` | not started | |
-| 52 | Admin | Proposals | `features/admin/tabs/ProposalsTab` | not started | |
-| 53 | Admin | Categories | `features/admin/tabs/CategoriesTab` | not started | |
-| 54 | Admin | Eniu bot | `features/admin/tabs/EniuBotTab` | not started | |
-| 55 | Admin | Agent runs | `features/admin/tabs/AgentRunsTab` | not started | |
-| 56 | Admin | Bonus campaigns admin | `features/admin/tabs/BonusCampaignsTab` | not started | |
-| 57 | Admin | Feature polls admin | `features/admin/tabs/FeaturePollsTab` | not started | |
+| 1 | Shell | Boot splash (native splash → roulette overlay, holds, min/max timing) | `features/boot` | complete | Cold start and the re-show after login verified on the simulator; prefetches every section before fading out |
+| 2 | Shell | Theme (light default, dark toggle, stored) | `theme`, `lib/preferences` | complete | Light default, dark toggle from the menu, persisted; both themes compared with the web |
+| 3 | Shell | Mobile navbar (wordmark, balance chip, bell, menu) | `features/shell/AppHeader` | complete | Compared with the web in both themes |
+| 4 | Shell | Header menu sheet | `sheets/menu` | complete | Bottom sheet instead of the web right drawer; content compared in both themes |
+| 5 | Shell | Daily top-up | `sheets/topup` | partial | Sheet compared with the web; claiming not yet exercised |
+| 6 | Shell | Bottom tabs (Zakłady, Social, Gry, Rankingi, Profil; minimize on scroll) | `(tabs)/_layout` | complete | Web nav colors (gold on dark/casino, red on light and over the white Social feed); minimizes on scroll |
+| 7 | Shell | Connectivity toasts, offline write blocking | `features/shell/ConnectivityWatcher`, `lib/connectivity` | partial | Not exercised on the simulator |
+| 8 | Shell | Maintenance mode | `features/shell/MaintenanceGate` | partial | Logic covered by tests; cannot be toggled on production |
+| 9 | Shell | 404 | `+not-found` | partial | Not exercised |
+| 10 | Auth | Login | `sign-in` | complete | Login and persisted session verified |
+| 11 | Auth | Registration | `sign-in` | partial | Not exercised (would create production accounts) |
+| 12 | Auth | Forgot password | `sign-in` | partial | Not exercised (sends production email) |
+| 13 | Auth | Password recovery via universal link | `reset-password` | blocked | Needs AASA + Team ID to activate links |
+| 14 | Auth | Persistent session, logout, cache clear | `features/auth/auth-store` | partial | Persistent session verified; logout not exercised in the final pass |
+| 15 | Sportsbook | Bet list, categories, live/boost, sorting | `(tabs)/(home)` | complete | Category rail, count line, cards and balanced titles compared with the web in both themes; sort sheet not yet exercised |
+| 16 | Sportsbook | Bet card odds selection | `features/home` | complete | Selection adds to the coupon with the toast |
+| 17 | Sportsbook | Propose bet | `sheets/propose-bet` | partial | Not exercised |
+| 18 | Coupon | Coupon bar | `features/coupon/CouponBar` | complete | |
+| 19 | Coupon | Coupon sheet, single/AKO, stake, AKO exclusions, placement | `sheets/coupon` | partial | Sheet compared with the web; placement not yet exercised |
+| 20 | Jackpot | Daily jackpot card, ticket purchase | `features/jackpot` | partial | Card and buy dialog compared with the web; purchase not executed |
+| 21 | Jackpot | Jackpot draw | `jackpot/draw/[roundId]` | complete | Settled draw, replay spin and reveal compared with the web (Chromium); fixed a UI-thread crash |
+| 22 | Wallet | Money transfer send | `sheets/wallet` | partial | Form compared with the web; no transfer executed (would move money to another player) |
+| 23 | Wallet | Transfer history | `sheets/wallet` | complete | Compared with the web |
+| 24 | Profile | Own profile (player card, stats, badges, histories) | `(tabs)/profile` | complete | Compared with the web in both themes |
+| 25 | Profile | Public profile | `profile/[userId]` | complete | Opens instantly from rankings (press-in prefetch); compared with the web |
+| 26 | Profile | Avatar upload | `features/profile` | partial | Not exercised |
+| 27 | Replay | Replay page, chart, history, coupon details | `replay` | partial | Empty state compared with the web; the test account has no coupons in range |
+| 28 | Replay | Replay poster share | `features/replay` | partial | Not exercised |
+| 29 | Rankings | Rankings tabs and stats | `(tabs)/rankings` | complete | Compared with the web in both themes |
+| 30 | Social | Feed, pagination, realtime, new-items pill | `(tabs)/social` | partial | Feed and filters compared with the web; realtime pill not exercised |
+| 31 | Social | Feed cards (posts, coupon, casino activity) | `features/social` | complete | Coupon and post cards compared with the web |
+| 32 | Social | Reactions, reactors | `sheets/reactors` | partial | Not exercised |
+| 33 | Social | Images, image viewer | `sheets/image-viewer` | partial | Not exercised |
+| 34 | Social | YouTube/Spotify embeds | `features/social` | partial | Not exercised |
+| 35 | Social | Coupon copying, sharing, deep links | `features/social` | partial | Not exercised |
+| 36 | Social | Post composer (text, image, mentions) | `sheets/compose-post` | partial | Not exercised |
+| 37 | Social | Stories strip, composer, viewer | `sheets/compose-story`, `sheets/story-viewer` | partial | Strip compared with the web; composer and viewer not exercised |
+| 38 | Social | Comments, replies, mentions autocomplete | `features/social/comments` | partial | Comment input on the item page compared with the web |
+| 39 | Social | Eniu bot replies | `features/social/eniu` | partial | Triggered by the comment and post actions; not exercised |
+| 40 | Social | Social item page | `social/[itemType]/[itemId]` | complete | Compared with the web |
+| 41 | Casino | Casino hub | `(tabs)/casino` | complete | Compared with the web |
+| 42 | Casino | Roulette live table, wheel, bets, stake drawer | `(tabs)/casino/roulette`, `sheets/roulette-stake` | partial | Table, wheel, panels and stake bar compared with the web; betting not yet exercised |
+| 43 | Casino | Blackjack | `(tabs)/casino/blackjack` | partial | Table with a game in progress compared with the web |
+| 44 | Casino | Slots | `(tabs)/casino/slots/[game]`, `sheets/slot-rules` | partial | Screen compared with the web; spin not yet exercised |
+| 45 | Engagement | In-app notifications (bell, sheet, realtime, sound) | `features/notifications`, `sheets/notifications` | partial | Bell, sheet and navigation to a draw verified; realtime and sound not exercised |
+| 46 | Engagement | Bonus campaigns | `features/bonus-campaigns` | partial | No active campaign to exercise |
+| 47 | Engagement | Feature polls | `features/feature-polls` | partial | No active poll to exercise |
+| 48 | Admin | Shell, role gating, mobile nav | `admin` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 49 | Admin | Dashboard | `features/admin` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 50 | Admin | Manage bets (edit, settle, delete, AKO) | `features/admin` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 51 | Admin | Create bet | `features/admin` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 52 | Admin | Proposals | `features/admin/tabs/ProposalsTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 53 | Admin | Categories | `features/admin/tabs/CategoriesTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 54 | Admin | Eniu bot | `features/admin/tabs/EniuBotTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 55 | Admin | Agent runs | `features/admin/tabs/AgentRunsTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 56 | Admin | Bonus campaigns admin | `features/admin/tabs/BonusCampaignsTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
+| 57 | Admin | Feature polls admin | `features/admin/tabs/FeaturePollsTab` | partial | Typecheck and ported tests pass; device QA needs an admin account (none available) |
 | 58 | Platform | Universal links / `bsplic://` for every route | `app.json`, router | partial | Scheme and associated domain configured; activation needs Team ID + AASA |
-| 59 | Platform | Signed-in preload (tab data, art) | `lib` | not started | |
-| 60 | Platform | Android static validity (`expo export --platform android`) | — | not started | |
+| 59 | Platform | Signed-in preload (tab data, art) | `lib` | complete | Boot prefetch of feed, stories, profile, history, rankings, roulette spins and blackjack table; press-in prefetch for profiles, social items and casino games |
+| 60 | Platform | Android static validity (`expo export --platform android`) | — | complete | `expo export --platform android` succeeds |
