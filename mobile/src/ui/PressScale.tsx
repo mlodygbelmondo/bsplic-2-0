@@ -1,4 +1,4 @@
-import type { ComponentRef, Ref } from 'react';
+import { useState, type ComponentRef, type Ref } from 'react';
 import { Pressable, type PressableProps, type PressableStateCallbackType } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -24,6 +24,11 @@ export function PressScale({
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  // Reanimated drops backgroundImage/boxShadow from function styles on animated
+  // components, so resolve pressed-state styles here and pass a static array.
+  const [pressed, setPressed] = useState(false);
+  const resolvedStyle =
+    typeof style === 'function' ? style({ pressed } as PressableStateCallbackType) : style;
 
   return (
     <AnimatedPressable
@@ -31,17 +36,15 @@ export function PressScale({
       disabled={disabled}
       onPressIn={(event) => {
         if (!reduced) scale.set(withTiming(scaleTo, { duration: 150 }));
+        if (typeof style === 'function') setPressed(true);
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
         scale.set(withTiming(1, { duration: 150 }));
+        if (typeof style === 'function') setPressed(false);
         onPressOut?.(event);
       }}
-      style={
-        typeof style === 'function'
-          ? (state: PressableStateCallbackType) => [style(state), animatedStyle]
-          : [style, animatedStyle]
-      }
+      style={[resolvedStyle, animatedStyle]}
       {...props}
     />
   );
