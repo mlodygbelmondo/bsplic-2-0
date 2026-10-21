@@ -10,6 +10,7 @@ import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import { Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { publishStory } from '../api/actions';
 import { social } from '../components/socialColors';
 import { attachSocialImage, SOCIAL_TEXT_MAX_LENGTH } from '../compose/attachImage';
@@ -62,7 +63,7 @@ export function StoryComposerScreen() {
       close();
     } catch (error) {
       haptics.error();
-      toast.error(error instanceof Error ? error.message : 'Nie udało się opublikować relacji');
+      toast.error(getErrorMessage(error, 'Nie udało się opublikować relacji'));
     } finally {
       setSubmitting(false);
     }

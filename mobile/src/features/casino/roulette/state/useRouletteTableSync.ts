@@ -81,12 +81,14 @@ export function useRouletteTableSync(userId: string) {
     controller.setActive(active);
   }, [controller, active]);
 
+  // The screen stays mounted under other tabs; a late response there still
+  // records the win but skips the chime and haptic.
   useEffect(
     () =>
       rouletteTableStore.subscribe((table) => {
-        if (rouletteSession.syncWithTable(table, userId)) celebrateRouletteWin();
+        if (rouletteSession.syncWithTable(table, userId) && active) celebrateRouletteWin();
       }),
-    [userId],
+    [userId, active],
   );
 
   useRealtimeChannel(

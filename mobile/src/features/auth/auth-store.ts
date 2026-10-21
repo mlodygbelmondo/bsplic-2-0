@@ -64,9 +64,11 @@ function clearProfileState() {
   useAuthStore.setState({ profile: null, profileStatus: 'idle', isAdmin: false, isModerator: false });
 }
 
-function fetchProfile(userId: string): Promise<void> {
+// `fresh` skips a request already in flight: after a write (bet, top-up) that
+// older request would answer with the pre-write balance.
+function fetchProfile(userId: string, fresh = false): Promise<void> {
   const inFlight = inFlightProfileFetches.get(userId);
-  if (inFlight) return inFlight;
+  if (inFlight && !fresh) return inFlight;
 
   const requestId = ++profileRequestId;
   if (!useAuthStore.getState().profile) {
@@ -218,12 +220,15 @@ export const authActions = {
 
   async refreshProfile() {
     const userId = useAuthStore.getState().user?.id;
-    if (userId) await fetchProfile(userId);
+    if (userId) await fetchProfile(userId, true);
   },
 
   updateProfileBalance(balance: number) {
     const { profile } = useAuthStore.getState();
     if (!profile) return;
+    // Drop older profile requests so their pre-write balance can't land after this.
+    profileRequestId += 1;
+    inFlightProfileFetches.clear();
     useAuthStore.setState({ profile: { ...profile, balance } });
     persistIdentity();
   },

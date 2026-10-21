@@ -46,7 +46,7 @@ function RankingsBody() {
     if (error) console.warn('Rankings fetch error:', error);
   }, [error]);
 
-  const sorted = rankings && !error ? sortRankings(rankings, sortBy) : [];
+  const sorted = rankings ? sortRankings(rankings, sortBy) : [];
 
   const handleRefresh = async () => {
     setPullRefreshing(true);

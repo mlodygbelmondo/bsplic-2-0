@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import { Button, Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { useAuthStore } from './auth-store';
 import { AuthField } from './AuthField';
 import { AuthCard, AuthShell } from './AuthShell';
@@ -19,7 +20,7 @@ type Status = 'checking' | 'recovery' | 'invalid';
 type RouteParams = { '#'?: string | string[]; code?: string | string[]; error_description?: string | string[] };
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Wystąpił błąd');
+const errorMessage = (err: unknown) => getErrorMessage(err, 'Wystąpił błąd');
 
 /**
  * Expo Router keeps a universal link's fragment as the `#` route param;

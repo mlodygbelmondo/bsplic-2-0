@@ -239,9 +239,10 @@ export function JackpotDrawScreen() {
     getDailyJackpotDraw(poolId)
       .then((fresh) => {
         if (!mountedRef.current) return;
-        // `get_daily_jackpot_draw` hides the winner; keep it and take the reward state.
+        // `get_daily_jackpot_draw` hides the winner; keep it and take the reward
+        // state, unless a claim finished while this request was in flight.
         setLocalDraw((existing) =>
-          existing
+          existing && existing.rewardCreditStatus === 'pending'
             ? {
                 ...existing,
                 rewardClaimedAt: fresh.rewardClaimedAt,

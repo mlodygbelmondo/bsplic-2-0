@@ -5,6 +5,7 @@ import { authActions } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE } from '@/lib/connectivity';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errors';
 import { uploadAvatar } from './uploadAvatar';
 
 const FALLBACK_ERROR = 'Nie udało się zaktualizować zdjęcia profilowego';
@@ -40,7 +41,7 @@ export function useAvatarUpload(userId: string | null, offline: boolean) {
       if (result.canceled) return;
       asset = result.assets[0];
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : FALLBACK_ERROR);
+      toast.error(getErrorMessage(error, FALLBACK_ERROR));
       return;
     }
     if (!asset) return;
@@ -59,7 +60,7 @@ export function useAvatarUpload(userId: string | null, offline: boolean) {
       toast.success('Zdjęcie profilowe zaktualizowane');
     } catch (error) {
       haptics.error();
-      toast.error(error instanceof Error ? error.message : FALLBACK_ERROR);
+      toast.error(getErrorMessage(error, FALLBACK_ERROR));
     } finally {
       setUploading(false);
     }

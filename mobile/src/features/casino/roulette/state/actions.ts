@@ -4,6 +4,7 @@ import { useAuthStore } from '@/features/auth/auth-store';
 import { callRpc } from '@/lib/rpc';
 import { toast } from '@/lib/toast';
 import type { RouletteColor } from '@/types/database';
+import { getErrorMessage } from '@/lib/errors';
 
 import { casinoHaptics, playCasinoWinChime } from '../../shared/audio';
 import { getRouletteColor, validateRouletteBetInput } from '../lib/roulette';
@@ -44,7 +45,7 @@ export async function submitRouletteBet() {
     toast.success(queuedForNextRound ? 'Zakład czeka na następną rundę!' : 'Zakład przyjęty do wspólnej rundy!');
   } catch (error) {
     casinoHaptics.error();
-    toast.error(error instanceof Error ? error.message : 'Nie udało się przyjąć zakładu.');
+    toast.error(getErrorMessage(error, 'Nie udało się przyjąć zakładu.'));
   }
 }
 
@@ -75,7 +76,7 @@ export async function repeatRouletteBets() {
     toast.success(lastSettled.bets.length === 1 ? 'Zakład powtórzony!' : 'Zakłady powtórzone!');
   } catch (error) {
     casinoHaptics.error();
-    toast.error(error instanceof Error ? error.message : 'Nie udało się powtórzyć zakładów.');
+    toast.error(getErrorMessage(error, 'Nie udało się powtórzyć zakładów.'));
   } finally {
     useRouletteSession.setState({ isRepeating: false });
   }
@@ -128,7 +129,7 @@ export async function shareRouletteWin() {
   } catch (error) {
     rouletteSession.markWinShared(latestWinKey, false);
     rouletteSession.dismissWin(previousDismissedWinKey);
-    toast.error(error instanceof Error ? error.message : 'Nie udało się udostępnić wygranej.');
+    toast.error(getErrorMessage(error, 'Nie udało się udostępnić wygranej.'));
   } finally {
     useRouletteSession.setState({ isSharingWin: false });
   }

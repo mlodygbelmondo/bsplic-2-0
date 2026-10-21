@@ -39,7 +39,7 @@ export function Avatar({
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`Avatar ${name}`}
+      accessibilityLabel={`Awatar ${name}`}
       style={[styles.root, { width: size, height: size, borderRadius: size / 2 }, style]}
     >
       {showImage ? (

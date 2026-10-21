@@ -8,6 +8,7 @@ import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme, type Colors } from '@/theme';
 import type { EniuBotRun } from '@/types/social';
 import { Button, Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { ADMIN_ENIU_RUNS_QUERY_KEY, commandEniu, eniuRunsQueryOptions, retryEniuResponse } from '../b/api/eniu';
 import { OfflineNotice, Pill, Spin, TextArea } from '../b/components/primitives';
 import { useAdminWriteGuard, useQueryErrorToast } from '../b/hooks';
@@ -20,7 +21,7 @@ import {
 } from '../b/logic/eniu-runs';
 
 const errorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+  getErrorMessage(error, fallback);
 
 /** Admin "Eniu" tab (web `EniuBotTab`): command composer and bot run log. */
 export function EniuBotTab() {

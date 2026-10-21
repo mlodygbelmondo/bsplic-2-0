@@ -16,6 +16,7 @@ import { RefreshControl, View } from 'react-native';
 import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { SectionLoader, Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { getRelativeTime, type AdminDashboardSummary } from '../api/dashboard';
 import { adminQueries } from '../api/queries';
 import { AdminTabScroll } from '../components/AdminChrome';
@@ -53,7 +54,7 @@ export function DashboardTab() {
 
   useEffect(() => {
     if (!error) return;
-    const msg = error instanceof Error ? error.message : 'Nieznany błąd';
+    const msg = getErrorMessage(error, 'Nieznany błąd');
     toast.error(`Nie udało się załadować statystyk: ${msg}`);
   }, [error]);
 

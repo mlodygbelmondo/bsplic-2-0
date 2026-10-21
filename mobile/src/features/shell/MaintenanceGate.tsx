@@ -97,7 +97,7 @@ function MaintenanceScreen() {
 
   return (
     <View
-      accessibilityLabel="Maintenance"
+      accessibilityLabel="Przerwa techniczna"
       accessibilityViewIsModal
       style={[
         styles.page,

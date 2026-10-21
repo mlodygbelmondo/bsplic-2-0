@@ -6,6 +6,7 @@ import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { createStyles, useTheme } from '@/theme';
 import { Button, Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { authActions } from './auth-store';
 import { AuthField, type AuthFieldProps } from './AuthField';
 import { AuthCard, AuthShell } from './AuthShell';
@@ -13,7 +14,7 @@ import { normalizeEmail, validateAuthForm, type AuthFieldName, type AuthView } f
 
 type InputRef = ComponentRef<typeof TextInput>;
 
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Wystąpił błąd');
+const errorMessage = (err: unknown) => getErrorMessage(err, 'Wystąpił błąd');
 
 /**
  * Web `LoginPage`: login, registration and forgot-password views on the

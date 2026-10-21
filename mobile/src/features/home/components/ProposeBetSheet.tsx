@@ -13,6 +13,7 @@ import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { createStyles, useScheme, useTheme } from '@/theme';
 import { Button, Field, PressScale, SheetHeader, Text } from '@/ui';
+import { getErrorMessage } from '@/lib/errors';
 import { createBetProposal } from '../api/bet-proposals';
 import { categoriesQueryOptions } from '../api/categories';
 import { getCategoryLabel, getCategoryOptions } from '../logic/category-tree';
@@ -123,7 +124,7 @@ export function ProposeBetSheet() {
       router.back();
     } catch (error) {
       haptics.error();
-      toast.error(error instanceof Error ? error.message : 'Nie udało się wysłać propozycji');
+      toast.error(getErrorMessage(error, 'Nie udało się wysłać propozycji'));
     } finally {
       setLoading(false);
     }

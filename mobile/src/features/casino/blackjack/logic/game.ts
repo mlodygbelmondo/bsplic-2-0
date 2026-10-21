@@ -12,6 +12,8 @@ import type {
 } from '../api/blackjack';
 import { buildFinaleSteps, calculateHandValue, maskHandsForReveal } from './blackjackReveal';
 
+import { getErrorMessage } from '@/lib/errors';
+
 /**
  * Blackjack table state machine (port of the web `useBlackjack` hook) as a
  * framework-free controller: a vanilla zustand store plus actions. The server
@@ -160,7 +162,7 @@ function isNaturalDeal(next: BlackjackGameState): boolean {
 }
 
 function messageOf(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+  return getErrorMessage(error, fallback);
 }
 
 interface ActionSpec {

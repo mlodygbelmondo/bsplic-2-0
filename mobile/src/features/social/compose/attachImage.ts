@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errors';
 import { compressSocialImage, type SocialImageAttachment } from '../images';
 
 /** Social text limit (web `MAX_LENGTH` / `maxLength={500}`, UTF-16 units like the web). */
@@ -53,7 +54,7 @@ export async function attachSocialImage({
     return image;
   } catch (error) {
     haptics.error();
-    toast.error(error instanceof Error ? error.message : 'Nie udało się dodać zdjęcia');
+    toast.error(getErrorMessage(error, 'Nie udało się dodać zdjęcia'));
     return null;
   }
 }

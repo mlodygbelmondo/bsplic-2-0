@@ -1,6 +1,7 @@
 import type { StoreApi } from 'zustand';
 
 import type { RouletteBetRecord, RouletteBetType } from '@/types/database';
+import { getErrorMessage } from '@/lib/errors';
 
 import type { PlaceRouletteBetParams, RouletteTableSnapshot } from '../api/roulette';
 import { getRouletteCountdownTargetMs, getRouletteNextSyncDelayMs } from '../lib/roulette';
@@ -140,7 +141,7 @@ export function createRouletteTableController({
     })()
       .catch((error: unknown) => {
         setState({
-          tableMessage: error instanceof Error ? error.message : 'Nie udało się zsynchronizować stołu ruletki.',
+          tableMessage: getErrorMessage(error, 'Nie udało się zsynchronizować stołu ruletki.'),
         });
       })
       .finally(() => {

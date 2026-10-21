@@ -1,4 +1,5 @@
 import type { CouponItem } from '@/types/database';
+import { getErrorMessage } from '@/lib/errors';
 
 /**
  * Pure coupon placement rules, ported from the web's `useCouponPlacement`
@@ -201,7 +202,7 @@ export async function submitCoupon(
   } catch (error) {
     return {
       status: 'failed',
-      message: error instanceof Error ? error.message : 'Nie udało się postawić kuponu',
+      message: getErrorMessage(error, 'Nie udało się postawić kuponu'),
       placedBetIds,
       chargedStake,
     };

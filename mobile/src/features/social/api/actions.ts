@@ -146,7 +146,7 @@ export async function copyCouponToSlip(item: SocialFeedItem): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Nie udało się skopiować kuponu');
+    toast.error(getErrorMessage(error, 'Nie udało się skopiować kuponu'));
     return false;
   }
 }
