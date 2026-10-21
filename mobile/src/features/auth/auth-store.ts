@@ -1,0 +1,242 @@
+import type { Session, User } from '@supabase/supabase-js';
+import { create } from 'zustand';
+
+import { queryClient } from '@/lib/query-client';
+import { readJson, writeJson, kv } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
+import type { Profile } from '@/types/database';
+
+/**
+ * Auth state (port of the web's AuthContext) as a zustand store, so screens
+ * subscribe to exactly the slice they render: a balance change re-renders the
+ * balance chip, not every consumer of auth.
+ */
+
+type ProfileStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+interface CachedIdentity {
+  userId: string;
+  profile: Profile;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
+interface AuthState {
+  /** True until the first auth signal (stored session read or auth event). */
+  loading: boolean;
+  session: Session | null;
+  user: User | null;
+  profile: Profile | null;
+  profileStatus: ProfileStatus;
+  isAdmin: boolean;
+  isModerator: boolean;
+}
+
+const IDENTITY_CACHE_KEY = 'bsplic.auth.identity';
+const LAST_EMAIL_KEY = 'bsplic.auth.last-email';
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 6000;
+
+export const useAuthStore = create<AuthState>(() => ({
+  loading: true,
+  session: null,
+  user: null,
+  profile: null,
+  profileStatus: 'idle',
+  isAdmin: false,
+  isModerator: false,
+}));
+
+let profileRequestId = 0;
+const inFlightProfileFetches = new Map<string, Promise<void>>();
+
+function persistIdentity() {
+  const { user, profile, isAdmin, isModerator } = useAuthStore.getState();
+  if (user && profile) {
+    writeJson(IDENTITY_CACHE_KEY, { userId: user.id, profile, isAdmin, isModerator } satisfies CachedIdentity);
+  }
+}
+
+function clearProfileState() {
+  profileRequestId += 1;
+  inFlightProfileFetches.clear();
+  kv.remove(IDENTITY_CACHE_KEY);
+  useAuthStore.setState({ profile: null, profileStatus: 'idle', isAdmin: false, isModerator: false });
+}
+
+function fetchProfile(userId: string): Promise<void> {
+  const inFlight = inFlightProfileFetches.get(userId);
+  if (inFlight) return inFlight;
+
+  const requestId = ++profileRequestId;
+  if (!useAuthStore.getState().profile) {
+    useAuthStore.setState({ profileStatus: 'loading' });
+  }
+
+  const load = Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).single(),
+    supabase.from('user_roles').select('role').eq('user_id', userId),
+  ])
+    .then(([profileResult, rolesResult]) => {
+      if (profileRequestId !== requestId) return;
+      if (profileResult.error || !profileResult.data) {
+        throw profileResult.error ?? new Error('Profile not found');
+      }
+      const roles = rolesResult.data ?? [];
+      useAuthStore.setState({
+        profile: profileResult.data as Profile,
+        profileStatus: 'ready',
+        isAdmin: roles.some((row) => row.role === 'admin'),
+        isModerator: roles.some((row) => row.role === 'moderator'),
+      });
+      persistIdentity();
+    })
+    .catch((error: unknown) => {
+      console.warn('Profile fetch error:', error);
+      if (profileRequestId !== requestId) return;
+      // Keep a cached profile on screen (offline cold start); only surface an
+      // error when there is nothing to show.
+      if (!useAuthStore.getState().profile) {
+        useAuthStore.setState({ profileStatus: 'error' });
+      }
+    })
+    .finally(() => {
+      if (inFlightProfileFetches.get(userId) === load) {
+        inFlightProfileFetches.delete(userId);
+      }
+    });
+
+  inFlightProfileFetches.set(userId, load);
+  return load;
+}
+
+function applyAuthSession(session: Session | null) {
+  const previousUserId = useAuthStore.getState().user?.id;
+  const nextUser = session?.user ?? null;
+
+  if (nextUser) {
+    const patch: Partial<AuthState> = { session, user: nextUser, loading: false };
+    if (previousUserId !== nextUser.id) {
+      // Seed from the identity cache so a signed-in cold start renders the
+      // first screen immediately instead of waiting for the profile query.
+      const cached = readJson<CachedIdentity>(IDENTITY_CACHE_KEY);
+      if (cached?.userId === nextUser.id) {
+        Object.assign(patch, {
+          profile: cached.profile,
+          profileStatus: 'ready',
+          isAdmin: cached.isAdmin,
+          isModerator: cached.isModerator,
+        });
+      } else {
+        Object.assign(patch, { profile: null, profileStatus: 'loading', isAdmin: false, isModerator: false });
+      }
+    }
+    useAuthStore.setState(patch);
+    void fetchProfile(nextUser.id);
+  } else {
+    if (previousUserId) {
+      queryClient.clear();
+    }
+    clearProfileState();
+    useAuthStore.setState({ session: null, user: null, loading: false });
+  }
+}
+
+let started = false;
+
+/** Starts listening to Supabase auth. Called once from the root layout. */
+export function startAuth() {
+  if (started) return;
+  started = true;
+  let hasAuthSignal = false;
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    hasAuthSignal = true;
+    // Defer out of the auth callback (supabase-js deadlocks if another auth
+    // call runs inside it).
+    setTimeout(() => applyAuthSession(session), 0);
+  });
+
+  const timeoutId = setTimeout(() => {
+    if (!hasAuthSignal) {
+      console.warn('Supabase auth bootstrap timed out; showing logged-out UI.');
+      applyAuthSession(null);
+    }
+  }, AUTH_BOOTSTRAP_TIMEOUT_MS);
+
+  supabase.auth
+    .getSession()
+    .then(({ data: { session } }) => {
+      clearTimeout(timeoutId);
+      hasAuthSignal = true;
+      applyAuthSession(session);
+    })
+    .catch((error: unknown) => {
+      clearTimeout(timeoutId);
+      console.warn('Supabase auth bootstrap error:', error);
+      applyAuthSession(null);
+    });
+}
+
+export const authActions = {
+  async signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    kv.set(LAST_EMAIL_KEY, email);
+  },
+
+  async signUp(email: string, password: string, username: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { username } },
+    });
+    if (error) throw error;
+    kv.set(LAST_EMAIL_KEY, email);
+    return { requiresEmailConfirmation: !data.session };
+  },
+
+  async signOut() {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      // The SIGNED_OUT event clears state too; do it eagerly so the UI never
+      // shows the previous user's data after a failed network sign-out.
+      queryClient.clear();
+      clearProfileState();
+      useAuthStore.setState({ session: null, user: null });
+    }
+  },
+
+  async resetPassword(email: string) {
+    // Universal link: opens the app when installed, the PWA otherwise.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${env.webUrl}/reset-password`,
+    });
+    if (error) throw error;
+  },
+
+  async refreshProfile() {
+    const userId = useAuthStore.getState().user?.id;
+    if (userId) await fetchProfile(userId);
+  },
+
+  updateProfileBalance(balance: number) {
+    const { profile } = useAuthStore.getState();
+    if (!profile) return;
+    useAuthStore.setState({ profile: { ...profile, balance } });
+    persistIdentity();
+  },
+
+  readLastEmail(): string {
+    return kv.getString(LAST_EMAIL_KEY) ?? '';
+  },
+};
+
+// Selectors — prefer these over reading the whole store.
+export const useUser = () => useAuthStore((s) => s.user);
+export const useUserId = () => useAuthStore((s) => s.user?.id ?? null);
+export const useProfile = () => useAuthStore((s) => s.profile);
+export const useBalance = () => useAuthStore((s) => s.profile?.balance ?? 0);
+export const useIsAdmin = () => useAuthStore((s) => s.isAdmin);
+export const useIsModerator = () => useAuthStore((s) => s.isModerator);

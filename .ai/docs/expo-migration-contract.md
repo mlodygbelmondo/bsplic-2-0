@@ -1,160 +1,111 @@
-# BSPLIC Expo Migration Contract
+# BSPLIC Expo native rewrite — contract v2
 
-Status: approved by Piotr on 2026-07-21.
+Status: requested by Piotr on 2026-10-21. Replaces the v1 contract and the old `mobile/` port, which was deleted.
 
-This document is the authoritative reference for the Expo migration. Agents must read it before changing the mobile application. If implementation pressure conflicts with this contract, preserve the contract and report the blocker instead of silently reducing scope.
+This is the authoritative scope and acceptance reference for the native app in `mobile/`. Read it before changing anything there. When implementation pressure conflicts with it, keep the contract and report the blocker.
 
 ## Outcome
 
-- Build the most complete Expo migration achievable during an autonomous overnight run.
-- Process the entire production feature inventory; do not stop at a foundation, prototype, or MVP.
-- Preserve product behavior, business rules, roles, data, and the established mobile design with high 1:1 fidelity.
-- Native components may replace web components when they improve correctness or performance without redesigning the product.
-- Never claim full parity unless every inventory item is verified. Report every item as `complete`, `partial`, `blocked`, or `not started`.
+- A fresh Expo app with **100% feature parity** with the production PWA at phone size (the web layout below 1024 px wide), implemented natively and tuned for performance.
+- Same product: features, business rules, roles, data, Polish copy, brand, light/dark themes, casino art direction and motion character. Native components replace web ones wherever the platform does it better (tabs, stacks, sheets, menus, lists, gestures, haptics), without redesigning the product.
+- Parity is tracked per surface in `docs/expo-rewrite/PARITY.md` as `complete`, `partial`, `blocked` or `not started`. Never claim parity for an item that was not verified.
+- Per-surface web specs live in `docs/expo-rewrite/spec/*.md`. They are a map, not a substitute: when in doubt, read the web source under `src/` — it is the reference implementation.
 
-## Platforms and repository layout
+## Scope
 
-- Target iOS and Android.
-- Perform interactive QA only on iOS during this run to avoid exhausting the host machine. Keep Android code and configuration cross-platform and statically valid.
-- Keep the existing Vite/PWA application working from the repository root with no user-visible changes.
-- Create the Expo application under `mobile/`.
-- Put genuinely reusable platform-neutral code under `packages/shared/` only when extracting it does not regress the web application.
-- Use Expo managed workflow. Generate native directories temporarily for verification and do not commit them unless a dependency makes persistent native changes necessary.
+In scope: every production route and surface of the PWA, including registration (the web login page has it), password recovery, sportsbook, coupon, jackpot (card and draw), wallet (top-up, transfers, history), profile (own/public, avatar, badges, histories), replay, rankings, social (feed, posts, images, stories, comments, mentions, reactions, Eniu, YouTube/Spotify, deep links, coupon copying, sharing), casino hub, roulette, blackjack, slots, bonus campaigns, feature polls, in-app notifications, maintenance mode, connectivity state, and the full admin/moderator panel (dashboard, bets, create bet, AKO exclusions, proposals, categories, Eniu, bonus campaigns, feature polls, agent runs).
+
+Out of scope: dev-only routes (`/casino/roulette/dev`, `/dev/jackpot`), the unused magic-link API and dead `AuthModal`, the PWA service-worker update prompt and `document.title` (no native equivalent), push notifications, biometrics, Apple/Google sign-in, and any new product feature.
+
+## Platforms
+
+- iOS and Android from one codebase. Interactive QA runs on the iOS simulator only (host RAM); Android must stay statically valid (`expo export --platform android`, Expo Doctor).
+- Development builds (`expo run:ios`), not Expo Go: the app uses native modules (MMKV, Skia, keyboard controller, glass, fonts plugin).
+- `ios/` and `android/` are generated (CNG) and never committed or edited by hand.
+
+## Repository layout
+
+- `mobile/` — the Expo app. The Vite/PWA app at the repository root stays untouched.
+- `mobile/src/app/` — Expo Router routes only. Every other module lives outside it.
+- `mobile/src/features/<area>/` — feature code (api, hooks, components, logic) owned per area.
+- `mobile/src/ui/` — shared primitives. `mobile/src/lib/` — infrastructure. `mobile/src/theme/` — tokens and styling helpers.
+- Pure logic ported from the web (rules, formatters, parsers) is copied into the matching feature folder with its tests; do not import from the root `src/`.
+
+## Stack (binding)
+
+- Expo SDK 58, React Native 0.88 (New Architecture), React 19.3, React Compiler on, typed routes.
+- Navigation: Expo Router. `NativeTabs` (`expo-router/native-tabs`) for the five primary tabs, native stacks inside tabs, native `formSheet`/`modal`/`fullScreenModal` presentations for drawers, dialogs and viewers, `Stack.Protected` for auth gating.
+- Styling: React Native styles via `createStyles` from `@/theme` (styles built once per scheme). No NativeWind, no Tailwind runtime. Port CSS gradients with the native `backgroundImage` CSS-string style prop, shadows with `boxShadow` strings, `filter`/`mixBlendMode` where they help. Inter is embedded; select faces with `fontFamily: 'Inter'` + `fontWeight`.
+- Motion: Reanimated 4 on the UI thread (CSS-style keyframes/transitions API is allowed). No JS timers driving visual motion. Gestures: react-native-gesture-handler.
+- Graphics: `@shopify/react-native-skia` for wheels, confetti, charts, posters and effects plain views cannot do; `react-native-svg` + `lucide-react-native` for icons (same icon names as the web); SF Symbols (`expo-symbols`) for native tab/toolbar icons.
+- Glass: `expo-glass-effect` (iOS 26 Liquid Glass) with `expo-blur`/solid fallback; respect Reduce Transparency.
+- Lists: `@shopify/flash-list` v2 for every long or paginated list.
+- Images: `expo-image` (memory+disk cache, `recyclingKey` in lists); `expo-image-picker` + `expo-image-manipulator` for uploads.
+- Data: `@supabase/supabase-js` against the production project; TanStack Query v5 with the MMKV-persisted cache (`@/lib/query-client`); zustand for client state; `react-native-mmkv` storage; session encrypted at rest (`@/lib/storage` `secureKv`).
+- Feedback: `sonner-native` toasts (top-center, rich colors, 2200 ms default, same ids/durations as the web), `expo-haptics`, `expo-audio`.
+- Keyboard: `react-native-keyboard-controller`. Web content: `react-native-webview`. Sharing: native share sheet, `expo-sharing`, `expo-clipboard`.
+- Adding a dependency requires a reason in the commit message; install with `npx expo install`.
+
+## Navigation map
+
+| Web path | Native route file | Presentation |
+|---|---|---|
+| `/` | `src/app/(tabs)/(home)/index.tsx` | tab “Zakłady” |
+| `/social` | `src/app/(tabs)/social/index.tsx` | tab “Social” |
+| `/casino` | `src/app/(tabs)/casino/index.tsx` | tab “Gry” |
+| `/casino/roulette` | `src/app/(tabs)/casino/roulette.tsx` | push in Gry stack |
+| `/casino/blackjack` | `src/app/(tabs)/casino/blackjack.tsx` | push in Gry stack |
+| `/casino/slots/:game` | `src/app/(tabs)/casino/slots/[game].tsx` | push in Gry stack |
+| `/rankings` | `src/app/(tabs)/rankings/index.tsx` | tab “Rankingi” |
+| `/profile` | `src/app/(tabs)/profile/index.tsx` | tab “Profil” |
+| `/profile/:userId` | `src/app/profile/[userId].tsx` | push over tabs |
+| `/social/:itemType/:itemId` | `src/app/social/[itemType]/[itemId].tsx` | push over tabs |
+| `/replay` | `src/app/replay.tsx` | push over tabs |
+| `/jackpot/draw/:roundId` | `src/app/jackpot/draw/[roundId].tsx` | full-screen modal |
+| `/admin` | `src/app/admin/…` | push over tabs, own stack |
+| `/reset-password` | `src/app/reset-password.tsx` | public |
+| login / register / forgot | `src/app/sign-in.tsx` | public, replaces tabs when signed out |
+| header menu, top-up, wallet, notifications, coupon, propose bet, composers, reactors, story viewer, image viewer, stake drawer, slot rules | `src/app/sheets/…` | native form sheets / modals |
+
+Every supported web path must open the matching native screen from a universal link (`https://bsplic.vercel.app/...`) and from `bsplic://`.
+
+## Product rules
+
+- Polish copy verbatim from the web, including toasts, empty/error states and accessibility labels. Web uses raw Supabase error text in some places; keep that unless the web maps it.
+- Theme: light by default (web `readStoredTheme`), dark on toggle, stored preference. On phones the Social page uses its own light Facebook-like palette in both themes (`socialMobileColors`).
+- Header (web `Navbar`, mobile part): gradient bar with the italic “BSPLIC 2.0” wordmark, balance chip (opens top-up), notifications bell, menu button. Bottom tabs: Zakłady, Social, Gry, Rankingi, Profil, minimizing on scroll.
+- Roles: `isAdmin`/`isModerator` from `user_roles`; admin entry only for admins/moderators.
+- Live server state is authoritative: never show a cached live roulette round, blackjack game, jackpot draw or slot spin; always fetch fresh. Never assume timers or animations kept running while the app was in the background — resume from server state on foreground.
+- Offline: cached reads stay visible; wagering, casino, financial, social and admin writes are disabled with a clear message, never queued.
+- Realtime channels open only while their screen is focused and the app is active, and are always removed on blur/background/unmount.
+- Decorative infinite animations stop under `useLiteMotion()` (reduced motion or Low Power Mode); heavy glass/blur falls back to plain surfaces.
+- Accessibility: labels on icon buttons, 44 pt touch targets, Dynamic Type not breaking layouts, reduced motion honored.
+
+## Performance rules
+
+- 60/120 fps scrolling: FlashList with stable keys, memoized rows, `expo-image` with fixed sizes, no layout thrash in rows.
+- Subscribe narrowly: zustand selectors, query `select`, no context that re-renders the tree on every balance tick.
+- Cold start: the native splash hands over to the in-app boot overlay; a signed-in cold start renders the first screen from the cached identity and persisted query cache, then refreshes in the background.
+- `NativeTabs` mounts every tab eagerly: tab roots must defer heavy work (queries, realtime, images) until first focus.
+- Measure, don't guess: check the JS and UI thread FPS in the perf monitor on heavy screens (feed, bet list, roulette, blackjack, slots, jackpot draw).
+
+## Identity, links, auth
+
+- Display name `BSPLIC 2.0`, scheme `bsplic`, bundle id / package `pl.bsplic.app`, web fallback `https://bsplic.vercel.app`.
+- Universal Links / App Links for `bsplic.vercel.app`; activation needs the Apple Team ID, `apple-app-site-association`, `assetlinks.json` and Supabase redirect allow-list entries — document, don't fake.
+- Email/password login, registration, forgot password, password recovery via universal link, persistent session, logout. Sessions are not shared with the browser.
 
 ## Git and safety
 
-- Work on `codex/expo-migration`.
-- Make small logical checkpoint commits. Do not push.
-- Never commit credentials, secrets, local environment files, signing material, or test-account details.
-- The production Supabase project remains the backend.
-- New SQL migrations are allowed only when strictly required: create a new migration with tests, but do not apply it to production.
-- Operator CLI tools, season-reset scripts, and agent scripts remain non-mobile repository tools.
+- Branch `expo-native-rewrite` in its own worktree. Small logical commits. Never push.
+- Never commit secrets, `.env*.local`, signing material or test credentials (`.test-credentials.local.md`).
+- Production Supabase stays the backend. New SQL only if strictly required, as a new migration with tests, never applied to production.
+- QA on production data: low-value actions on the reusable test account are fine; admin QA must be reversible and cleaned up; never settle real bets, reset seasons or touch other users' data.
 
-## App identity and links
+## Definition of done (per surface)
 
-- Display name: `BSPLIC 2.0`.
-- Scheme: `bsplic`.
-- iOS bundle identifier and Android package: `pl.bsplic.app`.
-- Production web fallback: `https://bsplic.vercel.app`.
-- Configure Expo Router deep links, iOS Universal Links, and Android App Links so supported web paths open the installed app and otherwise remain on the PWA.
-- Keep `bsplic://` as a development and password-recovery fallback.
-- Prepare configuration and clearly document external activation steps that require Apple Team ID, signing, Vercel association files, Supabase redirect allow-list changes, or store credentials.
-
-## Authentication and storage
-
-- Include email/password login, persistent session, logout, and password recovery.
-- Do not include registration or magic-link login.
-- Store sensitive session material through SecureStore.
-- Store preferences, theme, coupon, cached read models, and local drafts in non-sensitive persistent storage.
-- Do not share sessions with the browser.
-
-## Visual scope
-
-- The running PWA at a mobile viewport is the visual reference.
-- Preserve both light and dark themes, Inter typography, BSPLIC colors, assets, spacing character, cards, casino art direction, and motion character.
-- Prefer NativeWind where it is stable and suitable, but use React Native styles or native components when they provide better fidelity or performance.
-- Preserve the existing primary bottom navigation exactly:
-  - Zaklady
-  - Social
-  - Ruletka
-  - Blackjack
-  - Rankingi
-- Keep profile, balance, top-up, transfers, theme, notifications, and logout in the native equivalent of the current header/menu.
-- Preserve the liquid-glass appearance, selected colors, rounding, blur, and scroll-hiding behavior. Use native glass where available and a faithful blur/solid fallback elsewhere.
-- Account for safe areas, keyboard avoidance, touch targets, reduced motion, accessibility labels, loading, error, empty, active, and offline states.
-- Do not add placeholder screens that pretend an unfinished feature works.
-
-## Production feature inventory
-
-Migrate every production UI capability:
-
-1. App shell, maintenance state, connectivity state, themes, providers, and role gates.
-2. Email/password login, password recovery, session refresh, and logout.
-3. Sportsbook home: categories, active/in-progress bets, sorting, filtering, pagination, realtime updates, and option selection.
-4. Coupon: persistence, single/AKO, exclusions, stake inputs, validation, secure placement, balance refresh, and copied social coupons.
-5. Wallet: balance, daily top-up, money transfer, and transfer history.
-6. Profile: own/public profile, avatar camera/gallery upload and compression, badges, statistics, histories, and sharing.
-7. Rankings: sportsbook/casino modes, sorting, metrics, and responsive presentation.
-8. Social: feed, posts, image uploads, stories, mentions, Eniu, comments, threads, reactions, reactor lists, filters, deep links, coupon copying, sharing, and realtime updates.
-9. YouTube and Spotify content through a safe inline WebView with an external-open fallback.
-10. Casino lobby.
-11. Roulette: server-authoritative table snapshot, realtime, countdown, placement, participants, history, spin presentation, audio, haptics, and social sharing.
-12. Blackjack: server-authoritative game actions, hit/stand/double/split/insurance, staged reveal, cards, audio, haptics, and celebration effects.
-13. Jackpot: home card, ticket purchase, polling, deep link, draw presentation, background/resume correctness, and reward claim.
-14. Bonus campaigns and feature polls.
-15. In-app realtime notifications, unread state, navigation, and sound preference. Do not add background push in this migration.
-16. Full native administrator and moderator UI: dashboard, bet management/creation, proposals, categories, Eniu, bonus campaigns, and feature polls.
-
-Do not migrate development-only roulette/jackpot routes. Do not add biometrics, Apple/Google login, push notifications, or other new product features.
-
-## Offline and lifecycle behavior
-
-- Cache previously loaded bets, profiles, rankings, social content, and histories for read-only offline viewing.
-- Persist the coupon and social drafts locally.
-- Do not queue wagering, casino, financial, reaction, or admin writes while offline. Clearly disable them and explain why.
-- On reconnect or foreground resume, refresh auth and resynchronize server-authoritative snapshots and realtime subscriptions.
-- Never assume roulette/jackpot timers or animations continued while the app was suspended. Resume from server state.
-
-## Media and motion
-
-- Support camera and photo library for profile/social images.
-- Crop/manipulate/compress natively while preserving the current upload limits and storage expectations.
-- Preserve casino and jackpot ordering, timing, result semantics, visual character, audio, and haptics. Frame-identical animation is not required.
-- Respect reduced-motion preferences.
-
-## Implementation order
-
-1. Expo scaffold, configuration, and shared foundations.
-2. Auth, providers, secure storage, persistence, networking, and deep links.
-3. Shell, themes, navigation, maintenance, connectivity, and common primitives.
-4. Sportsbook and coupon.
-5. Profile, rankings, wallet, and transfers.
-6. Social.
-7. Roulette.
-8. Blackjack.
-9. Jackpot, bonuses, and feature polls.
-10. Admin/moderator.
-11. Complete inventory audit, review fixes, and final QA.
-
-## Definition of done for a module
-
-A module is complete only when it:
-
-- uses the real Supabase contract;
-- handles loading, error, empty, offline, authentication, and applicable role states;
-- has complete navigation and no deceptive stubs;
-- preserves the established PWA design at mobile size;
-- has been manually exercised or covered by a credible test.
+A surface is `complete` only when it uses the real Supabase contract; handles loading, empty, error, offline, auth and role states; has full navigation with no fake stubs; matches the PWA at phone size in both themes; and was exercised on the iOS simulator or covered by a credible test.
 
 ## Verification
 
-Run as the environment permits:
-
-- dependency installation;
-- Expo Doctor;
-- TypeScript checking;
-- lint;
-- iOS export/bundle;
-- focused unit tests for migrated logic;
-- existing web lint/test/build after shared-code extraction;
-- manual iOS simulator walkthrough when a runtime is available;
-- side-by-side PWA mobile screenshots and iOS screenshots for completed visual surfaces.
-
-Do not run an Android emulator during this migration. Missing iOS runtime does not block implementation; report what was verified instead.
-
-After implementation, use an independent reviewer to inspect the full diff, feature inventory, correctness, secrets, web regressions, and reporting accuracy. Fix actionable findings before final delivery when possible.
-
-## QA data rules
-
-- Use the existing ignored test credentials without printing or committing them.
-- Normal low-value user actions are allowed on the reusable test account.
-- Reversible admin QA is allowed: record prior state, mark test data, and clean it up afterward.
-- Do not reset a season, settle production bets, make irreversible balance changes, or alter other users' data without a certain rollback path.
-
-## Autonomous execution and final report
-
-- The main agent may use at most two parallel subagents with disjoint file ownership and remains responsible for integration.
-- At a blocker, diagnose for a bounded period, checkpoint safe work, record the exact blocker, continue with independent inventory items, and return later if useful.
-- Do not stop until every inventory item is classified.
-- Existing unrelated defects should be documented, not broadened into refactors, unless the smallest tested fix is necessary to continue.
-- The final report must include changed files, logical commits, commands and results, manual QA evidence, reviewer findings, the complete status inventory, known risks, and every external/manual input still needed from Piotr.
+`npm run typecheck`, `npm run lint`, `npm test` (pure logic), `npx expo-doctor`, `npx expo export` for iOS and Android, iOS simulator walkthroughs with side-by-side PWA screenshots, and an independent review of the full diff before final delivery. Root web checks (`npm run lint`, `npm run build`) must keep passing.
