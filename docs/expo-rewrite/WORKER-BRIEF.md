@@ -46,7 +46,7 @@ You implement one area of the native app in `mobile/` with 1:1 parity to the PWA
 - `@/lib/connectivity` — `useIsOffline()`, `OFFLINE_WRITE_MESSAGE`. Disable wagering, casino, money, social and admin writes while offline and show that message; never queue writes.
 - `@/lib/motion` — `useLiteMotion()` (reduced motion or Low Power Mode): stop decorative infinite animations, drop heavy blur/glass.
 - `@/lib/haptics`, `@/lib/toast` (`toast` from sonner-native: same text, ids and durations as the web), `@/lib/format` (`formatMoney`, `formatOdds`, `pluralPl`), `@/lib/errors` (`getErrorMessage`), `@/lib/sheet-options`.
-- `@/features/shell/AppHeader` — `<AppHeader back? />`, the mobile navbar. Every signed-in screen renders it at the top, outside its scroll view (`back` on pushed screens: public profile, social item, replay, admin).
+- `@/features/shell/AppHeader` — `<AppHeader back? />`, the mobile navbar. Every signed-in screen renders it at the top, outside its scroll view (`back` on pushed screens without their own back control: public profile, social item, admin).
 
 ## Implementation rules
 

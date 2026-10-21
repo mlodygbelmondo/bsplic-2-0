@@ -54,7 +54,7 @@ export function ReplayScreen() {
 
   return (
     <ScreenBackground>
-      <AppHeader back />
+      <AppHeader />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
