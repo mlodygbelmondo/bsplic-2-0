@@ -2,6 +2,8 @@
 
 Target: phones (web layout below 1024px). Desktop-only parts are noted inline.
 
+Desktop-only (`lg:`): one occurrence, `ProfileBadgesSection.tsx:23` (`lg:grid-cols-3`, badges in 3 columns at 1024px and up). The `sm:` rules (640px and up) are noted inline in S3, S4 and S5.
+
 ## Files covered
 
 | Path | Lines |
@@ -28,7 +30,7 @@ Entry: route `/profile` (own) and `/profile/:userId` (public). `usePageTitle("Pr
 - Ref equals `user.id`: target = `user.id`, own = true.
 - Ref matches UUID regex `^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$` (case-insensitive): target = ref, no request.
 - Otherwise username: `profiles.select("id").ilike("username", ref).limit(1).maybeSingle()`; `data?.id ?? null`. `error` is ignored.
-- `resolvingTarget` starts `Boolean(ref)`; while true the page renders `null` (`:145`).
+- `resolvingTarget` starts `Boolean(ref)`; while true the page renders `null` (`:145`), with no Navbar and no loader. See Edge cases 11-12.
 - `isOwnProfile = !ref || (target !== null && target === user?.id)` (`:99-100`).
 - Own and not (`user` && `profile`) → `<Navigate to="/" />` (`:146`).
 
@@ -98,7 +100,7 @@ Copy: "Karta gracza", "Sportsbook", "Udostępnij profil", "Zysk", "Win rate", "S
   2. `currentStreak >= 3` → `na-fali`, "Na fali".
   3. `totalBets >= 25` → `weteran-kuponow`, "Weteran kuponów".
   4. else → `nowy-gracz`, "Nowy gracz".
-- `ProfilePage` feeds it `rankingStats ?? 0`s and `displayStreak`, so a missing stats row yields "Nowy gracz".
+- `ProfilePage` feeds it `rankingStats?.<field> ?? 0` and `displayStreak`. A missing stats row therefore yields zeros, and the archetype depends only on the streak: "Na fali" at 3 or more, otherwise "Nowy gracz".
 
 ### S4. Badges (`ProfileBadgesSection.tsx`, props `{badges: Badge[]}`)
 
@@ -147,7 +149,7 @@ Header row `mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-betw
 - Filtering is client-side (`deriveSportsbookCouponRows(visibleCoupons, filter)`) over the visible slice only. A filter can hide everything from the loaded set while `hasMore` still says more exist.
 - Body states:
   - `loadingCoupons` → `<HistorySkeleton />` (defined below in the file).
-  - `sportsbookHistoryError` → `<p class="text-sm text-destructive text-center py-4">` with the error text.
+  - `sportsbookHistoryError` → `<p class="text-sm text-destructive text-center py-4">` with "Nie udało się załadować historii zakładów" (`useProfileHistory.ts:143`).
   - No filtered rows → `<p class="text-sm text-muted-foreground text-center py-4">Brak zakładów</p>`.
   - Else → list `space-y-2` of `SportsbookCouponRow` (key = `coupon.id`).
 - Footer buttons (`mt-3 flex gap-2`), shown only when `!loading && !error && coupons.length > 0 && (expanded || coupons.length > 10 || hasMore)`:
@@ -229,7 +231,7 @@ All spread `PAGE_DATA_QUERY_OPTIONS` (from `src/lib/query-client`).
 | `sportsbookHistoryPreviewQuery(userId)` | `["profile", userId, "history", "sportsbook"]` | `get_user_coupon_history` | `{p_user_id, p_limit: 11, p_offset: 0}` | `{entries: first 10, hasMore: length > 10}` (`:93-110`) |
 | `casinoHistoryPreviewQuery(userId)` | `["profile", userId, "history", "casino"]` | `get_user_casino_history` | `{p_user_id, p_limit: 11, p_offset: 0}` | same; entries through `toCasinoHistoryEntries` (`:112-129`) |
 
-Constants: `HISTORY_PREVIEW_SIZE = 10`, fetch limit = 11 (`:11-12`).
+Constants: `HISTORY_PREVIEW_SIZE = 10` (`profileQueries.ts:11`), fetch limit = 11 (`profileQueries.ts:12`).
 
 Page-level wiring (`ProfilePage.tsx:108-121`):
 - badges: `enabled: Boolean(targetUserId)`.
@@ -270,7 +272,7 @@ Show-more logic:
 - Errors: `console.error` plus `toast.error("Nie udało się załadować kolejnych zakładów")`; casino: `toast.error("Nie udało się załadować kolejnych wpisów kasyna")`. `finally` resets the loading flag.
 - `collapse...()`: sets expanded = false only. Loaded "more" entries stay in memory, so re-expanding is instant.
 
-Constants: `HISTORY_BATCH_SIZE = 30`; `HISTORY_PREVIEW_SIZE = 10` (re-exported).
+Constants: `HISTORY_BATCH_SIZE = 30`, `HISTORY_BATCH_FETCH_LIMIT = 31` (`useProfileHistory.ts:24-25`); `HISTORY_PREVIEW_SIZE = 10` re-exported from `profileQueries.ts:11` (`useProfileHistory.ts:14`).
 
 ### localStorage keys
 None in the files covered here.
@@ -284,14 +286,62 @@ None in the files covered here.
 - Accepted input: any file whose `type` starts with `image/`. Input `accept="image/*"`.
 
 ### Display formatting
-- Date: `new Date(created_at).toLocaleDateString("pl-PL")` (dd.mm.yyyy style from Intl pl-PL; the dd.mm.yyyy output is standard for pl-PL but not verified against the runtime here).
+- Join date: `new Date(created_at).toLocaleDateString("pl-PL")` (`ProfilePage.tsx:152-154`). Expected dd.mm.yyyy on web; the pl-PL output on Hermes (Expo) is unverified and must be checked on device.
+- Badge date: `Intl.DateTimeFormat("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric" })` (`ProfileBadgesSection.tsx:8-14`). Throws `RangeError` on an invalid date, unlike `toLocaleDateString`, which returns "Invalid Date".
 - Balance: `Number(balance).toFixed(2)` + `" zł"`. Dot decimal, no thousands separator, not locale formatted.
 - Streak: own = `profile.current_streak`; public = `publicProfile.current_streak ?? 0`.
+
+### Coupon display (`src/features/coupons/display.ts`, sportsbook history rows only)
+- `roundMoney(x)` = `Math.round(x * 100) / 100`.
+- `deriveCouponStatus({ status, legs })`, first match wins:
+  1. Raw `refund` and (no legs, or every leg `refund`) → `refund`.
+  2. Any leg `lost` → `lost`.
+  3. Legs present and every leg `won`, `lost` or `refund`: all `refund` → `refund`; otherwise → `won` (won + refund = won).
+  4. Raw `won` or `lost` → that value.
+  5. Else `pending`.
+  The status line and the status filter both use this derived value. Casino rows skip this step.
+- `getDisplayedCouponOdds({ totalOdds, legs })`, first match wins:
+  1. More than one leg, at least one `refund` leg, and every leg has finite odds > 0 → product of leg odds with refund legs counted as 1.
+  2. Exactly one leg and its `oddsAtTime` > 0 → that odds.
+  3. `totalOdds` if > 0.
+  4. Else 1.
+- `getDisplayedCouponWin({ status, isAko, stake, displayedOdds, couponPayout, legs })`:
+  - `refund`: `couponPayout` if > 0; else `roundMoney(stake)` if > 0; else 0.
+  - Any status other than `won`: 0.
+  - AKO `won`: `couponPayout` if > 0; else `roundMoney(stake * displayedOdds)` if both > 0; else 0.
+  - Single `won`: `legs[0].legPayout` if > 0; else `roundMoney(stake * displayedOdds)` if both > 0; else `couponPayout` if > 0; else 0.
+
+### Sportsbook stats (season-scoped)
+Chain: `private.sportsbook_ranking_units` (`supabase/migrations/20260626111524_global_season_reset.sql:731-798`) → `private.get_sportsbook_stats` (`supabase/migrations/20260602130000_performance_optimizations.sql:106-141`) → `get_user_stats` / `get_public_profile`. Both unit branches filter on `private.get_active_season_started_at()`.
+- Unit = one coupon with `total_odds > 1` (season filter on `coupons.created_at`), or one standalone bet (`placed_bets.coupon_id` NULL, or coupon `total_odds <= 1`; season filter on `placed_bets.created_at`). A coupon with `total_odds > 1` counts once regardless of leg count; a coupon with `total_odds <= 1` counts once per leg. The SQL AKO test (`total_odds > 1`) differs from the client test (`legs.length > 1`).
+- Coupon unit result: any leg `lost` → `lost`; all legs `refund` → `refund`; all legs `won`/`lost`/`refund` → `won`; else `pending`.
+- Coupon unit profit (rounded to 2 dp): `lost` → -stake; `refund` → 0; `won` → `COALESCE(NULLIF(payout, 0), ROUND(stake * total_odds, 2)) - stake`; `pending` → 0.
+- Standalone unit profit (rounded to 2 dp): `won` → `COALESCE(payout, 0) - stake` (NULL payout gives -stake); `lost` → -stake; else 0.
+- `total_bets` = count of all units, including `pending` and `refund`. `won_bets` / `lost_bets` = count of unit results `won` / `lost`.
+- `win_rate` = `ROUND(won / (won + lost) * 100, 1)`, on a 0-100 scale; 0 when there are no resolved units. Pending and refund units are excluded.
+- `total_profit` = `ROUND(SUM(profit), 2)`; 0 when there are no units.
+- Client: tile "Kupony" = `totalBets`, "Wygrane" = `wins` (S3).
+
+### Badges (triggers and awards)
+Migration refs are to `supabase/migrations/`; the trigger functions are in the season reset migration (`20260626111524_global_season_reset.sql`) unless noted.
+- `placed_bets` INSERT → `check_badges_on_bet_insert` (`:316-378`): `debiutant` (first season bet), `wieloryb` (stake >= 500), `kuponista` (`coupon_id` not NULL), `ryzykant` (coupon with >= 5 legs), `multi_fan` (>= 10 distinct `coupon_id` in season), `wszechstronny` (>= 4 distinct `category_id` in season).
+- `placed_bets` INSERT → `update_user_streak()` (`20260314120000_streaks_and_badges.sql:26-75`): `staly_bywalec` at streak >= 7, `legenda` at streak >= 30. Awarded live on every insert, not only by backfill.
+- `placed_bets` UPDATE when `result` changes → `check_badges_on_bet_result` (`:380-480`): `trafiony` (first season `won`), `goraca_passa` (3 consecutive `won`), `nie_do_zatrzymania` (5), `mistrz_serii` (10), `pierwszy_tysiac` (sum of `placed_bets.payout` over season `won` rows > 1000; gross, not profit; `:466`), `analityk` (>= 20 resolved rows and won/resolved > 0.60, counted per `placed_bets` row; `:477`).
+- `bet_proposals` UPDATE to `accepted` (`trg_badge_proposal`) → `check_badge_on_proposal_accept` (`20260524090000_agent_bet_proposal_source.sql:22-31`): `pomyslodawca`, human-sourced proposals only (`proposal_source` NULL or `human`).
+- `award_badge` is idempotent (EXISTS check, then `INSERT ... ON CONFLICT DO NOTHING`).
+- `backfill_streaks_and_badges` is EXECUTE for `service_role` only (`:728-729`). No app caller: references are the generated types (`src/integrations/supabase/types.ts`, `mobile/src/lib/database.types.ts`) and the grant assertions in `src/features/season-reset/seasonResetMigration.test.ts`.
+- No cron job writes `current_streak` or badges.
+- Badge list: `public.get_public_badges` (SECURITY INVOKER; `check_profile_access` false → `[]`) → `private.get_public_badges_for_rpc` (SECURITY DEFINER, `:1412-1442`), which returns only rows with `unlocked_at >= season start`, newest first. Own and public profiles both use this list.
+
+### History paging
+- Preview (sportsbook and casino): RPC limit 11 (`HISTORY_PREVIEW_FETCH_LIMIT`), show 10 (`HISTORY_PREVIEW_SIZE`); `hasMore` = 11 rows came back.
+- Show more: RPC limit 31 (`HISTORY_BATCH_FETCH_LIMIT`) at offset = current merged length; append 30 (`HISTORY_BATCH_SIZE`); `hasMore` = 31 rows came back.
+- Expanding a list that already has more than 10 entries makes no request (S5, `showMore`).
 
 ## Edge cases & gotchas
 
 1. **Username lookup error or no match hangs on loader.** If the username resolves to `null` (or the lookup errors), `targetUserId` is `null`, so `isOwnProfile` is `false` and `publicQuery` is disabled. A disabled query with no data reports `isPending === true` in TanStack Query v5, so `loadingProfile` stays true and the page shows "Wczytywanie profilu..." indefinitely. No "not found" state exists in this file. (Verify against installed TanStack version before relying on it.)
-2. **Non-existent UUID**: `publicProfile` is `null` with `isPending` false. The page renders the header with name `...`, empty date, zero stats, and the "Profil publiczny" badge. No explicit missing-user state.
+2. **Missing or private user renders an empty profile, not a not-found state.** `get_public_profile` returns `'{}'` (not null) when the user is missing or `check_profile_access` denies access. `publicQuery.data` is therefore the truthy object `{}`, so `publicProfile` is `{}` and the public branch runs: name `...`, join date "Invalid Date" on web (`new Date(undefined)`), stats `NaN` (`Number(undefined)`; `??` does not catch NaN), so the hero shows "NaN zł", "NaN%", "NaN" and "NaN". Archetype "Nowy gracz", streak 0, and the "Profil publiczny" badge all show. Expected from the code, not device-verified. Missing and private profiles look identical.
 3. **`avatarOverrideUrl` is not reset** when `userRef` changes while the component stays mounted. After uploading on own profile, navigating to another profile in the same mount shows the override avatar (`displayAvatarUrl` prefers it).
 4. **Orphaned storage object**: the file is uploaded before the `profiles` update. If the update fails, the blob remains. Old avatar files are never deleted.
 5. **Raw Supabase error text** from storage/profile update is shown in toasts (`error.message`), not localized.
@@ -299,7 +349,28 @@ None in the files covered here.
 7. Username matching uses `ilike` without escaping `%` and `_` wildcards.
 8. `displayName.charAt(0)` for the fallback yields `.` while the name is `...`.
 9. Input `disabled` during upload; value is reset in `finally`, so re-selecting the same file works.
+10. **Streak goes stale.** `current_streak` changes only on a bet insert (`update_user_streak`: same day no change, yesterday +1, otherwise reset to 1) and in the season reset. No read-time decay exists and no cron writes it. A user who stops betting keeps the old `Seria` tile, and the "Na fali" archetype while profit is not positive, until the next bet. The streak counts betting days, not wins.
+11. **Blank screen during resolution.** `resolvingTarget` starts true whenever a ref is present, so the page returns `null` (`ProfilePage.tsx:145`) until the target effect clears it. The result is a blank screen with no Navbar, no loader and no splash hold. For username refs this lasts until the `profiles` lookup settles.
+12. **Stale profile on in-place navigation.** If the route stays mounted and `userId` changes to a username, `resolvingTarget` is not set back to true and `resolvedTargetUserId` keeps the previous ID until the new lookup returns. The previous user's header, stats and history stay on screen during the lookup. If the previous target was the signed-in user, own-only controls (balance, avatar upload) stay enabled too.
+13. **Own-profile zero flash.** Own stats load separately (`profileStatsQuery`). Until they arrive `rankingStats` is null and the hero shows zeros: "+0.00 zł", "0.0%", "0", "0". The own profile has no loader; only the public profile does. Cached data (`PAGE_DATA_QUERY_OPTIONS`) avoids this on repeat visits.
+14. **"Na fali" beside zero tiles.** With no stats (edge 13), or a zero stats row, and streak >= 3, the archetype is "Na fali" while the profit and tiles show zero. Rule 2 applies because profit is not > 0.
+15. **`Kupony` counts pending and refund units.** `Kupony` = `total_bets`, which counts every unit (see Business rules). A new pending bet raises it at once. Refund units count but add 0 profit. Win rate ignores them. A coupon with `total_odds > 1` is one unit whatever its leg count.
+16. **Payout fallback differs between SQL and client.** Stats use stored `total_odds` (AKO) and `placed_bets.payout` (standalone). History rows use `displayedOdds`, which excludes refund legs, and `leg_payout` or stake * odds for standalone bets. When the payout is NULL or 0: an AKO won with a refund leg gets `stake * total_odds` in stats but `stake * displayedOdds` in history, and these differ. A standalone won bet with NULL payout gets profit -stake in stats but shows stake * odds in history. With a stored payout the two agree.
+17. **Badge catalog wording differs from the triggers.** `kuponista` says "Pierwszy kupon AKO" but triggers on any bet with a non-null `coupon_id`. `multi_fan` says "10 kuponów AKO" but counts 10 distinct `coupon_id` values with no leg-count check. `ryzykant` says "Kupon AKO z 5+ wydarzeniami" and the trigger checks for a coupon with >= 5 legs.
+18. **`pierwszy_tysiac` uses gross payout.** The trigger sums `placed_bets.payout` over season `won` rows (stake included). The catalog says "Łączne wygrane powyżej 1000 zł", and the stats profit is net. If AKO legs carry NULL `payout`, they add nothing to the sum (open question 4).
+19. **`formatBadgeDate` throws on an invalid date.** `Intl.DateTimeFormat.format` throws `RangeError` for an invalid `unlocked_at`. `ProfileBadgesSection.tsx:8-14` has no guard. The RPC returns valid timestamps today, so this is a defensive gap. Error-boundary coverage was not checked.
+20. **Filter can hide every row while "Pokaż więcej" stays.** The sportsbook filter runs over the visible slice only: the first 10 when collapsed, all loaded entries when expanded. With "Wygrane" or any other filter, the list can show "Brak zakładów" while `hasMore` keeps "Pokaż więcej" visible. Each click loads 30 more, and the filter applies only to what has loaded.
+21. **Show-more entries are stale and offset-paged.** Entries loaded by "Pokaż więcej" live in component state (`moreCoupons`), not in the React Query cache, so background refreshes never update them. A pending coupon loaded by show-more keeps showing "W toku" after it resolves, until the page remounts or `targetUserId` changes. Entries still inside the preview window refresh normally. Paging uses the merged length as offset, so new bets shift the server rows and the next batch repeats some entries. `mergeById` drops the duplicates, keeping the preview copy.
+22. **Own profile while auth is loading.** `if (isOwnProfile && (!user || !profile))` returns `<Navigate to="/" />` (`ProfilePage.tsx:146`). If `/profile` renders before AuthContext has restored the session, `user` and `profile` are null and the page redirects to `/`. Whether the route guard prevents this was not checked (AuthContext not read).
 
 ## Open questions
 
-(to be extended)
+1. **Disabled-query `isPending`** (edge 1): the public-profile loader depends on TanStack Query v5 reporting `isPending` for a disabled query with no data. Not checked; `node_modules` is absent in this worktree. Check the installed version and the `publicQuery` options.
+2. **Badge wording** (edge 17): for `kuponista`, `multi_fan` and `ryzykant`, catalog text and trigger rules differ. Which one is intended?
+3. **`analityk` vs displayed win rate** (edge 15): the badge counts `placed_bets` rows, the tile counts units. Is that intended?
+4. **AKO leg payouts**: is `placed_bets.payout` set for AKO legs? `pierwszy_tysiac` sums it (edge 18). Not verified.
+5. **Payout fallback** (edge 16): when `payout` is NULL or 0, which is authoritative, stored `total_odds` (stats) or displayed odds (history)? Standalone bets are the clearest case.
+6. **Streak decay** (edge 10): should the streak decay on read after a missed betting day? No code does it today.
+7. **Pre-season badge index**: `badges_user_badge_preseason_unique (user_id, badge_key)` (`supabase/migrations/20260626111524_global_season_reset.sql:65-80`) may block re-award of a badge in a later season. Not traced through the reset code.
+8. **Auth-loading redirect** (edge 22): does the route guard stop `/profile` from rendering before auth resolves? AuthContext not read.
+9. **Device checks** (Expo): pl-PL date output on Hermes (Display formatting), blank resolving state (edge 11), in-place navigation stale target (edge 12), NaN hero for a missing user (edge 2).
