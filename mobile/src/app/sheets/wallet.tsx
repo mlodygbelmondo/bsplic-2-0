@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { WalletSheet } from '@/features/transfers/WalletSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="wallet" />;
+  return <WalletSheet />;
 }
