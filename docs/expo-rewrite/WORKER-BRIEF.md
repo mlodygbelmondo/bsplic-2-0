@@ -63,6 +63,13 @@ You implement one area of the native app in `mobile/` with 1:1 parity to the PWA
 - **Assets**: web images from `public/` are in `mobile/assets/images/` (casino, jackpot, badges, maintenance). If you need another asset from `public/`, copy it into `mobile/assets/images/<area>/` and list it in your report.
 - **Performance**: no inline object styles in hot rows, no context that re-renders the tree, zustand selectors, `React.memo` rows where props are stable.
 
+## Platform pitfalls found on the simulator
+
+- **Form sheet roots**: give the outermost view of every `/sheets/*` screen `collapsable={false}`. Otherwise react-native-screens (iOS 26, Fabric) finds the ScrollView directly in the sheet and places it at the top, over the header.
+- **Animated components never get function styles**: an `Animated.createAnimatedComponent(Pressable)` with `style={({ pressed }) => …}` loses `backgroundImage` and `boxShadow`. Use `PressScale` from `@/ui` (it resolves pressed styles itself) or a plain `Pressable`.
+- **Italics**: iOS does not synthesize italics for Inter. Use `Text italic` or `fauxItalic` from `@/theme`, never `fontStyle: 'italic'`.
+- **Realtime**: `useRealtimeChannel` gives every subscription a unique topic; fixed names are fine.
+
 ## Final report (your last message)
 
 Keep it short and factual:
