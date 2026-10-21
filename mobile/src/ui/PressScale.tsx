@@ -37,7 +37,11 @@ export function PressScale({
         scale.set(withTiming(1, { duration: 150 }));
         onPressOut?.(event);
       }}
-      style={(state: PressableStateCallbackType) => [typeof style === 'function' ? style(state) : style, animatedStyle]}
+      style={
+        typeof style === 'function'
+          ? (state: PressableStateCallbackType) => [style(state), animatedStyle]
+          : [style, animatedStyle]
+      }
       {...props}
     />
   );
