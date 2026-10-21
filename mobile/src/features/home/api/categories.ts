@@ -20,7 +20,7 @@ export const categoriesQueryOptions = () =>
     ...PAGE_DATA_QUERY_OPTIONS,
   });
 
-function toCategoryMap(categories: Category[]): Record<string, Category> {
+export function toCategoryMap(categories: Category[]): Record<string, Category> {
   const map: Record<string, Category> = {};
   categories.forEach((category) => {
     map[category.id] = category;

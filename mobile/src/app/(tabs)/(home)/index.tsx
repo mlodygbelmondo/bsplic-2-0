@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { HomeScreen } from '@/features/home/components/HomeScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Zakłady" />;
+  return <HomeScreen />;
 }

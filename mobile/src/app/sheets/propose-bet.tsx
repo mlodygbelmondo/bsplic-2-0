@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { ProposeBetSheet } from '@/features/home/components/ProposeBetSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="propose-bet" />;
+  return <ProposeBetSheet />;
 }
