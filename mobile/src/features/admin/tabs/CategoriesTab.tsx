@@ -21,7 +21,7 @@ import {
 import { ColorField } from '../b/components/ColorField';
 import { FormModal } from '../b/components/FormModal';
 import { AdminCard, FormField, Input, OfflineNotice } from '../b/components/primitives';
-import { SelectField } from '../b/components/SelectField';
+import { SelectField } from '../components/SelectField';
 import { useAdminWriteGuard, useQueryErrorToast } from '../b/hooks';
 import {
   CATEGORY_PAGE_SIZE,

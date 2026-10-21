@@ -3,6 +3,7 @@ import { ListPlus, Plus, Power, Trash2, Vote } from 'lucide-react-native';
 import { memo, useState, type ReactNode } from 'react';
 import { Alert, View } from 'react-native';
 
+import { toInputDateTime } from '@/lib/date-input';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/lib/toast';
 import { createStyles, useTheme, type Colors } from '@/theme';
@@ -13,7 +14,7 @@ import {
   createFeaturePoll,
   deactivateFeaturePoll,
 } from '../b/api/feature-polls';
-import { DateTimeField } from '../b/components/DateTimeField';
+import { DateTimeField } from '../components/DateTimeField';
 import {
   AdminCard,
   CheckboxRow,
@@ -212,8 +213,8 @@ export function FeaturePollsTab() {
         <FormField label="Zakończenie">
           <DateTimeField
             accessibilityLabel="Zakończenie"
-            value={form.expiresAt}
-            onChange={(expiresAt) => update({ expiresAt })}
+            value={new Date(form.expiresAt)}
+            onChange={(date) => update({ expiresAt: toInputDateTime(date) })}
           />
         </FormField>
 

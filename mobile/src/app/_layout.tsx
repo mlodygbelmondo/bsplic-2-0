@@ -1,4 +1,5 @@
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { setAudioModeAsync } from 'expo-audio';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -28,6 +29,9 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ fade: true, duration: 200 });
 initBoot();
 startAuth();
+// Casino and notification sounds follow the silent switch and mix with the
+// player's music, like web audio in iOS Safari.
+void setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => undefined);
 
 export default function RootLayout() {
   return (

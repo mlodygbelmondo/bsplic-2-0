@@ -3,6 +3,7 @@ import { BadgePlus, Power } from 'lucide-react-native';
 import { memo, useState } from 'react';
 import { Alert, View } from 'react-native';
 
+import { toInputDateTime } from '@/lib/date-input';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/lib/toast';
 import { createStyles, useTheme, type Colors } from '@/theme';
@@ -13,7 +14,7 @@ import {
   createBonusCampaign,
   deactivateBonusCampaign,
 } from '../b/api/bonus-campaigns';
-import { DateTimeField } from '../b/components/DateTimeField';
+import { DateTimeField } from '../components/DateTimeField';
 import { AdminCard, FormField, Input, OfflineNotice, Pill, TextArea } from '../b/components/primitives';
 import { useAdminWriteGuard, useQueryErrorToast } from '../b/hooks';
 import {
@@ -138,15 +139,15 @@ export function BonusCampaignsTab() {
         <FormField label="Start">
           <DateTimeField
             accessibilityLabel="Start"
-            value={form.startsAt}
-            onChange={(startsAt) => update({ startsAt })}
+            value={new Date(form.startsAt)}
+            onChange={(date) => update({ startsAt: toInputDateTime(date) })}
           />
         </FormField>
         <FormField label="Wygaśnięcie">
           <DateTimeField
             accessibilityLabel="Wygaśnięcie"
-            value={form.expiresAt}
-            onChange={(expiresAt) => update({ expiresAt })}
+            value={new Date(form.expiresAt)}
+            onChange={(date) => update({ expiresAt: toInputDateTime(date) })}
           />
         </FormField>
 

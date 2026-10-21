@@ -2,16 +2,17 @@ import { Plus, X } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
 
 import { getCategoryLabel, getCategoryOptions } from '@/features/home/logic/category-tree';
+import { toInputDateTime } from '@/lib/date-input';
 import { createStyles, useTheme } from '@/theme';
 import type { Category } from '@/types/database';
 import { Button, Text } from '@/ui';
 import type { EditableBetType } from '../../constants';
 import { lockEditableOptionsByType } from '../../helpers';
 import { hasFixedOptionCount, type ProposalEditor } from '../logic/proposal-review';
-import { DateTimeField } from './DateTimeField';
+import { DateTimeField } from '../../components/DateTimeField';
 import { FormModal } from './FormModal';
 import { FormField, FormLabel, Input } from './primitives';
-import { SelectField, type SelectOption } from './SelectField';
+import { SelectField, type SelectOption } from '../../components/SelectField';
 
 const BET_TYPE_OPTIONS: SelectOption<EditableBetType>[] = [
   { value: 'single', label: 'Single' },
@@ -93,8 +94,8 @@ export function ProposalEditorModal({
           <FormField label="Data zakończenia">
             <DateTimeField
               accessibilityLabel="Data zakończenia propozycji"
-              value={editing.endsAt}
-              onChange={(endsAt) => onChange({ ...editing, endsAt })}
+              value={new Date(editing.endsAt)}
+              onChange={(date) => onChange({ ...editing, endsAt: toInputDateTime(date) })}
             />
           </FormField>
 
