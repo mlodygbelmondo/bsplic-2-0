@@ -23,7 +23,7 @@ import { useSocialFeed } from '../hooks/useSocialFeed';
 import { useSocialRealtimeFeed } from '../hooks/useSocialRealtimeFeed';
 import { FILTER_EMPTY_TITLES, getStoryProfiles, parseFeedFilter, type FeedFilter } from '../lib/feedList';
 import { getFeedItemKey } from '../lib/routes';
-import { getNextScrollChromeState, type ScrollChromeState } from '../lib/scrollChrome';
+import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { SocialStories } from '../stories/SocialStories';
 import { createFeedChromeStore, patchFeedChrome, type FeedChromeStore } from './feedChrome';
 import { createFeedVisibilityStore, FeedVisibilityContext } from './feedVisibility';

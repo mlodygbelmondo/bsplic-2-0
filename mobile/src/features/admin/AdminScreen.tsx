@@ -12,7 +12,7 @@ import { AdminChromeContext, AdminTabScroll, type AdminChrome } from './componen
 import { ConfettiOverlay } from './components/Confetti';
 import { MoreSections } from './components/MoreSections';
 import type { AdminTab } from './constants';
-import { getNextScrollChromeState, type ScrollChromeState } from './scroll-chrome';
+import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { AgentRunsTab } from './tabs/AgentRunsTab';
 import { BonusCampaignsTab } from './tabs/BonusCampaignsTab';
 import { CategoriesTab } from './tabs/CategoriesTab';

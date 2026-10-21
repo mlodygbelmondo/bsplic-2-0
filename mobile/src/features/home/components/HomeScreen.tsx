@@ -27,7 +27,7 @@ import { homePreferencesActions, useHomePreferences } from '../hooks/use-home-pr
 import { useHomeRealtime } from '../hooks/use-home-realtime';
 import { buildBetSections } from '../logic/bet-sections';
 import { getCategoryFilterIds } from '../logic/category-tree';
-import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '../logic/scroll-chrome';
+import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { BetFeedList, buildHomeRows, NO_ROWS, SKELETON_ROWS, type HomeRow } from './BetFeedList';
 import { HomeFilterBar } from './HomeFilterBar';
 

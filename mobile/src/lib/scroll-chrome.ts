@@ -1,5 +1,5 @@
 /**
- * Port of the web `src/lib/scroll-chrome.ts`: hides the list toolbar on a
+ * Port of the web `src/lib/scroll-chrome.ts` (home, Social and admin): hides the toolbar on a
  * deliberate downward scroll and shows it again on a deliberate upward one.
  * Runs as a worklet on the UI thread (also callable from JS).
  */
