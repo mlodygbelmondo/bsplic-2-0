@@ -73,9 +73,11 @@ export function getDrumFaceMatrix(
   angleDegrees: number,
   radius: number,
   renderScale: number,
-  perspective = DRUM_PERSPECTIVE,
+  perspectiveOverride?: number,
 ): number[] {
   'worklet';
+  // Default inside the body: worklets do not capture constants used in default parameters.
+  const perspective = perspectiveOverride ?? DRUM_PERSPECTIVE;
   const radians = (angleDegrees * Math.PI) / 180;
   const c = Math.cos(radians);
   const s = Math.sin(radians);
@@ -89,7 +91,8 @@ export function getDrumFaceMatrix(
 }
 
 /** `backface-visibility: hidden`: a face shows while its front points at the eye. */
-export function isDrumFaceFrontFacing(angleDegrees: number, radius: number, perspective = DRUM_PERSPECTIVE): boolean {
+export function isDrumFaceFrontFacing(angleDegrees: number, radius: number, perspectiveOverride?: number): boolean {
   'worklet';
+  const perspective = perspectiveOverride ?? DRUM_PERSPECTIVE;
   return perspective * Math.cos((angleDegrees * Math.PI) / 180) > radius;
 }

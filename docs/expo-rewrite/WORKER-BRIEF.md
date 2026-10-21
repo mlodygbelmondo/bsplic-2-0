@@ -69,6 +69,8 @@ You implement one area of the native app in `mobile/` with 1:1 parity to the PWA
 - **Animated components never get function styles**: an `Animated.createAnimatedComponent(Pressable)` with `style={({ pressed }) => …}` loses `backgroundImage` and `boxShadow`. Use `PressScale` from `@/ui` (it resolves pressed styles itself) or a plain `Pressable`.
 - **Italics**: iOS does not synthesize italics for Inter. Use `Text italic` or `fauxItalic` from `@/theme`, never `fontStyle: 'italic'`.
 - **Realtime**: `useRealtimeChannel` gives every subscription a unique topic; fixed names are fine.
+- **Worklet default parameters**: a worklet does not capture module constants used in default parameter values (`perspective = DRUM_PERSPECTIVE` crashes on the UI thread). Resolve defaults inside the body.
+- **Dialog close buttons**: the shadcn `data-[state=open]:bg-accent` on `DialogPrimitive.Close` never applies on the web (the button has no `data-state`); do not give native close buttons a background.
 
 ## Final report (your last message)
 

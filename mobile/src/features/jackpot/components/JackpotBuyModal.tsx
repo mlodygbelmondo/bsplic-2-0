@@ -332,7 +332,6 @@ const useStyles = createStyles(({ colors, radius }) => ({
     right: 16,
     borderRadius: radius.sm,
     opacity: 0.7,
-    backgroundColor: colors.accent,
   },
   closePressed: { opacity: 1 },
 }));
