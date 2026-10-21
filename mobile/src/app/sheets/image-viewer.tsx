@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { ImageViewer } from '@/features/social/components/ImageViewer';
 
 export default function Screen() {
-  return <RoutePlaceholder name="image-viewer" />;
+  return <ImageViewer />;
 }

@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { ReactorsSheet } from '@/features/social/components/ReactorsSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="reactors" />;
+  return <ReactorsSheet />;
 }

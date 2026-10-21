@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { SocialScreen } from '@/features/social/components/SocialScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Social" />;
+  return <SocialScreen />;
 }
