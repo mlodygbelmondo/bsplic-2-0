@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { NotFoundScreen } from '@/features/shell/NotFoundScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="404" />;
+  return <NotFoundScreen />;
 }

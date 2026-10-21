@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { SignInScreen } from '@/features/auth/SignInScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Logowanie" />;
+  return <SignInScreen />;
 }

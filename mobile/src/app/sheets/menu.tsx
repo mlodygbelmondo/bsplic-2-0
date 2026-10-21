@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { MenuSheet } from '@/features/shell/MenuSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="menu" />;
+  return <MenuSheet />;
 }

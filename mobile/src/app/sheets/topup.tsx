@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { TopupSheet } from '@/features/shell/TopupSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="topup" />;
+  return <TopupSheet />;
 }

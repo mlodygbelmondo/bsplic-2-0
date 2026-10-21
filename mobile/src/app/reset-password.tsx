@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { ResetPasswordScreen } from '@/features/auth/ResetPasswordScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Reset hasła" />;
+  return <ResetPasswordScreen />;
 }

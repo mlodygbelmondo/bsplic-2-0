@@ -1,3 +1,4 @@
+import { usePathname } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import { useAuthStore } from '@/features/auth/auth-store';
@@ -12,6 +13,8 @@ export function BootController() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const profileReady = useAuthStore((s) => s.profileStatus === 'ready' || s.profileStatus === 'error');
   const previousUserId = useRef<string | null | undefined>(undefined);
+  // A recovery link signs the user in on the reset form; never cover it.
+  const onResetPassword = usePathname() === '/reset-password';
 
   useEffect(() => {
     markAppMounted();
@@ -30,12 +33,12 @@ export function BootController() {
     if (loading || !userId || previous === userId) return;
     // Signed in without a cold start (login form): replay the overlay while
     // the first screen loads its data.
-    if (previous === null && !isBootVisible()) {
+    if (previous === null && !isBootVisible() && !onResetPassword) {
       showBootSplash();
     }
     setBootPhase('assets');
     setBootProgress(0.6);
-  }, [loading, userId]);
+  }, [loading, userId, onResetPassword]);
 
   return null;
 }
