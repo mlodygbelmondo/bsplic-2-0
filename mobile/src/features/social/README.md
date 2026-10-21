@@ -62,10 +62,10 @@ Every write goes through the RPCs: `create_social_post`, `add_social_comment`, `
 - Profile links prefetch on press-in with `prefetchPublicProfile(userId)` from `@/features/profile/api/profileQueries` (skipped for the viewer's own id). Comment authors in `CommentThread` should do the same. Mentions only carry a username, so they are not prefetched.
 - Sheets: `/sheets/reactors` takes `postId | couponId | casinoShareId | commentId` and `initial` (see `getReactorsRouteParams`). `/sheets/image-viewer` takes `uri`.
 
-## Scaffolds for the compose worker
+## Compose, stories, comments and the item page
 
-Each file keeps the web props, but with `image?: SocialImageAttachment` in place of `imageBlob?: Blob`:
-
-- `comments/CommentThread.tsx`: `comments: FlatComment[]` (parsed: `content` is the text and `image_path` the image), `initialCount`, `commentsLoaded`, `onFirstExpand`, `onAddComment(content, parentId?, image?)`, `onToggleReaction(commentId, emoji)`, `onOpenCommentReactors(commentId)`, `disabled`, `maxDepth`, `currentUserId`, `defaultExpanded`, `expandSignal` (the card's Komentarz button increments it to toggle the thread), `hideToggleOnMobile`. The card keys it by item, so state starts fresh in recycled cells.
-- `compose/PostComposer.tsx`: `onSubmit(content, image?)`, `disabled`, `currentUserId`, `currentUsername`, `currentUserAvatarUrl`. This is only the compact "Co nowego?" trigger. It opens `/sheets/compose-post`.
-- `stories/SocialStories.tsx`: `stories`, `profileFallbacks: SocialStoryProfile[]` (up to 8, from `getStoryProfiles`), `currentUsername`, `currentAvatarUrl`, `onCreateStory(content, image?)`, `disabled`. It opens `/sheets/compose-story` and `/sheets/story-viewer?index=`.
+- `compose/PostComposer.tsx` is the compact "Co nowego?" trigger; `/sheets/compose-post` (`PostComposerSheet`) is the full composer. The draft lives in `postDraftStore` and survives closing the sheet.
+- `stories/SocialStories.tsx` is the strip; `/sheets/compose-story` and `/sheets/story-viewer?index=` are the composer and the viewer.
+- `comments/CommentThread.tsx` renders nested replies, comment reactions and the comment and reply inputs (images, mentions, Eniu through `addSocialComment`).
+- `mentions/` holds the `search_mention_users` wrapper, the debounced autocomplete hook and the suggestion list.
+- `item/SocialItemScreen.tsx` is `/social/:itemType/:itemId`: `SocialFeedCard` with `detail`, seeded from the feed.

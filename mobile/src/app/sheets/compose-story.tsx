@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { StoryComposerScreen } from '@/features/social/stories/StoryComposerScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="compose-story" />;
+  return <StoryComposerScreen />;
 }

@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { SocialItemScreen } from '@/features/social/item/SocialItemScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Wpis" />;
+  return <SocialItemScreen />;
 }

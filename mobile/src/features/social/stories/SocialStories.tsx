@@ -1,14 +1,7 @@
-// SCAFFOLD — owner: social compose worker.
-// The stories strip of the web `SocialStories` (create tile, active stories,
-// profile fallbacks). Story creation is the `/sheets/compose-story` route and
-// the viewer is `/sheets/story-viewer`; this scaffold only opens them.
-// Keep the export name and these props (web props; `imageBlob?: Blob` becomes
-// `image?: SocialImageAttachment`). The feed passes `onCreateStory={publishStory}`
-// from `api/actions.ts`; the sheet can call `publishStory` directly.
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
@@ -20,6 +13,9 @@ import type { SocialImageAttachment } from '../images';
 import { getSocialImageUrl } from '../images';
 import { parseSocialContent } from '../lib/content';
 import type { SocialStoryProfile } from '../lib/feedList';
+import { storyComposerHandler } from './storyComposerHandler';
+import { STORY_CLOCK_MS, getActiveStories } from './storyFormat';
+import { StoryImage } from './StoryImage';
 
 export type { SocialStoryProfile } from '../lib/feedList';
 
@@ -32,10 +28,27 @@ export interface SocialStoriesProps {
   disabled?: boolean;
 }
 
-export function SocialStories({ stories, profileFallbacks, currentUsername, currentAvatarUrl, disabled }: SocialStoriesProps) {
+/**
+ * Web `SocialStories` strip: create tile, active stories, and profile tiles
+ * when nobody has a story. The composer is `/sheets/compose-story` and the
+ * viewer `/sheets/story-viewer`.
+ */
+export const SocialStories = memo(function SocialStories({
+  stories,
+  profileFallbacks,
+  currentUsername,
+  currentAvatarUrl,
+  onCreateStory,
+  disabled,
+}: SocialStoriesProps) {
   const styles = useStyles();
-  const [now] = useState(() => Date.now());
-  const activeStories = stories.filter((story) => new Date(story.expires_at).getTime() > now);
+  const [now, setNow] = useState(() => Date.now());
+  const activeStories = getActiveStories(stories, now);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), STORY_CLOCK_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <ScrollView
@@ -47,8 +60,12 @@ export function SocialStories({ stories, profileFallbacks, currentUsername, curr
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Utwórz relację"
+        accessibilityState={{ disabled: Boolean(disabled) }}
         disabled={disabled}
-        onPress={() => router.push('/sheets/compose-story')}
+        onPress={() => {
+          storyComposerHandler.set(onCreateStory);
+          router.push('/sheets/compose-story');
+        }}
         style={[styles.tile, styles.createTile]}
       >
         <View style={styles.createImage}>
@@ -67,7 +84,9 @@ export function SocialStories({ stories, profileFallbacks, currentUsername, curr
           key={story.id}
           accessibilityRole="button"
           accessibilityLabel={`Otwórz relację ${story.username}`}
-          onPress={() => router.push({ pathname: '/sheets/story-viewer', params: { index: String(index) } })}
+          onPress={() =>
+            router.push({ pathname: '/sheets/story-viewer', params: { index: String(index), id: story.id } })
+          }
           style={styles.tile}
         >
           <StoryCover story={story} />
@@ -88,7 +107,7 @@ export function SocialStories({ stories, profileFallbacks, currentUsername, curr
               accessibilityRole="link"
               accessibilityLabel={`Profil ${profile.username}`}
               onPressIn={() => prefetchPublicProfile(profile.userId)}
-              onPress={() => router.push(`/profile/${profile.userId}`)}
+              onPress={() => router.push({ pathname: '/profile/[userId]', params: { userId: profile.userId } })}
               style={styles.tile}
             >
               <StoryImage username={profile.username} avatarUrl={profile.avatarUrl} />
@@ -104,32 +123,27 @@ export function SocialStories({ stories, profileFallbacks, currentUsername, curr
         : null}
     </ScrollView>
   );
-}
+});
 
+/** Web `StoryCoverImage`: the story photo, else the author's avatar. */
 function StoryCover({ story }: { story: SocialStory }) {
   const styles = useStyles();
   const { imagePath } = parseSocialContent(story.content);
   if (imagePath) {
-    return <Image source={{ uri: getSocialImageUrl(imagePath) }} style={styles.fill} contentFit="cover" />;
+    return (
+      <Image
+        source={{ uri: getSocialImageUrl(imagePath) }}
+        style={styles.fill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+    );
   }
   return <StoryImage username={story.username} avatarUrl={story.avatar_url ?? null} />;
 }
 
-function StoryImage({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
-  const styles = useStyles();
-  const [failed, setFailed] = useState(false);
-  if (avatarUrl && !failed) {
-    return <Image source={{ uri: avatarUrl }} style={styles.fill} contentFit="cover" onError={() => setFailed(true)} />;
-  }
-  return (
-    <View style={[styles.fill, styles.fallback]}>
-      <Text style={styles.fallbackText}>{username.charAt(0).toUpperCase()}</Text>
-    </View>
-  );
-}
-
 const useStyles = createStyles(() => ({
-  // `.social-facebook-stories mb-2 flex gap-2 px-2 pb-2` on a card background.
+  // Phone `.social-facebook-stories mb-2 flex gap-2 px-2 pb-2`: card background, no border.
   strip: { flexGrow: 0, marginBottom: 8, backgroundColor: social.card },
   stripContent: { gap: 8, paddingHorizontal: 8, paddingBottom: 8 },
   // `.social-story-tile`: 6.6rem × 9rem, radius 0.75rem, border, muted, light shadow.
@@ -138,12 +152,14 @@ const useStyles = createStyles(() => ({
     height: 144,
     overflow: 'hidden',
     borderRadius: 12,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: social.border,
     backgroundColor: social.muted,
     boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.08)',
   },
   createTile: { backgroundColor: social.card },
+  // `.social-story-create-image`: bottom 2.3rem, bottom border.
   createImage: {
     position: 'absolute',
     top: 0,
@@ -154,13 +170,14 @@ const useStyles = createStyles(() => ({
     borderBottomWidth: 1,
     borderBottomColor: social.border,
   },
+  // `.social-story-create-plus`: 2rem circle centred at bottom 1.85rem, 3px card ring.
   createPlus: {
     position: 'absolute',
     bottom: 29.6,
-    alignSelf: 'center',
+    left: '50%',
     width: 32,
     height: 32,
-    marginBottom: -16,
+    marginLeft: -16,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 16,
@@ -169,14 +186,16 @@ const useStyles = createStyles(() => ({
     backgroundColor: social.primary,
   },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  // `::after`: `linear-gradient(180deg, transparent 35%, rgb(0 0 0 / 0.52))`.
   shade: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundImage: 'linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.52) 100%)',
+    backgroundImage: 'linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.52) 100%)',
   },
+  // `.social-story-avatar-ring`: 2rem at 0.45rem, 3px primary border, card fill.
   ring: {
     position: 'absolute',
     top: 7.2,
@@ -187,7 +206,9 @@ const useStyles = createStyles(() => ({
     borderRadius: 16,
     borderWidth: 3,
     borderColor: social.primary,
+    backgroundColor: social.card,
   },
+  // `.social-story-label`: 0.72rem, weight 800, line 1.05rem, inset 0.45rem.
   label: {
     position: 'absolute',
     left: 7.2,
@@ -199,11 +220,4 @@ const useStyles = createStyles(() => ({
     color: '#ffffff',
   },
   createLabel: { textAlign: 'center', color: social.foreground },
-  // `bg-gradient-to-br from-primary via-red-700 to-neutral-950 text-2xl font-black text-white`.
-  fallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundImage: `linear-gradient(135deg, ${social.primary} 0%, #b91c1c 50%, #0a0a0a 100%)`,
-  },
-  fallbackText: { fontSize: 24, lineHeight: 32, fontWeight: '900', color: '#ffffff' },
 }));

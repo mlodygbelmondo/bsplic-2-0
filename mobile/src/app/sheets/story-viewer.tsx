@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { StoryViewerScreen } from '@/features/social/stories/StoryViewerScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="story-viewer" />;
+  return <StoryViewerScreen />;
 }

@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { PostComposerSheet } from '@/features/social/compose/PostComposerSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="compose-post" />;
+  return <PostComposerSheet />;
 }
