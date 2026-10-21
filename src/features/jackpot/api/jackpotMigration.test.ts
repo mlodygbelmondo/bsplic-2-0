@@ -367,7 +367,7 @@ describe('daily jackpot migration security invariants', () => {
     expect(body).toContain('Rozliczenie tej puli jest dostępne tylko dla uczestników');
   });
 
-  it('keeps winner details behind the reveal RPC and claim behind viewed state', () => {
+  it('keeps winner details behind the reveal RPC and marks the result viewed on claim', () => {
     const metadataBody = getFunctionBody(
       'public.get_daily_jackpot_draw\\(p_pool_id UUID\\)',
     );
@@ -386,8 +386,11 @@ describe('daily jackpot migration security invariants', () => {
     expect(metadataBody).not.toContain("'winner_user_id', v_pool.winner_user_id");
     expect(revealBody).toContain("'winner_user_id', v_pool.winner_user_id");
     expect(revealBody).toContain('result_viewed_at = COALESCE(result_viewed_at, NOW())');
-    expect(claimBody).toContain('v_pool.result_viewed_at IS NULL');
-    expect(creditBody).not.toContain('result_viewed_at = CASE');
+    // Production never required a reveal before the claim; claiming marks the
+    // result as viewed instead.
+    expect(claimBody).toContain("private.credit_daily_jackpot_reward(p_pool_id, 'claimed')");
+    expect(claimBody).not.toContain('v_pool.result_viewed_at IS NULL');
+    expect(creditBody).toContain('result_viewed_at = CASE');
     expect(migrationSql).toContain(
       'REVOKE EXECUTE ON FUNCTION public.mark_daily_jackpot_result_viewed(UUID) FROM PUBLIC, anon, authenticated',
     );

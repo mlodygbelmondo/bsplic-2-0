@@ -485,7 +485,9 @@ describe('autonomous agent bet ops RPC contract', () => {
           { name: 'Gospodarze', odds: 1.8 },
           { name: 'Goście', odds: 2.0 },
         ],
-        ends_at: hoursFromNow(1),
+        // Agent bets must start at least two hours out; the test backdates
+        // ends_at through the DB seam before settling.
+        ends_at: hoursFromNow(3),
         agent_duplicate_key: `settlement-${runTag}`,
       },
     ]);

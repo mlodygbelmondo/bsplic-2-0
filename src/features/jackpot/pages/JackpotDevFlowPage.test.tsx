@@ -1,5 +1,11 @@
-import type { ComponentProps, ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -38,14 +44,6 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: ComponentProps<'div'>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-}));
-
 function renderDevFlow() {
   return render(
     <MemoryRouter initialEntries={['/dev/jackpot']}>
@@ -54,6 +52,15 @@ function renderDevFlow() {
       </CouponProvider>
     </MemoryRouter>,
   );
+}
+
+async function confirmPurchase(buttonName: string) {
+  fireEvent.click(
+    within(screen.getByRole('dialog')).getByRole('button', { name: buttonName }),
+  );
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 }
 
 async function startAndFinishReplay() {
@@ -79,9 +86,11 @@ describe('JackpotDevFlowPage', () => {
     expect(screen.getAllByText('2480,75 zł').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /^Kup ticket$/i }));
+    await confirmPurchase('Kupuję 1 ticket');
     expect(screen.getByText('#14')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Kup drugi ticket/i }));
+    await confirmPurchase('Kupuję 1 ticket');
     expect(screen.getByText('#14 #22')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Limit ticketów wykorzystany/i }),

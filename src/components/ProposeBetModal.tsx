@@ -18,6 +18,10 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { createBetProposal } from "@/features/home/api/betProposals";
+import {
+  getCategoryLabel,
+  getCategoryOptions,
+} from "@/features/home/categoryTree";
 import { Category } from "@/types/database";
 import { toast } from "sonner";
 
@@ -194,9 +198,9 @@ export function ProposeBetModal({
                   <SelectValue placeholder="Wybierz" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
+                  {getCategoryOptions(categories).map(({ category, parent }) => (
                     <SelectItem key={category.id} value={category.id}>
-                      {category.emoji} {category.name}
+                      {category.emoji} {getCategoryLabel(category, parent)}
                     </SelectItem>
                   ))}
                 </SelectContent>

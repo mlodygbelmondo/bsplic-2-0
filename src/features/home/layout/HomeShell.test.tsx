@@ -11,7 +11,7 @@ const useDailyJackpotMock = vi.hoisted(() =>
     loading: false,
     buying: false,
     balance: 500,
-    buyTicket: vi.fn(),
+    buyTickets: vi.fn(),
   })),
 );
 

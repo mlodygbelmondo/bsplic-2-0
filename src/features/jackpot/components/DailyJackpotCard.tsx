@@ -26,6 +26,7 @@ import {
   getDrawTimeLabel,
 } from '../lib/jackpotFormat';
 import type { DailyJackpotSnapshot } from '../types';
+import { JackpotBuyModal } from './JackpotBuyModal';
 import '../styles/dailyJackpotCard.css';
 
 function formatJackpotHeroAmount(amount: number) {
@@ -54,7 +55,7 @@ interface DailyJackpotCardProps {
   loading: boolean;
   buying: boolean;
   balance: number;
-  onBuy: () => void;
+  onBuy: (count: number) => Promise<boolean> | boolean | void;
   onOpenDraw?: (poolId: string) => void;
 }
 
@@ -70,6 +71,7 @@ export function DailyJackpotCard({
   const drawScheduledAt = snapshot?.drawScheduledAt;
   const serverNow = snapshot?.serverNow;
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [buyModalOpen, setBuyModalOpen] = useState(false);
 
   useEffect(() => {
     setElapsedSeconds(0);
@@ -181,7 +183,7 @@ export function DailyJackpotCard({
     }
 
     if (canBuy) {
-      onBuy();
+      setBuyModalOpen(true);
     }
   };
 
@@ -367,6 +369,20 @@ export function DailyJackpotCard({
         {ticketLimitReached && <span className="sr-only">{legacyLimitLabel}</span>}
         {actionIsDraw && <ArrowRight className="h-4 w-4" />}
       </Button>
+
+      <JackpotBuyModal
+        open={buyModalOpen}
+        onOpenChange={setBuyModalOpen}
+        ticketPrice={snapshot.ticketPrice}
+        prizeAmount={snapshot.prizeAmount}
+        balance={balance}
+        currentTicketCount={userTicketCount}
+        maxTicketsPerPlayer={snapshot.maxTicketsPerPlayer}
+        minUniqueUsers={snapshot.minUniqueUsers}
+        drawTimeLabel={drawTimeLabel}
+        buying={buying}
+        onConfirm={async (count) => (await onBuy(count)) !== false}
+      />
     </section>
   );
 }

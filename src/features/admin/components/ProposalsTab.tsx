@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SectionLoader } from '@/components/SectionLoader';
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/categoryTree';
 import { toast } from 'sonner';
 import { Check, XCircle, Plus, X, Inbox, Loader2 } from 'lucide-react';
 import type { EditableBetType } from '../constants';
@@ -382,9 +383,9 @@ export default function ProposalsTab() {
                       <SelectValue placeholder="Wybierz" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (
+                      {getCategoryOptions(categories).map(({ category: c, parent }) => (
                         <SelectItem key={c.id} value={c.id}>
-                          {c.emoji} {c.name}
+                          {c.emoji} {getCategoryLabel(c, parent)}
                         </SelectItem>
                       ))}
                     </SelectContent>

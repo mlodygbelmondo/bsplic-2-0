@@ -217,32 +217,6 @@
   .jackpot-draw-stage--revealed .jackpot-stage-title {
     opacity: 0;
   }
-  .jackpot-stage-asset {
-    position: absolute;
-    left: 50%;
-    top: 48%;
-    z-index: 1;
-    width: min(90%, 52rem);
-    max-height: 72%;
-    object-fit: contain;
-    filter: drop-shadow(0 34px 35px hsl(0 0% 0% / 0.62));
-    transform: translate(-50%, -50%);
-    animation: jackpot-stage-float 6s ease-in-out infinite;
-  }
-  .jackpot-draw-stage--drawing .jackpot-stage-asset {
-    animation:
-      jackpot-stage-float 1.8s ease-in-out infinite,
-      jackpot-stage-shake 220ms linear infinite;
-  }
-  .jackpot-draw-stage--revealed .jackpot-stage-asset {
-    opacity: 0.28;
-    animation: none;
-    filter:
-      blur(0.6px)
-      saturate(0.84)
-      drop-shadow(0 34px 35px hsl(0 0% 0% / 0.58));
-    transform: translate(-50%, -50%) scale(0.94);
-  }
   .jackpot-draw-actions {
     position: absolute;
     bottom: 1rem;
@@ -289,131 +263,6 @@
     border: 1px solid hsl(43 100% 60% / 0.28);
     background: hsl(0 0% 7% / 0.78);
   }
-  .jackpot-ticket-flight {
-    --jackpot-ticket-flight-start: -64vw;
-    --jackpot-ticket-flight-entry: -12vw;
-    --jackpot-ticket-flight-center: 2vw;
-    --jackpot-ticket-flight-exit: 18vw;
-    --jackpot-ticket-flight-end: 64vw;
-
-    position: absolute;
-    inset: 2.85rem 1rem 4.6rem;
-    z-index: 5;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.5rem;
-    pointer-events: none;
-  }
-  .jackpot-ticket-flight__header {
-    display: inline-flex;
-    width: fit-content;
-    align-items: center;
-    gap: 0.65rem;
-    border: 1px solid hsl(38 100% 60% / 0.22);
-    border-radius: 999px;
-    padding: 0.32rem 0.62rem;
-    color: hsl(0 0% 78%);
-    background: hsl(0 0% 3% / 0.62);
-    font-size: 0.68rem;
-    font-weight: 720;
-    backdrop-filter: blur(10px);
-  }
-  .jackpot-ticket-flight__header span,
-  .jackpot-ticket-flight__header strong {
-    line-height: 1;
-  }
-  .jackpot-ticket-flight__header strong {
-    color: hsl(39 100% 62%);
-    font-weight: 800;
-  }
-  .jackpot-ticket-flight__track {
-    position: relative;
-    min-height: 12.5rem;
-    margin: 0;
-    overflow: hidden;
-    padding: 0;
-    list-style: none;
-  }
-  .jackpot-flight-ticket {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    display: grid;
-    width: clamp(7.6rem, 10.4vw, 9.4rem);
-    aspect-ratio: 1.54;
-    place-items: center;
-    gap: 0.12rem;
-    border: 0;
-    border-radius: 0;
-    padding: 0;
-    color: hsl(28 38% 12%);
-    background: transparent;
-    box-shadow: none;
-    font-variant-numeric: tabular-nums;
-    transform: translate3d(-64vw, calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
-      rotate(-14deg)
-      scale(0.82);
-    animation: jackpot-ticket-flight 3.3s cubic-bezier(0.22, 0.78, 0.18, 1) infinite;
-    animation-delay: var(--ticket-delay, calc(var(--ticket-index) * -0.22s));
-    will-change: transform, opacity;
-  }
-  .jackpot-flight-ticket::before {
-    content: none;
-  }
-  .jackpot-flight-ticket__asset {
-    position: absolute;
-    inset: -24% -14%;
-    width: 128%;
-    height: 148%;
-    object-fit: contain;
-    filter: drop-shadow(0 0.7rem 1.1rem hsl(0 0% 0% / 0.34));
-    pointer-events: none;
-  }
-  .jackpot-flight-ticket__number {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    z-index: 1;
-    min-width: 4.5rem;
-    color: hsl(25 52% 15%);
-    font-size: clamp(1rem, 1.35vw, 1.2rem);
-    font-weight: 900;
-    line-height: 1;
-    text-align: center;
-    text-shadow: 0 1px 0 hsl(45 100% 82% / 0.58);
-    transform: translate(-50%, -50%);
-  }
-  .jackpot-stage-reveal {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    z-index: 9;
-    display: grid;
-    width: min(34rem, calc(100% - 1.3rem));
-    justify-items: center;
-    gap: 0.42rem;
-    border: 0;
-    border-radius: 0;
-    padding: clamp(0.7rem, 1.7vw, 1rem) 0 clamp(0.7rem, 1.7vw, 1rem);
-    color: hsl(0 0% 98%);
-    text-align: center;
-    background: transparent;
-    box-shadow: none;
-    transform: translate(-50%, -50%);
-    backdrop-filter: none;
-  }
-  .jackpot-stage-reveal__status {
-    display: none;
-    align-items: center;
-    gap: 0.4rem;
-    border-radius: 999px;
-    padding: 0.26rem 0.58rem;
-    color: hsl(43 100% 66%);
-    background: hsl(43 100% 45% / 0.12);
-    font-size: 0.66rem;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
   .jackpot-stage-reveal__ticket-wrap {
     position: relative;
     display: grid;
@@ -454,23 +303,6 @@
     font-variant-numeric: tabular-nums;
     text-shadow: 0 1px 0 hsl(46 100% 78% / 0.72);
   }
-  .jackpot-stage-reveal h2 {
-    margin-bottom: 0.34rem;
-    color: hsl(0 0% 98%);
-    font-size: clamp(1.05rem, 1.7vw, 1.36rem);
-    font-weight: 850;
-    line-height: 1.08;
-    text-shadow: 0 0.4rem 1.2rem hsl(0 0% 0% / 0.6);
-  }
-  .jackpot-stage-reveal h2 span,
-  .jackpot-stage-reveal p strong {
-    color: hsl(43 100% 62%);
-  }
-  .jackpot-stage-reveal p {
-    color: hsl(0 0% 74%);
-    font-size: 0.78rem;
-    font-weight: 720;
-  }
   .jackpot-stage-claim {
     display: inline-flex;
     min-height: 2.5rem;
@@ -486,6 +318,251 @@
     font-size: 0.78rem;
     font-weight: 850;
   }
+  .jackpot-draw-topbar__end {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .jackpot-draw-sound {
+    display: inline-flex;
+    width: 2.3rem;
+    flex: none;
+    aspect-ratio: 1;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid hsl(0 0% 100% / 0.12);
+    border-radius: 999px;
+    color: hsl(0 0% 52%);
+    background: hsl(0 0% 0% / 0.36);
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .jackpot-draw-sound[aria-pressed='true'] {
+    color: hsl(43 100% 62%);
+  }
+  .jackpot-draw-sound:hover,
+  .jackpot-draw-sound:focus-visible {
+    border-color: hsl(43 100% 60% / 0.42);
+    background: hsl(0 0% 100% / 0.08);
+  }
+
+  .jackpot-draw-stage--cylinder {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+    padding: 0.9rem;
+  }
+  .jackpot-draw-stage--cylinder .jackpot-stage-title {
+    position: static;
+    align-self: center;
+  }
+  .jackpot-draw-stage--cylinder.jackpot-draw-stage--revealed .jackpot-stage-title {
+    opacity: 1;
+  }
+  .jackpot-draw-stage--cylinder .jackpot-draw-actions {
+    position: static;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .jackpot-draw-stage--cylinder .jackpot-draw-claimed,
+  .jackpot-draw-stage--cylinder .jackpot-stage-claim {
+    margin: 0;
+  }
+
+  .jackpot-cylinder {
+    --jackpot-cylinder-face-height: 4.75rem;
+    --jackpot-cylinder-radius: 10.375rem;
+
+    position: relative;
+    height: 19rem;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid hsl(38 92% 50% / 0.42);
+    border-radius: 0.85rem;
+    background: hsl(0 0% 0%);
+    box-shadow: 0 25px 65px hsl(0 0% 0% / 0.9);
+  }
+  .jackpot-cylinder__scene {
+    position: absolute;
+    inset: 0;
+  }
+  .jackpot-cylinder__glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at center,
+      hsl(0 72% 51% / 0.5),
+      hsl(0 74% 35% / 0.25) 50%,
+      transparent 70%
+    );
+    opacity: 0.65;
+    transition: opacity 500ms ease;
+  }
+  .jackpot-cylinder--drawing .jackpot-cylinder__glow {
+    opacity: 1;
+    animation: jackpot-cylinder-pulse 900ms ease-in-out infinite alternate;
+  }
+  .jackpot-cylinder__grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    background-size: 26px 18px;
+    pointer-events: none;
+  }
+  .jackpot-cylinder__grid--ceiling {
+    top: 0;
+    height: 7rem;
+    background-image:
+      linear-gradient(to bottom, hsl(0 72% 51% / 0.35) 1px, transparent 1px),
+      linear-gradient(to right, hsl(0 72% 51% / 0.2) 1px, transparent 1px);
+    transform: perspective(140px) rotateX(-60deg);
+  }
+  .jackpot-cylinder__grid--floor {
+    bottom: 0;
+    height: 8rem;
+    background-image:
+      linear-gradient(to top, hsl(0 72% 51% / 0.35) 1px, transparent 1px),
+      linear-gradient(to right, hsl(0 72% 51% / 0.2) 1px, transparent 1px);
+    transform: perspective(140px) rotateX(60deg);
+  }
+  .jackpot-cylinder__viewport {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    perspective: 1000px;
+  }
+  .jackpot-cylinder__drum {
+    position: relative;
+    width: min(16rem, 80%);
+    height: var(--jackpot-cylinder-face-height);
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .jackpot-cylinder__face {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0.9;
+    backface-visibility: hidden;
+  }
+  .jackpot-cylinder__face img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .jackpot-cylinder__face span {
+    position: relative;
+    color: hsl(25 52% 15%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.85rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 0 hsl(45 100% 82% / 0.58);
+  }
+  .jackpot-cylinder--landed .jackpot-cylinder__face--winner {
+    opacity: 1;
+    filter: drop-shadow(0 0 1.6rem hsl(38 92% 50%));
+  }
+  .jackpot-cylinder__fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 3.5rem;
+    pointer-events: none;
+  }
+  .jackpot-cylinder__fade--top {
+    top: 0;
+    background: linear-gradient(to bottom, hsl(0 0% 0%), hsl(0 0% 0% / 0.8), transparent);
+  }
+  .jackpot-cylinder__fade--bottom {
+    bottom: 0;
+    background: linear-gradient(to top, hsl(0 0% 0%), hsl(0 0% 0% / 0.8), transparent);
+  }
+  .jackpot-cylinder__laser {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    z-index: 4;
+    display: flex;
+    height: 2px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 1rem;
+    background: hsl(0 84% 60%);
+    box-shadow: 0 0 12px hsl(0 84% 60% / 0.9);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .jackpot-cylinder__laser span {
+    width: 0.62rem;
+    height: 0.62rem;
+    background: hsl(0 84% 60%);
+    box-shadow: 0 0 8px hsl(0 84% 50%);
+    transform: rotate(45deg);
+  }
+  .jackpot-cylinder__winner {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    background: hsl(0 0% 0% / 0.55);
+    backdrop-filter: blur(2px);
+    animation: jackpot-cylinder-fade-in 240ms ease-out both;
+  }
+  .jackpot-stage-result {
+    display: grid;
+    justify-items: center;
+    gap: 0.2rem;
+    text-align: center;
+    animation: jackpot-cylinder-fade-in 280ms ease-out both;
+  }
+  .jackpot-stage-result h2 {
+    color: hsl(0 0% 98%);
+    font-size: clamp(1.05rem, 1.7vw, 1.36rem);
+    font-weight: 850;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .jackpot-stage-result p {
+    color: hsl(0 0% 74%);
+    font-size: 0.8rem;
+    font-weight: 720;
+  }
+  .jackpot-stage-result p strong {
+    color: hsl(43 100% 62%);
+  }
+  .jackpot-stage-replay {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid hsl(0 0% 100% / 0.12);
+    border-radius: 0.55rem;
+    padding: 0.5rem 0.9rem;
+    color: hsl(0 0% 78%);
+    background: hsl(0 0% 3% / 0.58);
+    font-size: 0.78rem;
+    font-weight: 760;
+    transition: color 140ms ease, border-color 140ms ease;
+  }
+  .jackpot-stage-replay:hover,
+  .jackpot-stage-replay:focus-visible {
+    border-color: hsl(43 100% 60% / 0.42);
+    color: hsl(0 0% 96%);
+  }
+
   .jackpot-draw-result {
     position: absolute;
     z-index: 7;
@@ -1016,49 +1093,21 @@
   }
 
 
-  @keyframes jackpot-ticket-flight {
-    0% {
-      opacity: 0;
-      transform: translate3d(var(--jackpot-ticket-flight-start), calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
-        rotate(-18deg)
-        scale(0.76);
+
+  @keyframes jackpot-cylinder-pulse {
+    from {
+      opacity: 0.75;
     }
-    10% {
-      opacity: 0.88;
-    }
-    34% {
+    to {
       opacity: 1;
-      transform: translate3d(var(--jackpot-ticket-flight-entry), calc(-50% + var(--ticket-lane-tight, 0rem)), 0)
-        rotate(8deg)
-        scale(1.05);
-    }
-    51% {
-      opacity: 1;
-      transform: translate3d(var(--jackpot-ticket-flight-center), calc(-50% + var(--ticket-lane-invert, 0rem)), 0)
-        rotate(-5deg)
-        scale(1.14);
-    }
-    68% {
-      opacity: 0.98;
-      transform: translate3d(var(--jackpot-ticket-flight-exit), calc(-50% + var(--ticket-lane-tight, 0rem)), 0)
-        rotate(5deg)
-        scale(0.98);
-    }
-    100% {
-      opacity: 0;
-      transform: translate3d(var(--jackpot-ticket-flight-end), calc(-50% + var(--ticket-lane-offset, 0rem)), 0)
-        rotate(18deg)
-        scale(0.78);
     }
   }
-
-  @keyframes jackpot-stage-float {
-    0%,
-    100% {
-      transform: translate(-50%, -50%);
+  @keyframes jackpot-cylinder-fade-in {
+    from {
+      opacity: 0;
     }
-    50% {
-      transform: translate(-50%, calc(-50% - 0.7rem));
+    to {
+      opacity: 1;
     }
   }
   @keyframes jackpot-winning-ticket-pop {
@@ -1078,17 +1127,6 @@
       filter: brightness(1);
     }
   }
-  @keyframes jackpot-stage-shake {
-    0%,
-    100% {
-      filter: drop-shadow(0 34px 35px hsl(0 0% 0% / 0.6));
-    }
-    50% {
-      filter:
-        drop-shadow(0 34px 35px hsl(0 0% 0% / 0.6))
-        drop-shadow(0 0 20px hsl(39 100% 55% / 0.52));
-    }
-  }
   @keyframes jackpot-gift-pulse {
     0%,
     100% {
@@ -1105,6 +1143,21 @@
     }
     50% {
       transform: translateY(0.8rem);
+    }
+  }
+
+  @media (min-width: 1181px) {
+    .jackpot-cylinder {
+      --jackpot-cylinder-face-height: 5.75rem;
+      --jackpot-cylinder-radius: 12.5rem;
+
+      height: 23rem;
+    }
+    .jackpot-cylinder__drum {
+      width: min(19.5rem, 80%);
+    }
+    .jackpot-cylinder__face span {
+      font-size: 2.25rem;
     }
   }
 
@@ -1210,50 +1263,29 @@
       min-width: 0;
       min-height: 2.7rem;
     }
-    .jackpot-ticket-flight {
-      --jackpot-ticket-flight-start: -64vw;
-      --jackpot-ticket-flight-entry: -12vw;
-      --jackpot-ticket-flight-center: 0vw;
-      --jackpot-ticket-flight-exit: 12vw;
-      --jackpot-ticket-flight-end: 64vw;
-
-      inset: 2.55rem 0.65rem 4.35rem;
-      gap: 0.45rem;
-    }
-    .jackpot-ticket-flight__track {
-      min-height: 7.7rem;
-    }
-    .jackpot-ticket-flight__header {
-      max-width: 100%;
-      font-size: 0.68rem;
-    }
-    .jackpot-flight-ticket {
-      width: 6rem;
-      min-height: 0;
-      padding: 0;
-    }
-    .jackpot-flight-ticket__number {
-      font-size: 0.96rem;
-    }
-    .jackpot-stage-reveal {
-      top: 50%;
-      width: calc(100% - 1.4rem);
-      gap: 0.36rem;
-    }
     .jackpot-stage-reveal__ticket-wrap {
       width: min(18.5rem, 94%);
     }
     .jackpot-stage-reveal__ticket {
       font-size: 1.42rem;
     }
-    .jackpot-stage-reveal h2 {
-      font-size: 1rem;
-    }
-    .jackpot-stage-reveal p {
-      font-size: 0.72rem;
-    }
     .jackpot-stage-claim {
       min-height: 2.35rem;
+      width: 100%;
+    }
+    .jackpot-draw-stage--cylinder {
+      padding: 0.65rem;
+    }
+    .jackpot-cylinder {
+      --jackpot-cylinder-face-height: 4.25rem;
+      --jackpot-cylinder-radius: 9.25rem;
+
+      height: 17rem;
+    }
+    .jackpot-cylinder__face span {
+      font-size: 1.6rem;
+    }
+    .jackpot-stage-replay {
       width: 100%;
     }
     .jackpot-draw-roster {
@@ -1293,27 +1325,13 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .jackpot-stage-asset,
-    .jackpot-draw-stage--drawing .jackpot-stage-asset,
-    .jackpot-flight-ticket,
     .jackpot-claim-icon,
-    .jackpot-result-hero__confetti {
+    .jackpot-result-hero__confetti,
+    .jackpot-cylinder--drawing .jackpot-cylinder__glow,
+    .jackpot-cylinder__winner,
+    .jackpot-stage-result,
+    .jackpot-stage-reveal__ticket-wrap {
       animation: none;
-    }
-    .jackpot-ticket-flight__track {
-      display: flex;
-      flex-wrap: wrap;
-      align-content: center;
-      justify-content: center;
-      gap: 0.5rem;
-      overflow: visible;
-    }
-    .jackpot-flight-ticket {
-      position: relative;
-      left: auto;
-      top: auto;
-      opacity: 1;
-      transform: none;
     }
     .jackpot-draw-primary {
       transition: background-color 120ms ease, filter 120ms ease;

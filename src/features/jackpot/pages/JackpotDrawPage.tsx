@@ -1,11 +1,4 @@
-import {
-  type CSSProperties,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -13,9 +6,11 @@ import {
   Gift,
   Loader2,
   Play,
+  RotateCcw,
   Ticket,
-  Trophy,
   Users,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -29,6 +24,9 @@ import {
   getDailyJackpotDraw,
   revealDailyJackpotDraw,
 } from '../api/jackpot';
+import { JackpotCylinderStage } from '../components/JackpotCylinderStage';
+import { jackpotAudio, useJackpotSound } from '../lib/jackpotAudio';
+import { celebrateJackpotReveal } from '../lib/jackpotCelebration';
 import { formatJackpotAmount } from '../lib/jackpotFormat';
 import type { DailyJackpotClaimResult, DailyJackpotDraw } from '../types';
 import '../styles/jackpotDrawPage.css';
@@ -37,66 +35,8 @@ type ReplayPhase = 'intro' | 'drawing' | 'revealed';
 
 const DRAWING_FLIGHT_MS = 3300;
 const REDUCED_MOTION_FLIGHT_MS = 160;
-const WINNING_TICKET_CENTER_PROGRESS = 0.51;
-const WINNING_TICKET_ANIMATION_DELAY_SECONDS = -(
-  (DRAWING_FLIGHT_MS / 1000) *
-  WINNING_TICKET_CENTER_PROGRESS
-);
-
-interface DrawTicketVisual {
-  key: string;
-  ticketNumber: number;
-  ticketLabel: string;
-}
-
-type TicketFlightStyle = CSSProperties & {
-  '--ticket-index': number;
-  '--ticket-count': number;
-  '--ticket-lane-offset': string;
-  '--ticket-lane-tight': string;
-  '--ticket-lane-invert': string;
-  '--ticket-delay': string;
-};
-
-function getVisibleDrawTickets(
-  drawTickets: DrawTicketVisual[],
-  winningTicketNumber: number | null,
-) {
-  const winningTicket =
-    winningTicketNumber === null
-      ? null
-      : drawTickets.find((ticket) => ticket.ticketNumber === winningTicketNumber);
-
-  if (drawTickets.length <= 18) {
-    if (!winningTicket) {
-      return drawTickets;
-    }
-
-    return [
-      ...drawTickets.filter(
-        (ticket) => ticket.ticketNumber !== winningTicket.ticketNumber,
-      ),
-      winningTicket,
-    ];
-  }
-
-  const visibleTickets = drawTickets
-    .filter(
-      (_, index) =>
-        index % Math.max(1, Math.ceil(drawTickets.length / 18)) === 0,
-    )
-    .slice(0, 18);
-
-  if (!winningTicket) {
-    return visibleTickets;
-  }
-
-  const visibleTicketsWithoutWinner = visibleTickets.filter(
-    (ticket) => ticket.ticketNumber !== winningTicket.ticketNumber,
-  );
-
-  return [...visibleTicketsWithoutWinner.slice(0, 17), winningTicket];
-}
+// The drum lands a moment before the reveal so the winning face can glow.
+const CYLINDER_SPIN_MS = DRAWING_FLIGHT_MS - 450;
 
 function usePrefersReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -223,6 +163,21 @@ export function JackpotDrawExperience({
   const [claiming, setClaiming] = useState(false);
   const [rosterExpanded, setRosterExpanded] = useState(false);
   const replayTimeoutRef = useRef<number | null>(null);
+  const { soundEnabled, toggleSound } = useJackpotSound();
+  const currentUserIsWinner = Boolean(draw?.currentUserIsWinner);
+  const previousPhaseRef = useRef<ReplayPhase>(phase);
+
+  useEffect(() => {
+    const previousPhase = previousPhaseRef.current;
+    previousPhaseRef.current = phase;
+
+    if (phase === 'revealed' && previousPhase !== 'revealed') {
+      celebrateJackpotReveal({
+        isCurrentUserWinner: currentUserIsWinner,
+        reducedMotion,
+      });
+    }
+  }, [currentUserIsWinner, phase, reducedMotion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,11 +237,12 @@ export function JackpotDrawExperience({
       return 'Ticket zwycięzcy';
     }
 
-    return `Ticket #${draw.winningTicketNumber}`;
+    return `Ticket #${String(draw.winningTicketNumber).padStart(2, '0')}`;
   }, [draw?.winningTicketNumber]);
 
   const rewardStateLabel = useMemo(() => {
-    if (!draw) {
+    // The reward status belongs to the pool, so only the winner should see it.
+    if (!draw?.currentUserIsWinner) {
       return null;
     }
 
@@ -302,10 +258,11 @@ export function JackpotDrawExperience({
   }, [draw]);
 
   const startReplay = () => {
-    if (!draw || phase !== 'intro') {
+    if (!draw || phase === 'drawing') {
       return;
     }
 
+    jackpotAudio.unlock();
     setPhase('drawing');
     const flightDelay = reducedMotion
       ? REDUCED_MOTION_FLIGHT_MS
@@ -441,19 +398,9 @@ export function JackpotDrawExperience({
         .sort((left, right) => left - right)
         .map((ticketNumber) => `#${formatTicketNumber(ticketNumber)}`)
     : [];
-  const drawTickets: DrawTicketVisual[] = draw.participants
-    .flatMap((participant) =>
-      participant.ticketNumbers.map((ticketNumber) => ({
-        key: `${participant.userId}-${ticketNumber}`,
-        ticketNumber,
-        ticketLabel: formatTicketNumber(ticketNumber),
-      })),
-    )
-    .sort((left, right) => left.ticketNumber - right.ticketNumber);
-  const visibleDrawTickets = getVisibleDrawTickets(
-    drawTickets,
-    draw.winningTicketNumber,
-  );
+  const poolTicketNumbers = draw.participants
+    .flatMap((participant) => participant.ticketNumbers)
+    .sort((left, right) => left - right);
   const hasHiddenRosterParticipants = draw.participants.length > 10;
   const rosterParticipants = rosterExpanded
     ? draw.participants
@@ -517,7 +464,22 @@ export function JackpotDrawExperience({
       <div className="jackpot-replay-shell">
         <div className="jackpot-draw-topbar">
           <JackpotDrawBackButton onBack={onBack} />
-          <span>Losowanie z {numericDrawDate}</span>
+          <div className="jackpot-draw-topbar__end">
+            <span>Losowanie z {numericDrawDate}</span>
+            <button
+              type="button"
+              className="jackpot-draw-sound"
+              aria-pressed={soundEnabled}
+              aria-label="Dźwięki losowania"
+              onClick={toggleSound}
+            >
+              {soundEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         <section className="jackpot-draw-hero jackpot-draw-hero--summary" aria-label="Dane losowania">
@@ -556,7 +518,11 @@ export function JackpotDrawExperience({
 
         <div className="jackpot-replay-layout">
           <section
-            className={cn('jackpot-draw-stage', `jackpot-draw-stage--${phase}`)}
+            className={cn(
+              'jackpot-draw-stage',
+              'jackpot-draw-stage--cylinder',
+              `jackpot-draw-stage--${phase}`,
+            )}
             aria-live="polite"
           >
             <div className="jackpot-stage-title" aria-hidden="true">
@@ -564,119 +530,23 @@ export function JackpotDrawExperience({
               Tickety w puli
               <span>◆</span>
             </div>
-            <img
-              className="jackpot-stage-asset"
-              src="/jackpot/jackpot-draw-stage.webp"
-              alt=""
-              aria-hidden="true"
+
+            <JackpotCylinderStage
+              phase={phase}
+              ticketNumbers={poolTicketNumbers}
+              winningTicketNumber={draw.winningTicketNumber}
+              winnerTicketLabel={winnerTicketLabel}
+              spinDurationMs={CYLINDER_SPIN_MS}
+              reducedMotion={reducedMotion}
             />
 
-            {drawingActive && (
-              <motion.div className="jackpot-ticket-flight">
-                <div className="jackpot-ticket-flight__header">
-                  <span>Losowanie ticketów</span>
-                  <strong>{formatPolishCount(drawTickets.length, 'ticket', 'tickety', 'ticketów')}</strong>
-                </div>
-
-                <ul
-                  className="jackpot-ticket-flight__track"
-                  aria-label="Animowane tickety w puli"
-                >
-                  {visibleDrawTickets.map((ticket, index) => {
-                    const lane = (index % 5) - 2;
-                    const isWinningTicket =
-                      draw.winningTicketNumber === ticket.ticketNumber;
-
-                    return (
-                      <li
-                        key={ticket.key}
-                        className="jackpot-flight-ticket"
-                        style={
-                          {
-                            '--ticket-index': index,
-                            '--ticket-count': visibleDrawTickets.length,
-                            '--ticket-lane-offset': `${lane}rem`,
-                            '--ticket-lane-tight': `${lane * 0.45}rem`,
-                            '--ticket-lane-invert': `${lane * -0.35}rem`,
-                            '--ticket-delay': isWinningTicket
-                              ? `${WINNING_TICKET_ANIMATION_DELAY_SECONDS}s`
-                              : `calc(${index} * -0.22s)`,
-                          } satisfies TicketFlightStyle
-                        }
-                      >
-                        <img
-                          className="jackpot-flight-ticket__asset"
-                          src="/jackpot/jackpot-ticket.webp"
-                          alt=""
-                          aria-hidden="true"
-                        />
-                        <span className="jackpot-flight-ticket__number">
-                          #{ticket.ticketLabel}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </motion.div>
-            )}
-
-            {phase === 'revealed' && (
-              <motion.div
-                className="jackpot-stage-reveal"
-                initial={reducedMotion ? false : { opacity: 0 }}
-                animate={reducedMotion ? undefined : { opacity: 1 }}
-                transition={{ duration: 0.28, ease: 'easeOut' }}
-              >
-                <div className="jackpot-stage-reveal__status">
-                  <Trophy className="h-4 w-4" />
-                  Wynik losowania
-                </div>
+            {revealed && (
+              <div className="jackpot-stage-result">
                 <h2>Wygrywa {draw.winnerUsername ?? 'zwycięzca'}</h2>
-                <div className="jackpot-stage-reveal__ticket-wrap">
-                  <img
-                    className="jackpot-stage-reveal__ticket-art"
-                    src="/jackpot/jackpot-winning-ticket.webp"
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <div className="jackpot-stage-reveal__ticket-copy">
-                    <span className="jackpot-stage-reveal__label">
-                      Zwycięski ticket
-                    </span>
-                    <strong className="jackpot-stage-reveal__ticket">
-                      {winnerTicketLabel}
-                    </strong>
-                  </div>
-                </div>
                 <p>
                   Wygrana <strong>{prizeAmountLabel}</strong>
                 </p>
-
-                {canClaim && (
-                  <Button
-                    type="button"
-                    variant={null}
-                    size={null}
-                    className="jackpot-stage-claim"
-                    disabled={claiming}
-                    onClick={() => void claimReward()}
-                  >
-                    {claiming ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Gift className="h-4 w-4" />
-                    )}
-                    Odbierz nagrodę
-                  </Button>
-                )}
-
-                {rewardStateLabel && (
-                  <div className="jackpot-draw-claimed">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {rewardStateLabel}
-                  </div>
-                )}
-              </motion.div>
+              </div>
             )}
 
             <div className="jackpot-draw-actions">
@@ -700,6 +570,42 @@ export function JackpotDrawExperience({
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Losowanie trwa
                 </div>
+              )}
+
+              {revealed && canClaim && (
+                <Button
+                  type="button"
+                  variant={null}
+                  size={null}
+                  className="jackpot-stage-claim"
+                  disabled={claiming}
+                  onClick={() => void claimReward()}
+                >
+                  {claiming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Gift className="h-4 w-4" />
+                  )}
+                  Odbierz nagrodę
+                </Button>
+              )}
+
+              {revealed && rewardStateLabel && (
+                <div className="jackpot-draw-claimed">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {rewardStateLabel}
+                </div>
+              )}
+
+              {revealed && (
+                <button
+                  type="button"
+                  className="jackpot-stage-replay"
+                  onClick={startReplay}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Obejrzyj ponownie
+                </button>
               )}
             </div>
           </section>

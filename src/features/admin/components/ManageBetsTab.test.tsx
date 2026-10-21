@@ -60,6 +60,8 @@ const categories: Category[] = [
     color: '#22c55e',
     sort_order: 1,
     created_at: '2026-06-17T10:00:00.000Z',
+    parent_id: null,
+    slug: null,
   },
 ];
 

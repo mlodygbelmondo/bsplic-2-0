@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -7,12 +8,17 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { ChevronDown, Lightbulb } from "lucide-react";
+import { ArrowUpDown, ChevronDown, Lightbulb } from "lucide-react";
 import { BetCard } from "./BetCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SectionLoader } from "@/components/SectionLoader";
+import { getCategoryFilterIds } from "@/features/home/categoryTree";
+import { CategoryRail } from "@/features/home/components/CategoryRail";
+import { SortSheet } from "@/features/home/components/SortSheet";
 import { useBets, SortMode } from "@/features/home/hooks/useBets";
+import { SORT_OPTIONS } from "@/features/home/sortOptions";
+import { polishPlural } from "@/features/social/lib/socialFormatters";
 import {
   getNextScrollChromeState,
   type ScrollChromeState,
@@ -42,12 +48,6 @@ interface BetListViewProps extends BetListProps {
   bets: BetListData;
 }
 
-const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: "newest", label: "Najnowsze" },
-  { value: "popular", label: "Popularne" },
-  { value: "ending_soon", label: "Kończące się" },
-];
-
 const SORT_STORAGE_KEY = "bsplic.home.sort";
 const ACTIVE_ONLY_STORAGE_KEY = "bsplic.home.activeOnly";
 
@@ -72,32 +72,6 @@ function readStoredActiveOnly(): boolean {
   return true;
 }
 
-type MobilePanelKind = "sort" | "category";
-
-// Floating dropdown under a mobile filter trigger — overlays the bet list
-// instead of pushing it down. Options inside get the cascading
-// filter-option-enter animation when it opens.
-function MobileFilterPanel({
-  open,
-  children,
-}: {
-  open: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "absolute left-0 right-0 top-[calc(100%+8px)] z-30 flex max-h-[55dvh] flex-col gap-1.5 overflow-y-auto overscroll-contain bg-transparent transition-opacity duration-150 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        open
-          ? "pointer-events-auto opacity-100"
-          : "pointer-events-none opacity-0",
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
 export function BetList({
   selectedCategory,
   onSelectCategory,
@@ -109,7 +83,15 @@ export function BetList({
 }: BetListProps) {
   const [sort, setSort] = useState<SortMode>(readStoredSort);
   const [activeOnly, setActiveOnly] = useState<boolean>(readStoredActiveOnly);
-  const bets = useBets(selectedCategory, sort, !activeOnly);
+  const categoryIds = useMemo(
+    () => getCategoryFilterIds(categories, selectedCategory),
+    [categories, selectedCategory],
+  );
+  // A remembered sport needs the category list to know its leagues; wait for
+  // it instead of loading the sport alone and then reloading.
+  const categoryIdsReady =
+    !selectedCategory || Boolean(categoryMap[selectedCategory]);
+  const bets = useBets(categoryIds, sort, !activeOnly, categoryIdsReady);
 
   return (
     <BetListView
@@ -153,14 +135,28 @@ export function BetListView({
   const { loading, loadingMore, hasMore, loadMore, liveBets, sortedBets } =
     bets;
   const loadMoreRef = useRef<HTMLButtonElement | null>(null);
-  const mobileToolbarRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [actionsHidden, setActionsHidden] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<MobilePanelKind | null>(null);
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const scrollChromeStateRef = useRef<ScrollChromeState>();
 
-  const toggleMobilePanel = (panel: MobilePanelKind) => {
-    setMobilePanel((previous) => (previous === panel ? null : panel));
-  };
+  // Only the very first load shows the loader. Later sort/category changes
+  // keep the filters and the previous bets on screen (dimmed) until the new
+  // ones arrive, then the list re-enters with its card animation.
+  const [hasShownBets, setHasShownBets] = useState(!loading);
+  if (!loading && !hasShownBets) {
+    setHasShownBets(true);
+  }
+  const refreshing = loading && hasShownBets;
+  const criteriaKey = `${sort}:${selectedCategory ?? "all"}:${activeOnly ? "active" : "all-states"}`;
+  const [listKey, setListKey] = useState(criteriaKey);
+  if (!loading && listKey !== criteriaKey) {
+    setListKey(criteriaKey);
+  }
+
+  const betCount = liveBets.length + sortedBets.length;
+  const sortLabel =
+    SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "Sortowanie";
 
   const handleSelectSort = (value: SortMode) => {
     onSortChange(value);
@@ -185,9 +181,6 @@ export function BetListView({
     setActionsHidden((current) =>
       current === nextState.hidden ? current : nextState.hidden,
     );
-    if (nextState.hidden) {
-      setMobilePanel(null);
-    }
   };
 
   const handleToggleActiveOnly = () => {
@@ -202,11 +195,13 @@ export function BetListView({
     });
   };
 
-  // Changing sort/category remounts the scroll container at the top, so the
-  // row must be visible again.
+  // A new sort/category starts at the top of the list with the filters shown.
   useEffect(() => {
     setActionsHidden(false);
     scrollChromeStateRef.current = undefined;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
   }, [sort, selectedCategory, activeOnly]);
 
   useEffect(() => {
@@ -234,45 +229,16 @@ export function BetListView({
     return () => observer.disconnect();
   }, [hasMore, loadMore, loading]);
 
-  useEffect(() => {
-    if (mobilePanel === null) {
-      return;
-    }
-
-    const handleOutsidePress = (event: Event) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-      if (mobileToolbarRef.current?.contains(target)) {
-        return;
-      }
-      setMobilePanel(null);
-    };
-
-    document.addEventListener("pointerdown", handleOutsidePress);
-    document.addEventListener("mousedown", handleOutsidePress);
-    document.addEventListener("touchstart", handleOutsidePress, {
-      passive: true,
-    });
-
-    return () => {
-      document.removeEventListener("pointerdown", handleOutsidePress);
-      document.removeEventListener("mousedown", handleOutsidePress);
-      document.removeEventListener("touchstart", handleOutsidePress);
-    };
-  }, [mobilePanel]);
-
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
-      {loading ? (
+      {loading && !hasShownBets ? (
         <SectionLoader label="Wczytywanie zakładów..." className="flex-1" />
       ) : (
         <div
+          ref={scrollContainerRef}
           data-testid="bet-list-scroll-container"
-          key={`${sort}:${selectedCategory ?? "all"}:${activeOnly ? "active" : "all-states"}`}
           onScroll={handleListScroll}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:pb-3"
+          className="-mx-3 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:mx-0 lg:px-0 lg:pb-3"
         >
           <div
             data-testid="bet-list-desktop-toolbar"
@@ -339,236 +305,152 @@ export function BetListView({
           </div>
 
           {/* Mobile: sticky inside the scroll container, so hiding it with a
-              transform does not change the scroll container height mid-gesture. */}
+              transform does not change the scroll container height mid-gesture.
+              It bleeds into the container's side padding to span the screen. */}
           <div
-            ref={mobileToolbarRef}
             data-testid="bet-list-mobile-toolbar"
             className={cn(
-              "sticky top-0 mb-2.5 lg:hidden transition-transform duration-200 ease-out",
-              mobilePanel !== null ? "z-50" : "z-30",
+              "home-filter-bar sticky top-0 z-30 -mx-3 mb-2.5 border-b border-border/60 transition-transform duration-200 ease-out lg:hidden",
               actionsHidden
                 ? "-translate-y-full opacity-100 pointer-events-none"
-                : "translate-y-0 opacity-100",
-              !actionsHidden && mobilePanel === null && "will-change-transform",
+                : "translate-y-0 opacity-100 will-change-transform",
             )}
           >
-            <div className="flex items-start gap-2 bg-transparent pb-2 pt-2">
-              {/* Left column: bet view type + Aktywne, options stack under
-                  the trigger. */}
-              <div className="relative z-30 min-w-0 flex-1">
-                <button
-                  type="button"
-                  onClick={() => toggleMobilePanel("sort")}
-                  aria-expanded={mobilePanel === "sort"}
+            {onSelectCategory && categories.length > 0 && (
+              <CategoryRail
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={onSelectCategory}
+              />
+            )}
+            <div className="flex h-11 items-center justify-between gap-3 px-3">
+              <p
+                data-testid="bet-list-count"
+                className={cn(
+                  "min-w-0 truncate text-[13px] text-muted-foreground transition-opacity duration-200",
+                  refreshing && "opacity-40",
+                )}
+              >
+                <span className="font-semibold tabular-nums text-foreground">
+                  {betCount}
+                  {hasMore ? "+" : ""}
+                </span>{" "}
+                {polishPlural(betCount, {
+                  one: "zakład",
+                  few: "zakłady",
+                  many: "zakładów",
+                })}
+                {!activeOnly && " · też w trakcie"}
+              </p>
+              <button
+                type="button"
+                data-testid="bet-list-sort-trigger"
+                onClick={() => setSortSheetOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={sortSheetOpen}
+                className="press-scale -mr-1.5 flex h-9 shrink-0 items-center gap-1.5 rounded-full px-1.5 text-[13px] font-semibold text-foreground"
+              >
+                <ArrowUpDown
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                {sortLabel}
+                <ChevronDown
                   className={cn(
-                    "press-scale flex h-11 w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                    mobilePanel === "sort"
-                      ? "border-foreground/40 bg-card text-foreground shadow-md"
-                      : "border-border bg-card/80 text-foreground",
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform duration-300",
+                    sortSheetOpen && "rotate-180",
                   )}
-                >
-                  <span className="flex items-center gap-1.5 truncate">
-                    {activeOnly && (
-                      <span
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-success"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="truncate">
-                      {SORT_OPTIONS.find((option) => option.value === sort)
-                        ?.label ?? "Sortowanie"}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                      mobilePanel === "sort" && "rotate-180",
-                    )}
-                  />
-                </button>
-
-                <MobileFilterPanel open={mobilePanel === "sort"}>
-                  {SORT_OPTIONS.map((option, index) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        handleSelectSort(option.value);
-                        setMobilePanel(null);
-                      }}
-                      className={cn(
-                        "press-scale h-11 w-full shrink-0 rounded-full px-3.5 text-left text-sm font-semibold leading-none transition-all duration-200",
-                        mobilePanel === "sort" && "filter-option-enter",
-                        sort === option.value
-                          ? "bg-foreground text-background shadow-md"
-                          : "bg-card text-foreground border border-border hover:border-foreground/30",
-                      )}
-                      style={{ "--stagger": index } as CSSProperties}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={handleToggleActiveOnly}
-                    aria-pressed={activeOnly}
-                    className={cn(
-                      "press-scale flex h-11 w-full shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                      mobilePanel === "sort" && "filter-option-enter",
-                      activeOnly
-                        ? "bg-foreground text-background shadow-md"
-                        : "bg-card text-muted-foreground border border-border hover:text-foreground hover:border-foreground/30",
-                    )}
-                    style={
-                      { "--stagger": SORT_OPTIONS.length } as CSSProperties
-                    }
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full transition-colors duration-200",
-                        activeOnly ? "bg-success" : "bg-muted-foreground/50",
-                      )}
-                      aria-hidden="true"
-                    />
-                    Aktywne
-                  </button>
-                </MobileFilterPanel>
-              </div>
-
-              {/* Right column: categories, stacked under the trigger. */}
-              {onSelectCategory && (
-                <div className="relative z-30 min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleMobilePanel("category")}
-                    aria-expanded={mobilePanel === "category"}
-                    className={cn(
-                      "press-scale flex h-11 w-full min-w-0 items-center justify-between gap-1.5 rounded-full border px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                      mobilePanel === "category"
-                        ? "border-foreground/40 bg-card text-foreground shadow-md"
-                        : "border-border bg-card/80 text-foreground",
-                    )}
-                  >
-                    <span className="truncate">
-                      {selectedCategory && categoryMap[selectedCategory]
-                        ? `${categoryMap[selectedCategory].emoji} ${categoryMap[selectedCategory].name}`
-                        : "🌐 Wszystkie"}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                        mobilePanel === "category" && "rotate-180",
-                      )}
-                    />
-                  </button>
-
-                  <MobileFilterPanel open={mobilePanel === "category"}>
-                    <button
-                      onClick={() => {
-                        onSelectCategory(null);
-                        setMobilePanel(null);
-                      }}
-                      className={cn(
-                        "press-scale flex h-11 w-full shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                        mobilePanel === "category" && "filter-option-enter",
-                        !selectedCategory
-                          ? "bg-foreground text-background shadow-md"
-                          : "bg-card text-foreground border border-border hover:border-foreground/30",
-                      )}
-                      style={{ "--stagger": 0 } as CSSProperties}
-                    >
-                      🌐 Wszystkie
-                    </button>
-                    {categories.map((cat, index) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => {
-                          onSelectCategory(cat.id);
-                          setMobilePanel(null);
-                        }}
-                        className={cn(
-                          "press-scale flex h-11 w-full shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-semibold leading-none transition-all duration-200",
-                          mobilePanel === "category" && "filter-option-enter",
-                          selectedCategory === cat.id
-                            ? "bg-foreground text-background shadow-md"
-                            : "bg-card text-foreground border border-border hover:border-foreground/30",
-                        )}
-                        style={{ "--stagger": index + 1 } as CSSProperties}
-                      >
-                        {cat.emoji} {cat.name}
-                      </button>
-                    ))}
-                  </MobileFilterPanel>
-                </div>
-              )}
+                  aria-hidden="true"
+                />
+              </button>
             </div>
           </div>
 
+          <SortSheet
+            open={sortSheetOpen}
+            onClose={() => setSortSheetOpen(false)}
+            sort={sort}
+            onSortChange={handleSelectSort}
+            activeOnly={activeOnly}
+            onToggleActiveOnly={handleToggleActiveOnly}
+          />
+
           {topBanner}
 
-          {liveBets.length > 0 && (
-            <div className="mb-4">
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {liveBets.map((bet, index) => (
+          <div
+            key={listKey}
+            data-testid="bet-list-results"
+            aria-busy={refreshing}
+            className={cn(
+              "transition-opacity duration-200",
+              refreshing && "pointer-events-none opacity-40",
+            )}
+          >
+            {liveBets.length > 0 && (
+              <div className="mb-4">
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {liveBets.map((bet, index) => (
+                    <div
+                      key={bet.id}
+                      className="bet-card-enter"
+                      style={{ "--stagger": Math.min(index, 8) } as CSSProperties}
+                    >
+                      <BetCard
+                        bet={bet}
+                        category={
+                          bet.category_id
+                            ? categoryMap[bet.category_id]
+                            : undefined
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2.5 mb-8">
+              {sortedBets.length === 0 && liveBets.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <p className="text-base font-medium">
+                    Brak dostępnych zakładów
+                  </p>
+                  <p className="text-[13px] mt-1">
+                    Wróć później lub zmień kategorię
+                  </p>
+                </div>
+              ) : (
+                sortedBets.map((bet, index) => (
                   <div
                     key={bet.id}
                     className="bet-card-enter"
-                    style={{ "--stagger": Math.min(index, 8) } as CSSProperties}
+                    style={
+                      {
+                        "--stagger": Math.min(index + liveBets.length, 8),
+                      } as CSSProperties
+                    }
                   >
                     <BetCard
                       bet={bet}
                       category={
-                        bet.category_id
-                          ? categoryMap[bet.category_id]
-                          : undefined
+                        bet.category_id ? categoryMap[bet.category_id] : undefined
                       }
                     />
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2.5 mb-8">
-            {sortedBets.length === 0 && liveBets.length === 0 ? (
-              <div className="text-center py-16 text-muted-foreground">
-                <p className="text-base font-medium">
-                  Brak dostępnych zakładów
-                </p>
-                <p className="text-[13px] mt-1">
-                  Wróć później lub zmień kategorię
-                </p>
-              </div>
-            ) : (
-              sortedBets.map((bet, index) => (
-                <div
-                  key={bet.id}
-                  className="bet-card-enter"
-                  style={
-                    {
-                      "--stagger": Math.min(index + liveBets.length, 8),
-                    } as CSSProperties
-                  }
+                ))
+              )}
+              {hasMore && (
+                <button
+                  type="button"
+                  ref={loadMoreRef}
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
                 >
-                  <BetCard
-                    bet={bet}
-                    category={
-                      bet.category_id ? categoryMap[bet.category_id] : undefined
-                    }
-                  />
-                </div>
-              ))
-            )}
-            {hasMore && (
-              <button
-                type="button"
-                ref={loadMoreRef}
-                onClick={() => void loadMore()}
-                disabled={loadingMore}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-70"
-              >
-                {loadingMore ? "Ładowanie..." : "Pokaż więcej"}
-              </button>
-            )}
+                  {loadingMore ? "Ładowanie..." : "Pokaż więcej"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

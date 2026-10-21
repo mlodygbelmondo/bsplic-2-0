@@ -73,8 +73,13 @@ describe('DailyJackpotCard', () => {
     expect(screen.getByText('0 zł')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Kupuję 1 ticket',
+      }),
+    );
 
-    expect(onBuy).toHaveBeenCalledTimes(1);
+    expect(onBuy).toHaveBeenCalledWith(1);
   });
 
   it('renders collecting state and buys a ticket', () => {
@@ -121,8 +126,70 @@ describe('DailyJackpotCard', () => {
     ).toBe('Cena');
 
     fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Kupuję 1 ticket',
+      }),
+    );
 
-    expect(onBuy).toHaveBeenCalledTimes(1);
+    expect(onBuy).toHaveBeenCalledWith(1);
+  });
+
+  it('asks for confirmation before charging and buys the chosen ticket count', () => {
+    const onBuy = vi.fn().mockResolvedValue(true);
+
+    render(
+      <DailyJackpotCard
+        snapshot={snapshot}
+        loading={false}
+        buying={false}
+        balance={250}
+        onBuy={onBuy}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
+
+    expect(onBuy).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Saldo:', { exact: false })).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Numery ticketów nadajemy po kolei/i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(
+        within(dialog).getByRole('group', { name: 'Liczba ticketów' }),
+      ).getByRole('button', { name: /2 tickety/i }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Kupuję 2 tickety' }),
+    );
+
+    expect(onBuy).toHaveBeenCalledWith(2);
+  });
+
+  it('only offers as many tickets as the balance covers', () => {
+    render(
+      <DailyJackpotCard
+        snapshot={snapshot}
+        loading={false}
+        buying={false}
+        balance={150}
+        onBuy={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Kup ticket/i }));
+
+    const quantity = screen.getByRole('group', { name: 'Liczba ticketów' });
+    expect(within(quantity).getByRole('button', { name: /1 ticket/i })).toBeEnabled();
+    expect(within(quantity).getByRole('button', { name: /2 tickety/i })).toBeDisabled();
+    expect(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Kupuję 1 ticket',
+      }),
+    ).toBeEnabled();
   });
 
   it('opens a short funding explanation from the pool label info icon', () => {
@@ -253,7 +320,15 @@ describe('DailyJackpotCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Kup drugi ticket/i }));
 
-    expect(onBuy).toHaveBeenCalledTimes(1);
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).queryByRole('button', { name: /2 tickety/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Kupuję 1 ticket' }),
+    );
+
+    expect(onBuy).toHaveBeenCalledWith(1);
   });
 
   it('disables buying after two tickets', () => {

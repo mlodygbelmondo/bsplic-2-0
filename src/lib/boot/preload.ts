@@ -74,8 +74,6 @@ function getCriticalImages() {
 }
 
 const BACKGROUND_IMAGES = [
-  "/jackpot/jackpot-draw-stage.webp",
-  "/jackpot/jackpot-ticket.webp",
   "/jackpot/jackpot-winning-ticket.webp",
   "/casino/roulette-background.webp",
 ];

@@ -26,6 +26,18 @@ function getPurchasedTicketLabel(
   return newTicketNumber === null ? null : formatTicketLabel(newTicketNumber);
 }
 
+function getPurchaseToastMessage(ticketLabels: string[], purchasedCount: number) {
+  if (purchasedCount === 1) {
+    return ticketLabels.length > 0
+      ? `Ticket ${ticketLabels[0]} kupiony!`
+      : 'Ticket kupiony!';
+  }
+
+  return ticketLabels.length === purchasedCount
+    ? `Tickety ${ticketLabels.join(' ')} kupione!`
+    : 'Tickety kupione!';
+}
+
 export function useDailyJackpot() {
   const { profile, refreshProfile } = useAuth();
   const [snapshot, setSnapshot] = useState<DailyJackpotSnapshot | null>(null);
@@ -100,37 +112,59 @@ export function useDailyJackpot() {
     [refreshBalanceAfterStateMaintenance],
   );
 
-  const buyTicket = useCallback(async () => {
-    if (!snapshot?.poolId || buyingRef.current) {
-      return;
-    }
+  const buyTickets = useCallback(
+    async (count = 1) => {
+      const poolId = snapshot?.poolId;
+      if (!snapshot || !poolId || buyingRef.current) {
+        return false;
+      }
 
-    buyingRef.current = true;
-    snapshotVersionRef.current += 1;
-    setBuying(true);
-    try {
-      const nextSnapshot = await buyDailyJackpotTicket(snapshot.poolId);
-      const purchasedTicketLabel = getPurchasedTicketLabel(
-        snapshot,
-        nextSnapshot,
-      );
-      setSnapshot(nextSnapshot);
-      lastLoadAtRef.current = Date.now();
-      await refreshProfile();
-      toast.success(
-        purchasedTicketLabel
-          ? `Ticket ${purchasedTicketLabel} kupiony!`
-          : 'Ticket kupiony!',
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Nie udało się kupić ticketu';
-      toast.error(message);
-    } finally {
-      buyingRef.current = false;
-      setBuying(false);
-    }
-  }, [refreshProfile, snapshot]);
+      buyingRef.current = true;
+      snapshotVersionRef.current += 1;
+      setBuying(true);
+      let latestSnapshot = snapshot;
+      let purchasedCount = 0;
+      const purchasedLabels: string[] = [];
+
+      try {
+        // The RPC sells one ticket per call and enforces the per-player limit.
+        for (let index = 0; index < count; index += 1) {
+          const nextSnapshot = await buyDailyJackpotTicket(poolId);
+          const purchasedLabel = getPurchasedTicketLabel(
+            latestSnapshot,
+            nextSnapshot,
+          );
+          if (purchasedLabel) {
+            purchasedLabels.push(purchasedLabel);
+          }
+          purchasedCount += 1;
+          latestSnapshot = nextSnapshot;
+          setSnapshot(nextSnapshot);
+          lastLoadAtRef.current = Date.now();
+        }
+
+        toast.success(getPurchaseToastMessage(purchasedLabels, purchasedCount));
+        return true;
+      } catch (error) {
+        if (purchasedCount > 0) {
+          toast.success(getPurchaseToastMessage(purchasedLabels, purchasedCount));
+        }
+        const message =
+          error instanceof Error ? error.message : 'Nie udało się kupić ticketu';
+        toast.error(message);
+        return false;
+      } finally {
+        buyingRef.current = false;
+        setBuying(false);
+        if (purchasedCount > 0) {
+          // The purchase already succeeded; a failed balance refresh is
+          // retried by the next profile load, so it must not show an error.
+          void refreshProfile().catch(() => undefined);
+        }
+      }
+    },
+    [refreshProfile, snapshot],
+  );
 
   useEffect(() => {
     void load();
@@ -166,6 +200,6 @@ export function useDailyJackpot() {
     loading,
     buying,
     balance: Number(profile?.balance ?? 0),
-    buyTicket,
+    buyTickets,
   };
 }

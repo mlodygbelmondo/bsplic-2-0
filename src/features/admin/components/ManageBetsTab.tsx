@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SectionLoader } from '@/components/SectionLoader';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/categoryTree';
 import { toast } from 'sonner';
 import { Plus, X, Check, Trophy, RotateCcw, CircleOff, Sparkles, Search, Pencil, MoreHorizontal, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 import {
@@ -596,7 +597,9 @@ export default function ManageBetsTab() {
                     <SelectTrigger><SelectValue placeholder="Wybierz" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_CATEGORY_VALUE}>Brak kategorii</SelectItem>
-                      {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.emoji} {c.name}</SelectItem>)}
+                      {getCategoryOptions(categories).map(({ category: c, parent }) => (
+                        <SelectItem key={c.id} value={c.id}>{c.emoji} {getCategoryLabel(c, parent)}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
