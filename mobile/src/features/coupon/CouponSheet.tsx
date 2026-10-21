@@ -126,7 +126,7 @@ export function CouponSheet() {
   }));
 
   return (
-    <KeyboardAvoidingView behavior="padding" automaticOffset style={styles.root}>
+    <KeyboardAvoidingView behavior="padding" automaticOffset style={styles.root} collapsable={false}>
       {/* Web drag-handle row; iOS draws the native grabber inside it. */}
       <View style={styles.handleRow}>
         {Platform.OS === 'android' ? <View style={styles.handle} /> : null}

@@ -59,7 +59,7 @@ export function NotificationsSheet() {
   };
 
   return (
-    <View style={styles.container} accessibilityLabel="Powiadomienia">
+    <View style={styles.container} accessibilityLabel="Powiadomienia" collapsable={false}>
       <View style={styles.header}>
         <Text size="sm" weight="600" accessibilityRole="header">
           Powiadomienia

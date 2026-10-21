@@ -52,7 +52,7 @@ export function MenuSheet() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} collapsable={false}>
       <View style={styles.header}>
         <Text size="base" weight="600" accessibilityRole="header">
           Menu
@@ -68,7 +68,7 @@ export function MenuSheet() {
         </Pressable>
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} contentInsetAdjustmentBehavior="never">
         <View style={styles.links}>
           {links.map((link) => {
             const active = isActivePath(currentPath, link.path);

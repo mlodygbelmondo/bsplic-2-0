@@ -49,7 +49,7 @@ export function TopupSheet() {
   };
 
   return (
-    <View style={[styles.root, { paddingBottom: 20 + insets.bottom }]}>
+    <View style={[styles.root, { paddingBottom: 20 + insets.bottom }]} collapsable={false}>
       <Text size="lg" weight="600" align="center" accessibilityRole="header" style={styles.title}>
         💰 Doładuj portfel
       </Text>

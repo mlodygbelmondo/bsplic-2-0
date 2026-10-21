@@ -39,7 +39,7 @@ export function WalletSheet() {
   }, [submitting]);
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} collapsable={false}>
       <Stack.Screen options={{ gestureEnabled: !submitting }} />
       <View style={styles.header}>
         <View style={styles.iconTile}>

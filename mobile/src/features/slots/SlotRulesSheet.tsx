@@ -26,7 +26,7 @@ export function SlotRulesSheet({ game }: { game: string | undefined }) {
   }
   const config = SLOT_GAMES[game];
   return (
-    <View style={styles.sheet}>
+    <View style={styles.sheet} collapsable={false}>
       <SheetHeader title={`${config.title} · zasady`} description={`${config.rule}.`} />
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}>
         <Text style={styles.paragraph}>
