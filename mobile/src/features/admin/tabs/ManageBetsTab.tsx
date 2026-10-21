@@ -119,6 +119,8 @@ export function ManageBetsTab() {
       toast.error(OFFLINE_WRITE_MESSAGE);
       return;
     }
+    // One settlement at a time: a second request would share the in-progress flag.
+    if (resolvingBetId) return;
     setResolvingBetId(bet.id);
     const isCorrection = Boolean(bet.winning_option);
     try {

@@ -72,7 +72,12 @@ export function FeaturePollSurface() {
         key={poll.id}
         poll={poll}
         loadingPoll={query.isFetching}
-        onVoted={() => queryClient.setQueryData(featurePollQueries.available(userId).queryKey, null)}
+        onVoted={() => {
+          // Drop any in-flight refetch so it cannot bring the answered poll back.
+          const { queryKey } = featurePollQueries.available(userId);
+          void queryClient.cancelQueries({ queryKey });
+          queryClient.setQueryData(queryKey, null);
+        }}
       />
     </DialogModal>
   );

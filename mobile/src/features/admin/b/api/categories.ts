@@ -25,11 +25,13 @@ export async function updateCategory(id: string, form: CategoryForm): Promise<vo
 
 /** Web check before deleting: a category with active bets cannot be removed. */
 export async function countActiveBetsInCategory(id: string): Promise<number> {
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('bets')
     .select('*', { count: 'exact', head: true })
     .eq('category_id', id)
     .eq('is_active', true);
+  // A failed count must not read as "no active bets" and allow the delete.
+  if (error) throw error;
   return count ?? 0;
 }
 
