@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { JackpotDrawScreen } from '@/features/jackpot/draw/JackpotDrawScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Losowanie jackpota" />;
+  return <JackpotDrawScreen />;
 }
