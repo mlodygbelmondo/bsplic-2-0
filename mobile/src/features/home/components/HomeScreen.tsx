@@ -17,6 +17,7 @@ import { CouponBar } from '@/features/coupon/CouponBar';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
 import { useLiteMotion, useReducedMotion } from '@/lib/motion';
+import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { createStyles } from '@/theme';
 import type { Category } from '@/types/database';
 import { ScreenBackground } from '@/ui';
@@ -27,7 +28,6 @@ import { homePreferencesActions, useHomePreferences } from '../hooks/use-home-pr
 import { useHomeRealtime } from '../hooks/use-home-realtime';
 import { buildBetSections } from '../logic/bet-sections';
 import { getCategoryFilterIds } from '../logic/category-tree';
-import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { BetFeedList, buildHomeRows, NO_ROWS, SKELETON_ROWS, type HomeRow } from './BetFeedList';
 import { HomeFilterBar } from './HomeFilterBar';
 

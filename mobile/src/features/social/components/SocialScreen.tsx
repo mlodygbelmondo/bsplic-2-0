@@ -3,7 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowUp } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Pressable, RefreshControl, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollViewProps,
+} from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from 'zustand';
 
@@ -12,6 +20,7 @@ import { AppHeader } from '@/features/shell/AppHeader';
 import { getErrorMessage } from '@/lib/errors';
 import { useHasBeenFocused } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
+import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import type { SocialFeedItem } from '@/types/database';
@@ -23,7 +32,6 @@ import { useSocialFeed } from '../hooks/useSocialFeed';
 import { useSocialRealtimeFeed } from '../hooks/useSocialRealtimeFeed';
 import { FILTER_EMPTY_TITLES, getStoryProfiles, parseFeedFilter, type FeedFilter } from '../lib/feedList';
 import { getFeedItemKey } from '../lib/routes';
-import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { SocialStories } from '../stories/SocialStories';
 import { createFeedChromeStore, patchFeedChrome, type FeedChromeStore } from './feedChrome';
 import { createFeedVisibilityStore, FeedVisibilityContext } from './feedVisibility';
@@ -190,6 +198,7 @@ function SocialFeedBody() {
           onViewableItemsChanged={handleViewableItemsChanged}
           viewabilityConfig={VIEWABILITY_CONFIG}
           maintainVisibleContentPosition={MAINTAIN_POSITION}
+          renderScrollComponent={FeedScrollView}
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           refreshControl={
@@ -207,6 +216,11 @@ function SocialFeedBody() {
       <BackToTopButton chrome={chrome} bottom={insets.bottom + 20} onPress={scrollToTop} />
     </View>
   );
+}
+
+/** Scrolls a focused comment field above the keyboard, as the browser does on the web. */
+function FeedScrollView(props: ScrollViewProps) {
+  return <KeyboardAwareScrollView bottomOffset={16} {...props} />;
 }
 
 /** Web empty block: `text-center py-12 text-muted-foreground`, `text-lg font-medium` + `text-sm mt-1`. */
