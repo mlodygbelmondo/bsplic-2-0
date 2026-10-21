@@ -36,7 +36,8 @@ const useStyles = createStyles(({ colors, gradients, shadows, radius, scheme }) 
   sub: {
     borderWidth: 1,
     borderColor: `${colors.border}b8`,
-    backgroundColor: `${colors.muted}85`,
+    // `.app-subsurface`: muted at 52%, 60% under `.light`.
+    backgroundColor: `${colors.muted}${scheme === 'dark' ? '85' : '99'}`,
   },
   bookmaker: {
     borderWidth: 1,

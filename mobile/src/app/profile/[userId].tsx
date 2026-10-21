@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { PublicProfileScreen } from '@/features/profile/ProfileScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Profil gracza" />;
+  return <PublicProfileScreen />;
 }

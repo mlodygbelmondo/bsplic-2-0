@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { OwnProfileScreen } from '@/features/profile/ProfileScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Profil" />;
+  return <OwnProfileScreen />;
 }
