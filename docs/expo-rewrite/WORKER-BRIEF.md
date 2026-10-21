@@ -70,6 +70,7 @@ You implement one area of the native app in `mobile/` with 1:1 parity to the PWA
 - **Italics**: iOS does not synthesize italics for Inter. Use `Text italic` or `fauxItalic` from `@/theme`, never `fontStyle: 'italic'`.
 - **Realtime**: `useRealtimeChannel` gives every subscription a unique topic; fixed names are fine.
 - **Worklet default parameters**: a worklet does not capture module constants used in default parameter values (`perspective = DRUM_PERSPECTIVE` crashes on the UI thread). Resolve defaults inside the body.
+- **3D transforms and zIndex**: Core Animation depth-sorts siblings with `perspective` + `rotateX/Y` transforms, so a tilted plane can poke through overlays despite `zIndex`. Wrap static tilted views in a `shouldRasterizeIOS` container.
 - **Dialog close buttons**: the shadcn `data-[state=open]:bg-accent` on `DialogPrimitive.Close` never applies on the web (the button has no `data-state`); do not give native close buttons a background.
 
 ## Final report (your last message)

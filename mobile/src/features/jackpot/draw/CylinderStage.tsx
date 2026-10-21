@@ -1,4 +1,5 @@
 import { Canvas, Image as SkiaImage, Shadow, useImage } from '@shopify/react-native-skia';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -13,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { useLiteMotion } from '@/lib/motion';
 import { hsl } from '@/theme';
 import { Text } from '@/ui';
 
@@ -133,8 +135,12 @@ export function CylinderStage({
     <View style={styles.shadow}>
       <View style={styles.cylinder}>
         <Animated.View pointerEvents="none" style={[styles.glow, glowStyle]} />
-        <View pointerEvents="none" style={[styles.grid, styles.ceiling]} />
-        <View pointerEvents="none" style={[styles.grid, styles.floor]} />
+        {/* Rasterized so the tilted planes stay flat under the fades and the winner overlay
+            (Core Animation depth-sorts 3D-transformed siblings regardless of zIndex). */}
+        <View pointerEvents="none" shouldRasterizeIOS style={styles.gridLayer}>
+          <View style={[styles.grid, styles.ceiling]} />
+          <View style={[styles.grid, styles.floor]} />
+        </View>
 
         <View pointerEvents="none" style={styles.viewport}>
           {labelsBefore.map((label, index) => (
@@ -286,6 +292,7 @@ function WinnerOverlay({
   reducedMotion: boolean;
 }) {
   const opacity = useSharedValue(reducedMotion ? 1 : 0);
+  const liteMotion = useLiteMotion();
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -296,6 +303,8 @@ function WinnerOverlay({
 
   return (
     <Animated.View pointerEvents="none" style={[styles.winner, style]}>
+      {/* backdrop-filter: blur(2px); dropped in Low Power Mode like the web's perf-lite. */}
+      {liteMotion ? null : <BlurView intensity={6} tint="dark" style={StyleSheet.absoluteFill} />}
       <WinningTicket label={label} width={ticketWidth} reducedMotion={reducedMotion} />
     </Animated.View>
   );
@@ -319,11 +328,11 @@ const styles = StyleSheet.create({
     ...FILL,
     backgroundImage: `radial-gradient(ellipse at center, ${hsl(0, 72, 51, 0.5)}, ${hsl(0, 74, 35, 0.25)} 50%, ${fade(0, 74, 35)} 70%)`,
   },
+  gridLayer: { ...FILL, zIndex: 1 },
   grid: {
     position: 'absolute',
     left: 0,
     right: 0,
-    zIndex: 1,
     backgroundSize: '26px 18px',
     backgroundRepeat: 'repeat',
   },
