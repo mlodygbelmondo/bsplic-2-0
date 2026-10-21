@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { NotificationsSheet } from '@/features/notifications/NotificationsSheet';
 
-export default function Screen() {
-  return <RoutePlaceholder name="notifications" />;
+export default function NotificationsScreen() {
+  return <NotificationsSheet />;
 }
