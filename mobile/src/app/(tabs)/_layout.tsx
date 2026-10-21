@@ -15,9 +15,11 @@ export default function TabsLayout() {
   const onDark = !pathname.startsWith('/social') && (scheme === 'dark' || pathname.startsWith('/casino'));
   const selected = onDark ? '#ffe14a' : '#c90018';
   const idle = onDark ? 'rgba(255, 255, 255, 0.68)' : 'rgba(2, 6, 23, 0.82)';
+  // The web hides its bottom nav on scroll only on home, Social and rankings.
+  const hidesOnScroll = pathname === '/' || pathname.startsWith('/social') || pathname.startsWith('/rankings');
   return (
     <NativeTabs
-      minimizeBehavior="onScrollDown"
+      minimizeBehavior={hidesOnScroll ? 'onScrollDown' : 'never'}
       tintColor={selected}
       iconColor={{ default: idle, selected }}
       labelStyle={{ default: { color: idle }, selected: { color: selected } }}

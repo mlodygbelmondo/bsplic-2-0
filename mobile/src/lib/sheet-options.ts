@@ -18,3 +18,11 @@ export function formSheet(detents: Detents): Extract<ScreenOptions, object> {
 
 /** Applied to any `sheets/*` route that is not declared explicitly. */
 export const sheetDefaults = formSheet([0.6, 1]);
+
+/** Transparent route that draws its own web-shaped overlay with `OverlayScreen` from `@/ui`. */
+export const overlayScreen = {
+  presentation: 'transparentModal',
+  animation: 'none',
+  gestureEnabled: false,
+  contentStyle: { backgroundColor: 'transparent' },
+} as Extract<ScreenOptions, object>;

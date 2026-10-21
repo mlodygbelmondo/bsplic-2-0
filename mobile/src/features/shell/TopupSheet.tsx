@@ -1,8 +1,6 @@
-import { router } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { authActions, useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
@@ -10,7 +8,7 @@ import { haptics } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import { createStyles, useTheme } from '@/theme';
-import { Button, Text } from '@/ui';
+import { Button, OverlayScreen, Text, useOverlayClose } from '@/ui';
 
 const TOPUP_ERROR_MESSAGE = 'Błąd doładowania';
 
@@ -18,7 +16,8 @@ const TOPUP_ERROR_MESSAGE = 'Błąd doładowania';
 export function TopupSheet() {
   const styles = useStyles();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const close = useOverlayClose();
   const userId = useUserId();
   const hasProfile = useAuthStore((s) => s.profile !== null);
   const offline = useIsOffline();
@@ -40,7 +39,7 @@ export function TopupSheet() {
       await authActions.refreshProfile();
       haptics.success();
       toast.success('💰 Doładowano 100 zł. Wróć jutro po więcej!');
-      router.back();
+      close();
     } catch {
       toast.error(TOPUP_ERROR_MESSAGE);
     } finally {
@@ -49,19 +48,15 @@ export function TopupSheet() {
   };
 
   return (
-    <View style={[styles.root, { paddingBottom: 20 + insets.bottom }]} collapsable={false}>
+    // Web DialogContent `w-[calc(100%-1.25rem)] max-w-sm rounded-xl p-5` over the shadcn `grid gap-4` base.
+    <OverlayScreen
+      variant="dialog"
+      accessibilityLabel="💰 Doładuj portfel"
+      style={[styles.card, { width: width - 20 }]}
+    >
       <Text size="lg" weight="600" align="center" accessibilityRole="header" style={styles.title}>
         💰 Doładuj portfel
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Zamknij"
-        hitSlop={14}
-        onPress={() => router.back()}
-        style={styles.close}
-      >
-        <X size={16} color={colors.foreground} />
-      </Pressable>
 
       <View style={styles.body}>
         <Text color="mutedForeground" align="center">
@@ -82,14 +77,27 @@ export function TopupSheet() {
           </Text>
         ) : null}
       </View>
-    </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Zamknij"
+        hitSlop={14}
+        onPress={() => close()}
+        style={styles.close}
+      >
+        <X size={16} color={colors.foreground} />
+      </Pressable>
+    </OverlayScreen>
   );
 }
 
-const useStyles = createStyles(({ colors }) => ({
-  root: { backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: 20, gap: 16 },
-  title: { lineHeight: 20, letterSpacing: -0.45, paddingHorizontal: 24 },
-  close: { position: 'absolute', right: 16, top: 16, padding: 2, opacity: 0.7 },
+const useStyles = createStyles(() => ({
+  card: { maxWidth: 384, borderRadius: 12, padding: 20, gap: 16 },
+  // DialogTitle `text-lg font-semibold leading-none tracking-tight`.
+  title: { lineHeight: 18, letterSpacing: -0.45 },
+  // `absolute right-4 top-4 opacity-70`, 16px X; no background (see WORKER-BRIEF).
+  close: { position: 'absolute', right: 16, top: 16, opacity: 0.7 },
+  // `text-center space-y-4 py-2`.
   body: { gap: 16, paddingVertical: 8 },
   // shadcn Button `h-11` with `gradient-primary font-bold` (no shadow on this one).
   button: { height: 44, boxShadow: [] },

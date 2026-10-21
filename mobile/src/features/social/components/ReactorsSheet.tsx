@@ -1,15 +1,14 @@
-import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
+import { X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
 import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
-import { alpha, createStyles } from '@/theme';
+import { alpha, createStyles, useTheme } from '@/theme';
 import type { ReactorUser } from '@/types/social';
-import { SheetHeader, Text } from '@/ui';
+import { OverlayScreen, Text, useOverlayClose } from '@/ui';
 import { reactorsQuery } from '../api/queries';
 import { REACTION_EMOJIS, REACTION_TYPES, type ReactionType } from '../lib/reactions';
 import { parseReactorsRouteParams, type ReactorsTarget } from '../lib/routes';
@@ -21,29 +20,52 @@ import { parseReactorsRouteParams, type ReactorsTarget } from '../lib/routes';
  */
 export function ReactorsSheet() {
   const styles = useStyles();
+  const { width: windowWidth } = useWindowDimensions();
   const parsed = parseReactorsRouteParams(useLocalSearchParams());
 
   return (
-    <View collapsable={false} style={styles.sheet}>
-      <SheetHeader title="Reakcje" />
+    // `w-[calc(100%-1rem)] max-w-md rounded-lg p-6 grid gap-4`.
+    <OverlayScreen variant="dialog" accessibilityLabel="Reakcje" style={[styles.card, { width: windowWidth - 16 }]}>
+      {/* DialogHeader is `text-center` below `sm`. */}
+      <Text style={styles.title} accessibilityRole="header">
+        Reakcje
+      </Text>
       {parsed ? (
         <ReactorsBody target={parsed.target} initial={parsed.initial} />
       ) : (
-        <Text style={styles.message}>Brak reakcji</Text>
+        <Text color="mutedForeground">Brak reakcji</Text>
       )}
-    </View>
+      <DialogClose />
+    </OverlayScreen>
+  );
+}
+
+/** shadcn `DialogPrimitive.Close`: `absolute right-4 top-4 opacity-70`, 16 px X, no background. */
+function DialogClose() {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  const close = useOverlayClose();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Zamknij"
+      hitSlop={14}
+      onPress={() => close()}
+      style={styles.close}
+    >
+      <X size={16} color={colors.foreground} />
+    </Pressable>
   );
 }
 
 function ReactorsBody({ target, initial }: { target: ReactorsTarget; initial: ReactionType | null }) {
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
   const currentUserId = useUserId();
   const { data: reactors, isPending } = useQuery(reactorsQuery(target));
   const [selected, setSelected] = useState<ReactionType | null>(null);
 
-  if (isPending) return <Text style={styles.message}>Ładowanie...</Text>;
-  if (!reactors || reactors.length === 0) return <Text style={styles.message}>Brak reakcji</Text>;
+  if (isPending) return <Text color="mutedForeground">Ładowanie...</Text>;
+  if (!reactors || reactors.length === 0) return <Text color="mutedForeground">Brak reakcji</Text>;
 
   const byType = new Map<ReactionType, ReactorUser[]>();
   for (const reactor of reactors) {
@@ -84,28 +106,29 @@ function ReactorsBody({ target, initial }: { target: ReactorsTarget; initial: Re
           );
         })}
       </ScrollView>
-      <FlashList
-        data={list}
-        keyExtractor={(reactor) => `${reactor.user_id}-${reactor.created_at}`}
-        renderItem={({ item }) => <ReactorRow reactor={item} isSelf={item.user_id === currentUserId} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
-      />
+      <ScrollView style={styles.list} contentContainerStyle={styles.listContent} alwaysBounceVertical={false}>
+        {list.map((reactor) => (
+          <ReactorRow
+            key={`${reactor.user_id}-${reactor.created_at}`}
+            reactor={reactor}
+            isSelf={reactor.user_id === currentUserId}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
 function ReactorRow({ reactor, isSelf }: { reactor: ReactorUser; isSelf: boolean }) {
   const styles = useStyles();
+  const close = useOverlayClose();
   return (
     <Pressable
       accessibilityRole="link"
       onPressIn={() => {
         if (!isSelf) prefetchPublicProfile(reactor.user_id);
       }}
-      onPress={() => {
-        router.back();
-        router.push(`/profile/${encodeURIComponent(reactor.username)}`);
-      }}
+      onPress={() => close(() => router.push(`/profile/${encodeURIComponent(reactor.username)}`))}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {({ pressed }) => (
@@ -118,13 +141,16 @@ function ReactorRow({ reactor, isSelf }: { reactor: ReactorUser; isSelf: boolean
 }
 
 const useStyles = createStyles(({ colors, radius }) => ({
-  sheet: { flex: 1, backgroundColor: colors.background },
-  message: { paddingHorizontal: 20, fontSize: 14, lineHeight: 20, color: colors.mutedForeground },
-  // `space-y-2`.
-  body: { flex: 1, gap: 8, paddingHorizontal: 20 },
+  card: { maxWidth: 448, borderRadius: radius.lg, padding: 24, gap: 16 },
+  // DialogTitle: `text-lg font-semibold leading-none tracking-tight`.
+  title: { fontSize: 18, lineHeight: 18, fontWeight: '600', letterSpacing: -0.45, textAlign: 'center' },
+  close: { position: 'absolute', top: 16, right: 16, opacity: 0.7 },
+  // Tabs `space-y-2`; shrinks so the reactor list scrolls inside the dialog's max height.
+  body: { flexShrink: 1, gap: 8 },
   // `TabsList`: rounded-md border bg-muted/60 p-1, `w-full justify-start gap-1`.
   tabsList: {
     flexGrow: 0,
+    flexShrink: 0,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -147,6 +173,9 @@ const useStyles = createStyles(({ colors, radius }) => ({
   },
   tabText: { fontSize: 12, lineHeight: 16, fontWeight: '500', color: colors.mutedForeground },
   tabTextActive: { color: colors.primary },
+  // `space-y-1 overflow-y-auto pr-1`.
+  list: { flexGrow: 0, flexShrink: 1 },
+  listContent: { gap: 4, paddingRight: 4 },
   // `block rounded-md px-2 py-1.5 text-sm font-medium hover:bg-muted hover:text-primary`.
   row: { borderRadius: radius.md, paddingHorizontal: 8, paddingVertical: 6 },
   rowPressed: { backgroundColor: colors.muted },

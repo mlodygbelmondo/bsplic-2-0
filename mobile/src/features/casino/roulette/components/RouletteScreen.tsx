@@ -116,11 +116,13 @@ const useStyles = createStyles(() => ({
     backgroundImage:
       'radial-gradient(circle at top, rgba(251, 191, 36, 0.14), transparent 35%), linear-gradient(180deg, rgba(3, 16, 10, 0.2), rgba(3, 16, 10, 0.38) 55%, rgba(3, 16, 10, 0.68))',
   },
-  // `p-4 pt-1.5 pb-10` + `space-y-5`
-  page: { paddingHorizontal: 16, paddingTop: 6, gap: 20 },
+  // `p-4 pt-1.5 pb-10` + `space-y-5`; the game root also gets the lobby's
+  // `space-y-5` margin (20) after the hidden `md:block` lobby header.
+  page: { paddingHorizontal: 16, paddingTop: 26, gap: 20 },
   // `grid gap-5`: center stage first, then the left rail on phones.
   table: { gap: 20 },
-  centerStage: { gap: 8 },
+  // `space-y-2`: the countdown follows the absolutely placed sound toggle, so it gets the 8 margin too.
+  centerStage: { gap: 8, paddingTop: 8 },
   rail: { gap: 20 },
   // `rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100`
   message: {

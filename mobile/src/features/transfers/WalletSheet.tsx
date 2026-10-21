@@ -1,12 +1,12 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { WalletCards, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, View } from 'react-native';
+import { BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
 
 import { useBalance, useProfile } from '@/features/auth/auth-store';
 import { haptics } from '@/lib/haptics';
 import { alpha, createStyles, useTheme } from '@/theme';
-import { SectionLoader, Text } from '@/ui';
+import { OverlayScreen, SectionLoader, Text, useOverlayClose } from '@/ui';
 import { formatMoney } from './format';
 import { MoneyTransferHistory } from './MoneyTransferHistory';
 import { MoneyTransferSend } from './MoneyTransferSend';
@@ -19,12 +19,15 @@ const TABS: readonly { value: WalletTab; label: string }[] = [
 ];
 
 /**
- * `/sheets/wallet?tab=send|history&recipient=<userId>` — port of the web
- * `MoneyTransferDialog` as a native form sheet.
+ * `/sheets/wallet?tab=send|history&recipient=<userId>` — the web
+ * `MoneyTransferDialog`: a centered dialog with a gradient header, two tabs and
+ * a fixed-height scrolling tab body (`h-[min(430px,calc(100dvh-13rem))]`).
  */
 export function WalletSheet() {
   const styles = useStyles();
   const { colors } = useTheme();
+  const { width, height } = useWindowDimensions();
+  const close = useOverlayClose();
   const params = useLocalSearchParams<{ tab?: string; recipient?: string }>();
   const profileCreatedAt = useProfile()?.created_at ?? null;
   const balance = Number(useBalance());
@@ -39,8 +42,7 @@ export function WalletSheet() {
   }, [submitting]);
 
   return (
-    <View style={styles.root} collapsable={false}>
-      <Stack.Screen options={{ gestureEnabled: !submitting }} />
+    <OverlayScreen variant="dialog" style={[styles.card, { width: width - 20 }]} accessibilityLabel="Portfel">
       <View style={styles.header}>
         <View style={styles.iconTile}>
           <WalletCards size={20} color={colors.primary} />
@@ -54,17 +56,6 @@ export function WalletSheet() {
             {formatMoney(balance)} zł
           </Text>
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Zamknij"
-          accessibilityState={{ disabled: submitting }}
-          disabled={submitting}
-          hitSlop={14}
-          onPress={() => router.back()}
-          style={styles.close}
-        >
-          <X size={16} color={colors.foreground} />
-        </Pressable>
       </View>
 
       <View style={styles.tabsWrap}>
@@ -93,7 +84,7 @@ export function WalletSheet() {
         </View>
       </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, { height: Math.min(430, height - 208) }]}>
         {profileCreatedAt === null ? (
           <SectionLoader size="sm" />
         ) : tab === 'send' ? (
@@ -108,12 +99,30 @@ export function WalletSheet() {
           <MoneyTransferHistory />
         )}
       </View>
-    </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Zamknij"
+        accessibilityState={{ disabled: submitting }}
+        disabled={submitting}
+        hitSlop={14}
+        onPress={() => close()}
+        style={styles.close}
+      >
+        <X size={16} color={colors.foreground} />
+      </Pressable>
+    </OverlayScreen>
   );
 }
 
 const useStyles = createStyles(({ colors, radius }) => ({
-  root: { flex: 1, backgroundColor: colors.background },
+  // DialogContent: w-[calc(100%-1.25rem)] max-w-lg overflow-hidden rounded-2xl border-border/70 p-0 (grid gap-4).
+  card: {
+    maxWidth: 512,
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    borderColor: alpha(colors.border, 0.7),
+  },
   header: {
     borderBottomWidth: 1,
     borderBottomColor: alpha(colors.border, 0.7),
@@ -132,10 +141,12 @@ const useStyles = createStyles(({ colors, radius }) => ({
     justifyContent: 'center',
     backgroundColor: alpha(colors.primary, 0.12),
   },
-  title: { marginTop: 6, lineHeight: 22, letterSpacing: -0.5 },
+  // DialogTitle text-xl (20/28, leading-none is merged away) tracking-tight; DialogHeader space-y-1.5.
+  title: { marginTop: 6, letterSpacing: -0.5 },
   description: { marginTop: 6 },
-  close: { position: 'absolute', top: 16, right: 16, padding: 2, opacity: 0.7 },
-  tabsWrap: { paddingHorizontal: 20, paddingTop: 16 },
+  close: { position: 'absolute', top: 16, right: 16, opacity: 0.7 },
+  // DialogContent gap-4 between the header and the Tabs root, then the list wrapper's pt-4.
+  tabsWrap: { marginTop: 16, paddingHorizontal: 20, paddingTop: 16 },
   tabsList: {
     height: 40,
     flexDirection: 'row',
@@ -155,5 +166,6 @@ const useStyles = createStyles(({ colors, radius }) => ({
     paddingHorizontal: 12,
   },
   tabActive: { backgroundColor: colors.primary, boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)' },
-  body: { flex: 1 },
+  // Shrinks below its web height when the keyboard leaves less room; the tab body scrolls inside it.
+  body: { flexShrink: 1 },
 }));

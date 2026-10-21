@@ -25,7 +25,7 @@ import {
   queryPersister,
 } from '@/lib/query-client';
 import { ThemeProvider, useTheme } from '@/theme';
-import { formSheet, sheetDefaults } from '@/lib/sheet-options';
+import { formSheet, overlayScreen, sheetDefaults } from '@/lib/sheet-options';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ fade: true, duration: 200 });
@@ -117,9 +117,12 @@ function SignedInSurfaces() {
 
 function RootNavigator() {
   const signedIn = useAuthStore((s) => s.user !== null);
-  // Web coupon panel: min(viewport - 6rem, 680px) tall.
+  // Web coupon panel: min(viewport - 6rem, 680px) tall, 8px above the bottom.
+  // iOS resolves detent fractions against the full-height sheet (window minus
+  // the top inset) and floats lower detents ~9pt in from the top and bottom.
   const { height } = useWindowDimensions();
-  const couponDetent = Math.min(height - 96, 680) / height;
+  const insets = useSafeAreaInsets();
+  const couponDetent = Math.min((Math.min(height - 96, 680) + 18) / (height - insets.top), 1);
 
   return (
     <Stack
@@ -138,20 +141,20 @@ function RootNavigator() {
           name="jackpot/draw/[roundId]"
           options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
         />
-        <Stack.Screen name="sheets/menu" options={formSheet([0.75, 1])} />
-        <Stack.Screen name="sheets/topup" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/wallet" options={formSheet([0.92])} />
-        <Stack.Screen name="sheets/notifications" options={formSheet([0.6, 1])} />
+        <Stack.Screen name="sheets/menu" options={overlayScreen} />
+        <Stack.Screen name="sheets/topup" options={overlayScreen} />
+        <Stack.Screen name="sheets/wallet" options={overlayScreen} />
+        <Stack.Screen name="sheets/notifications" options={overlayScreen} />
         <Stack.Screen name="sheets/coupon" options={formSheet([couponDetent, 1])} />
         <Stack.Screen name="sheets/sort-bets" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/propose-bet" options={formSheet([1])} />
-        <Stack.Screen name="sheets/reactors" options={formSheet([0.5, 1])} />
-        <Stack.Screen name="sheets/compose-post" options={formSheet([1])} />
+        <Stack.Screen name="sheets/propose-bet" options={overlayScreen} />
+        <Stack.Screen name="sheets/reactors" options={overlayScreen} />
+        <Stack.Screen name="sheets/compose-post" options={formSheet('fitToContents')} />
         <Stack.Screen name="sheets/compose-story" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="sheets/story-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="sheets/image-viewer" options={{ presentation: 'transparentModal', animation: 'fade' }} />
         <Stack.Screen name="sheets/roulette-stake" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/slot-rules" options={formSheet([0.7, 1])} />
+        <Stack.Screen name="sheets/slot-rules" options={overlayScreen} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />

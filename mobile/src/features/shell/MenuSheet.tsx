@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authActions, useIsAdmin, useIsModerator, useProfile } from '@/features/auth/auth-store';
 import { haptics } from '@/lib/haptics';
 import { usePreferences } from '@/lib/preferences';
+import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
-import { Avatar, Text } from '@/ui';
+import { Avatar, OverlayScreen, Text, useOverlayClose } from '@/ui';
 import { isActivePath, navigateFromChrome } from './navigation';
-import { openTopupSheet } from './topup';
+import { canClaimTopup } from './polish-day';
+import { TOPUP_DENIED_MESSAGE } from './topup';
 
 type MenuPath = '/' | '/casino' | '/social' | '/rankings' | '/admin';
 
@@ -21,14 +23,24 @@ const NAV_LINKS: readonly { path: MenuPath; label: string }[] = [
 ];
 
 /**
- * Header menu (web `NavbarMobileMenu`, a right-side Sheet) as a native form
- * sheet: links, account card with balance, top-up, transfers and profile,
- * then the propose action (home only), theme toggle and logout.
+ * Web `NavbarMobileMenu`: the right-side Sheet with links, account card
+ * (balance, top-up, transfers, profile), then the propose action (home only),
+ * theme toggle and logout. Every navigation closes the drawer first.
  */
 export function MenuSheet() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <OverlayScreen variant="drawer-right" accessibilityLabel="Menu" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      <MenuContent />
+    </OverlayScreen>
+  );
+}
+
+function MenuContent() {
   const styles = useStyles();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
+  const close = useOverlayClose();
   const navigation = useNavigation();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const currentPath = typeof from === 'string' ? from : '';
@@ -47,90 +59,90 @@ export function MenuSheet() {
 
   const handleSignOut = () => {
     haptics.selection();
-    router.back();
-    authActions.signOut().catch((error: unknown) => console.warn('Sign-out failed:', error));
+    close(() => {
+      authActions.signOut().catch((error: unknown) => console.warn('Sign-out failed:', error));
+    });
   };
 
   return (
-    <View style={styles.root} collapsable={false}>
-      <View style={styles.header}>
-        <Text size="base" weight="600" accessibilityRole="header">
-          Menu
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Zamknij"
-          hitSlop={14}
-          onPress={() => router.back()}
-          style={styles.close}
-        >
-          <X size={16} color={colors.foreground} />
-        </Pressable>
-      </View>
-
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} contentInsetAdjustmentBehavior="never">
-        <View style={styles.links}>
-          {links.map((link) => {
-            const active = isActivePath(currentPath, link.path);
-            return (
-              <Pressable
-                key={link.path}
-                accessibilityRole="link"
-                accessibilityState={{ selected: active }}
-                onPress={() => {
-                  haptics.selection();
-                  navigateFromChrome(navigation, link.path);
-                }}
-                style={({ pressed }) => [styles.link, active ? styles.linkActive : pressed && styles.linkPressed]}
-              >
-                <Text weight="600" color={active ? 'primary' : 'foreground'}>
-                  {link.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+    <>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text size="base" weight="600" accessibilityRole="header">
+            Menu
+          </Text>
         </View>
 
-        <AccountCard />
-      </ScrollView>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} contentInsetAdjustmentBehavior="never">
+          <View style={styles.links}>
+            {links.map((link) => {
+              const active = isActivePath(currentPath, link.path);
+              return (
+                <Pressable
+                  key={link.path}
+                  accessibilityRole="link"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => {
+                    haptics.selection();
+                    close(() => navigateFromChrome(navigation, link.path));
+                  }}
+                  style={({ pressed }) => [styles.link, active ? styles.linkActive : pressed && styles.linkPressed]}
+                >
+                  <Text weight="600" color={active ? 'primary' : 'foreground'}>
+                    {link.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-      <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
-        {currentPath === '/' ? (
+          <AccountCard />
+        </ScrollView>
+
+        <View style={styles.footer}>
+          {currentPath === '/' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                haptics.selection();
+                close(() => router.push('/sheets/propose-bet'));
+              }}
+              style={({ pressed }) => [styles.footerButton, styles.proposeButton, pressed && styles.proposePressed]}
+            >
+              <Lightbulb size={16} color={colors.primaryForeground} />
+              <Text weight="700" color="primaryForeground">
+                Zaproponuj zakład
+              </Text>
+            </Pressable>
+          ) : null}
+          {/* Web keeps the drawer open after toggling the theme. */}
           <Pressable
             accessibilityRole="button"
             onPress={() => {
               haptics.selection();
-              router.replace('/sheets/propose-bet');
+              toggleTheme();
             }}
-            style={({ pressed }) => [styles.footerButton, styles.proposeButton, pressed && styles.proposePressed]}
+            style={({ pressed }) => [styles.footerButton, styles.outlineButton, pressed && styles.outlinePressed]}
           >
-            <Lightbulb size={16} color={colors.primaryForeground} />
-            <Text weight="700" color="primaryForeground">
-              Zaproponuj zakład
-            </Text>
+            {theme === 'dark' ? <Sun size={16} color={colors.foreground} /> : <Moon size={16} color={colors.foreground} />}
+            <Text weight="600">{theme === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}</Text>
           </Pressable>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            haptics.selection();
-            toggleTheme();
-          }}
-          style={({ pressed }) => [styles.footerButton, styles.outlineButton, pressed && styles.outlinePressed]}
-        >
-          {theme === 'dark' ? <Sun size={16} color={colors.foreground} /> : <Moon size={16} color={colors.foreground} />}
-          <Text weight="600">{theme === 'dark' ? 'Tryb jasny' : 'Tryb ciemny'}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={handleSignOut}
-          style={({ pressed }) => [styles.footerButton, styles.outlineButton, pressed && styles.outlinePressed]}
-        >
-          <LogOut size={16} color={colors.foreground} />
-          <Text weight="600">Wyloguj się</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleSignOut}
+            style={({ pressed }) => [styles.footerButton, styles.outlineButton, pressed && styles.outlinePressed]}
+          >
+            <LogOut size={16} color={colors.foreground} />
+            <Text weight="600">Wyloguj się</Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+
+      {/* shadcn SheetContent close: `absolute right-4 top-4` on the panel's border box, so it sits in the status bar area. */}
+      <Pressable accessibilityRole="button" accessibilityLabel="Zamknij" hitSlop={14} onPress={() => close()} style={styles.close}>
+        <X size={16} color={colors.foreground} />
+      </Pressable>
+    </>
   );
 }
 
@@ -138,26 +150,31 @@ export function MenuSheet() {
 function AccountCard() {
   const styles = useStyles();
   const { colors } = useTheme();
+  const close = useOverlayClose();
   const navigation = useNavigation();
   const profile = useProfile();
 
   if (!profile) return null;
 
+  const handleOpenTopup = () => {
+    haptics.selection();
+    if (!canClaimTopup(profile.last_topup_at)) {
+      toast.error(TOPUP_DENIED_MESSAGE);
+      return;
+    }
+    close(() => router.push('/sheets/topup'));
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.balanceRow}>
         <Text color="mutedForeground">Saldo</Text>
-        <Text weight="700" tabular>
-          {Number(profile.balance).toFixed(2)} zł
-        </Text>
+        <Text weight="700">{Number(profile.balance).toFixed(2)} zł</Text>
       </View>
 
       <Pressable
         accessibilityRole="button"
-        onPress={() => {
-          haptics.selection();
-          openTopupSheet(profile.last_topup_at, 'replace');
-        }}
+        onPress={handleOpenTopup}
         style={({ pressed }) => [styles.cardButton, styles.topupButton, pressed && styles.topupPressed]}
       >
         <Plus size={14} color={colors.primary} />
@@ -170,7 +187,7 @@ function AccountCard() {
         accessibilityRole="button"
         onPress={() => {
           haptics.selection();
-          router.replace({ pathname: '/sheets/wallet', params: { tab: 'send' } });
+          close(() => router.push({ pathname: '/sheets/wallet', params: { tab: 'send' } }));
         }}
         style={({ pressed }) => [styles.cardButton, styles.transferButton, pressed && styles.transferPressed]}
       >
@@ -184,7 +201,7 @@ function AccountCard() {
         accessibilityRole="link"
         onPress={() => {
           haptics.selection();
-          navigateFromChrome(navigation, '/profile');
+          close(() => navigateFromChrome(navigation, '/profile'));
         }}
         style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
       >
@@ -192,6 +209,7 @@ function AccountCard() {
           uri={profile.avatar_url}
           name={profile.username}
           size={28}
+          style={styles.avatarFallback}
           fallbackStyle={styles.avatarFallback}
           fallbackTextStyle={styles.avatarFallbackText}
         />
@@ -202,24 +220,23 @@ function AccountCard() {
 }
 
 const useStyles = createStyles(({ colors, radius, scheme }) => ({
-  root: { flex: 1, backgroundColor: colors.background },
+  content: { flex: 1 },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  close: { position: 'absolute', right: 16, top: 16, padding: 2, opacity: 0.7 },
+  close: { position: 'absolute', right: 16, top: 16, borderRadius: radius.sm, opacity: 0.7 },
   body: { flex: 1 },
   bodyContent: { paddingHorizontal: 16, paddingVertical: 16, gap: 24 },
   links: { gap: 6 },
   link: { borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10 },
   linkActive: { backgroundColor: alpha(colors.primary, 0.1) },
   linkPressed: { backgroundColor: colors.muted },
-  // `.app-subsurface`
+  // `.app-subsurface rounded-lg p-3 space-y-3`
   card: {
     borderRadius: radius.lg,
-    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: alpha(colors.border, 0.72),
     backgroundColor: alpha(colors.muted, scheme === 'dark' ? 0.52 : 0.6),
@@ -236,7 +253,8 @@ const useStyles = createStyles(({ colors, radius, scheme }) => ({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  cardButtonLabel: { fontSize: 12, lineHeight: 16 },
+  // `text-[12px]` keeps the inherited `line-height: 1.5`.
+  cardButtonLabel: { fontSize: 12, lineHeight: 18 },
   topupButton: { backgroundColor: alpha(colors.primary, 0.1) },
   topupPressed: { backgroundColor: alpha(colors.primary, 0.15) },
   transferButton: {
@@ -259,8 +277,7 @@ const useStyles = createStyles(({ colors, radius, scheme }) => ({
   footer: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    padding: 16,
     gap: 8,
   },
   footerButton: {

@@ -1,9 +1,16 @@
 import { randomUUID } from 'expo-crypto';
 import { ArrowLeft, Clock3, Search, Send, ShieldCheck, WifiOff } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View, type LayoutRectangle } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+  type HostInstance,
+  type LayoutRectangle,
+  type ScrollViewInstance,
+  type TextInputFocusEvent,
+} from 'react-native';
 
 import { authActions } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
@@ -25,6 +32,8 @@ import type { MoneyTransferRecipient, MoneyTransferRules } from './types';
 
 const AMBER_700 = '#b45309';
 const AMBER_500 = '#f59e0b';
+/** Space kept between a focused field and the edge of the dialog's scroll area. */
+const REVEAL_MARGIN = 16;
 
 interface MoneyTransferSendProps {
   balance: number;
@@ -45,7 +54,6 @@ export function MoneyTransferSend({
 }: MoneyTransferSendProps) {
   const styles = useStyles();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const offline = useIsOffline();
 
   const [query, setQuery] = useState('');
@@ -62,6 +70,13 @@ export function MoneyTransferSend({
   const [rulesError, setRulesError] = useState<string | null>(null);
   const [rulesRequest, setRulesRequest] = useState(0);
   const [recipientFieldLayout, setRecipientFieldLayout] = useState<LayoutRectangle | null>(null);
+  // The dialog shrinks above the keyboard (OverlayScreen's KeyboardAvoidingView), so the
+  // focused field is scrolled back into the remaining viewport on focus and on every resize.
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const contentRef = useRef<HostInstance>(null);
+  const focusedInput = useRef<HostInstance | null>(null);
+  const scrollY = useRef(0);
+  const viewportHeight = useRef(0);
   // Only the pre-rules estimate reads the clock; Continue stays disabled until rules load.
   const [openedAt] = useState(() => Date.now());
 
@@ -219,11 +234,32 @@ export function MoneyTransferSend({
     }
   };
 
-  const contentStyle = [styles.content, { paddingBottom: 20 + insets.bottom }];
+  const revealFocused = () => {
+    const input = focusedInput.current;
+    const content = contentRef.current;
+    if (!input || !content || viewportHeight.current === 0) return;
+    input.measureLayout(content, (_x, y, _width, fieldHeight) => {
+      const top = y - REVEAL_MARGIN;
+      const bottom = y + fieldHeight + REVEAL_MARGIN;
+      if (bottom > scrollY.current + viewportHeight.current) {
+        scrollRef.current?.scrollTo({ y: Math.min(top, bottom - viewportHeight.current), animated: true });
+      } else if (top < scrollY.current) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, top), animated: true });
+      }
+    });
+  };
+
+  const handleFieldFocus = (event: TextInputFocusEvent) => {
+    focusedInput.current = typeof event.currentTarget === 'number' ? null : event.currentTarget;
+    revealFocused();
+  };
+  const handleFieldBlur = () => {
+    focusedInput.current = null;
+  };
 
   if (confirming && selectedRecipient && amount !== null) {
     return (
-      <ScrollView contentContainerStyle={contentStyle}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: submitting }}
@@ -292,197 +328,213 @@ export function MoneyTransferSend({
   }
 
   return (
-    <KeyboardAwareScrollView
-      bottomOffset={24}
+    <ScrollView
+      ref={scrollRef}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={contentStyle}
+      scrollEventThrottle={16}
+      onScroll={(event) => {
+        scrollY.current = event.nativeEvent.contentOffset.y;
+      }}
+      onLayout={(event) => {
+        viewportHeight.current = event.nativeEvent.layout.height;
+        revealFocused();
+      }}
     >
-      <View style={styles.form}>
-        {rulesError ? (
-          <View style={styles.rulesError}>
-            <Text color="destructive">{rulesError}</Text>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={12}
-              onPress={() => {
-                setRulesError(null);
-                setRulesRequest((current) => current + 1);
-              }}
-            >
-              <Text weight="600" color="destructive" style={styles.retryLink}>
-                Spróbuj ponownie
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <View style={styles.field} onLayout={(event) => setRecipientFieldLayout(event.nativeEvent.layout)}>
-          <Text weight="600">
-            Odbiorca
-          </Text>
-          {selectedRecipient ? (
-            <View style={styles.selected}>
-              <Avatar uri={selectedRecipient.avatar_url} name={selectedRecipient.username} size={36} />
-              <View style={styles.flexText}>
-                <Text weight="600" numberOfLines={1}>
-                  @{selectedRecipient.username}
-                </Text>
-                <Text size="xs" color="mutedForeground">
-                  Wybrany odbiorca
-                </Text>
-              </View>
+      <View ref={contentRef} style={styles.content}>
+        <View style={styles.form}>
+          {rulesError ? (
+            <View style={styles.rulesError}>
+              <Text color="destructive">{rulesError}</Text>
               <Pressable
                 accessibilityRole="button"
-                hitSlop={14}
+                hitSlop={12}
                 onPress={() => {
-                  haptics.selection();
-                  setSelectedRecipient(null);
-                  handleQueryChange('');
+                  setRulesError(null);
+                  setRulesRequest((current) => current + 1);
                 }}
               >
-                <Text size="xs" weight="600" color="primary">
-                  Zmień
+                <Text weight="600" color="destructive" style={styles.retryLink}>
+                  Spróbuj ponownie
                 </Text>
               </Pressable>
             </View>
-          ) : (
+          ) : null}
+
+          <View style={styles.field} onLayout={(event) => setRecipientFieldLayout(event.nativeEvent.layout)}>
+            <Text weight="600">
+              Odbiorca
+            </Text>
+            {selectedRecipient ? (
+              <View style={styles.selected}>
+                <Avatar uri={selectedRecipient.avatar_url} name={selectedRecipient.username} size={36} />
+                <View style={styles.flexText}>
+                  <Text weight="600" numberOfLines={1}>
+                    @{selectedRecipient.username}
+                  </Text>
+                  <Text size="xs" color="mutedForeground">
+                    Wybrany odbiorca
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={14}
+                  onPress={() => {
+                    haptics.selection();
+                    setSelectedRecipient(null);
+                    handleQueryChange('');
+                  }}
+                >
+                  <Text size="xs" weight="600" color="primary">
+                    Zmień
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.input}>
+                <Search size={16} color={colors.mutedForeground} style={styles.searchIcon} />
+                <TextInput
+                  onFocus={handleFieldFocus}
+                  onBlur={handleFieldBlur}
+                  accessibilityLabel="Odbiorca"
+                  value={query}
+                  onChangeText={handleQueryChange}
+                  placeholder="Wpisz nazwę użytkownika"
+                  placeholderTextColor={colors.mutedForeground}
+                  autoComplete="off"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  returnKeyType="search"
+                  style={[styles.inputText, styles.searchInputText]}
+                />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.labelRow}>
+              <Text weight="600">Kwota</Text>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={12}
+                onPress={() => {
+                  haptics.selection();
+                  setAmountInput(toAmountInput(balance));
+                }}
+              >
+                <Text size="xs" weight="600" color="primary">
+                  Wyślij całe saldo
+                </Text>
+              </Pressable>
+            </View>
             <View style={styles.input}>
-              <Search size={16} color={colors.mutedForeground} style={styles.searchIcon} />
+              <Text weight="600" color="mutedForeground" style={styles.amountSuffix}>
+                zł
+              </Text>
               <TextInput
-                accessibilityLabel="Odbiorca"
-                value={query}
-                onChangeText={handleQueryChange}
-                placeholder="Wpisz nazwę użytkownika"
+                onFocus={handleFieldFocus}
+                onBlur={handleFieldBlur}
+                accessibilityLabel="Kwota"
+                value={amountInput}
+                onChangeText={setAmountInput}
+                placeholder="0,00"
                 placeholderTextColor={colors.mutedForeground}
-                autoComplete="off"
-                autoCorrect={false}
-                autoCapitalize="none"
-                spellCheck={false}
-                returnKeyType="search"
-                style={[styles.inputText, styles.searchInputText]}
+                keyboardType="decimal-pad"
+                style={[styles.inputText, styles.amountInputText]}
               />
             </View>
-          )}
-        </View>
-
-        <View style={styles.field}>
-          <View style={styles.labelRow}>
-            <Text weight="600">Kwota</Text>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={12}
-              onPress={() => {
-                haptics.selection();
-                setAmountInput(toAmountInput(balance));
-              }}
-            >
-              <Text size="xs" weight="600" color="primary">
-                Wyślij całe saldo
-              </Text>
-            </Pressable>
-          </View>
-          <View style={styles.input}>
-            <Text weight="600" color="mutedForeground" style={styles.amountSuffix}>
-              zł
+            <Text size="xs" color="mutedForeground">
+              Minimum {formatMoney(minAmount)} zł · maksymalnie {maxTransfersPerHour} transferów w ciągu godziny
             </Text>
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.labelRow}>
+              <Text weight="600">
+                Wiadomość{' '}
+                <Text weight="400" color="mutedForeground">
+                  (opcjonalnie)
+                </Text>
+              </Text>
+              {messageLength >= messageLimit - 200 ? (
+                <Text size="xs" color="mutedForeground" tabular>
+                  {messageLength}/{messageLimit}
+                </Text>
+              ) : null}
+            </View>
             <TextInput
-              accessibilityLabel="Kwota"
-              value={amountInput}
-              onChangeText={setAmountInput}
-              placeholder="0,00"
+              onFocus={handleFieldFocus}
+              onBlur={handleFieldBlur}
+              accessibilityLabel="Wiadomość (opcjonalnie)"
+              onContentSizeChange={revealFocused}
+              value={message}
+              onChangeText={(next) => {
+                if (messageLengthOf(next) <= messageLimit) setMessage(next);
+              }}
+              multiline
+              placeholder="Dodaj krótką wiadomość..."
               placeholderTextColor={colors.mutedForeground}
-              keyboardType="decimal-pad"
-              style={[styles.inputText, styles.amountInputText]}
+              textAlignVertical="top"
+              style={styles.textarea}
             />
           </View>
-          <Text size="xs" color="mutedForeground">
-            Minimum {formatMoney(minAmount)} zł · maksymalnie {maxTransfersPerHour} transferów w ciągu godziny
-          </Text>
-        </View>
 
-        <View style={styles.field}>
-          <View style={styles.labelRow}>
-            <Text weight="600">
-              Wiadomość{' '}
-              <Text weight="400" color="mutedForeground">
-                (opcjonalnie)
+          {accountIsTooNew && eligibility.eligibleAt !== null ? (
+            <View style={styles.note}>
+              <Clock3 size={16} color={colors.mutedForeground} style={styles.noteIcon} />
+              <Text size="xs" color="mutedForeground" style={styles.flexText}>
+                Transfery będą dostępne {formatTransferDate(new Date(eligibility.eligibleAt).toISOString())}, po{' '}
+                {minAccountAgeDays} dniach od utworzenia konta.
               </Text>
-            </Text>
-            {messageLength >= messageLimit - 200 ? (
-              <Text size="xs" color="mutedForeground" tabular>
-                {messageLength}/{messageLimit}
-              </Text>
-            ) : null}
-          </View>
-          <TextInput
-            accessibilityLabel="Wiadomość (opcjonalnie)"
-            value={message}
-            onChangeText={(next) => {
-              if (messageLengthOf(next) <= messageLimit) setMessage(next);
-            }}
-            multiline
-            placeholder="Dodaj krótką wiadomość..."
-            placeholderTextColor={colors.mutedForeground}
-            textAlignVertical="top"
-            style={styles.textarea}
+            </View>
+          ) : null}
+
+          {offline ? <OfflineNote /> : null}
+
+          <GradientButton
+            label={rules ? 'Dalej' : rulesError ? 'Zasady niedostępne' : 'Ładowanie zasad...'}
+            icon={<Send size={16} color={colors.primaryForeground} />}
+            disabled={!rules || accountIsTooNew || offline}
+            onPress={handleContinue}
           />
+
+          {showDropdown && recipientFieldLayout ? (
+            <View style={[styles.dropdown, { top: recipientFieldLayout.y + recipientFieldLayout.height + 4 }]}>
+              <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                {searching ? (
+                  <Text color="mutedForeground" align="center" style={styles.dropdownMessage}>
+                    Szukam...
+                  </Text>
+                ) : searchError ? (
+                  <Text color="destructive" align="center" style={styles.dropdownMessage}>
+                    {searchError}
+                  </Text>
+                ) : recipients.length === 0 ? (
+                  <Text color="mutedForeground" align="center" style={styles.dropdownMessage}>
+                    Brak dostępnych użytkowników
+                  </Text>
+                ) : (
+                  recipients.map((recipient) => (
+                    <Pressable
+                      key={recipient.id}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        haptics.selection();
+                        setSelectedRecipient(recipient);
+                      }}
+                      style={({ pressed }) => [styles.result, pressed && styles.resultPressed]}
+                    >
+                      <Avatar uri={recipient.avatar_url} name={recipient.username} size={32} recyclingKey={recipient.id} />
+                      <Text weight="500">@{recipient.username}</Text>
+                    </Pressable>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          ) : null}
         </View>
-
-        {accountIsTooNew && eligibility.eligibleAt !== null ? (
-          <View style={styles.note}>
-            <Clock3 size={16} color={colors.mutedForeground} style={styles.noteIcon} />
-            <Text size="xs" color="mutedForeground" style={styles.flexText}>
-              Transfery będą dostępne {formatTransferDate(new Date(eligibility.eligibleAt).toISOString())}, po{' '}
-              {minAccountAgeDays} dniach od utworzenia konta.
-            </Text>
-          </View>
-        ) : null}
-
-        {offline ? <OfflineNote /> : null}
-
-        <GradientButton
-          label={rules ? 'Dalej' : rulesError ? 'Zasady niedostępne' : 'Ładowanie zasad...'}
-          icon={<Send size={16} color={colors.primaryForeground} />}
-          disabled={!rules || accountIsTooNew || offline}
-          onPress={handleContinue}
-        />
-
-        {showDropdown && recipientFieldLayout ? (
-          <View style={[styles.dropdown, { top: recipientFieldLayout.y + recipientFieldLayout.height + 4 }]}>
-            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-              {searching ? (
-                <Text color="mutedForeground" align="center" style={styles.dropdownMessage}>
-                  Szukam...
-                </Text>
-              ) : searchError ? (
-                <Text color="destructive" align="center" style={styles.dropdownMessage}>
-                  {searchError}
-                </Text>
-              ) : recipients.length === 0 ? (
-                <Text color="mutedForeground" align="center" style={styles.dropdownMessage}>
-                  Brak dostępnych użytkowników
-                </Text>
-              ) : (
-                recipients.map((recipient) => (
-                  <Pressable
-                    key={recipient.id}
-                    accessibilityRole="button"
-                    onPress={() => {
-                      haptics.selection();
-                      setSelectedRecipient(recipient);
-                    }}
-                    style={({ pressed }) => [styles.result, pressed && styles.resultPressed]}
-                  >
-                    <Avatar uri={recipient.avatar_url} name={recipient.username} size={32} recyclingKey={recipient.id} />
-                    <Text weight="500">@{recipient.username}</Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        ) : null}
       </View>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
 
@@ -500,7 +552,8 @@ function OfflineNote() {
 }
 
 const useStyles = createStyles(({ colors, radius, scheme }) => ({
-  content: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
+  // TabsContent px-5 pb-5 pt-4.
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 16 },
   form: { gap: 16 },
   field: { gap: 8 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ArrowRight, Clock3, Info, Ticket, Users } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -20,6 +20,7 @@ import { PressScale, Skeleton, Text } from '@/ui';
 
 import { JACKPOT_PRIZES_IMAGE } from './assets';
 import { JackpotBuyModal } from './components/JackpotBuyModal';
+import { JackpotInfoDialog } from './components/JackpotInfoDialog';
 import { SpinningLoader } from './components/SpinningLoader';
 import { useDailyJackpot } from './hooks/useDailyJackpot';
 import { getCountdownMs, getDailyJackpotCardModel } from './lib/cardModel';
@@ -32,8 +33,6 @@ import {
 
 const REM = 16;
 const INFO_TITLE = 'Skąd bierze się Jackpot?';
-const INFO_BODY =
-  'Pula Jackpotu bierze się z 20% stawek przegranych kuponów z poprzedniego dnia oraz z kupionych ticketów w aktualnym losowaniu. Im większy ruch w grze, tym większa pula do zgarnięcia.';
 
 const HOT_TEXT = hsl(24, 14, 8);
 const DISABLED_TEXT = hsl(0, 0, 100, 0.82);
@@ -51,6 +50,7 @@ export function DailyJackpotCard() {
   const collecting = snapshot?.status === 'collecting';
   const now = useSecondTicker(collecting && active, receivedAt);
   const [buyModalOpen, setBuyModalOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   if (loading && !snapshot) {
     return (
@@ -104,7 +104,7 @@ export function DailyJackpotCard() {
             hitSlop={13}
             onPress={() => {
               haptics.selection();
-              Alert.alert(INFO_TITLE, INFO_BODY, [{ text: 'Zamknij', style: 'cancel' }]);
+              setInfoOpen(true);
             }}
             style={({ pressed }) => [styles.infoTrigger, pressed && styles.infoTriggerPressed]}
           >
@@ -167,6 +167,7 @@ export function DailyJackpotCard() {
         {model.actionIsDraw ? <ArrowRight size={REM} color={buttonTextColor} /> : null}
       </PressScale>
 
+      <JackpotInfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
       <JackpotBuyModal
         open={buyModalOpen}
         onOpenChange={setBuyModalOpen}

@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { TextInput, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useProfile, useUserId } from '@/features/auth/auth-store';
@@ -111,11 +110,7 @@ export function PostComposerSheet() {
   return (
     <View collapsable={false} style={styles.root}>
       <ComposerHeader title="Utwórz post" onClose={close} />
-      <KeyboardAwareScrollView
-        bottomOffset={64}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.body, { paddingBottom: 16 + insets.bottom }]}
-      >
+      <View style={[styles.body, { paddingBottom: 16 + insets.bottom }]}>
         <View style={styles.author}>
           <ComposerAvatar username={username} avatarUrl={profile?.avatar_url} />
           <View style={styles.authorText}>
@@ -164,14 +159,15 @@ export function PostComposerSheet() {
         </View>
 
         {offline ? <Text style={styles.offline}>{OFFLINE_WRITE_MESSAGE}</Text> : null}
-      </KeyboardAwareScrollView>
+      </View>
     </View>
   );
 }
 
 const useStyles = createStyles(() => ({
-  // `.social-composer-sheet bg-background` with the phone Social palette.
-  root: { flex: 1, backgroundColor: social.background },
+  // `.social-composer-sheet bg-background` with the phone Social palette; the
+  // sheet fits its content like the web bottom sheet.
+  root: { backgroundColor: social.background },
   // `space-y-3 px-4 pt-4 pb-[calc(1rem+safe-area)]`.
   body: { gap: 12, paddingHorizontal: 16, paddingTop: 16 },
   // `flex items-center gap-3`.

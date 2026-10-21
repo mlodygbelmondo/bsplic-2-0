@@ -1,32 +1,54 @@
-import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { Volume2, VolumeX } from 'lucide-react-native';
 import { memo, useState } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUserId } from '@/features/auth/auth-store';
 import { haptics } from '@/lib/haptics';
 import { usePreferences } from '@/lib/preferences';
 import { alpha, createStyles, useTheme } from '@/theme';
-import { Text } from '@/ui';
+import { OverlayScreen, Text, useOverlayClose } from '@/ui';
 import type { UserNotification } from '@/types/database';
 import { notificationsQueries } from './api/notifications';
 import { formatNotificationTime, formatNotificationTypeLabel, getNotificationLink } from './format';
 import { notificationsActions, useNotificationsLive, useUnreadNotificationsCount } from './notifications-store';
 import { prepareNotificationSound, setNotificationsSoundMuted } from './sound';
 
+/** Web mobile panel: `fixed left-1/2 top-[calc(3.25rem+env(safe-area-inset-top))] w-[calc(100vw-2rem)] max-w-[340px] -translate-x-1/2`. */
+const PANEL_TOP = 52;
+const PANEL_MAX_WIDTH = 340;
+const PANEL_SIDE_GAP = 32;
+
 /**
- * Notifications panel (web mobile popover `notifications-popover-content`),
- * presented as a native form sheet. Same header, rows, states and copy.
+ * Notifications popover (web mobile `notifications-popover-content` in
+ * `NotificationsBell`): a card under the navbar, centered on the screen,
+ * no dimming, closes on outside tap.
  */
 export function NotificationsSheet() {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const panelWidth = Math.min(width - PANEL_SIDE_GAP, PANEL_MAX_WIDTH);
+
+  return (
+    <OverlayScreen
+      variant="popover"
+      anchor={{ top: insets.top + PANEL_TOP, left: (width - panelWidth) / 2 }}
+      style={{ width: panelWidth }}
+      accessibilityLabel="Powiadomienia"
+    >
+      <NotificationsPanel />
+    </OverlayScreen>
+  );
+}
+
+function NotificationsPanel() {
   const userId = useUserId();
   useNotificationsLive(userId);
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const close = useOverlayClose();
   const unreadCount = useUnreadNotificationsCount();
   const soundMuted = usePreferences((s) => !s.notificationSound);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,8 +67,7 @@ export function NotificationsSheet() {
   const handleNotificationPress = (notification: UserNotification) => {
     if (!userId) return;
     void notificationsActions.markRead(userId, notification);
-    router.back();
-    router.push(getNotificationLink(notification) as Href);
+    close(() => router.push(getNotificationLink(notification) as Href));
   };
 
   const handleRefresh = async () => {
@@ -59,9 +80,9 @@ export function NotificationsSheet() {
   };
 
   return (
-    <View style={styles.container} accessibilityLabel="Powiadomienia" collapsable={false}>
+    <>
       <View style={styles.header}>
-        <Text size="sm" weight="600" accessibilityRole="header">
+        <Text size="sm" weight="600" color="popoverForeground" accessibilityRole="header">
           Powiadomienia
         </Text>
         <View style={styles.headerActions}>
@@ -108,21 +129,21 @@ export function NotificationsSheet() {
           Brak powiadomień
         </Text>
       ) : (
-        <FlashList
-          data={notifications}
-          keyExtractor={keyExtractor}
-          renderItem={({ item }) => <NotificationRow notification={item} onPress={handleNotificationPress} />}
-          contentContainerStyle={{ paddingTop: 4, paddingBottom: insets.bottom + 4 }}
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.mutedForeground} />
           }
-        />
+        >
+          {notifications.map((notification) => (
+            <NotificationRow key={notification.id} notification={notification} onPress={handleNotificationPress} />
+          ))}
+        </ScrollView>
       )}
-    </View>
+    </>
   );
 }
-
-const keyExtractor = (item: UserNotification) => item.id;
 
 const NotificationRow = memo(function NotificationRow({
   notification,
@@ -167,14 +188,12 @@ const NotificationRow = memo(function NotificationRow({
 });
 
 const useStyles = createStyles(({ colors }) => ({
-  container: { flex: 1, backgroundColor: colors.popover },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -182,6 +201,9 @@ const useStyles = createStyles(({ colors }) => ({
   soundButton: { padding: 4, borderRadius: 6 },
   soundButtonPressed: { backgroundColor: colors.muted },
   stateText: { paddingHorizontal: 12, paddingVertical: 16 },
+  // `max-h-[380px] overflow-y-auto py-1` (border-box: the padding counts toward the cap).
+  list: { flexGrow: 0, maxHeight: 380 },
+  listContent: { paddingVertical: 4 },
   row: {
     paddingHorizontal: 12,
     paddingVertical: 8,

@@ -20,7 +20,7 @@ function formatUnreadBadge(count: number): string | null {
 
 /**
  * Header bell (web `NotificationsBell` trigger, mobile navbar variant:
- * `h-8 w-8` button with a 20 px `Bell`). Opens the notifications sheet.
+ * `h-8 w-8` button with a 20 px `Bell`). Opens the notifications popover.
  */
 export function NotificationsBell() {
   const userId = useUserId();

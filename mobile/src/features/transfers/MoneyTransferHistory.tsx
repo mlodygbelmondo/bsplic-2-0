@@ -3,7 +3,6 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Check } from 'lucide-react-native';
 import { memo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getErrorMessage } from '@/lib/errors';
 import { alpha, createStyles, useTheme } from '@/theme';
@@ -19,13 +18,11 @@ const EMERALD_500 = '#10b981';
 export function MoneyTransferHistory() {
   const styles = useStyles();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const { data, error, isPending, isFetching, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteQuery(moneyTransferHistoryQuery());
 
   const history = data?.pages.flat() ?? [];
-  const contentStyle = { ...styles.content, paddingBottom: 20 + insets.bottom };
 
   if (isPending) {
     return (
@@ -63,7 +60,7 @@ export function MoneyTransferHistory() {
       keyExtractor={(entry) => entry.id}
       renderItem={({ item }) => <HistoryRow entry={item} />}
       ItemSeparatorComponent={Separator}
-      contentContainerStyle={contentStyle}
+      contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl refreshing={pullRefreshing} onRefresh={handleRefresh} tintColor={colors.mutedForeground} />
       }
@@ -146,7 +143,8 @@ const HistoryRow = memo(function HistoryRow({ entry }: { entry: MoneyTransferHis
 });
 
 const useStyles = createStyles(({ colors }) => ({
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingRight: 24 },
+  // TabsContent px-5 pb-5 pt-4 around the list's pr-1.
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingRight: 24, paddingBottom: 20 },
   centerBlock: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 20 },
   errorBlock: { paddingVertical: 40, gap: 12 },
   emptyIcon: {

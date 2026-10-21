@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { authActions, useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { useBootVisible } from '@/features/boot/boot-store';
-import { DialogModal } from '@/features/feature-polls/components/DialogModal';
+import { DialogModal, PressScale, Text } from '@/ui';
 import { useFeaturePollOpen } from '@/features/feature-polls/feature-poll-store';
 import { useQueryErrorToast } from '@/features/feature-polls/use-query-error-toast';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
@@ -18,7 +18,6 @@ import { queryClient } from '@/lib/query-client';
 import { useReducedMotion } from '@/lib/motion';
 import { toast } from '@/lib/toast';
 import { createStyles, useTheme } from '@/theme';
-import { PressScale, Text } from '@/ui';
 import { bonusCampaignQueries, claimBonusCampaign } from './bonus-campaign-api';
 import { setBonusCtaVisible } from './bonus-cta-store';
 import { formatBonusAmount, pickFirstAvailableBonusCampaign } from './campaign-availability';
