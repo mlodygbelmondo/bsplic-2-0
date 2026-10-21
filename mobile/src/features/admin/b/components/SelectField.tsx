@@ -22,12 +22,14 @@ export function SelectField<T extends string>({
   onChange,
   placeholder,
   accessibilityLabel,
+  disabled = false,
 }: {
   value: T | '';
   options: SelectOption<T>[];
   onChange: (value: T) => void;
   placeholder?: string;
   accessibilityLabel: string;
+  disabled?: boolean;
 }) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -37,35 +39,44 @@ export function SelectField<T extends string>({
   const [width, setWidth] = useState<number | undefined>(undefined);
   const selected = options.find((option) => option.value === value);
 
+  const trigger = (
+    <View
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityValue={{ text: selected?.label ?? placeholder ?? '' }}
+      accessibilityState={{ disabled }}
+      style={[styles.trigger, disabled && styles.disabled, width !== undefined && { width }]}
+    >
+      <Text numberOfLines={1} color={selected ? 'foreground' : 'mutedForeground'} style={styles.label}>
+        {selected?.label ?? placeholder ?? ''}
+      </Text>
+      <ChevronDown size={16} color={alpha(colors.foreground, 0.5)} />
+    </View>
+  );
+
   return (
     <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      <MenuView
-        colorScheme={scheme}
-        actions={options.map((option) => ({
-          id: option.value,
-          title: option.label,
-          state: option.value === value ? 'on' : 'off',
-        }))}
-        onPressAction={({ nativeEvent }) => {
-          const next = options.find((option) => option.value === nativeEvent.event);
-          if (!next) return;
-          haptics.selection();
-          onChange(next.value);
-        }}
-      >
-        <View
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={accessibilityLabel}
-          accessibilityValue={{ text: selected?.label ?? placeholder ?? '' }}
-          style={[styles.trigger, width !== undefined && { width }]}
+      {disabled ? (
+        trigger
+      ) : (
+        <MenuView
+          colorScheme={scheme}
+          actions={options.map((option) => ({
+            id: option.value,
+            title: option.label,
+            state: option.value === value ? 'on' : 'off',
+          }))}
+          onPressAction={({ nativeEvent }) => {
+            const next = options.find((option) => option.value === nativeEvent.event);
+            if (!next) return;
+            haptics.selection();
+            onChange(next.value);
+          }}
         >
-          <Text numberOfLines={1} color={selected ? 'foreground' : 'mutedForeground'} style={styles.label}>
-            {selected?.label ?? placeholder ?? ''}
-          </Text>
-          <ChevronDown size={16} color={alpha(colors.foreground, 0.5)} />
-        </View>
-      </MenuView>
+          {trigger}
+        </MenuView>
+      )}
     </View>
   );
 }
@@ -83,4 +94,5 @@ const useStyles = createStyles(({ colors, radius }) => ({
     paddingHorizontal: 12,
   },
   label: { flex: 1 },
+  disabled: { opacity: 0.5 },
 }));

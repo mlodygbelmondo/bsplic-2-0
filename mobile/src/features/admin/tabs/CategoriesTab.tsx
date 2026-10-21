@@ -7,6 +7,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
+import { getCategoryOptions } from '@/features/home/logic/category-tree';
 import type { Category } from '@/types/database';
 import { Button, SectionLoader, StateMessage, Text } from '@/ui';
 import {
@@ -20,12 +21,18 @@ import {
 import { ColorField } from '../b/components/ColorField';
 import { FormModal } from '../b/components/FormModal';
 import { AdminCard, FormField, Input, OfflineNotice } from '../b/components/primitives';
+import { SelectField } from '../b/components/SelectField';
 import { useAdminWriteGuard, useQueryErrorToast } from '../b/hooks';
 import {
   CATEGORY_PAGE_SIZE,
   createNewCategoryForm,
   getCategoryPaginationRange,
+  getParentCategoryChoices,
+  getParentSelectOptions,
+  parentIdToSelectValue,
   parseSortOrder,
+  selectValueToParentId,
+  toCategoryForm,
   type CategoryForm,
 } from '../b/logic/categories';
 
@@ -49,10 +56,16 @@ export function CategoriesTab() {
     getErrorMessage(error, 'Nie udało się pobrać kategorii'),
   );
 
-  const totalPages = Math.max(1, Math.ceil(categories.length / CATEGORY_PAGE_SIZE));
+  // Hierarchy: each sport is listed with its leagues right below it. Only
+  // top-level categories can be parents (max two levels).
+  const orderedCategories = getCategoryOptions(categories);
+  const newParentChoices = getParentCategoryChoices(categories, null);
+  const editParentChoices = getParentCategoryChoices(categories, editingCat);
+
+  const totalPages = Math.max(1, Math.ceil(orderedCategories.length / CATEGORY_PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const paginated = categories.slice(safePage * CATEGORY_PAGE_SIZE, (safePage + 1) * CATEGORY_PAGE_SIZE);
-  const showPagination = categories.length > CATEGORY_PAGE_SIZE;
+  const paginated = orderedCategories.slice(safePage * CATEGORY_PAGE_SIZE, (safePage + 1) * CATEGORY_PAGE_SIZE);
+  const showPagination = orderedCategories.length > CATEGORY_PAGE_SIZE;
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY });
 
@@ -97,12 +110,7 @@ export function CategoriesTab() {
 
   const openEditModal = (category: Category) => {
     setEditingCat(category);
-    setEditForm({
-      name: category.name,
-      emoji: category.emoji,
-      color: category.color,
-      sort_order: category.sort_order,
-    });
+    setEditForm(toCategoryForm(category));
   };
 
   const saveEdit = async () => {
@@ -153,6 +161,14 @@ export function CategoriesTab() {
               />
             </SmallField>
           </View>
+          <SmallField label="Kategoria nadrzędna">
+            <SelectField
+              accessibilityLabel="Kategoria nadrzędna nowej kategorii"
+              value={parentIdToSelectValue(newCat.parent_id)}
+              options={getParentSelectOptions(newParentChoices.options)}
+              onChange={(value) => setNewCat((form) => ({ ...form, parent_id: selectValueToParentId(value) }))}
+            />
+          </SmallField>
           <View style={[styles.row, styles.alignEnd]}>
             <SmallField label="Kolor" style={styles.col1}>
               <ColorField
@@ -198,10 +214,11 @@ export function CategoriesTab() {
       ) : null}
 
       <View style={styles.list}>
-        {paginated.map((category) => (
+        {paginated.map(({ category, parent }) => (
           <CategoryRow
             key={category.id}
             category={category}
+            parent={parent}
             disabled={offline}
             onEdit={openEditModal}
             onDelete={confirmDelete}
@@ -226,6 +243,20 @@ export function CategoriesTab() {
             <Input value={editForm.name} onChangeText={(name) => setEditForm((form) => ({ ...form, name }))} />
           </FormField>
         </View>
+        <FormField label="Kategoria nadrzędna">
+          <SelectField
+            accessibilityLabel="Kategoria nadrzędna"
+            value={parentIdToSelectValue(editForm.parent_id)}
+            options={getParentSelectOptions(editParentChoices.options)}
+            disabled={editParentChoices.locked}
+            onChange={(value) => setEditForm((form) => ({ ...form, parent_id: selectValueToParentId(value) }))}
+          />
+          {editParentChoices.locked ? (
+            <Text size="xs" color="mutedForeground">
+              Ta kategoria ma podkategorie, więc sama nie może mieć kategorii nadrzędnej.
+            </Text>
+          ) : null}
+        </FormField>
         <View style={[styles.row, styles.alignEnd, { gap: 12 }]}>
           <FormField label="Kolor" style={styles.col1}>
             <ColorField
@@ -255,7 +286,7 @@ export function CategoriesTab() {
   );
 }
 
-function SmallField({ label, style, children }: { label: string; style: StyleProp<ViewStyle>; children: ReactNode }) {
+function SmallField({ label, style, children }: { label: string; style?: StyleProp<ViewStyle>; children: ReactNode }) {
   return (
     <View style={[{ gap: 6 }, style]}>
       <Text size="xs" weight="500" color="mutedForeground">
@@ -268,11 +299,13 @@ function SmallField({ label, style, children }: { label: string; style: StylePro
 
 const CategoryRow = memo(function CategoryRow({
   category,
+  parent,
   disabled,
   onEdit,
   onDelete,
 }: {
   category: Category;
+  parent: Category | null;
   disabled: boolean;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
@@ -280,7 +313,12 @@ const CategoryRow = memo(function CategoryRow({
   const styles = useStyles();
   const { colors } = useTheme();
   return (
-    <AdminCard style={styles.categoryCard}>
+    <AdminCard style={[styles.categoryCard, parent && styles.childCard]}>
+      {parent ? (
+        <Text color="mutedForeground" accessibilityElementsHidden importantForAccessibility="no">
+          ↳
+        </Text>
+      ) : null}
       <Text size="lg">{category.emoji}</Text>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text weight="500" numberOfLines={1}>
@@ -291,6 +329,11 @@ const CategoryRow = memo(function CategoryRow({
           <Text size="2xs" color="mutedForeground">
             #{category.sort_order}
           </Text>
+          {parent ? (
+            <Text size="2xs" color="mutedForeground" numberOfLines={1} style={styles.parentName}>
+              {parent.name}
+            </Text>
+          ) : null}
         </View>
       </View>
       <View style={styles.rowActions}>
@@ -395,6 +438,8 @@ const useStyles = createStyles(({ colors, radius }) => ({
   tallButton: { height: 44 },
   list: { gap: 8 },
   categoryCard: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  childCard: { marginLeft: 20 },
+  parentName: { flexShrink: 1 },
   categoryMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   colorDot: {
     width: 14,

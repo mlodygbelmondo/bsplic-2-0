@@ -17,6 +17,7 @@ export async function updateCategory(id: string, form: CategoryForm): Promise<vo
       emoji: form.emoji,
       color: form.color,
       sort_order: form.sort_order,
+      parent_id: form.parent_id,
     })
     .eq('id', id);
   if (error) throw error;

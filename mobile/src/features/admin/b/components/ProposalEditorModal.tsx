@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
 
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/logic/category-tree';
 import { createStyles, useTheme } from '@/theme';
 import type { Category } from '@/types/database';
 import { Button, Text } from '@/ui';
@@ -66,9 +67,9 @@ export function ProposalEditorModal({
               accessibilityLabel="Kategoria propozycji"
               placeholder="Wybierz"
               value={editing.categoryId}
-              options={categories.map((category) => ({
+              options={getCategoryOptions(categories).map(({ category, parent }) => ({
                 value: category.id,
-                label: `${category.emoji} ${category.name}`,
+                label: `${category.emoji} ${getCategoryLabel(category, parent)}`,
               }))}
               onChange={(categoryId) => onChange({ ...editing, categoryId })}
             />

@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { categoriesQueryOptions } from '@/features/home/api/categories';
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/logic/category-tree';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
@@ -139,9 +140,9 @@ export function CreateBetTab() {
               <CapsLabel>Kategoria</CapsLabel>
               <SelectField
                 value={categoryId}
-                options={categories.map((category) => ({
+                options={getCategoryOptions(categories).map(({ category, parent }) => ({
                   value: category.id,
-                  label: `${category.emoji} ${category.name}`,
+                  label: `${category.emoji} ${getCategoryLabel(category, parent)}`,
                 }))}
                 placeholder="Wybierz kategorię"
                 accessibilityLabel="Wybierz kategorię"

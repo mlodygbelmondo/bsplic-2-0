@@ -2,6 +2,7 @@ import { Plus, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { getCategoryLabel, getCategoryOptions } from '@/features/home/logic/category-tree';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
@@ -124,7 +125,10 @@ function EditBetForm({
 
   const categoryOptions: SelectOption<string>[] = [
     { value: NO_CATEGORY_VALUE, label: 'Brak kategorii' },
-    ...categories.map((category) => ({ value: category.id, label: `${category.emoji} ${category.name}` })),
+    ...getCategoryOptions(categories).map(({ category, parent }) => ({
+      value: category.id,
+      label: `${category.emoji} ${getCategoryLabel(category, parent)}`,
+    })),
   ];
 
   const save = async () => {

@@ -1,3 +1,7 @@
+import { buildCategoryTree } from '@/features/home/logic/category-tree';
+import type { Category } from '@/types/database';
+import { NO_CATEGORY_VALUE } from '../../constants';
+
 export const CATEGORY_PAGE_SIZE = 10;
 
 export interface CategoryForm {
@@ -5,6 +9,7 @@ export interface CategoryForm {
   emoji: string;
   color: string;
   sort_order: number;
+  parent_id: string | null;
 }
 
 export const createNewCategoryForm = (sortOrder = 0): CategoryForm => ({
@@ -12,7 +17,52 @@ export const createNewCategoryForm = (sortOrder = 0): CategoryForm => ({
   emoji: '⚽',
   color: '#dc2626',
   sort_order: sortOrder,
+  parent_id: null,
 });
+
+export const toCategoryForm = (category: Category): CategoryForm => ({
+  name: category.name,
+  emoji: category.emoji,
+  color: category.color,
+  sort_order: category.sort_order,
+  parent_id: category.parent_id ?? null,
+});
+
+export interface ParentCategoryChoices {
+  /** Sports the category can be filed under. */
+  options: Category[];
+  /** The category has leagues, so it cannot get a parent of its own. */
+  locked: boolean;
+}
+
+/**
+ * Parent picker choices (web `CategoriesTab`): only top-level categories can
+ * be parents (two levels max). A new category (`editing` null) may pick any
+ * sport; an edited one may not pick itself, and one with leagues gets none.
+ */
+export function getParentCategoryChoices(
+  categories: readonly Category[],
+  editing: Category | null,
+): ParentCategoryChoices {
+  const tree = buildCategoryTree(categories);
+  const topLevel = tree.map((node) => node.category);
+  if (!editing) return { options: topLevel, locked: false };
+  const locked = tree.some((node) => node.category.id === editing.id && node.children.length > 0);
+  return { options: locked ? [] : topLevel.filter((category) => category.id !== editing.id), locked };
+}
+
+/** Select entries for the parent picker: "Brak" (top level) then the sports. */
+export function getParentSelectOptions(options: readonly Category[]): { value: string; label: string }[] {
+  return [
+    { value: NO_CATEGORY_VALUE, label: 'Brak' },
+    ...options.map((category) => ({ value: category.id, label: `${category.emoji} ${category.name}` })),
+  ];
+}
+
+export const parentIdToSelectValue = (parentId: string | null): string => parentId ?? NO_CATEGORY_VALUE;
+
+export const selectValueToParentId = (value: string): string | null =>
+  value === NO_CATEGORY_VALUE ? null : value;
 
 /** Web `getCategoryPaginationRange`: first, last, current ±1 and ellipses. */
 export function getCategoryPaginationRange(current: number, total: number): (number | 'ellipsis')[] {
