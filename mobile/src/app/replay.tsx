@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { ReplayScreen } from '@/features/replay/ReplayScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Replay" />;
+  return <ReplayScreen />;
 }
