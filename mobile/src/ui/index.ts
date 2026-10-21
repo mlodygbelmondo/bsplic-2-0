@@ -1,3 +1,4 @@
+export { Avatar } from './Avatar';
 export { Badge } from './Badge';
 export { BrandSpinner } from './BrandSpinner';
 export { Button } from './Button';

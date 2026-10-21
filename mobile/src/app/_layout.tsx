@@ -7,9 +7,11 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Toaster } from 'sonner-native';
 
 import { startAuth, useAuthStore } from '@/features/auth/auth-store';
+import { BonusCampaignSurface } from '@/features/bonus-campaigns/BonusCampaignSurface';
 import { BootController } from '@/features/boot/BootController';
 import { BootOverlay } from '@/features/boot/BootOverlay';
 import { initBoot } from '@/features/boot/boot-store';
+import { FeaturePollSurface } from '@/features/feature-polls/FeaturePollSurface';
 import { ConnectivityWatcher } from '@/features/shell/ConnectivityWatcher';
 import { MaintenanceGate } from '@/features/shell/MaintenanceGate';
 import {
@@ -48,6 +50,7 @@ export default function RootLayout() {
             <ThemedChrome />
             <ConnectivityWatcher />
             <BootController />
+            <SignedInSurfaces />
             <MaintenanceGate />
             <BootOverlay />
           </ThemeProvider>
@@ -63,6 +66,18 @@ function ThemedChrome() {
     <>
       <StatusBar style="light" />
       <Toaster position="top-center" richColors duration={2200} theme={scheme} offset={8} />
+    </>
+  );
+}
+
+/** Global signed-in overlays (web mounts them in App.tsx). */
+function SignedInSurfaces() {
+  const signedIn = useAuthStore((s) => s.user !== null);
+  if (!signedIn) return null;
+  return (
+    <>
+      <BonusCampaignSurface />
+      <FeaturePollSurface />
     </>
   );
 }
