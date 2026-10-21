@@ -3,8 +3,10 @@ import { setAudioModeAsync } from 'expo-audio';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
 
 import { startAuth, useAuthStore } from '@/features/auth/auth-store';
@@ -22,7 +24,7 @@ import {
   queryClient,
   queryPersister,
 } from '@/lib/query-client';
-import { ThemeProvider, useScheme } from '@/theme';
+import { ThemeProvider, useTheme } from '@/theme';
 import { formSheet, sheetDefaults } from '@/lib/sheet-options';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -32,6 +34,8 @@ startAuth();
 // Casino and notification sounds follow the silent switch and mix with the
 // player's music, like web audio in iOS Safari.
 void setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => undefined);
+
+const TOAST_SHADOW = '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)';
 
 export default function RootLayout() {
   return (
@@ -65,11 +69,36 @@ export default function RootLayout() {
 }
 
 function ThemedChrome() {
-  const scheme = useScheme();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <>
       <StatusBar style="light" />
-      <Toaster position="top-center" richColors duration={2200} theme={scheme} offset={8} />
+      {/* Web sonner: system theme, 16px below the safe area (`offset` replaces
+          the inset here), 13px text, 8px radius, compact action button. */}
+      <Toaster
+        position="top-center"
+        richColors
+        duration={2200}
+        theme="system"
+        offset={insets.top + 16}
+        toastOptions={{
+          style: { padding: 16, borderRadius: 8, borderWidth: 1, boxShadow: TOAST_SHADOW },
+          toastContentStyle: { gap: 6 },
+          titleStyle: { fontSize: 13, lineHeight: 19.5, fontWeight: '500' },
+          descriptionStyle: { fontSize: 13, lineHeight: 19.5 },
+          actionButtonStyle: {
+            height: 24,
+            paddingHorizontal: 8,
+            paddingVertical: 0,
+            borderRadius: 4,
+            borderWidth: 0,
+            justifyContent: 'center',
+            backgroundColor: colors.foreground,
+          },
+          actionButtonTextStyle: { fontSize: 12, lineHeight: 16, fontWeight: '500', color: colors.background },
+        }}
+      />
     </>
   );
 }
@@ -88,6 +117,9 @@ function SignedInSurfaces() {
 
 function RootNavigator() {
   const signedIn = useAuthStore((s) => s.user !== null);
+  // Web coupon panel: min(viewport - 6rem, 680px) tall.
+  const { height } = useWindowDimensions();
+  const couponDetent = Math.min(height - 96, 680) / height;
 
   return (
     <Stack
@@ -110,7 +142,7 @@ function RootNavigator() {
         <Stack.Screen name="sheets/topup" options={formSheet('fitToContents')} />
         <Stack.Screen name="sheets/wallet" options={formSheet([0.92])} />
         <Stack.Screen name="sheets/notifications" options={formSheet([0.6, 1])} />
-        <Stack.Screen name="sheets/coupon" options={formSheet([0.6, 1])} />
+        <Stack.Screen name="sheets/coupon" options={formSheet([couponDetent, 1])} />
         <Stack.Screen name="sheets/sort-bets" options={formSheet('fitToContents')} />
         <Stack.Screen name="sheets/propose-bet" options={formSheet([1])} />
         <Stack.Screen name="sheets/reactors" options={formSheet([0.5, 1])} />

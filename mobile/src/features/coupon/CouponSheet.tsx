@@ -112,8 +112,18 @@ export function CouponSheet() {
   const clearCoupon = () => {
     const clearedItems = useCouponStore.getState().items;
     couponActions.clearCoupon();
+    // Web renders a plain toast() without an icon, the action on the same row.
     toast('Kupon wyczyszczony', {
       action: { label: 'Cofnij', onClick: () => couponActions.addItems(clearedItems) },
+      richColors: false,
+      icon: <></>,
+      style: { backgroundColor: colors.background, borderColor: colors.border },
+      styles: {
+        toastContent: { gap: 0 },
+        textContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+        title: { color: colors.foreground },
+        buttons: { marginTop: 0 },
+      },
     });
   };
 
