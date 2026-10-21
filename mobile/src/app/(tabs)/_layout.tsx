@@ -6,11 +6,13 @@ import { useScheme } from '@/theme';
 /**
  * Primary navigation (web bottom nav): Zakłady, Social, Gry, Rankingi, Profil.
  * Colors follow the web liquid-glass nav: gold on dark and casino screens,
- * brand red otherwise.
+ * brand red otherwise. Native glass takes on the content behind it, so the
+ * always-white phone Social feed gets the light colors.
  */
 export default function TabsLayout() {
   const scheme = useScheme();
-  const onDark = scheme === 'dark' || usePathname().startsWith('/casino');
+  const pathname = usePathname();
+  const onDark = !pathname.startsWith('/social') && (scheme === 'dark' || pathname.startsWith('/casino'));
   const selected = onDark ? '#ffe14a' : '#c90018';
   const idle = onDark ? 'rgba(255, 255, 255, 0.68)' : 'rgba(2, 6, 23, 0.82)';
   return (
