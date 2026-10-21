@@ -124,7 +124,8 @@
           "cameraPermission": "BSPLIC potrzebuje dostępu do aparatu, aby zrobić zdjęcie profilowe lub dodać zdjęcie do posta.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
