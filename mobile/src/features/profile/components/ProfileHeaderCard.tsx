@@ -2,7 +2,7 @@ import { Pressable, View } from 'react-native';
 
 import { useBalance } from '@/features/auth/auth-store';
 import { alpha, createStyles } from '@/theme';
-import { Avatar, Skeleton, Text } from '@/ui';
+import { Avatar, Text } from '@/ui';
 import { useSurfaceStyles } from './surfaces';
 
 interface AvatarUploadControl {
@@ -90,36 +90,10 @@ function OwnBalance() {
   );
 }
 
-/** Header card placeholder with the same box sizes. */
-export function ProfileHeaderCardSkeleton({ isOwnProfile }: { isOwnProfile: boolean }) {
-  const surfaces = useSurfaceStyles();
-  const styles = useStyles();
-  return (
-    <View style={[surfaces.card, styles.card]}>
-      <View style={styles.topRow}>
-        <View style={styles.identity}>
-          <Skeleton width={56} height={56} radius={28} />
-          <View style={[styles.identityText, styles.skeletonText]}>
-            <Skeleton width={140} height={24} />
-            <Skeleton width={120} height={14} />
-          </View>
-        </View>
-        {isOwnProfile ? (
-          <View style={[styles.balance, styles.skeletonText]}>
-            <Skeleton width={40} height={14} />
-            <Skeleton width={96} height={24} />
-          </View>
-        ) : null}
-      </View>
-      {isOwnProfile ? <Skeleton width={170} height={28} /> : null}
-    </View>
-  );
-}
-
 const useStyles = createStyles(({ colors, radius }) => ({
   card: { padding: 24 },
   // mb-4 stays on the row on public profiles too (the web card keeps the gap).
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { borderWidth: 1, borderColor: colors.border },
   avatarFallbackText: { fontSize: 16, lineHeight: 24, color: colors.foreground },
@@ -137,5 +111,4 @@ const useStyles = createStyles(({ colors, radius }) => ({
   },
   uploadButtonPressed: { backgroundColor: alpha(colors.muted, 0.8) },
   uploadButtonDisabled: { opacity: 0.5 },
-  skeletonText: { gap: 8 },
 }));

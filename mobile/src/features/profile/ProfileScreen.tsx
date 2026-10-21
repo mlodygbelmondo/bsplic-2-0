@@ -25,7 +25,7 @@ import { useAvatarUpload } from './avatar/useAvatarUpload';
 import { ProfileBadgesSection } from './components/ProfileBadgesSection';
 import { ProfileHeaderCard } from './components/ProfileHeaderCard';
 import { ProfileHistoryPanel } from './components/ProfileHistoryPanel';
-import { ProfileLoadError, ProfileNotFound, ProfilePageSkeleton } from './components/ProfileStates';
+import { ProfileLoadError, ProfileNotFound, ProfilePageLoader } from './components/ProfileStates';
 import { useProfileHistory, type ProfileHistoryState } from './hooks/useProfileHistory';
 import { formatJoinDate } from './logic/format';
 import { parseProfileRef } from './logic/profileTarget';
@@ -65,7 +65,7 @@ function UsernameProfileContent({ username }: { username: string }) {
   const currentUserId = useUserId();
   const lookup = useQuery(profileIdByUsernameQueryOptions(username));
 
-  if (lookup.isPending) return <ProfilePageSkeleton isOwnProfile={false} />;
+  if (lookup.isPending) return <ProfilePageLoader />;
   if (lookup.isError) return <ProfileLoadError onRetry={() => void lookup.refetch()} />;
   if (!lookup.data) return <ProfileNotFound />;
   if (lookup.data === currentUserId) return <OwnProfileContent />;
@@ -88,7 +88,7 @@ function OwnProfileContent() {
 
   if (!userId || !profile) {
     if (profileStatus === 'error') return <ProfileLoadError onRetry={() => void authActions.refreshProfile()} />;
-    return <ProfilePageSkeleton isOwnProfile />;
+    return <ProfilePageLoader />;
   }
 
   return (
@@ -116,7 +116,7 @@ function OtherProfileContent({ userId }: { userId: string }) {
   const badgesQuery = useQuery(profileBadgesQueryOptions(userId));
   useLogBadgesError(badgesQuery.error);
 
-  if (publicQuery.isPending) return <ProfilePageSkeleton isOwnProfile={false} />;
+  if (publicQuery.isPending) return <ProfilePageLoader />;
   if (publicQuery.isError && publicQuery.data === undefined) {
     return <ProfileLoadError onRetry={() => void publicQuery.refetch()} />;
   }

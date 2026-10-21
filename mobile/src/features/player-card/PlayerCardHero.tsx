@@ -6,7 +6,7 @@ import Animated, { css } from 'react-native-reanimated';
 import { useLiteMotion } from '@/lib/motion';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
-import { Skeleton, Text } from '@/ui';
+import { Text } from '@/ui';
 import type { PlayerCardDisplayModel } from './displayModel';
 
 interface PlayerCardHeroProps {
@@ -160,43 +160,6 @@ function Sheen() {
   );
 }
 
-/** Same card with placeholder bars, shown while the profile loads. */
-export function PlayerCardHeroSkeleton() {
-  const styles = useStyles();
-  return (
-    <View style={styles.card}>
-      <View style={styles.content}>
-        <View style={styles.headerColumn}>
-          <View>
-            <Text style={styles.eyebrow}>Karta gracza</Text>
-            <Skeleton width={140} height={22} style={[styles.skeletonBar, styles.skeletonTitle]} />
-          </View>
-          <View style={styles.pillRow}>
-            <Skeleton width={96} height={26} radius={9999} style={styles.skeletonBar} />
-            <Skeleton width={150} height={26} radius={9999} style={styles.skeletonBar} />
-          </View>
-        </View>
-        <View style={styles.metricsColumn}>
-          {['Zysk', 'Win rate', 'Seria'].map((label) => (
-            <View key={label} style={styles.primaryTile}>
-              <Text style={styles.metricLabel}>{label}</Text>
-              <Skeleton width={96} height={22} style={[styles.skeletonBar, styles.skeletonValue]} />
-            </View>
-          ))}
-        </View>
-        <View style={styles.secondaryRow}>
-          {['Kupony', 'Wygrane'].map((label) => (
-            <View key={label} style={styles.secondaryTile}>
-              <Text style={styles.metricLabel}>{label}</Text>
-              <Skeleton width={40} height={20} style={[styles.skeletonBar, styles.skeletonValue]} />
-            </View>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-}
-
 const sheenStyles = StyleSheet.create({
   sheen: {
     position: 'absolute',
@@ -288,7 +251,4 @@ const useStyles = createStyles(({ shadows }) => ({
     padding: 12,
   },
   secondaryValue: { marginTop: 4, color: '#ffffff' },
-  skeletonBar: { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-  skeletonTitle: { marginTop: 7 },
-  skeletonValue: { marginTop: 7 },
 }));

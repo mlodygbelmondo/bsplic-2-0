@@ -2,43 +2,15 @@ import { UserX } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { useBootHold } from '@/features/boot/boot-store';
-import { PlayerCardHeroSkeleton } from '@/features/player-card/PlayerCardHero';
 import { createStyles, useTheme } from '@/theme';
-import { Skeleton, StateMessage } from '@/ui';
-import { ProfileHeaderCardSkeleton } from './ProfileHeaderCard';
-import { HistorySkeleton } from './ProfileHistoryPanel';
-import { useSurfaceStyles } from './surfaces';
+import { SectionLoader, StateMessage } from '@/ui';
 
-const CHIP_WIDTHS = [86, 74, 82, 64, 66];
-
-/** Page placeholder with the final layout (header card, player card, history). Holds the boot overlay. */
-export function ProfilePageSkeleton({ isOwnProfile }: { isOwnProfile: boolean }) {
-  useBootHold();
-  const surfaces = useSurfaceStyles();
+/** Web `SectionLoader label="Wczytywanie profilu..."` in the page padding. Holds the boot overlay. */
+export function ProfilePageLoader() {
   const styles = useStyles();
-  const { radius } = useTheme();
   return (
-    <ScrollView
-      scrollEnabled={false}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.content}
-      accessibilityLabel="Wczytywanie profilu..."
-    >
-      <ProfileHeaderCardSkeleton isOwnProfile={isOwnProfile} />
-      <PlayerCardHeroSkeleton />
-      <View style={[surfaces.card, styles.historyCard]}>
-        <View style={styles.historyHeader}>
-          <Skeleton width={72} height={16} style={styles.titleBar} />
-          <Skeleton width={150} height={38} radius={radius.lg} />
-        </View>
-        <View style={styles.chipRow}>
-          {CHIP_WIDTHS.map((width) => (
-            <Skeleton key={width} width={width} height={30} radius={9999} />
-          ))}
-        </View>
-        <HistorySkeleton />
-      </View>
+    <ScrollView scrollEnabled={false} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
+      <SectionLoader label="Wczytywanie profilu..." />
     </ScrollView>
   );
 }
@@ -76,10 +48,6 @@ export function ProfileLoadError({ onRetry }: { onRetry: () => void }) {
 
 const useStyles = createStyles(({ colors }) => ({
   content: { padding: 16, gap: 16 },
-  historyCard: { padding: 16 },
-  historyHeader: { marginBottom: 12, gap: 12 },
-  titleBar: { marginVertical: 4 },
-  chipRow: { flexDirection: 'row', gap: 8, marginBottom: 16, overflow: 'hidden' },
   // rounded-xl border border-border bg-card (web "Nie znaleziono wpisu" card)
   stateCard: {
     borderRadius: 12,
