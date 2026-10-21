@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { AdminScreen } from '@/features/admin/AdminScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Admin" />;
+  return <AdminScreen />;
 }
