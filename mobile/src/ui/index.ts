@@ -1,4 +1,5 @@
 export { Avatar } from './Avatar';
+export { BalancedText } from './BalancedText';
 export { Badge } from './Badge';
 export { BrandSpinner } from './BrandSpinner';
 export { Button } from './Button';

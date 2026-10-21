@@ -6,6 +6,7 @@ import Animated, { css, cubicBezier } from 'react-native-reanimated';
 import { couponActions, useCouponSelection } from '@/features/coupon/coupon-store';
 import { haptics } from '@/lib/haptics';
 import { alpha, createStyles, hsl, useTheme } from '@/theme';
+import { BalancedText } from '@/ui';
 import type { Bet, BetOption, Category } from '@/types/database';
 import { useHomeNow } from '../hooks/use-home-clock';
 import {
@@ -105,9 +106,9 @@ export const BetCard = memo(function BetCard({ bet, category, lite, reducedMotio
 
       <View style={isBoost ? styles.bodyBoost : styles.body}>
         <View style={styles.titleBlock}>
-          <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>
+          <BalancedText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.title}>
             {bet.title}
-          </RNText>
+          </BalancedText>
           {clock.isInProgress ? (
             <View style={styles.inProgressRow}>
               <Animated.View style={[styles.inProgressDot, !lite && motion.pulse]} />
