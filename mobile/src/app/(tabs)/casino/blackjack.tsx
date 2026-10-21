@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { BlackjackScreen } from '@/features/casino/blackjack/components/BlackjackScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Blackjack" />;
+  return <BlackjackScreen />;
 }
