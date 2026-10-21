@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { CasinoHubScreen } from '@/features/casino/hub/CasinoHubScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Gry" />;
+  return <CasinoHubScreen />;
 }

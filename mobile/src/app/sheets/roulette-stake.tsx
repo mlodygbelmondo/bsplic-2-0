@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { StakeSheet } from '@/features/casino/roulette/components/StakeSheet';
 
 export default function Screen() {
-  return <RoutePlaceholder name="roulette-stake" />;
+  return <StakeSheet />;
 }

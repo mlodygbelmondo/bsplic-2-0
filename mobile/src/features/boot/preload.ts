@@ -1,6 +1,7 @@
 import type { FetchQueryOptions, QueryKey } from '@tanstack/react-query';
 
 import { blackjackSnapshotQuery } from '@/features/casino/blackjack/api/queries';
+import { rouletteHistoryQuery } from '@/features/casino/roulette/api/queries';
 import {
   casinoHistoryPreviewQueryOptions,
   profileBadgesQueryOptions,
@@ -49,6 +50,7 @@ function getPageDataTasks(userId: string): PrefetchTask[] {
     prefetch(sportsbookHistoryPreviewQueryOptions(userId)),
     prefetch(casinoHistoryPreviewQueryOptions(userId)),
     prefetch(rankingsQuery('sportsbook')),
+    prefetch(rouletteHistoryQuery()),
     prefetch(blackjackSnapshotQuery(userId)),
   ];
 }

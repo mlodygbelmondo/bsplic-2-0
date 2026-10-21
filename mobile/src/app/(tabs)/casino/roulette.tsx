@@ -1,5 +1,5 @@
-import { RoutePlaceholder } from '@/ui/RoutePlaceholder';
+import { RouletteScreen } from '@/features/casino/roulette/components/RouletteScreen';
 
 export default function Screen() {
-  return <RoutePlaceholder name="Ruletka" />;
+  return <RouletteScreen />;
 }
