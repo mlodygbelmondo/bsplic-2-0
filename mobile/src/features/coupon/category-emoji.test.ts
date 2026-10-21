@@ -12,6 +12,8 @@ const categoryMap: Record<string, Category> = {
     color: '#111111',
     sort_order: 1,
     created_at: '2030-01-01T00:00:00.000Z',
+    parent_id: null,
+    slug: null,
   },
   tennis: {
     id: 'tennis',
@@ -20,6 +22,8 @@ const categoryMap: Record<string, Category> = {
     color: '#222222',
     sort_order: 2,
     created_at: '2030-01-01T00:00:00.000Z',
+    parent_id: null,
+    slug: null,
   },
 };
 
