@@ -7,7 +7,7 @@ import { palettes, type Palette, type SchemeName } from './palette';
 
 export * from './palette';
 export { alpha, hsl } from './color';
-export { fonts, text } from './typography';
+export { fauxItalic, fonts, text } from './typography';
 
 const navigationThemes = {
   dark: {

@@ -4,6 +4,12 @@ import { useEffect, useRef } from 'react';
 import { useScreenActive } from './focus';
 import { supabase } from './supabase';
 
+// supabase-js returns the existing channel for a topic, including one still
+// leaving after `removeChannel`; reopening it right away would silently die.
+// Every subscription gets its own topic (the app only uses postgres_changes,
+// whose filters do not depend on the topic).
+let channelSeq = 0;
+
 interface RealtimeOptions {
   /** Extra condition (e.g. a user id is known). Defaults to true. */
   enabled?: boolean;
@@ -34,7 +40,8 @@ export function useRealtimeChannel(
 
   useEffect(() => {
     if (!open || !name) return;
-    const channel = configureRef.current(supabase.channel(name)).subscribe((status) => {
+    channelSeq += 1;
+    const channel = configureRef.current(supabase.channel(`${name}:${channelSeq}`)).subscribe((status) => {
       if (status === 'SUBSCRIBED') onSubscribedRef.current?.();
     });
     return () => {

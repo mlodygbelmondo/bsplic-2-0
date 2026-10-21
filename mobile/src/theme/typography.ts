@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 /** Inter is embedded natively (expo-font config plugin); select faces by weight. */
 export const fonts = {
@@ -28,3 +28,12 @@ export const text = {
   '4xl': inter(36, 40),
   '5xl': inter(48, 48),
 } as const;
+
+/**
+ * The web loads Inter without italic faces, so browsers draw a synthetic
+ * oblique (about 14°). iOS never synthesizes italics for custom fonts (it falls
+ * back to another face), so skew the glyphs there; Android synthesizes it.
+ * Meant for single-line text (wordmarks, labels).
+ */
+export const fauxItalic: TextStyle =
+  Platform.OS === 'ios' ? { transform: [{ skewX: '-14deg' }] } : { fontStyle: 'italic' };

@@ -1,6 +1,6 @@
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 
-import { text, useTheme, type Colors } from '@/theme';
+import { fauxItalic, text, useTheme, type Colors } from '@/theme';
 
 export interface TextProps extends RNTextProps {
   /** Tailwind text size (`text-sm` → `sm`). Default `sm`. */
@@ -35,7 +35,7 @@ export function Text({
         { color: colors[color] },
         weight !== undefined && { fontWeight: weight },
         align !== undefined && { textAlign: align },
-        italic && { fontStyle: 'italic' },
+        italic && fauxItalic,
         tabular && { fontVariant: ['tabular-nums'] },
         style,
       ]}

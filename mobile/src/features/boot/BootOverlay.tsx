@@ -16,7 +16,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { useReducedMotion } from '@/lib/motion';
-import { hsl } from '@/theme';
+import { fauxItalic, fonts, hsl } from '@/theme';
 import { hideNativeSplash, onBootOverlayHidden, PHASE_MESSAGES, useBootStore } from './boot-store';
 
 // The class typings of masked-view predate React 19's JSX types.
@@ -269,9 +269,10 @@ const styles = StyleSheet.create({
   wordmarkBox: { position: 'absolute' },
   maskCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wordmark: {
+    fontFamily: fonts.family,
     fontSize: 38,
     fontWeight: '900',
-    fontStyle: 'italic',
+    ...fauxItalic,
     letterSpacing: -1.14,
     lineHeight: 42,
     color: '#000',
@@ -302,6 +303,7 @@ const styles = StyleSheet.create({
   },
   status: {
     minHeight: 18,
+    fontFamily: fonts.family,
     fontSize: 13,
     fontWeight: '500',
     letterSpacing: 0.13,
