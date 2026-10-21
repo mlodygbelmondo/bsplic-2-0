@@ -2,12 +2,6 @@ import type { Bet } from '@/types/database';
 
 export type SortMode = 'newest' | 'popular' | 'ending_soon';
 
-export const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: 'newest', label: 'Najnowsze' },
-  { value: 'popular', label: 'Popularne' },
-  { value: 'ending_soon', label: 'Kończące się' },
-];
-
 function toTimestamp(value: string): number {
   const timestamp = new Date(value).getTime();
   if (Number.isFinite(timestamp)) {

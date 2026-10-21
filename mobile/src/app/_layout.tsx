@@ -111,6 +111,7 @@ function RootNavigator() {
         <Stack.Screen name="sheets/wallet" options={formSheet([0.92])} />
         <Stack.Screen name="sheets/notifications" options={formSheet([0.6, 1])} />
         <Stack.Screen name="sheets/coupon" options={formSheet([0.6, 1])} />
+        <Stack.Screen name="sheets/sort-bets" options={formSheet('fitToContents')} />
         <Stack.Screen name="sheets/propose-bet" options={formSheet([1])} />
         <Stack.Screen name="sheets/reactors" options={formSheet([0.5, 1])} />
         <Stack.Screen name="sheets/compose-post" options={formSheet([1])} />

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { create } from 'zustand';
 
 import { kv } from '@/lib/storage';
-import { SORT_OPTIONS, type SortMode } from '../logic/sort-bets';
+import type { SortMode } from '../logic/sort-bets';
+import { SORT_OPTIONS } from '../logic/sort-options';
 
 /** Same keys and defaults as the web (`AuthenticatedHome`, `BetList`). */
 const CATEGORY_STORAGE_KEY = 'bsplic.home.category';
@@ -22,35 +23,44 @@ function readStoredActiveOnly(): boolean {
   return kv.getString(ACTIVE_ONLY_STORAGE_KEY) !== 'false';
 }
 
-export function forgetStoredCategory() {
-  kv.remove(CATEGORY_STORAGE_KEY);
+interface HomePreferencesState {
+  category: string | null;
+  sort: SortMode;
+  activeOnly: boolean;
+  /** The sort sheet is presented (the trigger chevron points up). */
+  sortSheetOpen: boolean;
 }
 
-/** Category, sort and Aktywne, remembered across launches in MMKV. */
-export function useHomePreferences() {
-  const [storedCategory, setStoredCategory] = useState(readStoredCategory);
-  const [sort, setSortState] = useState(readStoredSort);
-  const [activeOnly, setActiveOnlyState] = useState(readStoredActiveOnly);
+/**
+ * Category, sort and Aktywne, remembered across launches in MMKV. A store
+ * rather than screen state because the sort sheet is its own route.
+ */
+export const useHomePreferences = create<HomePreferencesState>(() => ({
+  category: readStoredCategory(),
+  sort: readStoredSort(),
+  activeOnly: readStoredActiveOnly(),
+  sortSheetOpen: false,
+}));
 
-  const selectCategory = (id: string | null) => {
-    setStoredCategory(id);
+export const homePreferencesActions = {
+  selectCategory(id: string | null) {
+    useHomePreferences.setState({ category: id });
     if (id) {
       kv.set(CATEGORY_STORAGE_KEY, id);
     } else {
       kv.remove(CATEGORY_STORAGE_KEY);
     }
-  };
-
-  const setSort = (value: SortMode) => {
-    setSortState(value);
+  },
+  setSort(value: SortMode) {
+    useHomePreferences.setState({ sort: value });
     kv.set(SORT_STORAGE_KEY, value);
-  };
-
-  const toggleActiveOnly = () => {
-    const next = !activeOnly;
-    setActiveOnlyState(next);
+  },
+  toggleActiveOnly() {
+    const next = !useHomePreferences.getState().activeOnly;
+    useHomePreferences.setState({ activeOnly: next });
     kv.set(ACTIVE_ONLY_STORAGE_KEY, String(next));
-  };
-
-  return { storedCategory, selectCategory, sort, setSort, activeOnly, toggleActiveOnly };
-}
+  },
+  setSortSheetOpen(open: boolean) {
+    useHomePreferences.setState({ sortSheetOpen: open });
+  },
+};

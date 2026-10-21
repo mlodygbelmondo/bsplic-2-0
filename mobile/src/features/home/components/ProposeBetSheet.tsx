@@ -15,6 +15,7 @@ import { createStyles, useScheme, useTheme } from '@/theme';
 import { Button, Field, PressScale, SheetHeader, Text } from '@/ui';
 import { createBetProposal } from '../api/bet-proposals';
 import { categoriesQueryOptions } from '../api/categories';
+import { getCategoryLabel, getCategoryOptions } from '../logic/category-tree';
 import {
   getTomorrowAt2359,
   hasFixedOptionCount,
@@ -58,7 +59,12 @@ export function ProposeBetSheet() {
   const [loading, setLoading] = useState(false);
 
   const fixedCount = hasFixedOptionCount(betType);
-  const selectedCategory = categories.find((category) => category.id === categoryId);
+  // Each sport followed by its leagues, labelled "Piłka nożna › Premier League".
+  const categoryOptions = getCategoryOptions(categories).map(({ category, parent }) => ({
+    id: category.id,
+    label: `${category.emoji} ${getCategoryLabel(category, parent)}`,
+  }));
+  const selectedCategory = categoryOptions.find((option) => option.id === categoryId);
   const typeLabel = PROPOSAL_TYPES.find((type) => type.value === betType)?.label ?? '';
 
   const changeBetType = (next: ProposalBetType) => {
@@ -143,10 +149,10 @@ export function ProposeBetSheet() {
           <View style={styles.group}>
             <Text weight="500">Kategoria</Text>
             <MenuView
-              actions={categories.map((category) => ({
-                id: category.id,
-                title: `${category.emoji} ${category.name}`,
-                state: category.id === categoryId ? 'on' : 'off',
+              actions={categoryOptions.map((option) => ({
+                id: option.id,
+                title: option.label,
+                state: option.id === categoryId ? 'on' : 'off',
               }))}
               onPressAction={({ nativeEvent }) => {
                 haptics.selection();
@@ -156,7 +162,7 @@ export function ProposeBetSheet() {
             >
               <SelectTrigger
                 width={selectWidth}
-                label={selectedCategory ? `${selectedCategory.emoji} ${selectedCategory.name}` : 'Wybierz'}
+                label={selectedCategory?.label ?? 'Wybierz'}
                 placeholder={!selectedCategory}
               />
             </MenuView>

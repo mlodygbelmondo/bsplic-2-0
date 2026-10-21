@@ -38,7 +38,7 @@ export function useHomeRealtime(enabled: boolean, currentBetsKey: QueryKey) {
     queryClient.getQueriesData<InfiniteData<BetsPage, number>>({ queryKey: BETS_QUERY_ROOT }).forEach(([key, data]) => {
       const criteria = criteriaFromQueryKey(key);
       if (!data || !criteria) return;
-      const pages = applyBetsRealtimeToPages(data.pages, payloads, criteria.category, criteria.includeInProgress);
+      const pages = applyBetsRealtimeToPages(data.pages, payloads, criteria.categoryIds, criteria.includeInProgress);
       if (pages !== data.pages) {
         queryClient.setQueryData<InfiniteData<BetsPage, number>>(key, { ...data, pages });
       }

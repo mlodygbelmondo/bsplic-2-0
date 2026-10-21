@@ -34,7 +34,7 @@ function isBetOpenForPlacement(row: Pick<BetRow, 'ends_at' | 'is_active'>) {
   return Number.isFinite(endsAt) && endsAt > Date.now();
 }
 
-function isBetVisible(row: BetRow, selectedCategory: string | null, includeInProgress = false): boolean {
+function isBetVisible(row: BetRow, categoryIds: readonly string[] | null, includeInProgress = false): boolean {
   if (includeInProgress) {
     if (!row.is_active) {
       return false;
@@ -43,11 +43,11 @@ function isBetVisible(row: BetRow, selectedCategory: string | null, includeInPro
     return false;
   }
 
-  if (!selectedCategory) {
+  if (!categoryIds || categoryIds.length === 0) {
     return true;
   }
 
-  return row.category_id === selectedCategory;
+  return row.category_id !== null && categoryIds.includes(row.category_id);
 }
 
 function upsertBet(previous: Bet[], nextBet: Bet): Bet[] {
@@ -81,7 +81,7 @@ function removeBet(previous: Bet[], betId: string): Bet[] {
 export function applyBetsRealtimePayloads(
   previous: Bet[],
   payloads: BetsRealtimePayload[],
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   includeInProgress = false,
 ): Bet[] {
   let next = previous;
@@ -89,7 +89,7 @@ export function applyBetsRealtimePayloads(
   for (const payload of payloads) {
     if (payload.eventType === 'INSERT') {
       const row = payload.new;
-      if (!getBetId(row) || !isBetVisible(row, selectedCategory, includeInProgress)) {
+      if (!getBetId(row) || !isBetVisible(row, categoryIds, includeInProgress)) {
         continue;
       }
       next = upsertBet(next, toBet(row));
@@ -108,7 +108,7 @@ export function applyBetsRealtimePayloads(
         continue;
       }
 
-      if (isBetVisible(newRow, selectedCategory, includeInProgress)) {
+      if (isBetVisible(newRow, categoryIds, includeInProgress)) {
         next = upsertBet(next, toBet(newRow));
         continue;
       }
@@ -139,12 +139,12 @@ export function applyBetsRealtimePayloads(
 export function applyBetsRealtimeToPages(
   pages: BetsPage[],
   payloads: BetsRealtimePayload[],
-  selectedCategory: string | null,
+  categoryIds: readonly string[] | null,
   includeInProgress = false,
 ): BetsPage[] {
   if (pages.length === 0) return pages;
   const flat = pages.flatMap((page) => page.bets);
-  const next = applyBetsRealtimePayloads(flat, payloads, selectedCategory, includeInProgress);
+  const next = applyBetsRealtimePayloads(flat, payloads, categoryIds, includeInProgress);
   if (next === flat) return pages;
 
   let start = 0;

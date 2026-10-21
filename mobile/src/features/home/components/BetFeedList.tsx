@@ -1,14 +1,20 @@
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useEffect } from 'react';
 import { Pressable, RefreshControl, Text as RNText, View } from 'react-native';
-import { Easing, useSharedValue, withTiming, type AnimatedRef, type SharedValue } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type AnimatedRef,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { DailyJackpotCard } from '@/features/jackpot/DailyJackpotCard';
 import { createStyles, useTheme } from '@/theme';
 import type { Bet, Category } from '@/types/database';
 import type { BetSections } from '../logic/bet-sections';
 import { BetCardSkeleton } from './BetCardSkeleton';
-import { TOOLBAR_SPACE } from './BetListToolbar';
 import { BetRow, ENTER_TOTAL_MS, type RowGap } from './BetRow';
 
 const MAX_FONT_SCALE = 1.35;
@@ -57,6 +63,10 @@ interface BetFeedListProps {
   rows: HomeRow[];
   /** The first page is in (cards can play their entrance). */
   ready: boolean;
+  /** Space the filter bar covers at the top (its height plus `mb-2.5`). */
+  headerSpace: number;
+  /** The previous filter's bets stay on screen, dimmed, while the next ones load. */
+  dimmed: boolean;
   hasMore: boolean;
   loadingMore: boolean;
   hasRegularBets: boolean;
@@ -69,15 +79,20 @@ interface BetFeedListProps {
   reducedMotion: boolean;
 }
 
+/** `transition-opacity duration-200` on the web results block. */
+const DIM_TIMING = { duration: 200 };
+
 /**
- * The scrolling bet list. Keyed by sort, category and Aktywne by the parent,
- * so a filter change starts at the top and replays the card entrance (web
- * remounts its scroll container the same way).
+ * The scrolling bet list. Keyed by the parent on the filter of the bets it
+ * shows, so new results replay the card entrance (web re-keys its results
+ * block the same way once they arrive).
  */
 export function BetFeedList({
   listRef,
   rows,
   ready,
+  headerSpace,
+  dimmed,
   hasMore,
   loadingMore,
   hasRegularBets,
@@ -92,6 +107,12 @@ export function BetFeedList({
   const styles = useStyles();
   const { colors } = useTheme();
   const enterClock = useSharedValue(reducedMotion ? 1 : 0);
+  const dim = useSharedValue(dimmed ? 0.4 : 1);
+  const dimStyle = useAnimatedStyle(() => ({ opacity: dim.get() }));
+
+  useEffect(() => {
+    dim.set(withTiming(dimmed ? 0.4 : 1, DIM_TIMING));
+  }, [dimmed, dim]);
 
   useEffect(() => {
     if (!ready) return;
@@ -112,6 +133,8 @@ export function BetFeedList({
         gap={item.gap}
         enterIndex={item.enterIndex}
         enterClock={enterClock}
+        dim={dim}
+        blocked={dimmed}
         lite={lite}
         reducedMotion={reducedMotion}
       />
@@ -124,16 +147,17 @@ export function BetFeedList({
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       getItemType={getItemType}
+      extraData={dimmed}
       ListHeaderComponent={
         <View>
-          <View style={styles.toolbarSpace} />
+          <View style={{ height: headerSpace }} />
           <View style={styles.banner}>
             <DailyJackpotCard />
           </View>
         </View>
       }
       ListFooterComponent={
-        <View style={styles.footer}>
+        <Animated.View pointerEvents={dimmed ? 'none' : 'auto'} style={[styles.footer, dimStyle]}>
           {hasMore ? (
             <Pressable
               accessibilityRole="button"
@@ -153,17 +177,17 @@ export function BetFeedList({
               </RNText>
             </Pressable>
           ) : null}
-        </View>
+        </Animated.View>
       }
       ListEmptyComponent={
-        <View style={styles.empty}>
+        <Animated.View style={[styles.empty, dimStyle]}>
           <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>
             Brak dostępnych zakładów
           </RNText>
           <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptySubtitle}>
             Wróć później lub zmień kategorię
           </RNText>
-        </View>
+        </Animated.View>
       }
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
@@ -178,7 +202,6 @@ export function BetFeedList({
 }
 
 const useStyles = createStyles(({ colors, radius }) => ({
-  toolbarSpace: { height: TOOLBAR_SPACE },
   banner: { paddingHorizontal: 12 },
   // Regular block `mb-8`, plus the clearance the web keeps above its floating nav.
   footer: { paddingHorizontal: 12, paddingBottom: 48 },

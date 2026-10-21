@@ -23,24 +23,38 @@ interface BetRowProps {
   enterIndex: number;
   /** 0 → 1 over ENTER_TOTAL_MS when the list appears; stays at 1 afterwards. */
   enterClock: SharedValue<number>;
+  /** List opacity: 0.4 while the previous filter's bets wait for the next ones. */
+  dim: SharedValue<number>;
+  /** Taps are ignored while dimmed (web `pointer-events-none`). */
+  blocked: boolean;
   lite: boolean;
   reducedMotion: boolean;
 }
 
 /** One list cell: horizontal page padding, row gap and the card entrance. */
-export const BetRow = memo(function BetRow({ bet, category, gap, enterIndex, enterClock, lite, reducedMotion }: BetRowProps) {
+export const BetRow = memo(function BetRow({
+  bet,
+  category,
+  gap,
+  enterIndex,
+  enterClock,
+  dim,
+  blocked,
+  lite,
+  reducedMotion,
+}: BetRowProps) {
   const delay = Math.min(enterIndex, ENTER_MAX_INDEX) * ENTER_STAGGER_MS;
   const enterStyle = useAnimatedStyle(() => {
     const elapsed = enterClock.get() * ENTER_TOTAL_MS - delay;
     const progress = ENTER_EASING(Math.min(1, Math.max(0, elapsed / ENTER_MS)));
     return {
-      opacity: progress,
+      opacity: progress * dim.get(),
       transform: [{ translateY: 14 * (1 - progress) }, { scale: 0.985 + 0.015 * progress }],
     };
   });
 
   return (
-    <Animated.View style={[styles.row, GAP_STYLES[gap], enterStyle]}>
+    <Animated.View pointerEvents={blocked ? 'none' : 'auto'} style={[styles.row, GAP_STYLES[gap], enterStyle]}>
       <BetCard bet={bet} category={category} lite={lite} reducedMotion={reducedMotion} />
     </Animated.View>
   );

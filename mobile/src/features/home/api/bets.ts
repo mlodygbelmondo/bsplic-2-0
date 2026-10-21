@@ -15,7 +15,8 @@ export const ACTIVE_BETS_PAGE_SIZE = 80;
 export const BETS_QUERY_ROOT = ['home', 'bets'] as const;
 
 export interface BetsCriteria {
-  category: string | null;
+  /** The selected category plus its leagues (web `getCategoryFilterIds`); `null` = every category. */
+  categoryIds: string[] | null;
   sort: SortMode;
   /** Aktywne off: also show bets past `ends_at` that wait for settlement. */
   includeInProgress: boolean;
@@ -29,8 +30,8 @@ export async function fetchActiveBets(criteria: BetsCriteria, limit: number, off
     query = query.gt('ends_at', new Date().toISOString());
   }
 
-  if (criteria.category) {
-    query = query.eq('category_id', criteria.category);
+  if (criteria.categoryIds && criteria.categoryIds.length > 0) {
+    query = query.in('category_id', criteria.categoryIds);
   }
 
   if (criteria.sort === 'popular') {
@@ -70,7 +71,9 @@ export const betsQueryOptions = (criteria: BetsCriteria) =>
 export function criteriaFromQueryKey(queryKey: readonly unknown[]): BetsCriteria | null {
   const criteria = queryKey[2];
   if (!criteria || typeof criteria !== 'object') return null;
-  const { category, sort, includeInProgress } = criteria as Partial<BetsCriteria>;
+  const { categoryIds, sort, includeInProgress } = criteria as Partial<BetsCriteria>;
   if (typeof sort !== 'string' || typeof includeInProgress !== 'boolean') return null;
-  return { category: typeof category === 'string' ? category : null, sort, includeInProgress };
+  if (categoryIds === null) return { categoryIds, sort, includeInProgress };
+  if (!Array.isArray(categoryIds) || !categoryIds.every((id) => typeof id === 'string')) return null;
+  return { categoryIds, sort, includeInProgress };
 }
