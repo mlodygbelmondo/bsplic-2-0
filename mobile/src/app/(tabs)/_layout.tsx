@@ -1,12 +1,25 @@
+import { usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 
-import { useTheme } from '@/theme';
+import { useScheme } from '@/theme';
 
-/** Primary navigation (web bottom nav): Zakłady, Social, Gry, Rankingi, Profil. */
+/**
+ * Primary navigation (web bottom nav): Zakłady, Social, Gry, Rankingi, Profil.
+ * Colors follow the web liquid-glass nav: gold on dark and casino screens,
+ * brand red otherwise.
+ */
 export default function TabsLayout() {
-  const { colors } = useTheme();
+  const scheme = useScheme();
+  const onDark = scheme === 'dark' || usePathname().startsWith('/casino');
+  const selected = onDark ? '#ffe14a' : '#c90018';
+  const idle = onDark ? 'rgba(255, 255, 255, 0.68)' : 'rgba(2, 6, 23, 0.82)';
   return (
-    <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.primary}>
+    <NativeTabs
+      minimizeBehavior="onScrollDown"
+      tintColor={selected}
+      iconColor={{ default: idle, selected }}
+      labelStyle={{ default: { color: idle }, selected: { color: selected } }}
+    >
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
         <NativeTabs.Trigger.Label>Zakłady</NativeTabs.Trigger.Label>
