@@ -22,8 +22,9 @@ export const queryClient = new QueryClient({
       networkMode: 'offlineFirst',
     },
     mutations: {
-      // Never queue wagering/financial/social writes while offline.
-      networkMode: 'online',
+      // Never queue writes while offline: 'online' would pause the mutation and
+      // send it on reconnect; 'always' lets it fail at once.
+      networkMode: 'always',
     },
   },
 });

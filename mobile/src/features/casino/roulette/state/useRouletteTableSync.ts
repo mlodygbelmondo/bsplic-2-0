@@ -14,7 +14,7 @@ import {
   placeRouletteBet,
   rouletteRoundsChannelName,
 } from '../api/roulette';
-import { celebrateRouletteWin, registerRouletteController } from './actions';
+import { celebrateRouletteWin, registerRouletteController, unregisterRouletteController } from './actions';
 import { rouletteSession, useRouletteSession } from './sessionStore';
 import { createRouletteTableController, type RouletteTableController } from './tableController';
 import { createInitialTableState, rouletteTableStore } from './tableStore';
@@ -72,7 +72,7 @@ export function useRouletteTableSync(userId: string) {
     registerRouletteController(controller);
     prepareCasinoWinChime();
     return () => {
-      registerRouletteController(null);
+      unregisterRouletteController(controller);
       controller.dispose();
     };
   }, [controller]);

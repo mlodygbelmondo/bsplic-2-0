@@ -1,4 +1,4 @@
-import { useIsFocused } from 'expo-router';
+import { useIsFocused, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
@@ -22,6 +22,15 @@ export function useHasBeenFocused(): boolean {
   const [seen, setSeen] = useState(focused);
   if (focused && !seen) setSeen(true);
   return seen;
+}
+
+/**
+ * True while a sheet or modal route is presented. An RN `Modal` cannot present
+ * over it (UIKit refuses and RN never retries), so global dialogs wait.
+ */
+export function useModalRouteOpen(): boolean {
+  const [root] = useSegments();
+  return root === 'sheets' || root === 'jackpot';
 }
 
 /** True while the screen is focused and the app is in the foreground. */

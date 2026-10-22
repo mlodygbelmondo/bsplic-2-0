@@ -35,6 +35,9 @@ startAuth();
 // player's music, like web audio in iOS Safari.
 void setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => undefined);
 
+// A cold-start deep link (e.g. a shared post) opens on top of the tabs, so back leads home.
+export const unstable_settings = { anchor: '(tabs)' };
+
 const TOAST_SHADOW = '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)';
 
 export default function RootLayout() {
@@ -117,6 +120,9 @@ function SignedInSurfaces() {
 
 function RootNavigator() {
   const signedIn = useAuthStore((s) => s.user !== null);
+  // Until the stored session is read, keep the signed-in routes open so a
+  // cold-start deep link is not redirected away; the boot overlay covers it.
+  const authLoading = useAuthStore((s) => s.loading);
   // Web coupon panel: min(viewport - 6rem, 680px) tall, 8px above the bottom.
   // iOS resolves detent fractions against the full-height sheet (window minus
   // the top inset) and floats lower detents ~9pt in from the top and bottom.
@@ -131,7 +137,7 @@ function RootNavigator() {
         ...(route.name.startsWith('sheets/') ? sheetDefaults : null),
       })}
     >
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={signedIn || authLoading}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile/[userId]" />
         <Stack.Screen name="social/[itemType]/[itemId]" />
@@ -141,22 +147,22 @@ function RootNavigator() {
           name="jackpot/draw/[roundId]"
           options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
         />
-        <Stack.Screen name="sheets/menu" options={overlayScreen} />
-        <Stack.Screen name="sheets/topup" options={overlayScreen} />
-        <Stack.Screen name="sheets/wallet" options={overlayScreen} />
-        <Stack.Screen name="sheets/notifications" options={overlayScreen} />
-        <Stack.Screen name="sheets/coupon" options={formSheet([couponDetent, 1])} />
-        <Stack.Screen name="sheets/sort-bets" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/propose-bet" options={overlayScreen} />
-        <Stack.Screen name="sheets/reactors" options={overlayScreen} />
-        <Stack.Screen name="sheets/compose-post" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/compose-story" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="sheets/story-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
-        <Stack.Screen name="sheets/image-viewer" options={{ presentation: 'transparentModal', animation: 'fade' }} />
-        <Stack.Screen name="sheets/roulette-stake" options={formSheet('fitToContents')} />
-        <Stack.Screen name="sheets/slot-rules" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/menu" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/topup" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/wallet" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/notifications" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/coupon" options={formSheet([couponDetent, 1])} />
+        <Stack.Screen dangerouslySingular name="sheets/sort-bets" options={formSheet('fitToContents')} />
+        <Stack.Screen dangerouslySingular name="sheets/propose-bet" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/reactors" options={overlayScreen} />
+        <Stack.Screen dangerouslySingular name="sheets/compose-post" options={formSheet('fitToContents')} />
+        <Stack.Screen dangerouslySingular name="sheets/compose-story" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen dangerouslySingular name="sheets/story-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+        <Stack.Screen dangerouslySingular name="sheets/image-viewer" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+        <Stack.Screen dangerouslySingular name="sheets/roulette-stake" options={formSheet('fitToContents')} />
+        <Stack.Screen dangerouslySingular name="sheets/slot-rules" options={overlayScreen} />
       </Stack.Protected>
-      <Stack.Protected guard={!signedIn}>
+      <Stack.Protected guard={!signedIn && !authLoading}>
         <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />
       </Stack.Protected>
       <Stack.Screen name="reset-password" options={{ animation: 'fade' }} />

@@ -7,6 +7,7 @@ import Animated, { Easing, FadeOut, Keyframe, LinearTransition } from 'react-nat
 import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { useBootVisible } from '@/features/boot/boot-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
+import { useModalRouteOpen } from '@/lib/focus';
 import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { queryClient } from '@/lib/query-client';
@@ -42,6 +43,7 @@ export function FeaturePollSurface() {
   const userId = useUserId();
   const hasProfile = useAuthStore((s) => s.profile !== null);
   const bootVisible = useBootVisible();
+  const modalRouteOpen = useModalRouteOpen();
   const query = useQuery({
     ...featurePollQueries.available(userId ?? ''),
     enabled: userId !== null && hasProfile,
@@ -50,7 +52,7 @@ export function FeaturePollSurface() {
 
   // Never trust a poll restored from the persisted cache: it may already be answered.
   const poll = query.isFetchedAfterMount && !query.isError ? (query.data ?? null) : null;
-  const open = Boolean(userId && hasProfile && poll && !bootVisible);
+  const open = Boolean(userId && hasProfile && poll && !bootVisible && !modalRouteOpen);
 
   useEffect(() => {
     setFeaturePollOpen(open);

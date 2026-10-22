@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { queryClient } from '@/lib/query-client';
-import { readJson, writeJson, kv } from '@/lib/storage';
+import { readJson, writeJson, kv, secureKv } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import type { Profile } from '@/types/database';
@@ -202,7 +202,13 @@ export const authActions = {
 
   async signOut() {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // Offline with an expired token, supabase-js gives up before removing the
+        // stored session, and the next refresh would sign the user back in.
+        supabase.auth.stopAutoRefresh();
+        secureKv.clearAll();
+      }
     } finally {
       // The SIGNED_OUT event clears state too; do it eagerly so the UI never
       // shows the previous user's data after a failed network sign-out.

@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef, type ViewToken } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { ArrowUp } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import {
@@ -68,7 +68,8 @@ function SocialFeedBody() {
   const profile = useProfile();
   const filter = parseFeedFilter(useLocalSearchParams<{ filter?: string }>().filter);
   const feed = useSocialFeed(userId, filter);
-  const storiesQuery = useQuery(socialStoriesQuery());
+  // The tab stays mounted: resubscribing on focus refetches the stories.
+  const storiesQuery = useQuery({ ...socialStoriesQuery(), subscribed: useIsFocused() });
   const [chrome] = useState(createFeedChromeStore);
   const [visibility] = useState(createFeedVisibilityStore);
   const listRef = useRef<FlashListRef<SocialFeedItem>>(null);
@@ -204,7 +205,10 @@ function SocialFeedBody() {
           refreshControl={
             <RefreshControl
               refreshing={feed.refreshing}
-              onRefresh={feed.refresh}
+              onRefresh={() => {
+                void storiesQuery.refetch();
+                void feed.refresh();
+              }}
               tintColor={social.mutedForeground}
               progressViewOffset={FILTER_BAR_HEIGHT}
             />

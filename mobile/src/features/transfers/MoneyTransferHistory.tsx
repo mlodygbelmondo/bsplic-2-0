@@ -6,6 +6,7 @@ import { RefreshControl, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
 import { getErrorMessage } from '@/lib/errors';
+import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { Avatar, Button, Text } from '@/ui';
 import { moneyTransferHistoryQuery } from './api/transfers';
@@ -47,6 +48,14 @@ export function MoneyTransferHistory() {
     );
   }
 
+  const loadOlder = () => {
+    void fetchNextPage().then((result) => {
+      if (result.isFetchNextPageError) {
+        toast.error(getErrorMessage(result.error, 'Nie udało się pobrać historii transferów'));
+      }
+    });
+  };
+
   const handleRefresh = async () => {
     setPullRefreshing(true);
     try {
@@ -86,7 +95,7 @@ export function MoneyTransferHistory() {
             fullWidth
             label={isFetchingNextPage ? 'Ładowanie...' : 'Pokaż starsze'}
             disabled={isFetchingNextPage}
-            onPress={() => void fetchNextPage()}
+            onPress={loadOlder}
             style={styles.more}
           />
         ) : null

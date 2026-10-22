@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
 import { ArrowRight, Clock3, Info, Ticket, Users } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
@@ -238,10 +238,13 @@ function useSecondTicker(enabled: boolean, receivedAt: number): number {
 function Embers() {
   const styles = useStyles();
   const lite = useLiteMotion();
+  // The home tab stays mounted: stop while another tab is on screen.
+  const focused = useIsFocused();
+  const still = lite || !focused;
   const drift = useSharedValue(0);
 
   useEffect(() => {
-    if (lite) {
+    if (still) {
       cancelAnimation(drift);
       drift.set(0);
       return;
@@ -249,7 +252,7 @@ function Embers() {
     drift.set(0);
     drift.set(withRepeat(withTiming(1, { duration: 18_000, easing: Easing.linear }), -1, false));
     return () => cancelAnimation(drift);
-  }, [lite, drift]);
+  }, [still, drift]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: -5 * REM * drift.get() }, { translateY: 3 * REM * drift.get() }],
@@ -262,17 +265,19 @@ function Embers() {
 function FloatingArt() {
   const styles = useStyles();
   const lite = useLiteMotion();
+  const focused = useIsFocused();
+  const still = lite || !focused;
   const float = useSharedValue(0);
 
   useEffect(() => {
-    if (lite) {
+    if (still) {
       cancelAnimation(float);
       float.set(0);
       return;
     }
     float.set(withRepeat(withTiming(1, { duration: 2750, easing: Easing.bezier(0.42, 0, 0.58, 1) }), -1, true));
     return () => cancelAnimation(float);
-  }, [lite, float]);
+  }, [still, float]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -0.6 * REM * float.get() }, { rotate: `${1.2 * float.get()}deg` }],

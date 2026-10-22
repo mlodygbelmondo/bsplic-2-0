@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
+import { useIsFocused } from 'expo-router';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -40,7 +41,12 @@ function RankingsBody() {
   const [rankingType, setRankingType] = useState<RankingType>('sportsbook');
   const [pullRefreshing, setPullRefreshing] = useState(false);
 
-  const { data: rankings, error, isLoading, isFetching, refetch } = useQuery(rankingsQuery(rankingType));
+  // The tab stays mounted: resubscribing on focus refetches, like a web page visit.
+  const focused = useIsFocused();
+  const { data: rankings, error, isLoading, isFetching, refetch } = useQuery({
+    ...rankingsQuery(rankingType),
+    subscribed: focused,
+  });
 
   useEffect(() => {
     if (error) console.warn('Rankings fetch error:', error);

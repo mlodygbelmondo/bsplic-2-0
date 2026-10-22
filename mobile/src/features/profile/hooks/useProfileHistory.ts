@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useIsFocused } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { toast } from '@/lib/toast';
@@ -81,13 +82,17 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
   }
 
   const active = Boolean(targetUserId);
+  // Screens stay mounted under tabs and pushes: refetch on every focus, like a web page visit.
+  const focused = useIsFocused();
   const sportsbookPreview = useQuery({
     ...sportsbookHistoryPreviewQueryOptions(targetUserId ?? ''),
     enabled: active,
+    subscribed: focused,
   });
   const casinoPreview = useQuery({
     ...casinoHistoryPreviewQueryOptions(targetUserId ?? ''),
     enabled: active && historyType === 'casino',
+    subscribed: focused,
   });
 
   useEffect(() => {

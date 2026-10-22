@@ -21,15 +21,20 @@ import { rouletteTableStore } from './tableStore';
 
 let activeController: RouletteTableController | null = null;
 
-export function registerRouletteController(controller: RouletteTableController | null) {
+export function registerRouletteController(controller: RouletteTableController) {
   activeController = controller;
+}
+
+/** Clears the controller only if it is still the registered one. */
+export function unregisterRouletteController(controller: RouletteTableController) {
+  if (activeController === controller) activeController = null;
 }
 
 const balance = () => Number(useAuthStore.getState().profile?.balance ?? 0);
 
 export async function submitRouletteBet() {
   const controller = activeController;
-  if (!controller) return;
+  if (!controller || rouletteTableStore.getState().isPlacingBet) return;
   const { betType, betValue, stake } = useRouletteSession.getState();
 
   try {

@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
@@ -27,7 +28,8 @@ const DRIFT = `linear-gradient(100deg, transparent 6%, ${hsl(355, 85, 30, 0.12)}
 /**
  * Full-screen app background (web `.h-safe-screen.bg-background`): the
  * aurora gradient plus, in dark mode, a drifting band (32 s) and a slow
- * yellow particle field (80 s). Transform-only, stopped under lite motion.
+ * yellow particle field (80 s). Transform-only, stopped under lite motion
+ * and while the screen is not focused (tabs stay mounted).
  */
 export function ScreenBackground({ children, style }: { children?: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { colors, gradients, scheme } = useTheme();
@@ -46,11 +48,13 @@ export function ScreenBackground({ children, style }: { children?: ReactNode; st
 
 function AmbientLayers() {
   const lite = useLiteMotion();
+  const focused = useIsFocused();
+  const still = lite || !focused;
   const drift = useSharedValue(0);
   const rise = useSharedValue(0);
 
   useEffect(() => {
-    if (lite) {
+    if (still) {
       cancelAnimation(drift);
       cancelAnimation(rise);
       return;
@@ -61,7 +65,7 @@ function AmbientLayers() {
       cancelAnimation(drift);
       cancelAnimation(rise);
     };
-  }, [lite, drift, rise]);
+  }, [still, drift, rise]);
 
   const driftStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: `${-5 + 10 * drift.get()}%` }],

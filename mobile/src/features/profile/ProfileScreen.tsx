@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 
@@ -80,10 +80,20 @@ function OwnProfileContent() {
   const history = useProfileHistory(userId);
   const avatar = useAvatarUpload(userId, offline);
 
-  const badgesQuery = useQuery({ ...profileBadgesQueryOptions(userId ?? ''), enabled: Boolean(userId) });
+  // Tabs stay mounted: resubscribing on focus refetches (`refetchOnMount: 'always'`), like a web page visit.
+  const focused = useIsFocused();
+  const badgesQuery = useQuery({
+    ...profileBadgesQueryOptions(userId ?? ''),
+    enabled: Boolean(userId),
+    subscribed: focused,
+  });
   // Own stats come from a cheap per-user RPC; other players need the public
   // profile RPC, which also carries their name and avatar.
-  const statsQuery = useQuery({ ...profileStatsQueryOptions(userId ?? ''), enabled: Boolean(userId) });
+  const statsQuery = useQuery({
+    ...profileStatsQueryOptions(userId ?? ''),
+    enabled: Boolean(userId),
+    subscribed: focused,
+  });
   useLogBadgesError(badgesQuery.error);
 
   if (!userId || !profile) {

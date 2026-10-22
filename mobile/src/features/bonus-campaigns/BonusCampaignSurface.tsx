@@ -13,6 +13,7 @@ import { useFeaturePollOpen } from '@/features/feature-polls/feature-poll-store'
 import { useQueryErrorToast } from '@/features/feature-polls/use-query-error-toast';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
+import { useModalRouteOpen } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
 import { queryClient } from '@/lib/query-client';
 import { useReducedMotion } from '@/lib/motion';
@@ -68,6 +69,7 @@ export function BonusCampaignSurface() {
   const offline = useIsOffline();
   const reducedMotion = useReducedMotion();
   const segments = useSegments();
+  const modalRouteOpen = useModalRouteOpen();
   const insets = useSafeAreaInsets();
   const styles = useStyles();
   const { colors } = useTheme();
@@ -166,8 +168,11 @@ export function BonusCampaignSurface() {
       ) : null}
 
       <DialogModal
-        visible={modalOpen && !bootVisible && !pollOpen}
+        visible={modalOpen && !bootVisible && !pollOpen && !modalRouteOpen}
         onRequestClose={() => {
+          if (!claiming) handleCloseModal();
+        }}
+        onBackdropPress={() => {
           if (!claiming) handleCloseModal();
         }}
         maxWidth={448}
