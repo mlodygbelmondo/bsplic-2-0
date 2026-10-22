@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
-import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
 import { alpha, createStyles, useTheme } from '@/theme';
 import type { ReactorUser } from '@/types/social';
 import { OverlayScreen, Text, useOverlayClose } from '@/ui';
@@ -125,6 +125,7 @@ function ReactorRow({ reactor, isSelf }: { reactor: ReactorUser; isSelf: boolean
   return (
     <Pressable
       accessibilityRole="link"
+      unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
       onPressIn={() => {
         if (!isSelf) prefetchPublicProfile(reactor.user_id);
       }}

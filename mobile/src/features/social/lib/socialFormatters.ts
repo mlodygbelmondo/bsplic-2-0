@@ -23,7 +23,7 @@ export function formatEventsCount(count: number) {
   return `${count} ${polishPlural(count, { one: 'zdarzenie', few: 'zdarzenia', many: 'zdarzeń' })}`;
 }
 
-/** Feed card time label; computed at render, like the web (no ticker). */
+/** Feed card time label; cards pass the shared minute clock so the label moves forward. */
 export function formatSocialTimeAgo(dateStr: string, now: number = Date.now()) {
   const diff = now - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);

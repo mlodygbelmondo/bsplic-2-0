@@ -8,6 +8,7 @@ import {
   isAkoItem,
   mapFeedPages,
   mergeFeedItemIntoPages,
+  mergeFreshFirstPage,
   parseFeedFilter,
   trimFeedToFirstPage,
   type FeedPages,
@@ -93,6 +94,41 @@ describe('mapFeedPages', () => {
   it('returns the same object when nothing changes', () => {
     const data = pages(makePostPage(2));
     expect(mapFeedPages(data, (item) => item)).toBe(data);
+  });
+});
+
+describe('mergeFreshFirstPage', () => {
+  it('puts new items on top and updates loaded ones without dropping later pages', () => {
+    const data = pages(makePostPage(50, 0), makePostPage(50, 50));
+    const fresh = [
+      makePostFeedItem({ id: 'new-1' }),
+      makePostFeedItem({ id: 'new-2' }),
+      makePostFeedItem({ id: 'post-0', content: 'Edytowany' }),
+      ...makePostPage(47, 1),
+    ];
+
+    const merged = mergeFreshFirstPage(data, fresh);
+
+    expect(merged.pages).toHaveLength(2);
+    expect(merged.pages[0].slice(0, 3).map((item) => item.id)).toEqual(['new-1', 'new-2', 'post-0']);
+    expect(merged.pages[0][2].content).toBe('Edytowany');
+    // Items pushed below the fresh page (post-48, post-49) stay in the list.
+    expect(merged.pages[0].map((item) => item.id)).toContain('post-49');
+    expect(merged.pages[1]).toBe(data.pages[1]);
+  });
+
+  it('replaces a single loaded page with the fresh one', () => {
+    const fresh = [makePostFeedItem({ id: 'new-1' }), ...makePostPage(1, 1)];
+    const merged = mergeFreshFirstPage(pages(makePostPage(3)), fresh);
+    expect(merged.pages).toEqual([fresh]);
+    expect(merged.pageParams).toEqual([0]);
+  });
+
+  it('starts over from the fresh page when it shares no item with the loaded pages', () => {
+    const fresh = makePostPage(50, 200);
+    const merged = mergeFreshFirstPage(pages(makePostPage(50, 0), makePostPage(50, 50)), fresh);
+    expect(merged.pages).toEqual([fresh]);
+    expect(merged.pageParams).toEqual([0]);
   });
 });
 

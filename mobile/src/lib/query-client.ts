@@ -1,9 +1,10 @@
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query';
+import type { PersistedClient, Persister } from '@tanstack/react-query-persist-client';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { isOffline, subscribeOffline } from './connectivity';
-import { serializeQueryCache } from './query-persistence';
+import { persistedQueriesChanged, serializeQueryCache } from './query-persistence';
 import { kv } from './storage';
 
 /**
@@ -38,7 +39,7 @@ export const PAGE_DATA_QUERY_OPTIONS = {
   refetchOnMount: 'always',
 } as const;
 
-export const queryPersister = createSyncStoragePersister({
+const storagePersister = createSyncStoragePersister({
   storage: {
     getItem: (key) => kv.getString(key) ?? null,
     setItem: (key, value) => kv.set(key, value),
@@ -51,7 +52,21 @@ export const queryPersister = createSyncStoragePersister({
   serialize: serializeQueryCache,
 });
 
-export const PERSIST_MAX_AGE = 24 * 60 * 60_000;
+let lastPersistedQueries: PersistedClient['clientState']['queries'] = [];
+
+/** Every cache event asks for a save; only changes to persisted data rewrite MMKV. */
+export const queryPersister: Persister = {
+  ...storagePersister,
+  persistClient: (client) => {
+    if (!persistedQueriesChanged(lastPersistedQueries, client.clientState.queries)) return;
+    lastPersistedQueries = client.clientState.queries;
+    return storagePersister.persistClient(client);
+  },
+  removeClient: () => {
+    lastPersistedQueries = [];
+    return storagePersister.removeClient();
+  },
+};
 
 /** Bump to drop every persisted cache after a breaking data-shape change. */
 export const PERSIST_BUSTER = 'v1';

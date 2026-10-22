@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
 import { alpha, createStyles } from '@/theme';
 import { Text } from '@/ui';
 import {
@@ -31,6 +31,7 @@ export const RankingRow = memo(function RankingRow({ entry, rank, sortBy, isCurr
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`${rank}. ${entry.username}${isCurrentUser ? ' (ty)' : ''}, ${metric.label} ${metric.value}`}
+      unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
       onPressIn={() => prefetchPublicProfile(entry.id)}
       onPress={() => router.push(`/profile/${entry.id}`)}
       style={({ pressed }) => [

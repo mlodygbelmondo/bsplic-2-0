@@ -17,8 +17,8 @@ import { initBoot } from '@/features/boot/boot-store';
 import { FeaturePollSurface } from '@/features/feature-polls/FeaturePollSurface';
 import { ConnectivityWatcher } from '@/features/shell/ConnectivityWatcher';
 import { MaintenanceGate } from '@/features/shell/MaintenanceGate';
-import { PERSIST_BUSTER, PERSIST_MAX_AGE, queryClient, queryPersister } from '@/lib/query-client';
-import { shouldPersistQuery } from '@/lib/query-persistence';
+import { PERSIST_BUSTER, queryClient, queryPersister } from '@/lib/query-client';
+import { PERSIST_MAX_AGE, shouldPersistQuery } from '@/lib/query-persistence';
 import { ThemeProvider, useTheme } from '@/theme';
 import { formSheet, overlayScreen, sheetDefaults } from '@/lib/sheet-options';
 

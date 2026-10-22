@@ -17,6 +17,7 @@ import { CouponBar } from '@/features/coupon/CouponBar';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
 import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
+import { useMinuteClockTicker } from '@/lib/minute-clock';
 import { useLiteMotion, useReducedMotion } from '@/lib/motion';
 import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { createStyles } from '@/theme';
@@ -24,7 +25,6 @@ import type { Category } from '@/types/database';
 import { ScreenBackground } from '@/ui';
 import { betsQueryKey, betsQueryOptions, type BetsCriteria } from '../api/bets';
 import { categoriesQueryOptions, toCategoryMap } from '../api/categories';
-import { useHomeClockTicker } from '../hooks/use-home-clock';
 import { homePreferencesActions, useHomePreferences } from '../hooks/use-home-preferences';
 import { useHomeRealtime } from '../hooks/use-home-realtime';
 import { buildBetSections } from '../logic/bet-sections';
@@ -97,7 +97,7 @@ export function HomeScreen() {
   useBootHold(waitingForBets || waitingForCategories);
 
   useHomeRealtime(hasBeenFocused, betsQueryKey(criteria));
-  useHomeClockTicker(screenActive);
+  useMinuteClockTicker(screenActive);
 
   // Scroll chrome on the UI thread: the filter bar slides away on a deliberate
   // downward scroll, comes back on an upward one and follows pull-to-refresh.

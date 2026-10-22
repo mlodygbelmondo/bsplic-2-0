@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react-native';
 import { memo, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
 import { createStyles } from '@/theme';
 import type { SocialStory } from '@/types/database';
 import { Text } from '@/ui';
@@ -106,6 +106,7 @@ export const SocialStories = memo(function SocialStories({
               key={profile.userId}
               accessibilityRole="link"
               accessibilityLabel={`Profil ${profile.username}`}
+              unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
               onPressIn={() => prefetchPublicProfile(profile.userId)}
               onPress={() => router.push({ pathname: '/profile/[userId]', params: { userId: profile.userId } })}
               style={styles.tile}

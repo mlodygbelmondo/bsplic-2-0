@@ -11,6 +11,8 @@ import { useBootHold } from '@/features/boot/boot-store';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
+import { useScreenActive } from '@/lib/focus';
+import { useMinuteClockTicker } from '@/lib/minute-clock';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import type { FeedItemType } from '@/types/database';
@@ -43,6 +45,7 @@ export function SocialItemScreen() {
 
 function SocialItemBody({ itemType, itemId }: { itemType: FeedItemType; itemId: string }) {
   const userId = useUserId();
+  useMinuteClockTicker(useScreenActive());
   // Show the cached feed copy at once (notification taps, deep links) while the item loads.
   const query = useQuery({
     ...socialItemQuery(itemType, itemId, userId),

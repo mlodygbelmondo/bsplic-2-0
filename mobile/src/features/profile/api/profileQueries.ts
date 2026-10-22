@@ -173,8 +173,16 @@ export const profileIdByUsernameQueryOptions = (username: string) =>
   });
 
 /**
+ * Press-in delay for rows in scrolling lists that warm data on press-in: a
+ * scroll that starts on the row cancels the press before it fires, so scrolling
+ * past avatars and names fetches nothing. A quicker tap still fires press-in.
+ */
+export const PREFETCH_PRESS_DELAY_MS = 130;
+
+/**
  * Warms another player's profile screen (call on press-in of an avatar or
- * name): public profile, badges and the sportsbook history preview.
+ * name, with `PREFETCH_PRESS_DELAY_MS` inside lists): public profile, badges
+ * and the sportsbook history preview.
  */
 export function prefetchPublicProfile(userId: string) {
   void queryClient.prefetchQuery(publicProfileQueryOptions(userId));

@@ -19,8 +19,9 @@ import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
-import { useHasBeenFocused } from '@/lib/focus';
+import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
+import { useMinuteClockTicker } from '@/lib/minute-clock';
 import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
@@ -73,6 +74,7 @@ function SocialFeedBody() {
   const feed = useSocialFeed(userId, filter);
   // The tab stays mounted: resubscribing on focus refetches the stories.
   const storiesQuery = useQuery({ ...socialStoriesQuery(), subscribed: useIsFocused() });
+  useMinuteClockTicker(useScreenActive());
   const [chrome] = useState(createFeedChromeStore);
   const [visibility] = useState(createFeedVisibilityStore);
   const listRef = useRef<FlashListRef<SocialFeedItem>>(null);

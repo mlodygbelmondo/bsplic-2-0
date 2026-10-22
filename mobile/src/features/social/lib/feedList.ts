@@ -90,6 +90,26 @@ export function mergeFeedItemIntoPages(data: FeedPages, nextItem: SocialFeedItem
   return { ...data, pages: [[nextItem, ...first], ...rest] };
 }
 
+/**
+ * Merges a freshly read first page into the loaded pages after a realtime gap,
+ * so catching up is one request however far the user scrolled. Loaded items
+ * take their fresh copy and new ones go on top in feed order. A single page is
+ * simply replaced; without any overlap (more new items than a page) the fresh
+ * page replaces everything, since the items between would be missing.
+ */
+export function mergeFreshFirstPage(data: FeedPages, fresh: SocialFeedItem[]): FeedPages {
+  const freshByKey = new Map(fresh.map((item) => [getFeedItemKey(item), item]));
+  const loaded = new Set(data.pages.flatMap((page) => page.map(getFeedItemKey)));
+  const added = fresh.filter((item) => !loaded.has(getFeedItemKey(item)));
+  if (data.pages.length <= 1 || added.length === fresh.length) {
+    return { pages: [fresh], pageParams: data.pageParams.slice(0, 1) };
+  }
+  const updated = mapFeedPages(data, (item) => freshByKey.get(getFeedItemKey(item)) ?? item);
+  if (added.length === 0) return updated;
+  const [first, ...rest] = updated.pages;
+  return { ...updated, pages: [[...added, ...first], ...rest] };
+}
+
 /** Keeps only the first page (the web caches and refreshes just the first 50 items). */
 export function trimFeedToFirstPage(data: FeedPages): FeedPages {
   if (data.pages.length <= 1) return data;

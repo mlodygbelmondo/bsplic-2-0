@@ -17,9 +17,35 @@ export const NON_PERSISTED_QUERY_ROOTS = new Set<string>([
   'bonus-campaigns',
 ]);
 
-/** Every query with data is saved, including one whose latest background refresh failed. */
+/** Persisted entries older than this are dropped (restore also rejects a save older than this). */
+export const PERSIST_MAX_AGE = 24 * 60 * 60_000;
+
+/**
+ * Every query with data from the last day is saved, including one whose latest
+ * background refresh failed. The age check keeps per-item entries (profiles,
+ * threads, items) from piling up across days: restoring gives each entry a fresh
+ * `gcTime`, so without it anything loaded once would survive every daily launch.
+ */
 export function shouldPersistQuery(query: Query): boolean {
-  return query.state.data !== undefined && !NON_PERSISTED_QUERY_ROOTS.has(String(query.queryKey[0]));
+  return (
+    query.state.data !== undefined &&
+    Date.now() - query.state.dataUpdatedAt < PERSIST_MAX_AGE &&
+    !NON_PERSISTED_QUERY_ROOTS.has(String(query.queryKey[0]))
+  );
+}
+
+type PersistedQueries = PersistedClient['clientState']['queries'];
+
+/**
+ * True when the queries to save differ from the last save: an entry was added or
+ * removed or its data changed. Live-only updates (roulette rounds, refetches that
+ * return the same data) then skip the full rewrite.
+ */
+export function persistedQueriesChanged(previous: PersistedQueries, next: PersistedQueries): boolean {
+  if (previous.length !== next.length) return true;
+  return next.some(
+    (query, index) => query.queryHash !== previous[index].queryHash || query.state.data !== previous[index].state.data,
+  );
 }
 
 /**

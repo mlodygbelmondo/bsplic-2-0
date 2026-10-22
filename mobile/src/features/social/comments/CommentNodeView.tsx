@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { useMinuteNow } from '@/lib/minute-clock';
 import { createStyles } from '@/theme';
 import { Avatar, Text } from '@/ui';
 import { SocialContentBlock } from '../components/SocialContentBlock';
@@ -43,6 +44,7 @@ export function CommentNodeView({
   currentUserId,
 }: CommentNodeViewProps) {
   const styles = useStyles();
+  const now = useMinuteNow();
   const [replying, setReplying] = useState(false);
   const canReply = depth < maxDepth;
 
@@ -63,6 +65,7 @@ export function CommentNodeView({
           accessibilityRole="link"
           accessibilityLabel={`Profil ${node.username}`}
           hitSlop={8}
+          unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
           onPressIn={prefetchAuthor}
           onPress={openAuthor}
           style={styles.avatarPress}
@@ -83,13 +86,12 @@ export function CommentNodeView({
               <Text
                 accessibilityRole="link"
                 numberOfLines={1}
-                onPressIn={prefetchAuthor}
                 onPress={openAuthor}
                 style={styles.username}
               >
                 {node.username}
               </Text>
-              <Text style={styles.time}>{formatCommentTime(node.created_at)}</Text>
+              <Text style={styles.time}>{formatCommentTime(node.created_at, now)}</Text>
             </View>
             <View style={styles.body}>
               <SocialContentBlock

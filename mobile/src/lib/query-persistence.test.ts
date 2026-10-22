@@ -2,7 +2,7 @@ import { dehydrate, hydrate, QueryClient } from '@tanstack/react-query';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
 import { describe, expect, it } from 'vitest';
 
-import { serializeQueryCache, shouldPersistQuery } from './query-persistence';
+import { persistedQueriesChanged, serializeQueryCache, shouldPersistQuery } from './query-persistence';
 
 const BETS = [{ id: 'bet-1', title: 'Legia - Lech' }];
 
@@ -49,5 +49,39 @@ describe('query cache persistence', () => {
     expect(restored.getQueryState(['profile', 'u1'])).toBeUndefined();
     expect(restored.getQueryState(['roulette-live', 'table'])).toBeUndefined();
     expect(restored.getQueryState(['admin', 'bets'])).toBeUndefined();
+  });
+
+  it('drops entries whose data is older than a day', () => {
+    const client = new QueryClient();
+    client.setQueryData(['profile', 'old'], { id: 'old' }, { updatedAt: Date.now() - 25 * 60 * 60_000 });
+    client.setQueryData(['profile', 'recent'], { id: 'recent' }, { updatedAt: Date.now() - 23 * 60 * 60_000 });
+
+    const restored = restore(serializeQueryCache(persist(client)));
+
+    expect(restored.getQueryState(['profile', 'old'])).toBeUndefined();
+    expect(restored.getQueryData(['profile', 'recent'])).toEqual({ id: 'recent' });
+  });
+
+  it('reports a change only when persisted data was added, removed or replaced', async () => {
+    const client = new QueryClient();
+    client.setQueryData(['bets', 'all'], BETS);
+    const first = persist(client).clientState.queries;
+
+    // A refetch returning equal data keeps the data reference (structural sharing).
+    await client.fetchQuery({
+      queryKey: ['bets', 'all'],
+      queryFn: () => [{ id: 'bet-1', title: 'Legia - Lech' }],
+      staleTime: 0,
+    });
+    client.setQueryData(['roulette-live', 'table'], { roundId: 'r2' });
+    const refetched = persist(client).clientState.queries;
+    expect(persistedQueriesChanged(first, refetched)).toBe(false);
+
+    client.setQueryData(['bets', 'all'], [{ id: 'bet-1', title: 'Legia - Wisła' }]);
+    const replaced = persist(client).clientState.queries;
+    expect(persistedQueriesChanged(refetched, replaced)).toBe(true);
+
+    client.setQueryData(['profile', 'u1'], { id: 'u1' });
+    expect(persistedQueriesChanged(replaced, persist(client).clientState.queries)).toBe(true);
   });
 });

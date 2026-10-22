@@ -5,7 +5,7 @@ import {
   areCommentsShown,
   isFeedItemLoaded,
   mergeFeedItem,
-  refreshFeedPages,
+  refreshFeedFirstPage,
   reloadComments,
   removeFeedItem,
 } from '../api/cache';
@@ -66,7 +66,7 @@ export function useSocialRealtimeFeed(userId: string | null, onItemsPrepended: (
           subscribedOnceRef.current = true;
           return;
         }
-        refreshFeedPages(userId)
+        refreshFeedFirstPage(userId)
           .then((added) => {
             if (added > 0) onPrependedRef.current();
           })

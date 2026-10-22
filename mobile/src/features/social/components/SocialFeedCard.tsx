@@ -5,8 +5,9 @@ import { Copy, Globe2, MoreHorizontal, X } from 'lucide-react-native';
 import { memo, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
 import { haptics } from '@/lib/haptics';
+import { useMinuteNow } from '@/lib/minute-clock';
 import { createStyles } from '@/theme';
 import type { SocialComment, SocialFeedItem } from '@/types/database';
 import { Avatar, Text } from '@/ui';
@@ -79,6 +80,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
   spaced = false,
 }: SocialFeedCardProps) {
   const styles = useStyles();
+  const now = useMinuteNow();
   const itemKey = getFeedItemKey(item);
   // The item page always shows its card, even one hidden in the feed.
   const hidden = useFeedCardFlag('hidden', itemKey) && !detail;
@@ -127,6 +129,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
         <Pressable
           accessibilityRole="link"
           accessibilityLabel={`Profil ${item.username}`}
+          unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
           onPressIn={() => {
             if (item.user_id !== currentUserId) prefetchPublicProfile(item.user_id);
           }}
@@ -147,7 +150,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
               {item.username}
             </Text>
             <View style={styles.timeRow}>
-              <Text style={styles.time}>{formatSocialTimeAgo(item.created_at)}</Text>
+              <Text style={styles.time}>{formatSocialTimeAgo(item.created_at, now)}</Text>
               <Text style={styles.time} importantForAccessibility="no" accessibilityElementsHidden>
                 ·
               </Text>
@@ -201,6 +204,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
         // Not an accessibility element itself, so VoiceOver still reaches the buttons and links inside.
         <Pressable
           accessible={false}
+          unstable_pressDelay={PREFETCH_PRESS_DELAY_MS}
           onPressIn={() => seedSocialItem(item, currentUserId)}
           onPress={() =>
             router.push({ pathname: '/social/[itemType]/[itemId]', params: { itemType: item.item_type, itemId: item.id } })

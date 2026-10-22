@@ -5,10 +5,10 @@ import Animated, { css, cubicBezier } from 'react-native-reanimated';
 
 import { couponActions, useCouponSelection } from '@/features/coupon/coupon-store';
 import { haptics } from '@/lib/haptics';
+import { useMinuteNow } from '@/lib/minute-clock';
 import { alpha, createStyles, hsl, useTheme } from '@/theme';
 import { BalancedText } from '@/ui';
 import type { Bet, BetOption, Category } from '@/types/database';
-import { useHomeNow } from '../hooks/use-home-clock';
 import {
   buildOddsRows,
   formatBetDate,
@@ -39,7 +39,7 @@ interface BetCardProps {
 export const BetCard = memo(function BetCard({ bet, category, lite, reducedMotion }: BetCardProps) {
   const styles = useStyles();
   const { colors } = useTheme();
-  const now = useHomeNow();
+  const now = useMinuteNow();
   const selectedOption = useCouponSelection(bet.id);
   const clock = getBetClockState(bet, now);
   const options: BetOption[] = bet.options ?? [];
