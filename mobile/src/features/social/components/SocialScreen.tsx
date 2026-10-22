@@ -202,6 +202,8 @@ function SocialFeedBody() {
           viewabilityConfig={VIEWABILITY_CONFIG}
           maintainVisibleContentPosition={MAINTAIN_POSITION}
           renderScrollComponent={FeedScrollView}
+          // A tap on Send (or a mention, photo, reaction) while typing a comment fires at once instead of only closing the keyboard.
+          keyboardShouldPersistTaps="handled"
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={styles.content}
           refreshControl={

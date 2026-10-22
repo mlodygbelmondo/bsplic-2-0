@@ -125,6 +125,32 @@ function clearQueryCache() {
 
 /** Between tapping sign-out and supabase-js finishing it: a late token refresh must not sign the UI back in. */
 let signOutInFlight = false;
+let pendingSignOut: Promise<void> | null = null;
+
+async function runSignOut() {
+  const accessToken = readStoredSession()?.access_token;
+  // Forget the session on the device first: the sign-in screen shows at once,
+  // and an app killed before the server answers cannot come back signed in.
+  // A token refresh still in flight is discarded by supabase-js (storage changed).
+  secureKv.remove(AUTH_STORAGE_KEY);
+  signOutInFlight = true;
+  clearQueryCache();
+  clearProfileState();
+  useAuthStore.setState({ session: null, user: null });
+  try {
+    // Revoke the session on the server (global scope, like the web's signOut()).
+    if (accessToken) {
+      const { error } = await supabase.auth.admin.signOut(accessToken);
+      if (error) console.warn('Server sign-out failed:', error);
+    }
+    // Reset supabase-js itself (timers, SIGNED_OUT); nothing left to revoke.
+    await supabase.auth.signOut({ scope: 'local' });
+  } finally {
+    signOutInFlight = false;
+    // Requests that finished meanwhile may have refilled the cache.
+    clearQueryCache();
+  }
+}
 
 function applyAuthSession(session: Session | null, { fromTimeout = false } = {}) {
   if (session && signOutInFlight) return;
@@ -248,12 +274,15 @@ export function startAuth() {
 
 export const authActions = {
   async signIn(email: string, password: string) {
+    // A sign-out still revoking every session of this account would revoke the new one too.
+    await pendingSignOut;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     kv.set(LAST_EMAIL_KEY, email);
   },
 
   async signUp(email: string, password: string, username: string) {
+    await pendingSignOut;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -264,25 +293,11 @@ export const authActions = {
     return { requiresEmailConfirmation: !data.session };
   },
 
-  async signOut() {
-    // Show the sign-in screen at once: the server sign-out waits for any token
-    // refresh in flight (up to ~25 s offline) and finishes in the background.
-    signOutInFlight = true;
-    clearQueryCache();
-    clearProfileState();
-    useAuthStore.setState({ session: null, user: null });
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        // Offline with an expired token, supabase-js gives up before removing the
-        // stored session, and the next refresh would sign the user back in.
-        secureKv.clearAll();
-      }
-    } finally {
-      signOutInFlight = false;
-      // Requests that finished meanwhile may have refilled the cache.
-      clearQueryCache();
-    }
+  signOut() {
+    pendingSignOut ??= runSignOut().finally(() => {
+      pendingSignOut = null;
+    });
+    return pendingSignOut;
   },
 
   async resetPassword(email: string) {

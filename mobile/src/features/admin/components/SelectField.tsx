@@ -73,7 +73,8 @@ export function SelectField<T extends string>({
           }))}
           onPressAction={({ nativeEvent }) => {
             const next = options.find((option) => option.value === nativeEvent.event);
-            if (!next) return;
+            // Re-picking the checked item is not a change (Radix Select on the web stays silent).
+            if (!next || next.value === value) return;
             haptics.selection();
             onChange(next.value);
           }}

@@ -17,7 +17,7 @@ Status per surface: `complete` (meets the contract's definition of done and was 
 | 11 | Auth | Registration | `sign-in` | partial | Not exercised (would create production accounts) |
 | 12 | Auth | Forgot password | `sign-in` | partial | Not exercised (sends production email) |
 | 13 | Auth | Password recovery via universal link | `reset-password` | blocked | Needs AASA + Team ID to activate links |
-| 14 | Auth | Persistent session, logout, cache clear | `features/auth/auth-store` | partial | Persistent session verified; logout not exercised in the final pass |
+| 14 | Auth | Persistent session, logout, cache clear | `features/auth/auth-store` | complete | Cold start from the stored session, logout (sign-in screen in under a second) and re-login verified on the simulator; cache cleared on sign-out and account switch |
 | 15 | Sportsbook | Bet list, categories, live/boost, sorting | `(tabs)/(home)` | complete | Category rail, count line, cards and balanced titles compared with the web in both themes; sort sheet not yet exercised |
 | 16 | Sportsbook | Bet card odds selection | `features/home` | complete | Selection adds to the coupon with the toast |
 | 17 | Sportsbook | Propose bet | `sheets/propose-bet` | partial | Dialog with the web layout; not exercised on the simulator |

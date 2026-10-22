@@ -68,7 +68,10 @@ export function ManageBetsTab() {
   const categoriesQuery = useQuery(categoriesQueryOptions());
   const bets = betsQuery.data ?? EMPTY_BETS;
   const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
-  const loading = betsQuery.isPending || categoriesQuery.isPending;
+  // Like the web, every visit waits for a fresh list: settling a bet from an older
+  // copy (one the cron already settled) would overwrite its result.
+  const loading =
+    betsQuery.isPending || categoriesQuery.isPending || (betsQuery.isFetching && !betsQuery.isFetchedAfterMount);
   const loadError = betsQuery.error ?? categoriesQuery.error;
 
   const [search, setSearch] = useState('');

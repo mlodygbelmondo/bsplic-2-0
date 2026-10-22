@@ -30,7 +30,8 @@ interface CompressImageOptions {
 
 const DEFAULT_MAX_IMAGE_DIMENSION = 1280;
 const DEFAULT_TARGET_IMAGE_BYTES = 85 * 1024;
-const DEFAULT_ABSOLUTE_MAX_IMAGE_BYTES = 90 * 1024;
+/** The `social-images` bucket limit (90,000 bytes); the web's 90 KiB lets a 90.0–92.2 kB file through to a storage error. */
+const DEFAULT_ABSOLUTE_MAX_IMAGE_BYTES = 90_000;
 const DEFAULT_MIN_IMAGE_DIMENSION = 320;
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_QUALITIES = [0.8, 0.72, 0.64, 0.56, 0.48];

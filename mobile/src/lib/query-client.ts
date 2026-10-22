@@ -38,10 +38,12 @@ export const PAGE_DATA_QUERY_OPTIONS = {
 } as const;
 
 /**
- * Queries whose key starts with one of these are never persisted: live casino
- * rounds and in-progress games must always load fresh (web rule).
+ * Queries whose key starts with one of these are never persisted: admin data,
+ * live casino rounds and in-progress games must always load fresh (web rule).
  */
 export const NON_PERSISTED_QUERY_ROOTS = new Set<string>([
+  // Admin actions settle real bets: never act on a list restored from disk.
+  'admin',
   'roulette-live',
   'blackjack-live',
   'jackpot-live',

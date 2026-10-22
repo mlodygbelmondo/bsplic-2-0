@@ -98,6 +98,36 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
     subscribed: focused,
   });
 
+  // A preview with different rows shifts the offsets the extra pages were
+  // loaded at (new coupons or spins push rows down), so drop those pages. An
+  // unchanged refetch (focus back after a sheet) keeps its data object, and the pages.
+  const [sportsbookBase, setSportsbookBase] = useState(sportsbookPreview.data);
+  const [casinoBase, setCasinoBase] = useState(casinoPreview.data);
+  if (sportsbookBase !== sportsbookPreview.data) {
+    setSportsbookBase(sportsbookPreview.data);
+    if (more.coupons.length > 0 || loadingMoreCoupons) {
+      setMore((prev) => ({
+        ...prev,
+        coupons: [],
+        couponsAvailable: null,
+        sportsbookExpanded: false,
+        generation: prev.generation + 1,
+      }));
+    }
+  }
+  if (casinoBase !== casinoPreview.data) {
+    setCasinoBase(casinoPreview.data);
+    if (more.casino.length > 0 || loadingMoreCasinoHistory) {
+      setMore((prev) => ({
+        ...prev,
+        casino: [],
+        casinoAvailable: null,
+        casinoExpanded: false,
+        generation: prev.generation + 1,
+      }));
+    }
+  }
+
   useEffect(() => {
     if (sportsbookPreview.error) console.error('Failed to load sportsbook history', sportsbookPreview.error);
   }, [sportsbookPreview.error]);
