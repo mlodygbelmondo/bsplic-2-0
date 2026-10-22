@@ -74,8 +74,9 @@ export function useBlackjackTable(userId: string) {
   }, [game, reducedMotion]);
 
   useEffect(() => {
-    loadBlackjackSfx();
+    // Send the table requests before creating the sound players.
     game.start();
+    loadBlackjackSfx();
     return () => {
       game.stop();
       unloadBlackjackSfx();

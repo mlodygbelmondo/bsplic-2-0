@@ -25,16 +25,22 @@ const TIMING: Record<OverlayVariant, { open: number; close: number }> = {
 };
 const EASE = Easing.bezier(0.4, 0, 0.2, 1);
 
-type Close = (after?: () => void) => void;
+/**
+ * Plays the exit animation, pops the overlay route, then runs `after` (e.g. a navigation).
+ * Pass `{ pop: false }` when `after` leaves the overlay itself (`router.dismissTo`).
+ */
+type Close = (after?: () => void, options?: { pop?: boolean }) => void;
 const OverlayContext = createContext<Close | null>(null);
 
-/** Closes the surrounding overlay with its exit animation, then runs `after` (e.g. a navigation). */
+function finish(after?: () => void, pop = true) {
+  if (pop) router.back();
+  after?.();
+}
+
+/** Closes the surrounding overlay (see `Close`). */
 export function useOverlayClose(): Close {
   const close = useContext(OverlayContext);
-  return close ?? ((after) => {
-    router.back();
-    after?.();
-  });
+  return close ?? ((after, options) => finish(after, options?.pop));
 }
 
 interface OverlayScreenProps {
@@ -59,17 +65,13 @@ export function OverlayScreen({ variant, style, anchor, accessibilityLabel, chil
     progress.set(withTiming(1, { duration: TIMING[variant].open, easing: EASE }));
   }, [progress, variant]);
 
-  const finish = (after?: () => void) => {
-    router.back();
-    after?.();
-  };
-
-  const close: Close = (after) => {
+  const close: Close = (after, options) => {
     if (closing.current) return;
     closing.current = true;
+    const pop = options?.pop ?? true;
     progress.set(
       withTiming(0, { duration: TIMING[variant].close, easing: EASE }, (finished) => {
-        if (finished) scheduleOnRN(finish, after);
+        if (finished) scheduleOnRN(finish, after, pop);
       }),
     );
   };

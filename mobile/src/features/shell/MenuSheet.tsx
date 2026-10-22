@@ -84,7 +84,8 @@ function MenuContent() {
                   accessibilityState={{ selected: active }}
                   onPress={() => {
                     haptics.selection();
-                    close(() => navigateFromChrome(navigation, link.path));
+                    // dismissTo pops the drawer and switches the tab in one step.
+                    close(() => navigateFromChrome(navigation, link.path), { pop: false });
                   }}
                   style={({ pressed }) => [styles.link, active ? styles.linkActive : pressed && styles.linkPressed]}
                 >
@@ -201,7 +202,7 @@ function AccountCard() {
         accessibilityRole="link"
         onPress={() => {
           haptics.selection();
-          close(() => navigateFromChrome(navigation, '/profile'));
+          close(() => navigateFromChrome(navigation, '/profile'), { pop: false });
         }}
         style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
       >

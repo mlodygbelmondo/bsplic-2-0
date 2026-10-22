@@ -170,6 +170,9 @@ function RankingsBody() {
       )}
       ListHeaderComponent={header}
       ListEmptyComponent={emptyState}
+      // FlashList keeps the first visible row in place across data changes by default, so a
+      // re-sort scrolled the header (tabs, sort chips) away. The web list stays put.
+      maintainVisibleContentPosition={{ disabled: true }}
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
       refreshControl={

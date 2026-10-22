@@ -253,6 +253,8 @@ export function ManageBetsTab() {
         )}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={header}
+        // Filters replace the data; keep the filter header on screen (FlashList anchors rows by default).
+        maintainVisibleContentPosition={{ disabled: true }}
         ListEmptyComponent={
           loading ? (
             <SectionLoader label="Wczytywanie zakładów..." />
