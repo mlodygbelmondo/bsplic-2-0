@@ -12,9 +12,10 @@ import {
   type TestUser,
 } from './dbTestClient';
 
-// Behavioral contract tests for the Jackpot Dnia lifecycle: buy limits and
-// the underfunded-round refund path — the flow the 2026-07-22 multi-ticket
-// refund fix patched — exercised through the real RPC interface.
+// Behavioral contract tests for the Jackpot Dnia lifecycle: buy limits,
+// lost-coupon funding sync (which client polls must not rewrite when nothing
+// changed), and the underfunded-round refund path — the flow the 2026-07-22
+// multi-ticket refund fix patched — exercised through the real RPC interface.
 describe('daily jackpot RPC contract', () => {
   let service: SupabaseClient;
   let pool: Pool;
@@ -110,6 +111,93 @@ describe('daily jackpot RPC contract', () => {
       `SELECT (private.daily_jackpot_rules()->>'max_tickets_per_player')::int AS max`,
     );
     expect(state.data.max_tickets_per_player).toBe(rows[0].max);
+  });
+
+  it('does not rewrite the pool when a poll finds nothing new to fund', async () => {
+    const warmUp = await player.client.rpc('get_daily_jackpot_state');
+    expect(warmUp.error).toBeNull();
+    const poolId: string = warmUp.data.pool_id;
+    testedPoolId = poolId;
+
+    const readPoolRow = async () => {
+      const { rows } = await pool.query(
+        `SELECT xmin::text AS xmin, xmax::text AS xmax, updated_at, prize_amount::text AS prize_amount
+           FROM public.daily_jackpot_pools
+          WHERE id = $1`,
+        [poolId],
+      );
+      return rows[0];
+    };
+
+    const before = await readPoolRow();
+    const poll = await player.client.rpc('get_daily_jackpot_state');
+    expect(poll.error).toBeNull();
+    expect(await readPoolRow()).toEqual(before);
+  });
+
+  it('funds the pool from a coupon lost on the source day and drops it after resettlement', async () => {
+    const state = await player.client.rpc('get_daily_jackpot_state');
+    expect(state.error).toBeNull();
+    const poolId: string = state.data.pool_id;
+    testedPoolId = poolId;
+
+    const readPrize = async () => {
+      const { rows } = await pool.query(
+        `SELECT prize_amount::float8 AS prize_amount
+           FROM public.daily_jackpot_pools
+          WHERE id = $1`,
+        [poolId],
+      );
+      return rows[0].prize_amount as number;
+    };
+    const readCouponFunding = async (couponId: string) => {
+      const { rows } = await pool.query(
+        `SELECT pool_id, amount::float8 AS amount
+           FROM public.daily_jackpot_funding_entries
+          WHERE source_type = 'lost_coupon' AND coupon_id = $1`,
+        [couponId],
+      );
+      return rows;
+    };
+
+    const prizeBefore = await readPrize();
+    // A coupon lost at noon (Warsaw) of the day this pool collects from.
+    const { rows: couponRows } = await pool.query(
+      `INSERT INTO public.coupons (user_id, stake, status, created_at, settled_at)
+       SELECT $1, 50, 'lost', source_noon, source_noon
+         FROM (
+           SELECT ((p.pool_date - 1)::text || ' 12:00:00 Europe/Warsaw')::timestamptz AS source_noon
+             FROM public.daily_jackpot_pools p
+            WHERE p.id = $2
+         ) source
+       RETURNING id`,
+      [player.id, poolId],
+    );
+    const couponId: string = couponRows[0].id;
+
+    try {
+      const funded = await player.client.rpc('get_daily_jackpot_state');
+      expect(funded.error).toBeNull();
+      expect(await readCouponFunding(couponId)).toEqual([
+        { pool_id: poolId, amount: 10 },
+      ]);
+      expect(await readPrize()).toBeCloseTo(prizeBefore + 10, 2);
+
+      await pool.query(
+        `UPDATE public.coupons SET status = 'refund' WHERE id = $1`,
+        [couponId],
+      );
+      const resettled = await player.client.rpc('get_daily_jackpot_state');
+      expect(resettled.error).toBeNull();
+      expect(await readCouponFunding(couponId)).toEqual([]);
+      expect(await readPrize()).toBeCloseTo(prizeBefore, 2);
+    } finally {
+      await pool.query(
+        `DELETE FROM public.daily_jackpot_funding_entries WHERE coupon_id = $1`,
+        [couponId],
+      );
+      await pool.query(`DELETE FROM public.coupons WHERE id = $1`, [couponId]);
+    }
   });
 
   it('enforces the per-player ticket limit and refunds an underfunded round', async () => {
