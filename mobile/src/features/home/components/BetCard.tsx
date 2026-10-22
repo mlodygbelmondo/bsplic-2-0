@@ -168,25 +168,25 @@ export const BetCard = memo(function BetCard({ bet, category, lite, reducedMotio
 });
 
 const pulseLive = css.keyframes({
-  0: { opacity: 1 },
-  50: { opacity: 0.3 },
-  100: { opacity: 1 },
+  '0%': { opacity: 1 },
+  '50%': { opacity: 0.3 },
+  '100%': { opacity: 1 },
 });
 
 /** Tailwind `animate-pulse`. */
 const pulse = css.keyframes({
-  0: { opacity: 1 },
-  50: { opacity: 0.5 },
-  100: { opacity: 1 },
+  '0%': { opacity: 1 },
+  '50%': { opacity: 0.5 },
+  '100%': { opacity: 1 },
 });
 
 const SKEW = { skewX: '-14deg' } as const;
 const boostShimmer = css.keyframes({
-  0: { opacity: 0, transform: [{ translateX: '-140%' }, SKEW] },
-  68: { opacity: 0, transform: [{ translateX: '-140%' }, SKEW] },
-  73: { opacity: 1 },
-  86: { opacity: 1, transform: [{ translateX: '145%' }, SKEW] },
-  100: { opacity: 0, transform: [{ translateX: '145%' }, SKEW] },
+  '0%': { opacity: 0, transform: [{ translateX: '-140%' }, SKEW] },
+  '68%': { opacity: 0, transform: [{ translateX: '-140%' }, SKEW] },
+  '73%': { opacity: 1 },
+  '86%': { opacity: 1, transform: [{ translateX: '145%' }, SKEW] },
+  '100%': { opacity: 0, transform: [{ translateX: '145%' }, SKEW] },
 });
 
 const motion = {
