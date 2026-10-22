@@ -73,9 +73,12 @@ export async function toggleItemReaction(itemType: FeedItemType, itemId: string,
     );
 
   moveFrom(original, optimistic);
+  const target = getSocialItemCommentsTarget(itemType, itemId);
   try {
-    const next = await toggleReaction({ userId, emoji, ...getSocialItemCommentsTarget(itemType, itemId) });
+    const next = await toggleReaction({ userId, emoji, ...target });
     moveFrom(optimistic, next);
+    // The cached "who reacted" list no longer matches.
+    queryClient.removeQueries({ queryKey: socialKeys.reactors(target) });
   } catch (error) {
     moveFrom(optimistic, original);
     toast.error(getErrorMessage(error, 'Nie udało się zapisać reakcji'));
@@ -107,6 +110,7 @@ export async function toggleCommentReaction(commentId: string, emoji: ReactionEm
   try {
     const next = await toggleReaction({ userId, emoji, commentId });
     moveFrom(optimistic, next);
+    queryClient.removeQueries({ queryKey: socialKeys.reactors({ commentId }) });
   } catch (error) {
     moveFrom(optimistic, original);
     toast.error(getErrorMessage(error, 'Nie udało się zapisać reakcji'));

@@ -22,7 +22,8 @@ const checkMaintenanceMode = createMaintenanceModeChecker({
 /** Last answer, so a cold start only waits for the check when maintenance was on. */
 const LAST_STATE_KEY = 'bsplic.maintenance.active';
 
-const useMaintenanceStore = create<{ active: boolean }>(() => ({ active: kv.getBoolean(LAST_STATE_KEY) === true }));
+// Starts off: only a live answer turns the page on, so a failed check never locks anyone out.
+const useMaintenanceStore = create<{ active: boolean }>(() => ({ active: false }));
 
 async function refreshMaintenanceMode() {
   const maintenanceMode = await checkMaintenanceMode();

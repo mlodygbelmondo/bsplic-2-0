@@ -1,4 +1,5 @@
 import { isAuthRetryableFetchError, type Session, type User } from '@supabase/supabase-js';
+import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
 
@@ -122,7 +123,11 @@ function clearQueryCache() {
   void queryPersister.removeClient();
 }
 
+/** Between tapping sign-out and supabase-js finishing it: a late token refresh must not sign the UI back in. */
+let signOutInFlight = false;
+
 function applyAuthSession(session: Session | null, { fromTimeout = false } = {}) {
+  if (session && signOutInFlight) return;
   const previousUserId = useAuthStore.getState().user?.id;
   const nextUser = session?.user ?? null;
 
@@ -168,6 +173,11 @@ function readStoredSession(): Session | null {
   }
 }
 
+/** The account supabase-js holds a session for, even before it is restored. */
+export function readStoredUserId(): string | null {
+  return readStoredSession()?.user.id ?? useAuthStore.getState().user?.id ?? null;
+}
+
 let started = false;
 
 /** Starts listening to Supabase auth. Called once from the root layout. */
@@ -193,7 +203,24 @@ export function startAuth() {
     if (event === 'INITIAL_SESSION' && !session && useAuthStore.getState().user) return;
     // Defer out of the auth callback (supabase-js deadlocks if another auth
     // call runs inside it).
-    setTimeout(() => applyAuthSession(session), 0);
+    setTimeout(() => {
+      applyAuthSession(session);
+      // Requests sent while the token could not be refreshed (offline start,
+      // refresh cooldown) went out without it; retry the ones that failed.
+      if (session && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
+        void queryClient.refetchQueries({ type: 'active', predicate: (query) => query.state.status === 'error' });
+      }
+    }, 0);
+  });
+
+  // The app can stay in memory for days: back from the background, re-read the
+  // balance (settled coupons, transfers received meanwhile).
+  let appState = AppState.currentState;
+  AppState.addEventListener('change', (next) => {
+    const resumed = appState === 'background' && next === 'active';
+    appState = next;
+    const userId = useAuthStore.getState().user?.id;
+    if (resumed && userId) void fetchProfile(userId);
   });
 
   const timeoutId = setTimeout(() => {
@@ -238,6 +265,12 @@ export const authActions = {
   },
 
   async signOut() {
+    // Show the sign-in screen at once: the server sign-out waits for any token
+    // refresh in flight (up to ~25 s offline) and finishes in the background.
+    signOutInFlight = true;
+    clearQueryCache();
+    clearProfileState();
+    useAuthStore.setState({ session: null, user: null });
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -246,11 +279,9 @@ export const authActions = {
         secureKv.clearAll();
       }
     } finally {
-      // The SIGNED_OUT event clears state too; do it eagerly so the UI never
-      // shows the previous user's data after a failed network sign-out.
+      signOutInFlight = false;
+      // Requests that finished meanwhile may have refilled the cache.
       clearQueryCache();
-      clearProfileState();
-      useAuthStore.setState({ session: null, user: null });
     }
   },
 

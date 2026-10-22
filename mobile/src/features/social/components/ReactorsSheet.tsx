@@ -128,7 +128,8 @@ function ReactorRow({ reactor, isSelf }: { reactor: ReactorUser; isSelf: boolean
       onPressIn={() => {
         if (!isSelf) prefetchPublicProfile(reactor.user_id);
       }}
-      onPress={() => close(() => router.push(`/profile/${encodeURIComponent(reactor.username)}`))}
+      // By id, the key the press-in prefetch warmed (a username needs a lookup first).
+      onPress={() => close(() => router.push(`/profile/${reactor.user_id}`))}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {({ pressed }) => (

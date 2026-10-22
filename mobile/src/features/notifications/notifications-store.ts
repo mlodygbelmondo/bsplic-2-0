@@ -1,6 +1,7 @@
 import { useEffect, useId } from 'react';
 import { create } from 'zustand';
 
+import { authActions } from '@/features/auth/auth-store';
 import { useScreenActive } from '@/lib/focus';
 import { queryClient } from '@/lib/query-client';
 import { useRealtimeChannel } from '@/lib/realtime';
@@ -79,6 +80,10 @@ function handleRealtimeEvent(userId: string, payload: NotificationRealtimePayloa
     playNotificationSound();
   }
   applyUnreadCountAction({ type: 'realtime', payload });
+  // A won coupon or a received transfer changed the balance in the header.
+  if (payload.eventType === 'INSERT' && (payload.new?.type === 'coupon_won' || payload.new?.type === 'money_transfer')) {
+    void authActions.refreshProfile();
+  }
   // Refetches only while the sheet observes the list; otherwise marks it stale for the next open.
   void queryClient.invalidateQueries({ queryKey: notificationsKeys.list(userId) });
 }

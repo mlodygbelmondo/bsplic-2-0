@@ -14,7 +14,7 @@ import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import type { FeedItemType } from '@/types/database';
 import { Text } from '@/ui';
-import { reloadComments } from '../api/cache';
+import { getCachedFeedItem, reloadComments } from '../api/cache';
 import { socialItemQuery } from '../api/queries';
 import { SocialFeedCard } from '../components/SocialFeedCard';
 import { social } from '../components/socialColors';
@@ -42,7 +42,11 @@ export function SocialItemScreen() {
 
 function SocialItemBody({ itemType, itemId }: { itemType: FeedItemType; itemId: string }) {
   const userId = useUserId();
-  const query = useQuery(socialItemQuery(itemType, itemId, userId));
+  // Show the cached feed copy at once (notification taps, deep links) while the item loads.
+  const query = useQuery({
+    ...socialItemQuery(itemType, itemId, userId),
+    placeholderData: () => getCachedFeedItem(userId, itemType, itemId),
+  });
   const [refreshing, setRefreshing] = useState(false);
   useBootHold(query.isPending);
 
@@ -50,13 +54,9 @@ function SocialItemBody({ itemType, itemId }: { itemType: FeedItemType; itemId: 
     if (query.error) toast.error(getErrorMessage(query.error, 'Nie udało się załadować wpisu'));
   }, [query.error]);
 
-  const refresh = async () => {
+  const refresh = () => {
     setRefreshing(true);
-    try {
-      await Promise.all([query.refetch(), reloadComments(itemType, itemId)]);
-    } finally {
-      setRefreshing(false);
-    }
+    return Promise.all([query.refetch(), reloadComments(itemType, itemId)]).finally(() => setRefreshing(false));
   };
 
   let state;

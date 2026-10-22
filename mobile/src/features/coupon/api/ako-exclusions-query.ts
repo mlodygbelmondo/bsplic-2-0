@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query';
 
 import { PAGE_DATA_QUERY_OPTIONS } from '@/lib/query-client';
 
@@ -24,6 +24,8 @@ export const akoExclusionsQueryOptions = (betIds: string[]) => {
  */
 export function useAkoExclusions(betIds: string[]): AkoExclusion[] {
   const options = akoExclusionsQueryOptions(betIds);
-  const { data } = useQuery(options);
+  // Keep the previous pairs while a changed selection loads, like the web: a
+  // conflict between bets still selected keeps blocking the AKO.
+  const { data } = useQuery({ ...options, placeholderData: keepPreviousData });
   return options.enabled && data ? data : NO_EXCLUSIONS;
 }

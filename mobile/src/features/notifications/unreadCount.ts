@@ -1,6 +1,7 @@
 type NotificationRealtimeRow = {
   id?: unknown;
   is_read?: unknown;
+  type?: unknown;
 };
 
 export type NotificationRealtimePayload = {

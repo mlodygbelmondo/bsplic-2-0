@@ -10,7 +10,7 @@ import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import { Button, Text } from '@/ui';
 import { getErrorMessage } from '@/lib/errors';
-import { useAuthStore } from './auth-store';
+import { readStoredUserId, useAuthStore } from './auth-store';
 import { AuthField } from './AuthField';
 import { AuthCard, AuthShell } from './AuthShell';
 import { parseRecoveryLink, parseRecoveryUrl, readJwtSubject, recoveryLinkKey, type RecoveryLink } from './recovery-link';
@@ -50,7 +50,7 @@ function establishRecoverySession(link: RecoveryLink): Promise<boolean> {
     attempt = (async () => {
       if (link.kind === 'tokens') {
         // Anyone can craft a link with their own tokens: never let one switch a signed-in player to another account.
-        const signedInUserId = useAuthStore.getState().user?.id;
+        const signedInUserId = readStoredUserId();
         if (signedInUserId && readJwtSubject(link.accessToken) !== signedInUserId) {
           throw new Error('The recovery link belongs to another account');
         }

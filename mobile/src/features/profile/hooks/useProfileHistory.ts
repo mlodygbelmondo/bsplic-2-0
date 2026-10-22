@@ -49,6 +49,8 @@ interface MoreState {
   sportsbookExpanded: boolean;
   casinoExpanded: boolean;
   expandedCoupons: ReadonlySet<string>;
+  /** Bumped whenever the extra pages are dropped: a batch requested before is discarded. */
+  generation: number;
 }
 
 const INITIAL_MORE_STATE: MoreState = {
@@ -59,6 +61,7 @@ const INITIAL_MORE_STATE: MoreState = {
   sportsbookExpanded: false,
   casinoExpanded: false,
   expandedCoupons: new Set(),
+  generation: 0,
 };
 
 /**
@@ -78,7 +81,7 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
   // (filter and history type stay, like the web).
   if (moreTarget !== targetUserId) {
     setMoreTarget(targetUserId);
-    setMore(INITIAL_MORE_STATE);
+    setMore((prev) => ({ ...INITIAL_MORE_STATE, generation: prev.generation + 1 }));
   }
 
   const active = Boolean(targetUserId);
@@ -94,19 +97,6 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
     enabled: active && historyType === 'casino',
     subscribed: focused,
   });
-
-  // A refreshed preview shifts the offsets the extra pages were loaded at, so
-  // drop those pages (a web revisit reloads the page and shows the preview too).
-  const [sportsbookBase, setSportsbookBase] = useState(sportsbookPreview.dataUpdatedAt);
-  const [casinoBase, setCasinoBase] = useState(casinoPreview.dataUpdatedAt);
-  if (sportsbookBase !== sportsbookPreview.dataUpdatedAt) {
-    setSportsbookBase(sportsbookPreview.dataUpdatedAt);
-    if (more.coupons.length > 0) setMore((prev) => ({ ...prev, coupons: [], couponsAvailable: null }));
-  }
-  if (casinoBase !== casinoPreview.dataUpdatedAt) {
-    setCasinoBase(casinoPreview.dataUpdatedAt);
-    if (more.casino.length > 0) setMore((prev) => ({ ...prev, casino: [], casinoAvailable: null }));
-  }
 
   useEffect(() => {
     if (sportsbookPreview.error) console.error('Failed to load sportsbook history', sportsbookPreview.error);
@@ -138,23 +128,23 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
     });
   };
 
-  const loadMoreSportsbookHistory = async () => {
+  const loadMoreSportsbookHistory = () => {
     if (!targetUserId || loadingMoreCoupons) return;
+    const { generation } = more;
     setLoadingMoreCoupons(true);
-    try {
-      const page = await fetchSportsbookHistoryPage(targetUserId, coupons.length);
-      setMore((prev) => ({
-        ...prev,
-        coupons: [...prev.coupons, ...page.entries],
-        couponsAvailable: page.hasMore,
-        sportsbookExpanded: true,
-      }));
-    } catch (error) {
-      console.error('Failed to load more sportsbook history', error);
-      toast.error('Nie udało się załadować kolejnych zakładów');
-    } finally {
-      setLoadingMoreCoupons(false);
-    }
+    fetchSportsbookHistoryPage(targetUserId, coupons.length)
+      .then((page) =>
+        setMore((prev) =>
+          prev.generation !== generation
+            ? prev
+            : { ...prev, coupons: [...prev.coupons, ...page.entries], couponsAvailable: page.hasMore, sportsbookExpanded: true },
+        ),
+      )
+      .catch((error: unknown) => {
+        console.error('Failed to load more sportsbook history', error);
+        toast.error('Nie udało się załadować kolejnych zakładów');
+      })
+      .finally(() => setLoadingMoreCoupons(false));
   };
 
   const showMoreSportsbookHistory = () => {
@@ -162,26 +152,26 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
       setMore((prev) => ({ ...prev, sportsbookExpanded: true }));
       return;
     }
-    void loadMoreSportsbookHistory();
+    loadMoreSportsbookHistory();
   };
 
-  const loadMoreCasinoHistory = async () => {
+  const loadMoreCasinoHistory = () => {
     if (!targetUserId || loadingMoreCasinoHistory) return;
+    const { generation } = more;
     setLoadingMoreCasinoHistory(true);
-    try {
-      const page = await fetchCasinoHistoryPage(targetUserId, casinoHistory.length);
-      setMore((prev) => ({
-        ...prev,
-        casino: [...prev.casino, ...page.entries],
-        casinoAvailable: page.hasMore,
-        casinoExpanded: true,
-      }));
-    } catch (error) {
-      console.error('Failed to load more casino history', error);
-      toast.error('Nie udało się załadować kolejnych wpisów kasyna');
-    } finally {
-      setLoadingMoreCasinoHistory(false);
-    }
+    fetchCasinoHistoryPage(targetUserId, casinoHistory.length)
+      .then((page) =>
+        setMore((prev) =>
+          prev.generation !== generation
+            ? prev
+            : { ...prev, casino: [...prev.casino, ...page.entries], casinoAvailable: page.hasMore, casinoExpanded: true },
+        ),
+      )
+      .catch((error: unknown) => {
+        console.error('Failed to load more casino history', error);
+        toast.error('Nie udało się załadować kolejnych wpisów kasyna');
+      })
+      .finally(() => setLoadingMoreCasinoHistory(false));
   };
 
   const showMoreCasinoHistory = () => {
@@ -189,11 +179,17 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
       setMore((prev) => ({ ...prev, casinoExpanded: true }));
       return;
     }
-    void loadMoreCasinoHistory();
+    loadMoreCasinoHistory();
   };
 
   const refresh = () => {
     if (!active) return Promise.resolve();
+    // A pull starts over from fresh previews, like reloading the web page.
+    setMore((prev) => ({
+      ...INITIAL_MORE_STATE,
+      expandedCoupons: prev.expandedCoupons,
+      generation: prev.generation + 1,
+    }));
     return Promise.all([
       sportsbookPreview.refetch(),
       historyType === 'casino' ? casinoPreview.refetch() : undefined,

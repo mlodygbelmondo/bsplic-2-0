@@ -96,7 +96,8 @@ export const SocialFeedCard = memo(function SocialFeedCard({
 
   const loggedIn = currentUserId !== null;
   const comments = commentsQuery.data ?? EMPTY_COMMENTS;
-  const commentsLoaded = commentsQuery.isSuccess;
+  // Cached comments alone do not count: the first expand enables the query, which refreshes them.
+  const commentsLoaded = commentsRequested && commentsQuery.isSuccess;
   const ako = isAkoItem(item);
 
   const handleCopy = () => {
