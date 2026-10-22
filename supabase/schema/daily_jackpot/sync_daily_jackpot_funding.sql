@@ -19,6 +19,81 @@ BEGIN
   v_source_start := (v_source_day::TEXT || ' 00:00:00 Europe/Warsaw')::TIMESTAMPTZ;
   v_source_end := ((v_source_day + 1)::TEXT || ' 00:00:00 Europe/Warsaw')::TIMESTAMPTZ;
 
+  -- Read-only check first, without the row lock: client polls reach this
+  -- every 45 s, and nearly always there is nothing to change. The three
+  -- conditions mirror the DELETE, INSERT and UPDATE below; keep them in step.
+  SELECT *
+    INTO v_pool
+    FROM public.daily_jackpot_pools
+   WHERE id = v_pool_id;
+
+  IF v_pool.status <> 'collecting' THEN
+    RETURN v_pool_id;
+  END IF;
+
+  IF NOT EXISTS (
+       SELECT 1
+         FROM public.daily_jackpot_funding_entries f
+        WHERE f.pool_id = v_pool.id
+          AND f.source_type = 'lost_coupon'
+          AND f.source_day = v_source_day
+          AND NOT EXISTS (
+            SELECT 1
+              FROM public.coupons c
+             WHERE c.id = f.coupon_id
+               AND c.status = 'lost'
+               AND c.stake > 0
+               AND COALESCE(c.settled_at, c.created_at) >= v_season_started_at
+               AND ROUND(c.stake * 0.20, 2) = ROUND(f.amount, 2)
+               AND (
+                 (
+                   c.settled_at IS NOT NULL
+                   AND c.settled_at >= v_source_start
+                   AND c.settled_at < v_source_end
+                 )
+                 OR (
+                   c.settled_at IS NULL
+                   AND c.created_at >= v_source_start
+                   AND c.created_at < v_source_end
+                 )
+               )
+          )
+     )
+     AND NOT EXISTS (
+       SELECT 1
+         FROM public.coupons c
+        WHERE c.status = 'lost'
+          AND c.stake > 0
+          AND COALESCE(c.settled_at, c.created_at) >= v_season_started_at
+          AND (
+            (
+              c.settled_at IS NOT NULL
+              AND c.settled_at >= v_source_start
+              AND c.settled_at < v_source_end
+            )
+            OR (
+              c.settled_at IS NULL
+              AND c.created_at >= v_source_start
+              AND c.created_at < v_source_end
+            )
+          )
+          -- Lost-coupon entries are unique per coupon, across all pools.
+          AND NOT EXISTS (
+            SELECT 1
+              FROM public.daily_jackpot_funding_entries f
+             WHERE f.source_type = 'lost_coupon'
+               AND f.coupon_id = c.id
+          )
+     )
+     AND v_pool.prize_amount IS NOT DISTINCT FROM ROUND(COALESCE((
+       SELECT SUM(f.amount)
+         FROM public.daily_jackpot_funding_entries f
+        WHERE f.pool_id = v_pool.id
+     ), 0), 2)
+  THEN
+    RETURN v_pool_id;
+  END IF;
+
   SELECT *
     INTO v_pool
     FROM public.daily_jackpot_pools
