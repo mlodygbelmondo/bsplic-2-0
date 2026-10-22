@@ -56,9 +56,9 @@ export async function fetchMoneyTransferHistory(
 }
 
 /** Wallet history, 20 per page; "Pokaż starsze" appears while a page comes back full. */
-export const moneyTransferHistoryQuery = () =>
+export const moneyTransferHistoryQuery = (userId: string | null) =>
   infiniteQueryOptions({
-    queryKey: ['money-transfer-history'],
+    queryKey: ['money-transfer-history', userId],
     queryFn: ({ pageParam }) => fetchMoneyTransferHistory(HISTORY_PAGE_SIZE, pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) =>

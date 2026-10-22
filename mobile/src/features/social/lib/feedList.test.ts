@@ -9,7 +9,6 @@ import {
   mapFeedPages,
   mergeFeedItemIntoPages,
   parseFeedFilter,
-  replaceFirstFeedPage,
   trimFeedToFirstPage,
   type FeedPages,
 } from './feedList';
@@ -102,15 +101,6 @@ describe('first page helpers', () => {
     const trimmed = trimFeedToFirstPage(pages(makePostPage(50), makePostPage(50, 50)));
     expect(trimmed.pages).toHaveLength(1);
     expect(trimmed.pageParams).toEqual([0]);
-  });
-
-  it('swaps in a fresh first page and keeps later pages', () => {
-    const data = pages(makePostPage(50), makePostPage(10, 50));
-    const fresh = [makePostFeedItem({ id: 'top' }), ...makePostPage(49)];
-    const next = replaceFirstFeedPage(data, fresh);
-    expect(next.pages[0][0].id).toBe('top');
-    expect(next.pages[1]).toBe(data.pages[1]);
-    expect(replaceFirstFeedPage(undefined, fresh)).toEqual({ pages: [fresh], pageParams: [0] });
   });
 });
 

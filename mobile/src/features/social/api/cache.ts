@@ -4,14 +4,11 @@ import {
   findFeedItem,
   mapFeedPages,
   mergeFeedItemIntoPages,
-  replaceFirstFeedPage,
-  SOCIAL_FEED_PAGE_SIZE,
   trimFeedToFirstPage,
   type FeedPages,
 } from '../lib/feedList';
 import { getFeedItemKey } from '../lib/routes';
 import { socialKeys } from './keys';
-import { fetchSocialFeed } from './social';
 
 /**
  * Cache helpers shared by the feed, the item page and the comment thread.
@@ -86,17 +83,17 @@ export function trimFeedCache(userId: string | null | undefined) {
 }
 
 /**
- * Re-reads the first page and keeps the pages loaded after it (resume after a
- * realtime gap). Resolves with the number of items that were not loaded before.
+ * Re-reads every loaded page after a realtime gap: rows that arrived meanwhile
+ * shift the server offsets, so later pages are fetched again too. Resolves
+ * with the number of items that were not loaded before.
  */
-export async function refreshFirstFeedPage(userId: string | null | undefined): Promise<number> {
-  const firstPage = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, 0, userId);
-  const previous = queryClient.getQueryData<FeedPages>(socialKeys.feed(userId));
-  const added = previous
-    ? firstPage.filter((item) => findFeedItem(previous, getFeedItemKey(item)) === undefined).length
-    : 0;
-  queryClient.setQueryData<FeedPages>(socialKeys.feed(userId), (data) => replaceFirstFeedPage(data, firstPage));
-  return added;
+export async function refreshFeedPages(userId: string | null | undefined): Promise<number> {
+  const key = socialKeys.feed(userId);
+  const previous = queryClient.getQueryData<FeedPages>(key);
+  await queryClient.refetchQueries({ queryKey: key, exact: true }, { throwOnError: true });
+  const next = queryClient.getQueryData<FeedPages>(key);
+  if (!previous || !next) return 0;
+  return (next.pages[0] ?? []).filter((item) => findFeedItem(previous, getFeedItemKey(item)) === undefined).length;
 }
 
 // ── Comments ──────────────────────────────────────────────────

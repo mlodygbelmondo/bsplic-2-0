@@ -47,7 +47,7 @@ export function unloadBlackjackSfx(): void {
 }
 
 export function playBlackjackSound(kind: BlackjackSound): void {
-  if (!usePreferences.getState().casinoSound) return;
+  if (!usePreferences.getState().blackjackSound) return;
   const player = players.get(kind);
   if (!player) return;
   try {

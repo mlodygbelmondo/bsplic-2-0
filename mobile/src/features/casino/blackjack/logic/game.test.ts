@@ -350,6 +350,7 @@ describe('blackjack game dealer reveal', () => {
     await flush();
     expect(state().isRevealing).toBe(true);
     deps.sound.mockClear();
+    deps.refreshProfile.mockClear();
 
     game.setActive(false);
     await flush();
@@ -360,6 +361,23 @@ describe('blackjack game dealer reveal', () => {
     expect(state().isResolving).toBe(false);
     expect(deps.sound).not.toHaveBeenCalled();
     expect(deps.onSettled).toHaveBeenCalledWith('won', { offscreen: true });
+    expect(deps.refreshProfile).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes the wallet when the table unmounts mid-reveal', async () => {
+    const { game, api, deps, state } = setup();
+    api.getCurrentGame.mockResolvedValue(playingGame());
+    api.stand.mockResolvedValue(wonGame());
+    game.start();
+    await flush();
+    void game.stand();
+    await flush();
+    expect(state().isRevealing).toBe(true);
+    deps.refreshProfile.mockClear();
+
+    game.stop();
+
+    expect(deps.refreshProfile).toHaveBeenCalledOnce();
   });
 
   it('skips the staged reveal with reduced motion', async () => {

@@ -118,6 +118,8 @@ function applyAuthSession(session: Session | null) {
 
   if (nextUser) {
     const patch: Partial<AuthState> = { session, user: nextUser, loading: false };
+    // Another account took over without a sign-out (a recovery link): drop the previous user's data.
+    if (previousUserId && previousUserId !== nextUser.id) queryClient.clear();
     if (previousUserId !== nextUser.id) {
       // Seed from the identity cache so a signed-in cold start renders the
       // first screen immediately instead of waiting for the profile query.

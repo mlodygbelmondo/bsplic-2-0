@@ -1,12 +1,10 @@
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 
-import { usePreferences } from '@/lib/preferences';
-
 /**
  * Slot tones. The web synthesizes a sine (gain 0.055 → 0.001 over 220 ms)
  * with Web Audio: 260 Hz when a spin starts and 660 Hz on a winning spin.
  * The same envelopes are rendered into `assets/tone-*.wav` and played with
- * expo-audio. Muting follows the shared `casinoSound` preference.
+ * expo-audio. The caller checks the screen's sound switch (off on every visit, like the web).
  *
  * Local stand-in for the shared casino audio helper
  * (`features/casino/shared/audio.ts`); merge once that exists.
@@ -22,7 +20,6 @@ export type SlotTone = keyof typeof TONES;
 const players: Partial<Record<SlotTone, AudioPlayer>> = {};
 
 export function playSlotTone(tone: SlotTone): void {
-  if (!usePreferences.getState().casinoSound) return;
   try {
     const player = (players[tone] ??= createAudioPlayer(TONES[tone]));
     void player.seekTo(0).catch(() => undefined);

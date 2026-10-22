@@ -31,6 +31,8 @@ export interface CommentThreadProps {
   defaultExpanded?: boolean;
   /** Bumped by the card's "Komentarz" button: toggles the thread like the web. */
   expandSignal?: number;
+  /** Reports open/closed so a feed card can restore the thread after recycling. */
+  onExpandedChange?: (expanded: boolean) => void;
   hideToggleOnMobile?: boolean;
 }
 
@@ -52,6 +54,7 @@ export function CommentThread({
   currentUserId,
   defaultExpanded = false,
   expandSignal,
+  onExpandedChange,
   hideToggleOnMobile = false,
 }: CommentThreadProps) {
   const styles = useStyles();
@@ -73,6 +76,11 @@ export function CommentThread({
   useEffect(() => {
     if (!collapsed && !commentsLoaded) requestComments();
   }, [collapsed, commentsLoaded]);
+
+  const reportExpanded = useEffectEvent((expanded: boolean) => onExpandedChange?.(expanded));
+  useEffect(() => {
+    reportExpanded(!collapsed);
+  }, [collapsed]);
 
   const writesDisabled = Boolean(disabled) || offline;
   const totalCount = commentsLoaded ? comments.length : Math.max(comments.length, initialCount);

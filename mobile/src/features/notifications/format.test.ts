@@ -45,6 +45,12 @@ describe('notifications format helpers', () => {
     ).toBe('/social/post/abc');
   });
 
+  it('opens the wallet history for money transfer links', () => {
+    expect(getNotificationLink({ ...baseNotification, type: 'money_transfer', link_path: '/?wallet=history' })).toBe(
+      '/sheets/wallet?tab=history',
+    );
+  });
+
   it('keeps social query links whose item type is not a feed type', () => {
     expect(
       getNotificationLink({

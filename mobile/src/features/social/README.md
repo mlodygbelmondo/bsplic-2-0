@@ -22,7 +22,7 @@ All factories use `PAGE_DATA_QUERY_OPTIONS`. Use `socialKeys.itemAnyViewer(type,
 - `getCachedFeedItem(userId, type, id)` and `isFeedItemLoaded(userId, type, id)`.
 - `seedSocialItem(item, userId)` seeds the item query from the feed. The feed card calls it on press-in, so the item page renders immediately.
 - `trimFeedCache(userId)` keeps only the first page (the web caches 50 items).
-- `refreshFirstFeedPage(userId)` re-reads the first page and resolves with the number of new items.
+- `refreshFeedPages(userId)` re-reads every loaded page after a realtime gap and resolves with the number of new items.
 - `updateCommentEverywhere(commentId, updater)` and `findCachedComment(commentId)`.
 - `areCommentsShown(type, id)` and `reloadComments(type, id)` (refetches the active comment queries).
 

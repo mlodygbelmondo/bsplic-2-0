@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { useAuthStore } from '@/features/auth/auth-store';
 import type { SocialImageAttachment } from '../images';
 
 export type PostSubmitHandler = (content: string, image?: SocialImageAttachment) => Promise<void>;
@@ -27,3 +28,10 @@ export const postDraftActions = {
   },
   getSubmitHandler: () => submitHandler,
 };
+
+// A draft belongs to the account that wrote it: drop it on sign-out or an account switch.
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id === previous.user?.id) return;
+  postDraftActions.reset();
+  submitHandler = null;
+});

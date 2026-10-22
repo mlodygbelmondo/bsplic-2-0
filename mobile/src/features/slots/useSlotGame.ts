@@ -52,6 +52,7 @@ export function useSlotGame(game: SlotGame) {
     lock.current = true;
     setBusy(true);
     setError(null);
+    const retry = pending !== null;
     const request = pending ?? { id: Crypto.randomUUID(), stake, bonusOnly };
     setPending(request);
     kv.set(key, JSON.stringify(request));
@@ -61,7 +62,8 @@ export function useSlotGame(game: SlotGame) {
         throw caught;
       });
       forgetPending();
-      authActions.updateProfileBalance(result.balance);
+      // A retried request returns the stored result with that spin's old balance; the refresh below has the real one.
+      if (!retry) authActions.updateProfileBalance(result.balance);
       return result;
     } catch (caught) {
       const message =

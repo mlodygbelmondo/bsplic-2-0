@@ -1,7 +1,7 @@
 import { useIsRestoring, useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
-import { authActions, useBalance } from '@/features/auth/auth-store';
+import { authActions, useBalance, useUserId } from '@/features/auth/auth-store';
 import { useBootHold } from '@/features/boot/boot-store';
 import { getErrorMessage } from '@/lib/errors';
 import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
@@ -10,7 +10,7 @@ import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
 
 import { buyDailyJackpotTicket, getDailyJackpotState } from '../api/jackpot';
-import { jackpotDrawQueryOptions, JACKPOT_STATE_QUERY_KEY, type JackpotStateEntry } from '../api/queries';
+import { jackpotDrawQueryOptions, jackpotStateQueryKey, type JackpotStateEntry } from '../api/queries';
 import { getPurchaseToastMessage } from '../lib/buyModel';
 import { getPurchasedTicketLabel, isLiveJackpotStatus } from '../lib/cardModel';
 import type { DailyJackpotSnapshot } from '../types';
@@ -34,19 +34,19 @@ function refreshBalanceAfterStateMaintenance(snapshot: DailyJackpotSnapshot) {
   void authActions.refreshProfile();
 }
 
-async function fetchJackpotState(): Promise<JackpotStateEntry> {
+async function fetchJackpotState(queryKey: ReturnType<typeof jackpotStateQueryKey>): Promise<JackpotStateEntry> {
   const version = stateVersion;
   let snapshot: DailyJackpotSnapshot;
   try {
     snapshot = await getDailyJackpotState();
   } catch (error) {
     // The web toasts only the visible (first) load; background polls fail silently.
-    if (!queryClient.getQueryData(JACKPOT_STATE_QUERY_KEY)) {
+    if (!queryClient.getQueryData(queryKey)) {
       toast.error(getErrorMessage(error, 'Nie udało się wczytać Jackpotu'));
     }
     throw error;
   }
-  const cached = queryClient.getQueryData<JackpotStateEntry>(JACKPOT_STATE_QUERY_KEY);
+  const cached = queryClient.getQueryData<JackpotStateEntry>(queryKey);
   if (version !== stateVersion && cached) return cached;
   refreshBalanceAfterStateMaintenance(snapshot);
   return { snapshot, receivedAt: Date.now() };
@@ -63,12 +63,13 @@ export function useDailyJackpot() {
   const active = useScreenActive();
   const restoring = useIsRestoring();
   const balance = Number(useBalance());
+  const queryKey = jackpotStateQueryKey(useUserId());
   const [buying, setBuying] = useState(false);
   const buyingRef = useRef(false);
 
   const query = useQuery({
-    queryKey: JACKPOT_STATE_QUERY_KEY,
-    queryFn: fetchJackpotState,
+    queryKey,
+    queryFn: () => fetchJackpotState(queryKey),
     enabled: hasBeenFocused,
     // Inactive (other tab, app in background): no polling; re-activation refetches overdue data.
     subscribed: active,
@@ -107,14 +108,14 @@ export function useDailyJackpot() {
     const purchasedLabels: string[] = [];
 
     try {
-      await queryClient.cancelQueries({ queryKey: JACKPOT_STATE_QUERY_KEY });
+      await queryClient.cancelQueries({ queryKey });
       for (let index = 0; index < count; index += 1) {
         const nextSnapshot = await buyDailyJackpotTicket(poolId);
         const purchasedLabel = getPurchasedTicketLabel(latest, nextSnapshot);
         if (purchasedLabel) purchasedLabels.push(purchasedLabel);
         purchasedCount += 1;
         latest = nextSnapshot;
-        queryClient.setQueryData<JackpotStateEntry>(JACKPOT_STATE_QUERY_KEY, {
+        queryClient.setQueryData<JackpotStateEntry>(queryKey, {
           snapshot: nextSnapshot,
           receivedAt: Date.now(),
         });

@@ -6,7 +6,7 @@ import { createStyles } from '@/theme';
 import { setCasinoSoundMuted, useCasinoSoundMuted } from '../../shared/audio';
 import { rgba, tw } from '../../shared/casinoTheme';
 
-/** Mute switch over the wheel (web `handleToggleSound`); shares the `casinoSound` preference with the slots. */
+/** Mute switch over the wheel (web `handleToggleSound`), bound to the `casinoSound` preference. */
 export function SoundToggle() {
   const styles = useStyles();
   const muted = useCasinoSoundMuted();

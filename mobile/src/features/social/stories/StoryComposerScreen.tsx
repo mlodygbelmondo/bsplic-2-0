@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -35,6 +35,7 @@ const close = () => {
 export function StoryComposerScreen() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const profile = useProfile();
   const offline = useIsOffline();
   const [content, setContent] = useState('');
@@ -60,7 +61,8 @@ export function StoryComposerScreen() {
       const submit = storyComposerHandler.get() ?? publishStory;
       await submit(trimmed, image ?? undefined);
       haptics.success();
-      close();
+      // Closed during a slow upload: do not pop whatever screen is on top now.
+      if (navigation.isFocused()) close();
     } catch (error) {
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się opublikować relacji'));

@@ -79,6 +79,10 @@ export function getNotificationLink(notification: UserNotification): string {
     if (pathname === '/social' && isFeedItemType(itemType) && itemId) {
       return getSocialItemPath(itemType, itemId);
     }
+    // Money transfers link to `/?wallet=history`; the web navbar opens the wallet on History.
+    if (params.get('wallet') === 'history') {
+      return '/sheets/wallet?tab=history';
+    }
   } catch {
     return linkPath;
   }

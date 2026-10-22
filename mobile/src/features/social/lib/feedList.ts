@@ -96,12 +96,6 @@ export function trimFeedToFirstPage(data: FeedPages): FeedPages {
   return { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) };
 }
 
-/** Replaces the first page with fresh rows and keeps the pages loaded after it. */
-export function replaceFirstFeedPage(data: FeedPages | undefined, firstPage: SocialFeedItem[]): FeedPages {
-  if (!data || data.pages.length === 0) return { pages: [firstPage], pageParams: [0] };
-  return { pages: [firstPage, ...data.pages.slice(1)], pageParams: data.pageParams };
-}
-
 export function findFeedItem(data: FeedPages | undefined, key: string): SocialFeedItem | undefined {
   if (!data) return undefined;
   for (const page of data.pages) {

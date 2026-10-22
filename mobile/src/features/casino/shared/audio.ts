@@ -11,7 +11,7 @@ import { usePreferences } from '@/lib/preferences';
  * 659.25, 880 and 1318.5 Hz starting at +0.02 s, +0.13 s and +0.24 s, each
  * ramping exponentially 0.0001 → 0.12 in 20 ms and back to 0.0001 at +0.5 s,
  * stopped at +0.55 s. `assets/win-chime.wav` is that exact render (44.1 kHz,
- * mono). Mute is the shared `casinoSound` preference (web `bsplic.casino.sound`
+ * mono). Mute is the roulette `casinoSound` preference (web `bsplic.casino.sound`
  * = `'muted'` | `'on'`). Like the web, mute never silences haptics.
  */
 

@@ -20,7 +20,7 @@ import { Text } from '@/ui';
 import { JACKPOT_PAGE_BACKGROUND_IMAGE } from '../assets';
 import { SpinningLoader } from '../components/SpinningLoader';
 import { claimDailyJackpotReward, getDailyJackpotDraw, revealDailyJackpotDraw } from '../api/jackpot';
-import { jackpotDrawQueryKey, jackpotDrawQueryOptions, JACKPOT_STATE_QUERY_KEY } from '../api/queries';
+import { jackpotDrawQueryKey, jackpotDrawQueryOptions, JACKPOT_STATE_QUERY_ROOT } from '../api/queries';
 import {
   canClaimReward,
   canReuseRevealedDraw,
@@ -115,7 +115,7 @@ export function JackpotDrawScreen() {
       runRef.current = null;
       jackpotAudio.releaseDraw();
       if (poolId) queryClient.removeQueries({ queryKey: jackpotDrawQueryKey(poolId) });
-      void queryClient.invalidateQueries({ queryKey: JACKPOT_STATE_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: JACKPOT_STATE_QUERY_ROOT });
     };
   }, [poolId]);
 

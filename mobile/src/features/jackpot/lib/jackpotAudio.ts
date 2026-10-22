@@ -20,8 +20,7 @@ import { usePreferences } from '@/lib/preferences';
  * - `coin`: sines 987.77 Hz (0.08 s) and 1318.51 Hz (0.32 s at +0.08 s), 0.18.
  * - `tick-option-n`: tick(700 + 100 n, 0.03 s, 0.1); `tick-toggle`: tick(900, 0.04 s, 0.1).
  *
- * Mute follows the shared casino sound switch (`casinoSound`) instead of the
- * web's separate `bsplic:jackpot-sound-muted` key.
+ * Mute follows the `jackpotSound` preference (web `bsplic:jackpot-sound-muted`).
  */
 
 const SOUNDS = {
@@ -44,7 +43,7 @@ const OPTION_SOUNDS: JackpotSound[] = ['option1', 'option2', 'option3', 'option4
 const players: Partial<Record<JackpotSound, AudioPlayer>> = {};
 
 function soundEnabled(): boolean {
-  return usePreferences.getState().casinoSound;
+  return usePreferences.getState().jackpotSound;
 }
 
 function getPlayer(sound: JackpotSound): AudioPlayer {
@@ -120,13 +119,13 @@ export const jackpotAudio = {
   },
 };
 
-/** Draw page sound switch (web `useJackpotSound`), bound to `casinoSound`. */
+/** Draw page sound switch (web `useJackpotSound`), bound to `jackpotSound`. */
 export function useJackpotSound() {
-  const soundEnabledState = usePreferences((state) => state.casinoSound);
+  const soundEnabledState = usePreferences((state) => state.jackpotSound);
 
   const toggleSound = () => {
-    const next = !usePreferences.getState().casinoSound;
-    usePreferences.getState().setCasinoSound(next);
+    const next = !usePreferences.getState().jackpotSound;
+    usePreferences.getState().setJackpotSound(next);
     if (next) {
       jackpotAudio.prepareDraw();
       play('toggle');

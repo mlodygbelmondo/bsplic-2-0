@@ -12,11 +12,11 @@ import { fadeIn } from './motion';
 import { PlayingCard } from './PlayingCard';
 import { black, white } from './tokens';
 
-/** Mute toggle: drives the app-wide casino sound preference. */
+/** Mute toggle: the blackjack sound preference (web `bsplic.blackjack.muted`). */
 function MuteButton() {
   const styles = useStyles();
-  const soundOn = usePreferences((s) => s.casinoSound);
-  const setCasinoSound = usePreferences((s) => s.setCasinoSound);
+  const soundOn = usePreferences((s) => s.blackjackSound);
+  const setBlackjackSound = usePreferences((s) => s.setBlackjackSound);
   const Icon = soundOn ? Volume2 : VolumeX;
   return (
     <PressScale
@@ -24,7 +24,7 @@ function MuteButton() {
       accessibilityLabel={soundOn ? 'Wycisz dźwięki' : 'Włącz dźwięki'}
       onPress={() => {
         haptics.selection();
-        setCasinoSound(!soundOn);
+        setBlackjackSound(!soundOn);
       }}
       style={styles.mute}
     >

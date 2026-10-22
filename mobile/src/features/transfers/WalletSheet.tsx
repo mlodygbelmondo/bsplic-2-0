@@ -42,7 +42,12 @@ export function WalletSheet() {
   }, [submitting]);
 
   return (
-    <OverlayScreen variant="dialog" style={[styles.card, { width: width - 20 }]} accessibilityLabel="Portfel">
+    <OverlayScreen
+      variant="dialog"
+      style={[styles.card, { width: width - 20 }]}
+      accessibilityLabel="Portfel"
+      dismissible={!submitting}
+    >
       <View style={styles.header}>
         <View style={styles.iconTile}>
           <WalletCards size={20} color={colors.primary} />

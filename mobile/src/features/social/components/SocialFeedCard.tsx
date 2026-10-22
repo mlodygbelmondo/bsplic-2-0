@@ -29,6 +29,7 @@ import { formatSocialTimeAgo } from '../lib/socialFormatters';
 import type { FlatComment } from '../lib/thread';
 import { CasinoContent } from './CasinoContent';
 import { CouponContent } from './CouponContent';
+import { setFeedCardFlag, useFeedCardFlag } from './feedCardState';
 import { MobileEngagement } from './MobileEngagement';
 import { SocialContentBlock } from './SocialContentBlock';
 import { social } from './socialColors';
@@ -67,8 +68,9 @@ function toFlatComments(comments: SocialComment[]): FlatComment[] {
 
 /**
  * Web `SocialFeedCard` at phone size: header, post/coupon/casino body, the
- * reactions/comment/share engagement and the comment thread. Per-card state
- * lives in `useRecyclingState`, so recycled cells start clean.
+ * reactions/comment/share engagement and the comment thread. Hidden,
+ * expanded and open-thread flags live in `feedCardState` so they survive
+ * recycling; transient state lives in `useRecyclingState`.
  */
 export const SocialFeedCard = memo(function SocialFeedCard({
   item,
@@ -78,8 +80,10 @@ export const SocialFeedCard = memo(function SocialFeedCard({
 }: SocialFeedCardProps) {
   const styles = useStyles();
   const itemKey = getFeedItemKey(item);
-  const [hidden, setHidden] = useRecyclingState(false, [itemKey]);
-  const [couponExpanded, setCouponExpanded] = useRecyclingState(false, [itemKey]);
+  // The item page always shows its card, even one hidden in the feed.
+  const hidden = useFeedCardFlag('hidden', itemKey) && !detail;
+  const couponExpanded = useFeedCardFlag('couponExpanded', itemKey);
+  const threadOpen = useFeedCardFlag('threadOpen', itemKey);
   const [copying, setCopying] = useRecyclingState(false, [itemKey]);
   const [expandSignal, setExpandSignal] = useRecyclingState(0, [itemKey]);
   const [commentsRequested, setCommentsRequested] = useRecyclingState(detail, [itemKey]);
@@ -164,7 +168,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
           <IconButton label="Więcej opcji">
             <MoreHorizontal size={20} color={social.mutedForeground} />
           </IconButton>
-          <IconButton label="Ukryj wpis" onPress={() => setHidden(true)}>
+          <IconButton label="Ukryj wpis" onPress={() => setFeedCardFlag('hidden', itemKey, true)}>
             <X size={20} color={social.mutedForeground} />
           </IconButton>
         </View>
@@ -181,7 +185,7 @@ export const SocialFeedCard = memo(function SocialFeedCard({
           ako={ako}
           expanded={detail || couponExpanded}
           onToggle={() => {
-            if (!detail) setCouponExpanded((current) => !current);
+            if (!detail) setFeedCardFlag('couponExpanded', itemKey, !couponExpanded);
           }}
         />
       ) : null}
@@ -223,8 +227,11 @@ export const SocialFeedCard = memo(function SocialFeedCard({
             comments={toFlatComments(comments)}
             initialCount={item.comment_count ?? 0}
             commentsLoaded={commentsLoaded}
-            defaultExpanded={detail}
+            defaultExpanded={detail || threadOpen}
             expandSignal={expandSignal}
+            onExpandedChange={(open) => {
+              if (!detail) setFeedCardFlag('threadOpen', itemKey, open);
+            }}
             hideToggleOnMobile
             onFirstExpand={() => {
               if (!commentsLoaded && !commentsQuery.isFetching) setCommentsRequested(true);

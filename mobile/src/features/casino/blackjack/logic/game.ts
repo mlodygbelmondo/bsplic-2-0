@@ -297,6 +297,8 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
     cancelReveal();
     settle(next, true);
     set({ isRevealing: false, actionMessage: null });
+    // The cancelled reveal skips its closing balance refresh.
+    void deps.refreshProfile();
   }
 
   async function load({ quiet = false, keepSettled = false } = {}) {
@@ -404,6 +406,8 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
         deps.cache.write({ tableInfo: s.tableInfo, currentGame: null });
       }
       alive = false;
+      // Leaving mid-reveal: the payout already happened on the server.
+      if (pendingFinale) void deps.refreshProfile();
       cancelReveal();
       unsubscribe?.();
       unsubscribe = null;

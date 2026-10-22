@@ -23,7 +23,6 @@ import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
 import { useAppActive } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
 import { useLiteMotion, useReducedMotion } from '@/lib/motion';
-import { usePreferences } from '@/lib/preferences';
 import { toast } from '@/lib/toast';
 import { createStyles, fauxItalic } from '@/theme';
 import { Text } from '@/ui';
@@ -93,7 +92,8 @@ function SlotMachine({ game }: { game: SlotGame }) {
   const offline = useIsOffline();
   const focused = useIsFocused();
   const appActive = useAppActive();
-  const sound = usePreferences((s) => s.casinoSound);
+  // Web `useState(false)`: slot sound starts off on every visit.
+  const [sound, setSound] = useState(false);
   const { width, height } = useWindowDimensions();
   const [stakeInput, setStakeInput] = useState('5');
   const [playback, setPlayback] = useState<Playback>(IDLE_PLAYBACK);
@@ -183,7 +183,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
     }
     localLock.current = true;
     Keyboard.dismiss();
-    playSlotTone('spin');
+    if (sound) playSlotTone('spin');
     const next = await spin(view.actualStake, freeSpins > 0);
     if (!mounted.current) return;
     if (!next) {
@@ -198,7 +198,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
     setSession((previous) => addToSession(previous, next.net));
     if (foreground) {
       haptics.medium();
-      if (next.net > 0) playSlotTone('win');
+      if (sound && next.net > 0) playSlotTone('win');
     }
   };
 
@@ -258,7 +258,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
             hitSlop={4}
             onPress={() => {
               haptics.selection();
-              usePreferences.getState().setCasinoSound(!sound);
+              setSound(!sound);
             }}
             style={styles.iconButton}
           >

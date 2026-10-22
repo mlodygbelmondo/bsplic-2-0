@@ -50,10 +50,19 @@ interface OverlayScreenProps {
   /** Popover only: window position of the card's top edge and its horizontal placement. */
   anchor?: { top: number; left: number };
   accessibilityLabel?: string;
+  /** False while a write is in flight: the backdrop stops closing the overlay. */
+  dismissible?: boolean;
   children: ReactNode;
 }
 
-export function OverlayScreen({ variant, style, anchor, accessibilityLabel, children }: OverlayScreenProps) {
+export function OverlayScreen({
+  variant,
+  style,
+  anchor,
+  accessibilityLabel,
+  dismissible = true,
+  children,
+}: OverlayScreenProps) {
   const styles = useStyles();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -116,6 +125,7 @@ export function OverlayScreen({ variant, style, anchor, accessibilityLabel, chil
         />
         <Pressable
           style={StyleSheet.absoluteFill}
+          disabled={!dismissible}
           onPress={() => close()}
           accessibilityRole="button"
           accessibilityLabel="Zamknij"

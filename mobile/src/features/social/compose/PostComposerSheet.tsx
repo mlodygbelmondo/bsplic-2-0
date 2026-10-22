@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ const close = () => {
 export function PostComposerSheet() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const userId = useUserId();
   const profile = useProfile();
   const offline = useIsOffline();
@@ -70,8 +71,10 @@ export function PostComposerSheet() {
       const submit = postDraftActions.getSubmitHandler() ?? publishPost;
       await submit(trimmed, image ?? undefined);
       haptics.success();
-      postDraftActions.reset();
-      close();
+      // The sheet may have been dismissed (and reopened with a new draft) during a slow upload.
+      const draft = usePostDraftStore.getState();
+      if (draft.content === content && draft.image === image) postDraftActions.reset();
+      if (navigation.isFocused()) close();
     } catch (error) {
       // The web leaves this unhandled; native keeps the draft and says why.
       haptics.error();

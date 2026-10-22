@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, Check } from 'lucide-react-native';
 import { memo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 
+import { useUserId } from '@/features/auth/auth-store';
 import { getErrorMessage } from '@/lib/errors';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { Avatar, Button, Text } from '@/ui';
@@ -19,8 +20,9 @@ export function MoneyTransferHistory() {
   const styles = useStyles();
   const { colors } = useTheme();
   const [pullRefreshing, setPullRefreshing] = useState(false);
+  const userId = useUserId();
   const { data, error, isPending, isFetching, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteQuery(moneyTransferHistoryQuery());
+    useInfiniteQuery(moneyTransferHistoryQuery(userId));
 
   const history = data?.pages.flat() ?? [];
 
