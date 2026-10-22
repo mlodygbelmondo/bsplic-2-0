@@ -1,4 +1,3 @@
-import NetInfo from '@react-native-community/netinfo';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
@@ -7,6 +6,7 @@ import { FullWindowOverlay } from 'react-native-screens';
 import { create } from 'zustand';
 
 import { holdBoot } from '@/features/boot/boot-store';
+import { subscribeOffline } from '@/lib/connectivity';
 import { env } from '@/lib/env';
 import { useAppActive } from '@/lib/focus';
 import { kv } from '@/lib/storage';
@@ -71,11 +71,8 @@ export function MaintenanceGate() {
     // Foreground recheck (the launch check above dedupes this first call).
     void refreshMaintenanceMode();
     const intervalId = setInterval(() => void refreshMaintenanceMode(), MAINTENANCE_CHECK_INTERVAL_MS);
-    let wasOffline = false;
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const offline = state.isConnected === false || state.isInternetReachable === false;
-      if (wasOffline && !offline) void refreshMaintenanceMode();
-      wasOffline = offline;
+    const unsubscribe = subscribeOffline((offline) => {
+      if (!offline) void refreshMaintenanceMode();
     });
     return () => {
       clearInterval(intervalId);

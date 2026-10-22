@@ -9,7 +9,7 @@ import { derivePlayerCardDisplayModel } from '@/features/player-card/displayMode
 import { PlayerCardHero } from '@/features/player-card/PlayerCardHero';
 import { ReplayLaunchCard } from '@/features/replay/ReplayLaunchCard';
 import { AppHeader } from '@/features/shell/AppHeader';
-import { useIsOffline } from '@/lib/connectivity';
+import { useIsOffline, whenOnline } from '@/lib/connectivity';
 import { env } from '@/lib/env';
 import { useHasBeenFocused } from '@/lib/focus';
 import { createStyles, useTheme } from '@/theme';
@@ -245,7 +245,7 @@ function RefreshableScroll({ onRefresh, children }: { onRefresh: () => Promise<u
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.mutedForeground} />
+        <RefreshControl refreshing={refreshing} onRefresh={whenOnline(() => void handleRefresh())} tintColor={colors.mutedForeground} />
       }
     >
       {children}

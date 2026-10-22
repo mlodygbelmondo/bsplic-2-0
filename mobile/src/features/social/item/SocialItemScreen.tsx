@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserId } from '@/features/auth/auth-store';
 import { useBootHold } from '@/features/boot/boot-store';
 import { AppHeader } from '@/features/shell/AppHeader';
+import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
@@ -84,7 +85,7 @@ function ItemScroll({
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[styles.content, { paddingBottom: 12 + insets.bottom }]}
       refreshControl={
-        onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={social.mutedForeground} /> : undefined
+        onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={whenOnline(onRefresh)} tintColor={social.mutedForeground} /> : undefined
       }
     >
       <Pressable

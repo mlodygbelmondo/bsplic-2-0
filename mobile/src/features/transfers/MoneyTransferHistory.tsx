@@ -5,6 +5,7 @@ import { memo, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
+import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
@@ -73,7 +74,7 @@ export function MoneyTransferHistory() {
       ItemSeparatorComponent={Separator}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={pullRefreshing} onRefresh={handleRefresh} tintColor={colors.mutedForeground} />
+        <RefreshControl refreshing={pullRefreshing} onRefresh={whenOnline(handleRefresh)} tintColor={colors.mutedForeground} />
       }
       ListEmptyComponent={
         <View style={styles.centerBlock}>

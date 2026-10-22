@@ -15,6 +15,7 @@ import {
 import { useBootHold } from '@/features/boot/boot-store';
 import { CouponBar } from '@/features/coupon/CouponBar';
 import { AppHeader } from '@/features/shell/AppHeader';
+import { whenOnline } from '@/lib/connectivity';
 import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
 import { useLiteMotion, useReducedMotion } from '@/lib/motion';
 import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
@@ -181,7 +182,7 @@ export function HomeScreen() {
             hasRegularBets={(sections?.sortedBets.length ?? 0) > 0}
             onLoadMore={handleLoadMore}
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={whenOnline(handleRefresh)}
             contentHeight={contentHeight}
             viewportHeight={viewportHeight}
             lite={stillCards}

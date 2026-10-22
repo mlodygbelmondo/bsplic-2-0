@@ -6,6 +6,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
+import { whenOnline } from '@/lib/connectivity';
 import { useHasBeenFocused } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
 import { alpha, createStyles, useTheme } from '@/theme';
@@ -178,7 +179,7 @@ function RankingsBody() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={pullRefreshing} onRefresh={handleRefresh} tintColor={colors.mutedForeground} />
+        <RefreshControl refreshing={pullRefreshing} onRefresh={whenOnline(handleRefresh)} tintColor={colors.mutedForeground} />
       }
     />
   );

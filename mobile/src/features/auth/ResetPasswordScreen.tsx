@@ -10,7 +10,7 @@ import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import { Button, Text } from '@/ui';
 import { getErrorMessage } from '@/lib/errors';
-import { readStoredUserId, useAuthStore } from './auth-store';
+import { readStoredUserId, useAuthStore, waitForSignOut } from './auth-store';
 import { AuthField } from './AuthField';
 import { AuthCard, AuthShell } from './AuthShell';
 import { parseRecoveryLink, parseRecoveryUrl, readJwtSubject, recoveryLinkKey, type RecoveryLink } from './recovery-link';
@@ -48,6 +48,8 @@ function establishRecoverySession(link: RecoveryLink): Promise<boolean> {
   let attempt = recoveryAttempts.get(key);
   if (!attempt) {
     attempt = (async () => {
+      // A sign-out still finishing would remove the recovery session right after it is stored.
+      await waitForSignOut();
       if (link.kind === 'tokens') {
         // Anyone can craft a link with their own tokens: never let one switch a signed-in player to another account.
         const signedInUserId = readStoredUserId();

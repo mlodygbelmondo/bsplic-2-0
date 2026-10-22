@@ -2,11 +2,14 @@ import { useIsFocused, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
-/** True while the app is in the foreground. */
+/**
+ * True while the app is in the foreground. iOS `inactive` (Control Center,
+ * Notification Center, a system prompt) still counts: the app stays on screen.
+ */
 export function useAppActive(): boolean {
-  const [active, setActive] = useState(AppState.currentState === 'active');
+  const [active, setActive] = useState(AppState.currentState !== 'background');
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => setActive(state === 'active'));
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => setActive(state !== 'background'));
     return () => subscription.remove();
   }, []);
   return active;

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { useBootHold } from '@/features/boot/boot-store';
 import { AppHeader } from '@/features/shell/AppHeader';
+import { whenOnline } from '@/lib/connectivity';
 import { haptics } from '@/lib/haptics';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { Button, ScreenBackground, Surface, Text } from '@/ui';
@@ -55,7 +56,7 @@ export function ReplayScreen() {
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         accessibilityLabel="Replay"
-        refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => void onPull()} tintColor={colors.mutedForeground} />}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={whenOnline(() => void onPull())} tintColor={colors.mutedForeground} />}
       >
         <View style={styles.header}>
           <View style={styles.headerTitle}>

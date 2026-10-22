@@ -3,10 +3,19 @@ import { AppState, Platform } from 'react-native';
 
 import type { Database } from './database.types';
 import { env } from './env';
-import { secureKv } from './storage';
+import { kv, secureKv } from './storage';
 
 /** supabase-js's default session key, named explicitly so boot can read the stored session synchronously. */
 export const AUTH_STORAGE_KEY = `sb-${new URL(env.supabaseUrl).hostname.split('.')[0]}-auth-token`;
+
+/** Set while a sign-out runs (the UI is already signed out). */
+export const PENDING_SIGN_OUT_KEY = 'bsplic.auth.pendingSignOut';
+
+// The app died before supabase-js finished a sign-out: never restore that session.
+if (kv.getBoolean(PENDING_SIGN_OUT_KEY)) {
+  secureKv.remove(AUTH_STORAGE_KEY);
+  kv.remove(PENDING_SIGN_OUT_KEY);
+}
 
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseKey, {
   auth: {

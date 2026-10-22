@@ -6,6 +6,7 @@ import { Pressable, RefreshControl, ScrollView, useWindowDimensions, View } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUserId } from '@/features/auth/auth-store';
+import { whenOnline } from '@/lib/connectivity';
 import { haptics } from '@/lib/haptics';
 import { usePreferences } from '@/lib/preferences';
 import { alpha, createStyles, useTheme } from '@/theme';
@@ -129,7 +130,7 @@ function NotificationsPanel() {
           style={styles.list}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.mutedForeground} />
+            <RefreshControl refreshing={refreshing} onRefresh={whenOnline(() => void handleRefresh())} tintColor={colors.mutedForeground} />
           }
         >
           {notifications.map((notification) => (

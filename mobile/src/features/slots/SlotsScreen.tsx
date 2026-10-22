@@ -98,7 +98,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
   const [stakeInput, setStakeInput] = useState('5');
   const [playback, setPlayback] = useState<Playback>(IDLE_PLAYBACK);
   const [session, setSession] = useState({ spins: 0, net: 0 });
-  const [bonusPaused, setBonusPaused] = useState(() => AppState.currentState !== 'active');
+  const [bonusPaused, setBonusPaused] = useState(() => AppState.currentState === 'background');
   const [stopped, setStopped] = useState(false);
   const localLock = useRef(false);
   const mounted = useRef(true);
@@ -156,11 +156,16 @@ function SlotMachine({ game }: { game: SlotGame }) {
 
   // Background: pause the bonus (web pauses on a hidden tab). Foreground: show
   // the settled result instead of replaying cascades; the state query refetches.
+  // iOS `inactive` (Control Center, a system prompt) keeps the game on screen and running.
+  const wentBackground = useRef(false);
   const onAppStateChange = useEffectEvent((status: AppStateStatus) => {
-    if (status !== 'active') {
+    if (status === 'background') {
+      wentBackground.current = true;
       setBonusPaused(true);
       return;
     }
+    if (status !== 'active' || !wentBackground.current) return;
+    wentBackground.current = false;
     if (playback.animating && playback.result) {
       localLock.current = false;
       setPlayback({ ...playback, frameIndex: playback.result.frames.length - 1, animating: false });
@@ -192,7 +197,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
       haptics.error();
       return;
     }
-    const foreground = AppState.currentState === 'active';
+    const foreground = AppState.currentState !== 'background';
     setPlayback({ result: next, frameIndex: foreground ? 0 : next.frames.length - 1, animating: foreground });
     if (!foreground) localLock.current = false;
     setSession((previous) => addToSession(previous, next.net));
@@ -214,7 +219,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
     visible: focused && appActive && !offline,
   });
   const autoSpin = useEffectEvent(() => {
-    if (AppState.currentState === 'active') void handleSpin();
+    if (AppState.currentState !== 'background') void handleSpin();
   });
   useEffect(() => {
     if (!autoplay) return;

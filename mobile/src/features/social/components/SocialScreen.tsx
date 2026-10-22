@@ -17,6 +17,7 @@ import { useStore } from 'zustand';
 
 import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
+import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { useHasBeenFocused } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
@@ -209,10 +210,10 @@ function SocialFeedBody() {
           refreshControl={
             <RefreshControl
               refreshing={feed.refreshing}
-              onRefresh={() => {
+              onRefresh={whenOnline(() => {
                 void storiesQuery.refetch();
                 void feed.refresh();
-              }}
+              })}
               tintColor={social.mutedForeground}
               progressViewOffset={FILTER_BAR_HEIGHT}
             />

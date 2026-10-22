@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Alert, RefreshControl, View } from 'react-native';
 
 import { categoriesQueryOptions } from '@/features/home/api/categories';
-import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
+import { OFFLINE_WRITE_MESSAGE, useIsOffline, whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
@@ -287,7 +287,7 @@ export function ManageBetsTab() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={pullToRefresh} tintColor={colors.mutedForeground} />
+          <RefreshControl refreshing={refreshing} onRefresh={whenOnline(pullToRefresh)} tintColor={colors.mutedForeground} />
         }
         contentContainerStyle={{ padding: 16, paddingBottom }}
       />

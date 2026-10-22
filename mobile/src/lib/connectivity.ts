@@ -1,9 +1,50 @@
-import { useNetInfo } from '@react-native-community/netinfo';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import { create } from 'zustand';
+
+/**
+ * Offline when NetInfo knows the device is offline. While iOS re-checks
+ * reachability (`isInternetReachable` null), the last answer stands, so a
+ * re-check never looks like a reconnect.
+ */
+function nextOffline(state: NetInfoState, previous: boolean): boolean {
+  if (state.isConnected === false || state.isInternetReachable === false) return true;
+  if (state.isInternetReachable === null) return previous;
+  return false;
+}
+
+const useConnectivityStore = create<{ offline: boolean }>(() => ({ offline: false }));
+
+NetInfo.addEventListener((state) => {
+  const previous = useConnectivityStore.getState().offline;
+  const offline = nextOffline(state, previous);
+  if (offline !== previous) useConnectivityStore.setState({ offline });
+});
 
 /** True when the device is known to be offline (unknown counts as online). */
 export function useIsOffline(): boolean {
-  const { isConnected, isInternetReachable } = useNetInfo();
-  return isConnected === false || isInternetReachable === false;
+  return useConnectivityStore((s) => s.offline);
+}
+
+/** Calls `listener` whenever the device goes offline or comes back. */
+export function subscribeOffline(listener: (offline: boolean) => void): () => void {
+  return useConnectivityStore.subscribe((state, previous) => {
+    if (state.offline !== previous.offline) listener(state.offline);
+  });
+}
+
+export function isOffline(): boolean {
+  return useConnectivityStore.getState().offline;
+}
+
+/**
+ * Wraps a pull-to-refresh handler. Offline, queries pause and the refetch would
+ * keep the spinner up until the connection returns, so the pull does nothing
+ * (the connection toast already says why).
+ */
+export function whenOnline(refresh: () => void): () => void {
+  return () => {
+    if (!isOffline()) refresh();
+  };
 }
 
 /** Copy for disabled writes while offline. */

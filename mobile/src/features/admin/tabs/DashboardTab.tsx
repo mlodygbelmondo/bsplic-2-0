@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 
+import { whenOnline } from '@/lib/connectivity';
 import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { SectionLoader, Text } from '@/ui';
@@ -71,7 +72,7 @@ export function DashboardTab() {
 
   return (
     <AdminTabScroll
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.mutedForeground} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={whenOnline(refresh)} tintColor={colors.mutedForeground} />}
     >
       {summary ? (
         <DashboardContent summary={summary} />

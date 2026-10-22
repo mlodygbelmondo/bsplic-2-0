@@ -1,8 +1,8 @@
-import NetInfo from '@react-native-community/netinfo';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { isOffline, subscribeOffline } from './connectivity';
 import { kv } from './storage';
 
 /**
@@ -67,7 +67,7 @@ export const PERSIST_MAX_AGE = 24 * 60 * 60_000;
 /** Bump to drop every persisted cache after a breaking data-shape change. */
 export const PERSIST_BUSTER = 'v1';
 
-// React Query focus = app foreground; online = NetInfo reachability.
+// React Query focus = app foreground; online = NetInfo reachability (see connectivity).
 focusManager.setEventListener((setFocused) => {
   const subscription = AppState.addEventListener('change', (status: AppStateStatus) => {
     setFocused(status === 'active');
@@ -75,8 +75,7 @@ focusManager.setEventListener((setFocused) => {
   return () => subscription.remove();
 });
 
-onlineManager.setEventListener((setOnline) =>
-  NetInfo.addEventListener((state) => {
-    setOnline(state.isConnected !== false && state.isInternetReachable !== false);
-  }),
-);
+onlineManager.setEventListener((setOnline) => {
+  setOnline(!isOffline());
+  return subscribeOffline((offline) => setOnline(!offline));
+});
