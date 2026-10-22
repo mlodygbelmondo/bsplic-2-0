@@ -1,3 +1,5 @@
+import { getPolishDateString } from '@/features/shell/polish-day';
+
 import type { DailyJackpotSnapshot, DailyJackpotStatus } from '../types';
 import { formatTicketLabel } from './jackpotFormat';
 
@@ -20,6 +22,16 @@ export interface DailyJackpotCardModel {
 
 export function isLiveJackpotStatus(status: DailyJackpotStatus | undefined): boolean {
   return status === 'collecting' || status === 'locked';
+}
+
+/**
+ * A cached snapshot still describes today's pool: same Polish day, and a live
+ * pool's draw time has not passed. Such a snapshot can be shown while the
+ * fresh state loads.
+ */
+export function isJackpotSnapshotCurrent(snapshot: DailyJackpotSnapshot, now = Date.now()): boolean {
+  if (snapshot.poolDate !== getPolishDateString(new Date(now))) return false;
+  return !isLiveJackpotStatus(snapshot.status) || Date.parse(snapshot.drawScheduledAt) > now;
 }
 
 export function getDailyJackpotCardModel(

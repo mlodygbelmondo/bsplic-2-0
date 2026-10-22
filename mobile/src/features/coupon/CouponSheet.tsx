@@ -23,6 +23,7 @@ import { findAkoConflict, formatAkoConflictMessage, shouldBlockAkoCoupon } from 
 import { getCouponCategoryEmoji } from './category-emoji';
 import { CouponFooter } from './CouponFooter';
 import { CouponItemCard } from './CouponItemCard';
+import { refreshCouponOdds } from './coupon-odds';
 import { couponActions, useCouponItems, useCouponStore, usePreferredCouponType } from './coupon-store';
 import {
   couponSheetActions,
@@ -66,6 +67,11 @@ export function CouponSheet() {
     return () => {
       mountedRef.current = false;
     };
+  }, []);
+
+  // A coupon kept from earlier may hold odds changed since: check them on opening.
+  useEffect(() => {
+    refreshCouponOdds().catch((error: unknown) => console.warn('Coupon odds refresh failed', error));
   }, []);
 
   // Coupon copied from Social: open on the preset tab (web parity).

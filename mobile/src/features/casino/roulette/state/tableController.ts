@@ -128,6 +128,7 @@ export function createRouletteTableController({
         recentWins: keepIfEqual(previous.recentWins, snapshot.recentWins),
         activeBets: keepIfEqual(previous.activeBets, snapshot.activeBets),
         roundParticipants: keepIfEqual(previous.roundParticipants, snapshot.roundParticipants),
+        lastSettledBets: keepIfEqual(previous.lastSettledBets, snapshot.lastSettledBets),
       });
 
       const { userId } = identity();

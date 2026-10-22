@@ -4,6 +4,8 @@ import { advanceRouletteRoundIfDue, getRouletteTableSnapshot, placeRouletteBet }
 
 const rpcMock = vi.fn();
 
+vi.mock('expo-crypto', () => ({ randomUUID: () => 'request-1' }));
+
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpcMock(...args),
@@ -141,6 +143,7 @@ describe('roulette api', () => {
       recentWins: [],
       activeBets: [],
       roundParticipants: [],
+      lastSettledBets: [],
     });
   });
 
@@ -179,7 +182,33 @@ describe('roulette api', () => {
       p_bet_type: 'color',
       p_bet_value: 'red',
       p_stake: 25,
+      p_request_id: 'request-1',
     });
+  });
+
+  it('retries a bet whose response was lost under the same request id', async () => {
+    const bet = {
+      id: 'bet-1',
+      round_id: 'round-1',
+      user_id: 'user-1',
+      bet_type: 'color',
+      bet_value: 'red',
+      stake: 25,
+      payout: 0,
+      is_win: null,
+      created_at: '2026-06-11T10:00:01.000Z',
+      settled_at: null,
+    };
+    rpcMock
+      .mockResolvedValueOnce({ data: null, error: { message: 'TypeError: Network request failed', code: '' } })
+      .mockResolvedValueOnce({ data: [bet], error: null });
+
+    await expect(
+      placeRouletteBet({ userId: 'user-1', betType: 'color', betValue: 'red', stake: 25 }),
+    ).resolves.toMatchObject({ id: 'bet-1' });
+
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+    expect(rpcMock.mock.calls.map(([, params]) => params.p_request_id)).toEqual(['request-1', 'request-1']);
   });
 
   it('rejects a bet the server did not return', async () => {

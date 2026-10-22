@@ -15,7 +15,7 @@ export const DEFAULT_STAKE = '10';
 export const STAKE_PRESETS = ['5', '10', '25', '50'] as const;
 
 export const UNCONFIRMED_PLACEMENT_MESSAGE =
-  'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.';
+  'Nie udało się potwierdzić kuponu. Postaw go jeszcze raz bez zmian: nie zostanie przyjęty dwa razy.';
 
 export interface PlaceCouponParams {
   userId: string;
@@ -27,9 +27,38 @@ export interface PlaceCouponParams {
     odds: number;
     stake: number;
   }[];
+  /** Same id, same coupon: the server places it once however many times it is sent. */
+  requestId: string;
 }
 
 export type PlaceCouponSecure = (params: PlaceCouponParams) => Promise<string>;
+
+/**
+ * Request ids per placement call. An attempt whose outcome stayed unknown
+ * keeps its id, so placing the same coupon again is a safe retry: the server
+ * returns the coupon the first call created instead of charging twice. A
+ * changed coupon (other picks or stakes) gets a new id.
+ */
+export function createRequestIdStore(createId: () => string) {
+  const pending = new Map<string, string>();
+  return {
+    idFor(key: string): string {
+      const id = pending.get(key) ?? createId();
+      pending.set(key, id);
+      return id;
+    },
+    settle(key: string) {
+      pending.delete(key);
+    },
+  };
+}
+
+export type RequestIdStore = ReturnType<typeof createRequestIdStore>;
+
+/** The server refused a coupon whose odds changed since the player saw them (`p_check_odds`). */
+export function isOddsChangedError(error: unknown): boolean {
+  return (error as { hint?: unknown } | null)?.hint === 'odds_changed';
+}
 
 export function parseStake(value: string): number {
   const parsed = Number(value);
@@ -125,7 +154,7 @@ export type SubmitCouponResult =
   | { status: 'invalid'; message: string }
   | { status: 'placed'; chargedStake: number }
   /** `placedBetIds` are singles the server accepted before the failing one. */
-  | { status: 'failed'; message: string; placedBetIds: string[]; chargedStake: number };
+  | { status: 'failed'; message: string; placedBetIds: string[]; chargedStake: number; oddsChanged: boolean };
 
 /** Client checks in the web's order; returns the toast message or null. */
 export function validateCoupon(input: SubmitCouponInput): string | null {
@@ -151,16 +180,46 @@ export function validateCoupon(input: SubmitCouponInput): string | null {
   return null;
 }
 
+export interface SubmitCouponDeps {
+  place: PlaceCouponSecure;
+  requestIds: RequestIdStore;
+  /** Runs right before the first RPC. */
+  onSending?: () => void;
+}
+
+/**
+ * Places one coupon under its request id. A lost response is retried once at
+ * once (the id makes that safe); an id whose outcome is still unknown is kept
+ * for the player's next attempt.
+ */
+async function placeWithRequestId(
+  { place, requestIds }: SubmitCouponDeps,
+  params: Omit<PlaceCouponParams, 'requestId'>,
+): Promise<string> {
+  const key = JSON.stringify([
+    params.userId,
+    params.stake,
+    params.items.map((item) => [item.betId, item.selectedOption, item.stake]),
+  ]);
+  const request = { ...params, requestId: requestIds.idFor(key) };
+  try {
+    const couponId = await place(request).catch((error: unknown) => {
+      if (!isOutcomeUnknown(error)) throw error;
+      return place(request);
+    });
+    requestIds.settle(key);
+    return couponId;
+  } catch (error) {
+    if (!isOutcomeUnknown(error)) requestIds.settle(key);
+    throw error;
+  }
+}
+
 /**
  * Validates and places the coupon: one RPC per single (in order, stopping at
- * the first failure) or one RPC for the whole AKO. `onSending` runs right
- * before the first RPC.
+ * the first failure) or one RPC for the whole AKO.
  */
-export async function submitCoupon(
-  input: SubmitCouponInput,
-  placeCouponSecure: PlaceCouponSecure,
-  onSending?: () => void,
-): Promise<SubmitCouponResult> {
+export async function submitCoupon(input: SubmitCouponInput, deps: SubmitCouponDeps): Promise<SubmitCouponResult> {
   const invalid = validateCoupon(input);
   if (invalid) return { status: 'invalid', message: invalid };
 
@@ -169,13 +228,13 @@ export async function submitCoupon(
   const placedBetIds: string[] = [];
   let chargedStake = 0;
 
-  onSending?.();
+  deps.onSending?.();
 
   try {
     if (activeTab === 'single') {
       for (const item of items) {
         const itemStake = parseStake(singleStakes[item.bet.id] || '');
-        await placeCouponSecure({
+        await placeWithRequestId(deps, {
           userId,
           totalOdds: 1,
           stake: itemStake,
@@ -186,7 +245,7 @@ export async function submitCoupon(
       }
     } else {
       const legStakes = distributeStakeAcrossItems(totalStake, items.length);
-      await placeCouponSecure({
+      await placeWithRequestId(deps, {
         userId,
         totalOdds: getEffectiveTotalOdds('ako', items),
         stake: totalStake,
@@ -203,12 +262,13 @@ export async function submitCoupon(
   } catch (error) {
     return {
       status: 'failed',
-      // A timeout or dropped connection leaves the outcome unknown: the server may have placed it.
+      // A dropped connection, even after the retry, leaves the outcome unknown: the server may have placed it.
       message: isOutcomeUnknown(error)
         ? UNCONFIRMED_PLACEMENT_MESSAGE
         : getErrorMessage(error, 'Nie udało się postawić kuponu'),
       placedBetIds,
       chargedStake,
+      oddsChanged: isOddsChangedError(error),
     };
   }
 }

@@ -218,9 +218,9 @@ describe('getLatestUserWin', () => {
 });
 
 describe('deriveLastSettled', () => {
-  it('keeps the previous result while no table bet is settled', () => {
+  it('keeps the previous result while the newest settled round has none of the player\'s bets', () => {
     const previous = { roundId: 'r1', bets: [], winningNumber: 3, winningColor: 'red' as const };
-    expect(deriveLastSettled(previous, [bet({})], null, [])).toBe(previous);
+    expect(deriveLastSettled(previous, [], null, [spin('round-8', 5, 'red')])).toBe(previous);
   });
 
   it('pairs settled bets with the spin result of their round', () => {

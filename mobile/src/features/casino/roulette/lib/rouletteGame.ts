@@ -156,14 +156,18 @@ export interface LastSettledBets {
   winningColor: RouletteColor | null;
 }
 
-/** Settled bets of the player's last round for the result strip and "Powtórz" (web `lastSettled` effect). */
+/**
+ * Settled bets of the player's last round for the result strip and "Powtórz"
+ * (web `lastSettled` effect), from the snapshot's `last_settled_bets`. A
+ * newer settled round without the player's bets keeps the previous result.
+ */
 export function deriveLastSettled(
   current: LastSettledBets | null,
-  activeBets: RouletteBetRecord[],
+  lastSettledBets: RouletteBetRecord[],
   currentRound: RouletteTableRound | null,
   recentSpins: RouletteTableRound[],
 ): LastSettledBets | null {
-  const settledBets = activeBets.filter((bet) => bet.is_win !== null);
+  const settledBets = lastSettledBets.filter((bet) => bet.is_win !== null);
   if (settledBets.length === 0) return current;
 
   const roundId = settledBets[0].round_id;

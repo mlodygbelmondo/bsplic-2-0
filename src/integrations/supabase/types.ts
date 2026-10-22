@@ -609,6 +609,7 @@ export type Database = {
           created_at: string
           id: string
           payout: number | null
+          request_id: string | null
           settled_at: string | null
           stake: number
           status: string
@@ -619,6 +620,7 @@ export type Database = {
           created_at?: string
           id?: string
           payout?: number | null
+          request_id?: string | null
           settled_at?: string | null
           stake: number
           status?: string
@@ -629,6 +631,7 @@ export type Database = {
           created_at?: string
           id?: string
           payout?: number | null
+          request_id?: string | null
           settled_at?: string | null
           stake?: number
           status?: string
@@ -1055,6 +1058,7 @@ export type Database = {
           id: string
           is_win: boolean | null
           payout: number
+          request_id: string | null
           round_id: string
           settled_at: string | null
           stake: number
@@ -1067,6 +1071,7 @@ export type Database = {
           id?: string
           is_win?: boolean | null
           payout?: number
+          request_id?: string | null
           round_id: string
           settled_at?: string | null
           stake: number
@@ -1079,6 +1084,7 @@ export type Database = {
           id?: string
           is_win?: boolean | null
           payout?: number
+          request_id?: string | null
           round_id?: string
           settled_at?: string | null
           stake?: number
@@ -1667,7 +1673,9 @@ export type Database = {
       }
       place_bet_secure: {
         Args: {
+          p_check_odds?: boolean
           p_items: Json
+          p_request_id?: string
           p_stake: number
           p_total_odds: number
           p_user_id: string
@@ -1758,6 +1766,7 @@ export type Database = {
         Returns: {
           active_bets: Json
           current_round: Json
+          last_settled_bets: Json
           recent_spins: Json
           recent_wins: Json
           round_participants: Json
@@ -1822,6 +1831,7 @@ export type Database = {
         Args: {
           p_bet_type: string
           p_bet_value: string
+          p_request_id?: string
           p_stake: number
           p_table_key?: string
           p_user_id: string

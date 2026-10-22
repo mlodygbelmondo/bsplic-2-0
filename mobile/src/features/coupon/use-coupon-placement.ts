@@ -1,3 +1,5 @@
+import { randomUUID } from 'expo-crypto';
+
 import { authActions, useAuthStore } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE } from '@/lib/connectivity';
 import { haptics } from '@/lib/haptics';
@@ -6,15 +8,20 @@ import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
 
 import { placeCouponSecure } from './api/place-coupon';
+import { announceOddsChanges, refreshCouponOdds } from './coupon-odds';
 import { couponActions, useCouponItems, useCouponStore } from './coupon-store';
 import { couponSheetActions, useCouponPlacing, useCouponSheetStore } from './coupon-sheet-store';
 import {
+  createRequestIdStore,
   getEffectiveTotalOdds,
   getPotentialWin,
   getTotalStake,
   submitCoupon,
   type CouponTab,
 } from './placement';
+
+/** Kept across placements: an unconfirmed coupon placed again reuses its request id. */
+const requestIds = createRequestIdStore(randomUUID);
 
 interface UseCouponPlacementResult {
   placeBet: () => Promise<void>;
@@ -78,8 +85,7 @@ export function useCouponPlacement(
         singleStakes,
         items: submittedItems,
       },
-      placeCouponSecure,
-      () => couponSheetActions.setPlacing(true),
+      { place: placeCouponSecure, requestIds, onSending: () => couponSheetActions.setPlacing(true) },
     ).finally(() => couponSheetActions.setPlacing(false));
 
     if (result.status === 'invalid') {
@@ -110,6 +116,18 @@ export function useCouponPlacement(
       // After a timeout the server may still have placed it: show the real balance and history.
       void authActions.refreshProfile();
       void queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+    }
+    if (result.oddsChanged) {
+      // Nothing was charged for the refused coupon: show the new odds and let the player decide.
+      haptics.warning();
+      const message = result.message;
+      void refreshCouponOdds(false)
+        .then((changes) => {
+          if (changes.length > 0) announceOddsChanges(changes);
+          else toast.error(message);
+        })
+        .catch(() => toast.error(message));
+      return;
     }
     haptics.error();
     toast.error(result.message);

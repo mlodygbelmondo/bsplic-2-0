@@ -12,7 +12,7 @@ import { toast } from '@/lib/toast';
 import { buyDailyJackpotTicket, getDailyJackpotState } from '../api/jackpot';
 import { jackpotDrawQueryOptions, jackpotStateQueryKey, type JackpotStateEntry } from '../api/queries';
 import { getPurchaseToastMessage } from '../lib/buyModel';
-import { getPurchasedTicketLabel, isLiveJackpotStatus } from '../lib/cardModel';
+import { getPurchasedTicketLabel, isJackpotSnapshotCurrent, isLiveJackpotStatus } from '../lib/cardModel';
 import type { DailyJackpotSnapshot } from '../types';
 
 /** Web `JACKPOT_POLL_MS`: poll and refresh-when-visible interval while the pool is live. */
@@ -85,8 +85,10 @@ export function useDailyJackpot() {
     retry: false,
   });
 
-  // The home screen appears once with the card's data: hold boot during the first load.
-  useBootHold(restoring || (query.fetchStatus === 'fetching' && !query.isFetchedAfterMount));
+  // The home screen appears once with the card's data: hold boot during the first load,
+  // unless the cache already shows today's pool (it refreshes in the background).
+  const cachedIsCurrent = query.data !== undefined && isJackpotSnapshotCurrent(query.data.snapshot);
+  useBootHold(restoring || (!cachedIsCurrent && query.fetchStatus === 'fetching' && !query.isFetchedAfterMount));
 
   const entry = query.data ?? null;
 

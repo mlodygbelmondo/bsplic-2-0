@@ -2,7 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CouponItem } from '@/types/database';
 
-import { doubleStake, eventsLabel, maxStakeFor, normalizeStakeInput, submitCoupon, type SubmitCouponInput } from './placement';
+import {
+  createRequestIdStore,
+  doubleStake,
+  eventsLabel,
+  maxStakeFor,
+  normalizeStakeInput,
+  submitCoupon,
+  type RequestIdStore,
+  type SubmitCouponInput,
+} from './placement';
 
 function createCouponItem(id: string, odds: number): CouponItem {
   return {
@@ -40,11 +49,17 @@ function input(overrides: Partial<SubmitCouponInput>): SubmitCouponInput {
 }
 
 const placeCouponSecure = vi.fn();
+let requestIds: RequestIdStore;
+const deps = () => ({ place: placeCouponSecure, requestIds });
+const UNCONFIRMED = 'Nie udało się potwierdzić kuponu. Postaw go jeszcze raz bez zmian: nie zostanie przyjęty dwa razy.';
+const connectionAbort = () => new Error("fetch failed: The operation couldn't be completed. Software caused connection abort");
 
 describe('submitCoupon', () => {
   beforeEach(() => {
     placeCouponSecure.mockReset();
     placeCouponSecure.mockResolvedValue('coupon-1');
+    let next = 0;
+    requestIds = createRequestIdStore(() => `req-${++next}`);
   });
 
   it('places multiple single-tab items as separate one-leg coupons', async () => {
@@ -53,7 +68,7 @@ describe('submitCoupon', () => {
         items: [createCouponItem('bet-1', 1.8), createCouponItem('bet-2', 2.2)],
         singleStakes: { 'bet-1': '7', 'bet-2': '8' },
       }),
-      placeCouponSecure,
+      deps(),
     );
 
     expect(placeCouponSecure).toHaveBeenCalledTimes(2);
@@ -62,12 +77,14 @@ describe('submitCoupon', () => {
       totalOdds: 1,
       stake: 7,
       items: [{ betId: 'bet-1', selectedOption: 'A', odds: 1.8, stake: 7 }],
+      requestId: 'req-1',
     });
     expect(placeCouponSecure).toHaveBeenNthCalledWith(2, {
       userId: 'user-1',
       totalOdds: 1,
       stake: 8,
       items: [{ betId: 'bet-2', selectedOption: 'A', odds: 2.2, stake: 8 }],
+      requestId: 'req-2',
     });
     expect(result).toEqual({ status: 'placed', chargedStake: 15 });
   });
@@ -75,7 +92,7 @@ describe('submitCoupon', () => {
   it('rejects over-precision single stakes before rounding', async () => {
     const result = await submitCoupon(
       input({ items: [createCouponItem('bet-1', 1.8)], singleStakes: { 'bet-1': '10.999' } }),
-      placeCouponSecure,
+      deps(),
     );
 
     expect(placeCouponSecure).not.toHaveBeenCalled();
@@ -92,7 +109,7 @@ describe('submitCoupon', () => {
         stake: '10',
         items: [createCouponItem('bet-1', 1.5), createCouponItem('bet-2', 2), createCouponItem('bet-3', 2.5)],
       }),
-      placeCouponSecure,
+      deps(),
     );
 
     expect(placeCouponSecure).toHaveBeenCalledTimes(1);
@@ -105,13 +122,14 @@ describe('submitCoupon', () => {
         { betId: 'bet-2', selectedOption: 'A', odds: 2, stake: 3.33 },
         { betId: 'bet-3', selectedOption: 'A', odds: 2.5, stake: 3.33 },
       ],
+      requestId: 'req-1',
     });
   });
 
   it('blocks a stake above the balance without calling the server', async () => {
     const result = await submitCoupon(
       input({ balance: 12.5, activeTab: 'ako', stake: '15', items: [createCouponItem('bet-1', 2)] }),
-      placeCouponSecure,
+      deps(),
     );
 
     expect(placeCouponSecure).not.toHaveBeenCalled();
@@ -128,7 +146,7 @@ describe('submitCoupon', () => {
         items: [createCouponItem('bet-1', 1.8), createCouponItem('bet-2', 2.2), createCouponItem('bet-3', 3)],
         singleStakes: { 'bet-1': '7', 'bet-2': '8', 'bet-3': '9' },
       }),
-      placeCouponSecure,
+      deps(),
     );
 
     expect(placeCouponSecure).toHaveBeenCalledTimes(2);
@@ -137,38 +155,52 @@ describe('submitCoupon', () => {
       message: 'Zakład jest już zamknięty',
       placedBetIds: ['bet-1'],
       chargedStake: 7,
+      oddsChanged: false,
     });
   });
 
-  it('asks to check the history when a timeout leaves the outcome unknown', async () => {
-    placeCouponSecure.mockRejectedValueOnce(new Error('Error: fetch failed: Fetch request has been canceled'));
+  it('retries a lost response once under the same request id', async () => {
+    placeCouponSecure.mockRejectedValueOnce(connectionAbort()).mockResolvedValueOnce('coupon-1');
 
     const result = await submitCoupon(
       input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] }),
-      placeCouponSecure,
+      deps(),
+    );
+
+    expect(result).toEqual({ status: 'placed', chargedStake: 10 });
+    expect(placeCouponSecure.mock.calls.map(([params]) => params.requestId)).toEqual(['req-1', 'req-1']);
+  });
+
+  it('keeps the request id of an unconfirmed coupon for the next attempt at the same coupon', async () => {
+    placeCouponSecure.mockRejectedValueOnce(connectionAbort()).mockRejectedValueOnce(new Error('Error: fetch failed: Fetch request has been canceled'));
+    const ako = input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] });
+
+    const unconfirmed = await submitCoupon(ako, deps());
+    await submitCoupon(ako, deps());
+    await submitCoupon({ ...ako, stake: '12' }, deps());
+
+    expect(unconfirmed).toEqual({ status: 'failed', message: UNCONFIRMED, placedBetIds: [], chargedStake: 0, oddsChanged: false });
+    expect(placeCouponSecure.mock.calls.map(([params]) => params.requestId)).toEqual(['req-1', 'req-1', 'req-1', 'req-2']);
+  });
+
+  it('flags a coupon refused because its odds changed', async () => {
+    placeCouponSecure.mockRejectedValueOnce({
+      message: 'Kurs zakładu się zmienił. Sprawdź kupon i postaw go ponownie.',
+      code: 'P0001',
+      hint: 'odds_changed',
+    });
+
+    const result = await submitCoupon(
+      input({ items: [createCouponItem('bet-1', 2)], singleStakes: { 'bet-1': '5' } }),
+      deps(),
     );
 
     expect(result).toEqual({
       status: 'failed',
-      message: 'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.',
+      message: 'Kurs zakładu się zmienił. Sprawdź kupon i postaw go ponownie.',
       placedBetIds: [],
       chargedStake: 0,
-    });
-  });
-
-  it('treats a connection dropped by suspending the app as an unknown outcome', async () => {
-    placeCouponSecure.mockRejectedValueOnce(
-      new Error("fetch failed: The operation couldn't be completed. Software caused connection abort"),
-    );
-
-    const result = await submitCoupon(
-      input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] }),
-      placeCouponSecure,
-    );
-
-    expect(result).toMatchObject({
-      status: 'failed',
-      message: 'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.',
+      oddsChanged: true,
     });
   });
 
@@ -178,8 +210,8 @@ describe('submitCoupon', () => {
       .mockRejectedValueOnce(new Error('Error: fetch failed: The Internet connection appears to be offline.'));
     const ako = input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] });
 
-    const poolTimeout = await submitCoupon(ako, placeCouponSecure);
-    const offline = await submitCoupon(ako, placeCouponSecure);
+    const poolTimeout = await submitCoupon(ako, deps());
+    const offline = await submitCoupon(ako, deps());
 
     expect(poolTimeout).toMatchObject({ status: 'failed', message: 'Nie udało się postawić kuponu' });
     expect(offline).toMatchObject({ status: 'failed', message: 'Nie udało się postawić kuponu' });

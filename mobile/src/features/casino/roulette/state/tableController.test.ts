@@ -27,7 +27,15 @@ function round(overrides: Partial<RouletteTableRound> = {}): RouletteTableRound 
 }
 
 function snapshot(overrides: Partial<RouletteTableSnapshot> = {}): RouletteTableSnapshot {
-  return { currentRound: null, recentSpins: [], recentWins: [], activeBets: [], roundParticipants: [], ...overrides };
+  return {
+    currentRound: null,
+    recentSpins: [],
+    recentWins: [],
+    activeBets: [],
+    roundParticipants: [],
+    lastSettledBets: [],
+    ...overrides,
+  };
 }
 
 function win(overrides: Partial<RouletteRecentWin> = {}): RouletteRecentWin {

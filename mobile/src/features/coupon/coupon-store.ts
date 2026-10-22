@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { kv, readJson } from '@/lib/storage';
 import { toast } from '@/lib/toast';
-import type { CouponItem } from '@/types/database';
+import type { BetOption, CouponItem } from '@/types/database';
 
 /**
  * Port of the web CouponContext as a zustand store. Bet cards subscribe to the
@@ -11,6 +11,15 @@ import type { CouponItem } from '@/types/database';
  */
 
 export type CouponType = 'single' | 'ako';
+
+/** A pick whose odds changed: what the player saw and the price they would get now. */
+export interface CouponOddsChange {
+  betId: string;
+  title: string;
+  option: string;
+  from: number;
+  to: number;
+}
 
 const STORED_ITEMS_KEY = 'bsplic.coupon.items.v1';
 
@@ -86,6 +95,22 @@ export const couponActions = {
   removeItems(removed: CouponItem[]) {
     const set = new Set(removed);
     useCouponStore.setState(({ items }) => ({ items: items.filter((item) => !set.has(item)) }));
+  },
+
+  /** Takes the current odds of bets on the coupon; returns the picks whose price changed. */
+  syncOdds(bets: { id: string; options: BetOption[] }[]): CouponOddsChange[] {
+    const byId = new Map(bets.map((bet) => [bet.id, bet]));
+    const changes: CouponOddsChange[] = [];
+    const { items } = useCouponStore.getState();
+    const next = items.map((item) => {
+      const bet = byId.get(item.bet.id);
+      const odds = bet?.options.find((option) => option.name === item.selectedOption)?.odds;
+      if (!bet || odds === undefined || !Number.isFinite(odds) || odds <= 0 || odds === item.odds) return item;
+      changes.push({ betId: item.bet.id, title: item.bet.title, option: item.selectedOption, from: item.odds, to: odds });
+      return { ...item, odds, bet: { ...item.bet, options: bet.options } };
+    });
+    if (changes.length > 0) useCouponStore.setState({ items: next });
+    return changes;
   },
 
   clearCoupon() {

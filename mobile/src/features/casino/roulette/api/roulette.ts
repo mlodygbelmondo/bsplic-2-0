@@ -1,5 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { randomUUID } from 'expo-crypto';
 
+import { isOutcomeUnknown } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import type {
   RouletteBetRecord,
@@ -28,6 +30,8 @@ export interface RouletteTableSnapshot {
   recentWins: RouletteRecentWin[];
   activeBets: RouletteBetRecord[];
   roundParticipants: RouletteRoundParticipant[];
+  /** The player's bets in the newest settled round (result strip and "Powtórz"). */
+  lastSettledBets: RouletteBetRecord[];
 }
 
 export interface PlaceRouletteBetParams {
@@ -57,6 +61,11 @@ export async function getRouletteTableSnapshot(
   return normalizeRouletteTableSnapshot(snapshot);
 }
 
+/**
+ * Places one bet under a fresh request id. A lost response is retried once at
+ * once: the server returns the bet the first call created instead of
+ * charging twice.
+ */
 export async function placeRouletteBet({
   userId,
   betType,
@@ -64,13 +73,18 @@ export async function placeRouletteBet({
   stake,
   tableKey = ROULETTE_TABLE_KEY,
 }: PlaceRouletteBetParams): Promise<RouletteBetRecord> {
-  const { data, error } = await supabase.rpc('place_roulette_table_bet', {
-    p_table_key: tableKey,
-    p_user_id: userId,
-    p_bet_type: betType,
-    p_bet_value: betValue,
-    p_stake: Math.round(stake * 100) / 100,
-  });
+  const send = () =>
+    supabase.rpc('place_roulette_table_bet', {
+      p_table_key: tableKey,
+      p_user_id: userId,
+      p_bet_type: betType,
+      p_bet_value: betValue,
+      p_stake: Math.round(stake * 100) / 100,
+      p_request_id: requestId,
+    });
+  const requestId = randomUUID();
+  let { data, error } = await send();
+  if (error && isOutcomeUnknown(error)) ({ data, error } = await send());
 
   if (error) {
     throw new Error(error.message || 'Nie udało się przyjąć zakładu');
@@ -206,6 +220,7 @@ function normalizeRouletteTableSnapshot(snapshot: unknown): RouletteTableSnapsho
     recentWins: normalizeArray(row.recent_wins, normalizeRecentWin),
     activeBets: normalizeArray(row.active_bets, normalizeRouletteBet),
     roundParticipants: normalizeArray(row.round_participants, normalizeRoundParticipant),
+    lastSettledBets: normalizeArray(row.last_settled_bets, normalizeRouletteBet),
   };
 }
 

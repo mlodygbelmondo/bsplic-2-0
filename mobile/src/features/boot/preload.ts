@@ -18,7 +18,8 @@ import { queryClient } from '@/lib/query-client';
 // first screen has its data, fetch the first screen of every other section so
 // opening it later renders instantly. Artwork ships in the app bundle, so
 // there is no asset warm-up. The persisted cache already covers sections the
-// player has seen before, so only missing sections are fetched.
+// player has seen before, so only missing sections are fetched, and only a
+// sign-in with nothing cached waits for them.
 
 const CRITICAL_TIMEOUT_MS = 3000;
 
@@ -60,17 +61,23 @@ function getPageDataTasks(userId: string): PrefetchTask[] {
 
 /**
  * Fetches the first screen of every section the cache does not have yet (the
- * screens refresh cached data themselves when opened). Resolves when done or
- * after CRITICAL_TIMEOUT_MS.
+ * screens refresh cached data themselves when opened). Right after sign-in,
+ * with nothing cached, it resolves when done or after CRITICAL_TIMEOUT_MS so
+ * the overlay can wait for it. With a restored cache every section can render
+ * at once, so the gaps load in the background and it resolves right away.
  */
 export function prefetchPageData(userId: string, onProgress: (fraction: number) => void): Promise<unknown> {
   // Offline nothing can load: the requests would only pause and hold the overlay for the whole budget.
   if (isOffline()) return Promise.resolve();
-  const missing = getPageDataTasks(userId).filter((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  const sections = getPageDataTasks(userId);
+  const missing = sections.filter((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  const nothingCached = sections.every((task) => task.background || missing.includes(task));
+  const tasks = nothingCached ? missing.filter((task) => !task.background) : [];
   for (const task of missing) {
-    if (task.background) void task.run().catch((error: unknown) => console.warn('Boot preload task failed:', error));
+    if (!tasks.includes(task)) {
+      void task.run().catch((error: unknown) => console.warn('Boot preload task failed:', error));
+    }
   }
-  const tasks = missing.filter((task) => !task.background);
   if (tasks.length === 0) return Promise.resolve();
   let settled = 0;
   const all = Promise.allSettled(

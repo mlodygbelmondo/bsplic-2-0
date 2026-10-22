@@ -109,7 +109,7 @@ export const rouletteSession = {
    */
   syncWithTable(table: RouletteTableState, userId: string): boolean {
     const session = useRouletteSession.getState();
-    const lastSettled = deriveLastSettled(session.lastSettled, table.activeBets, table.currentRound, table.recentSpins);
+    const lastSettled = deriveLastSettled(session.lastSettled, table.lastSettledBets, table.currentRound, table.recentSpins);
     const latestWin = getLatestUserWin({
       activeBets: table.activeBets,
       recentWins: table.recentWins,

@@ -22,6 +22,8 @@ export interface RouletteTableState {
   recentWins: RouletteRecentWin[];
   activeBets: RouletteBetRecord[];
   roundParticipants: RouletteRoundParticipant[];
+  /** The player's bets in the newest settled round. */
+  lastSettledBets: RouletteBetRecord[];
   isLoading: boolean;
   isRefreshing: boolean;
   isPlacingBet: boolean;
@@ -35,6 +37,7 @@ export function createInitialTableState(history?: RouletteHistory | null): Roule
     recentWins: history?.recentWins ?? [],
     activeBets: [],
     roundParticipants: [],
+    lastSettledBets: [],
     isLoading: true,
     isRefreshing: false,
     isPlacingBet: false,

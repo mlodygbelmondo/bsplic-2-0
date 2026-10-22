@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DailyJackpotSnapshot } from '../types';
-import { getCountdownMs, getDailyJackpotCardModel, getPurchasedTicketLabel } from './cardModel';
+import { getCountdownMs, getDailyJackpotCardModel, getPurchasedTicketLabel, isJackpotSnapshotCurrent } from './cardModel';
 
 const snapshot: DailyJackpotSnapshot = {
   poolId: 'pool-1',
@@ -146,5 +146,24 @@ describe('daily jackpot card model', () => {
     expect(getCountdownMs(snapshot, receivedAt, receivedAt)).toBe(8 * 3600_000);
     expect(getCountdownMs(snapshot, receivedAt, receivedAt + 61_900)).toBe(8 * 3600_000 - 61_000);
     expect(getCountdownMs({ ...snapshot, serverNow: 'not a date' }, receivedAt, receivedAt)).toBeNull();
+  });
+});
+
+describe('isJackpotSnapshotCurrent', () => {
+  // 2026-06-17 12:00 in Warsaw (UTC+2).
+  const noon = Date.parse('2026-06-17T10:00:00.000Z');
+
+  it("shows a cached snapshot of today's pool before its draw", () => {
+    expect(isJackpotSnapshotCurrent(snapshot, noon)).toBe(true);
+  });
+
+  it('refuses a live pool whose draw time has passed', () => {
+    expect(isJackpotSnapshotCurrent(snapshot, Date.parse('2026-06-17T18:00:01.000Z'))).toBe(false);
+    expect(isJackpotSnapshotCurrent({ ...snapshot, status: 'drawn' }, Date.parse('2026-06-17T19:00:00.000Z'))).toBe(true);
+  });
+
+  it("refuses yesterday's pool after midnight in Warsaw", () => {
+    // 00:30 on 18 June in Warsaw is still 17 June in UTC.
+    expect(isJackpotSnapshotCurrent({ ...snapshot, status: 'drawn' }, Date.parse('2026-06-17T22:30:00.000Z'))).toBe(false);
   });
 });

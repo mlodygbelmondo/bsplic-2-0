@@ -16,7 +16,8 @@ import { prefetchPageData } from './preload';
 /**
  * Drives the boot overlay from auth state (web `BootController`): holds it
  * while the session or profile is loading, re-shows it right after login,
- * and prefetches every section's first screen before it fades out.
+ * and prefetches every section's first screen (before it fades out only when
+ * nothing is cached yet).
  */
 export function BootController() {
   const loading = useAuthStore((s) => s.loading);

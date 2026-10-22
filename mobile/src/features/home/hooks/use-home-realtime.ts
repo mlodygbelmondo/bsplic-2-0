@@ -2,6 +2,7 @@ import type { InfiniteData, QueryKey } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
+import { applyCouponOdds, toBetOdds } from '@/features/coupon/coupon-odds';
 import { useRealtimeChannel } from '@/lib/realtime';
 import { BETS_QUERY_ROOT, criteriaFromQueryKey, type BetsPage } from '../api/bets';
 import { CATEGORIES_QUERY_KEY } from '../api/categories';
@@ -35,6 +36,8 @@ export function useHomeRealtime(enabled: boolean, currentBetsKey: QueryKey) {
     const payloads = queueRef.current;
     queueRef.current = [];
     if (payloads.length === 0) return;
+    // A pick on the coupon follows its bet's new odds (and the player is told).
+    applyCouponOdds(toBetOdds(payloads.flatMap((payload) => (payload.eventType === 'UPDATE' ? [payload.new] : []))));
     queryClient.getQueriesData<InfiniteData<BetsPage, number>>({ queryKey: BETS_QUERY_ROOT }).forEach(([key, data]) => {
       const criteria = criteriaFromQueryKey(key);
       if (!data || !criteria) return;
