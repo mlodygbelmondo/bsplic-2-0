@@ -39,6 +39,7 @@ export function Field({
           <TextInput
             ref={ref}
             placeholderTextColor={colors.mutedForeground}
+            maxFontSizeMultiplier={1.35}
             style={[styles.filledInput, style]}
             {...props}
           />
@@ -53,7 +54,13 @@ export function Field({
         <Text weight="500">{label}</Text>
       ) : null}
       <View style={[styles.outline, styles.row]}>
-        <TextInput ref={ref} placeholderTextColor={colors.mutedForeground} style={[styles.outlineInput, style]} {...props} />
+        <TextInput
+          ref={ref}
+          placeholderTextColor={colors.mutedForeground}
+          maxFontSizeMultiplier={1.35}
+          style={[styles.outlineInput, style]}
+          {...props}
+        />
         {trailing}
       </View>
     </View>

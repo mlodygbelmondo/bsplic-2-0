@@ -139,6 +139,22 @@ describe('submitCoupon', () => {
       chargedStake: 7,
     });
   });
+
+  it('asks to check the history when a timeout leaves the outcome unknown', async () => {
+    placeCouponSecure.mockRejectedValueOnce(new Error('Error: fetch failed: Fetch request has been canceled'));
+
+    const result = await submitCoupon(
+      input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] }),
+      placeCouponSecure,
+    );
+
+    expect(result).toEqual({
+      status: 'failed',
+      message: 'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.',
+      placedBetIds: [],
+      chargedStake: 0,
+    });
+  });
 });
 
 describe('coupon stake helpers', () => {

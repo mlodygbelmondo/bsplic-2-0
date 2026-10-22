@@ -1,4 +1,5 @@
 import { router, useNavigation } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -88,6 +89,8 @@ export function StoryComposerScreen() {
 
   return (
     <View collapsable={false} style={[styles.root, { paddingTop: insets.top }]}>
+      {/* The app's light status bar is invisible on this light-grey sheet. */}
+      <StatusBar style="dark" />
       <ComposerHeader title="Utwórz relację" onClose={close} />
       <KeyboardAwareScrollView
         bottomOffset={64}

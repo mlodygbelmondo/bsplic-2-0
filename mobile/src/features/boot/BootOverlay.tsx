@@ -185,7 +185,8 @@ function BootOverlayContent() {
             style={{ width: WORDMARK_WIDTH, height: 46 }}
             maskElement={
               <View style={styles.maskCenter}>
-                <Text style={styles.wordmark} numberOfLines={1}>
+                {/* Matches the native splash image exactly, so it never scales with the system text size. */}
+                <Text style={styles.wordmark} numberOfLines={1} allowFontScaling={false}>
                   BSPLIC{' '}2.0
                 </Text>
               </View>
@@ -200,7 +201,12 @@ function BootOverlayContent() {
         <View style={styles.track}>
           <Animated.View style={[styles.bar, barStyle]} />
         </View>
-        <Animated.Text key={message} entering={reduced ? undefined : FadeIn.duration(260)} style={styles.status}>
+        <Animated.Text
+          key={message}
+          entering={reduced ? undefined : FadeIn.duration(260)}
+          maxFontSizeMultiplier={1.35}
+          style={styles.status}
+        >
           {message}
         </Animated.Text>
       </Animated.View>

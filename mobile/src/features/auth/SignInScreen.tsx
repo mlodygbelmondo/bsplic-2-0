@@ -59,11 +59,14 @@ export function SignInScreen() {
       } else if (view === 'register') {
         const { requiresEmailConfirmation } = await authActions.signUp(trimmedEmail, password, username);
         haptics.success();
-        toast.success(
-          requiresEmailConfirmation
-            ? 'Konto utworzone! Sprawdź email, aby potwierdzić konto.'
-            : 'Konto utworzone i zalogowano automatycznie!',
-        );
+        if (requiresEmailConfirmation) {
+          // The link confirms the account in the browser; the player comes back here to log in.
+          toast.success('Konto utworzone! Sprawdź email, aby potwierdzić konto.', { duration: 8000 });
+          setPassword('');
+          setView('login');
+        } else {
+          toast.success('Konto utworzone i zalogowano automatycznie!');
+        }
       }
     } catch (err: unknown) {
       haptics.error();

@@ -87,15 +87,17 @@ function fetchProfile(userId: string, fresh = false): Promise<void> {
       if (profileResult.error || !profileResult.data) {
         throw profileResult.error ?? new Error('Profile not found');
       }
+      const current = useAuthStore.getState();
       const roles = rolesResult.data ?? [];
-      const previous = useAuthStore.getState().profile;
+      const previous = current.profile;
       const next = profileResult.data as Profile;
       useAuthStore.setState({
         // An unchanged row keeps its object, so profile subscribers skip the re-render.
         profile: previous && shallow(previous, next) ? previous : next,
         profileStatus: 'ready',
-        isAdmin: roles.some((row) => row.role === 'admin'),
-        isModerator: roles.some((row) => row.role === 'moderator'),
+        // A failed roles request keeps the known roles: an admin is not thrown out of the panel.
+        isAdmin: rolesResult.error ? current.isAdmin : roles.some((row) => row.role === 'admin'),
+        isModerator: rolesResult.error ? current.isModerator : roles.some((row) => row.role === 'moderator'),
       });
       persistIdentity();
     })

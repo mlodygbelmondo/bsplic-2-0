@@ -11,16 +11,22 @@ const NETWORK_FAILURE =
 // timed out (PGRST003), or Postgres cancelled the statement (57014).
 const BACKEND_UNAVAILABLE_CODES = new Set(['PGRST000', 'PGRST001', 'PGRST002', 'PGRST003', '57014']);
 
+const errorMessageOf = (error: unknown): string | null =>
+  typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
+    ? error.message
+    : null;
+
+/** The request failed in transit or the backend could not run it: a write's outcome may be unknown. */
+export const isTransportFailure = (error: unknown): boolean => {
+  const message = errorMessageOf(error);
+  if (message === null) return false;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === 'string' && BACKEND_UNAVAILABLE_CODES.has(code)) return true;
+  return NETWORK_FAILURE.test(message);
+};
+
 export const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'message' in error &&
-    typeof (error as { message: unknown }).message === 'string'
-  ) {
-    const { message, code } = error as { message: string; code?: unknown };
-    if (typeof code === 'string' && BACKEND_UNAVAILABLE_CODES.has(code)) return fallback;
-    return NETWORK_FAILURE.test(message) ? fallback : message;
-  }
-  return fallback;
+  const message = errorMessageOf(error);
+  if (message === null || isTransportFailure(error)) return fallback;
+  return message;
 };

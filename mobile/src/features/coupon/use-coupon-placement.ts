@@ -99,6 +99,10 @@ export function useCouponPlacement(
     if (result.placedBetIds.length > 0) {
       result.placedBetIds.forEach(couponActions.removeItem);
       refreshAfterPlacement(user.id, balance, result.chargedStake);
+    } else {
+      // After a timeout the server may still have placed it: show the real balance and history.
+      void authActions.refreshProfile();
+      void queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
     }
     haptics.error();
     toast.error(result.message);

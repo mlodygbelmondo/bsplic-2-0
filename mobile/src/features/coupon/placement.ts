@@ -1,5 +1,5 @@
 import type { CouponItem } from '@/types/database';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isTransportFailure } from '@/lib/errors';
 
 /**
  * Pure coupon placement rules, ported from the web's `useCouponPlacement`
@@ -11,6 +11,9 @@ export type CouponTab = 'single' | 'ako';
 
 export const DEFAULT_STAKE = '10';
 export const STAKE_PRESETS = ['5', '10', '25', '50'] as const;
+
+export const UNCONFIRMED_PLACEMENT_MESSAGE =
+  'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.';
 
 export interface PlaceCouponParams {
   userId: string;
@@ -202,7 +205,10 @@ export async function submitCoupon(
   } catch (error) {
     return {
       status: 'failed',
-      message: getErrorMessage(error, 'Nie udało się postawić kuponu'),
+      // A timeout or dropped connection leaves the outcome unknown: the server may have placed it.
+      message: isTransportFailure(error)
+        ? UNCONFIRMED_PLACEMENT_MESSAGE
+        : getErrorMessage(error, 'Nie udało się postawić kuponu'),
       placedBetIds,
       chargedStake,
     };

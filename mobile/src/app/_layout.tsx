@@ -73,6 +73,8 @@ function ThemedChrome() {
         richColors
         duration={2200}
         theme="system"
+        // Same cap as the app's text: the fixed-height action button would overflow at accessibility sizes.
+        maxFontSizeMultiplier={1.35}
         offset={insets.top + 16}
         toastOptions={{
           style: { padding: 16, borderRadius: 8, borderWidth: 1, boxShadow: TOAST_SHADOW },

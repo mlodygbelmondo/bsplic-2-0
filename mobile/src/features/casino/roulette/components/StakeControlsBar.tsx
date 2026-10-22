@@ -75,7 +75,7 @@ export const StakeControlsBar = memo(function StakeControlsBar() {
           onPress={() => void submitRouletteBet()}
           style={[styles.submit, disabled && styles.submitDisabled]}
         >
-          <Text size="base" weight="700" style={styles.submitText}>
+          <Text size="base" weight="700" numberOfLines={1} adjustsFontSizeToFit style={styles.submitText}>
             {isPlacingBet ? 'Przyjmowanie…' : 'Postaw zakład'}
           </Text>
         </PressScale>

@@ -12,6 +12,9 @@ export const NON_PERSISTED_QUERY_ROOTS = new Set<string>([
   'blackjack-live',
   'jackpot-live',
   'slots-live',
+  // The poll and bonus dialogs open only on fresh data: a restored poll may already be answered.
+  'feature-polls',
+  'bonus-campaigns',
 ]);
 
 /** Every query with data is saved, including one whose latest background refresh failed. */
@@ -28,7 +31,15 @@ export function serializeQueryCache(client: PersistedClient): string {
     query.state.status === 'error'
       ? {
           ...query,
-          state: { ...query.state, status: 'success' as const, error: null, fetchFailureCount: 0, fetchFailureReason: null },
+          state: {
+            ...query.state,
+            status: 'success' as const,
+            error: null,
+            errorUpdatedAt: 0,
+            errorUpdateCount: 0,
+            fetchFailureCount: 0,
+            fetchFailureReason: null,
+          },
         }
       : query,
   );

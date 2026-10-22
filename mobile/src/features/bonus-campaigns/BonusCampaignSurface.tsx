@@ -207,7 +207,7 @@ export function BonusCampaignSurface() {
           </Animated.View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel="Zamknij"
             hitSlop={12}
             disabled={claiming}
             onPress={handleCloseModal}

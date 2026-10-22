@@ -44,7 +44,7 @@ export function CouponBar() {
     >
       <PressScale
         accessibilityRole="button"
-        accessibilityLabel="Otwórz kupon"
+        accessibilityLabel={hasItems ? `Otwórz kupon, zdarzenia: ${count}` : 'Otwórz kupon'}
         onPress={() => {
           haptics.selection();
           router.push('/sheets/coupon');

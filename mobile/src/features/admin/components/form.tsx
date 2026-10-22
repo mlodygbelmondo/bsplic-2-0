@@ -27,6 +27,7 @@ export function Input({
       editable={!disabled}
       placeholderTextColor={colors.mutedForeground}
       selectionColor={colors.primary}
+      maxFontSizeMultiplier={1.35}
       style={[styles.input, disabled && styles.disabled, style]}
       {...props}
     />

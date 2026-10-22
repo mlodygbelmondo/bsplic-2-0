@@ -396,6 +396,7 @@ export function MoneyTransferSend({
                   onFocus={handleFieldFocus}
                   onBlur={handleFieldBlur}
                   accessibilityLabel="Odbiorca"
+                  maxFontSizeMultiplier={1.35}
                   value={query}
                   onChangeText={handleQueryChange}
                   placeholder="Wpisz nazwę użytkownika"
@@ -435,6 +436,7 @@ export function MoneyTransferSend({
                 onFocus={handleFieldFocus}
                 onBlur={handleFieldBlur}
                 accessibilityLabel="Kwota"
+                maxFontSizeMultiplier={1.35}
                 value={amountInput}
                 onChangeText={setAmountInput}
                 placeholder="0,00"
@@ -466,6 +468,7 @@ export function MoneyTransferSend({
               onFocus={handleFieldFocus}
               onBlur={handleFieldBlur}
               accessibilityLabel="Wiadomość (opcjonalnie)"
+              maxFontSizeMultiplier={1.35}
               onContentSizeChange={revealFocused}
               value={message}
               onChangeText={(next) => {
