@@ -17,13 +17,8 @@ import { initBoot } from '@/features/boot/boot-store';
 import { FeaturePollSurface } from '@/features/feature-polls/FeaturePollSurface';
 import { ConnectivityWatcher } from '@/features/shell/ConnectivityWatcher';
 import { MaintenanceGate } from '@/features/shell/MaintenanceGate';
-import {
-  NON_PERSISTED_QUERY_ROOTS,
-  PERSIST_BUSTER,
-  PERSIST_MAX_AGE,
-  queryClient,
-  queryPersister,
-} from '@/lib/query-client';
+import { PERSIST_BUSTER, PERSIST_MAX_AGE, queryClient, queryPersister } from '@/lib/query-client';
+import { shouldPersistQuery } from '@/lib/query-persistence';
 import { ThemeProvider, useTheme } from '@/theme';
 import { formSheet, overlayScreen, sheetDefaults } from '@/lib/sheet-options';
 
@@ -47,10 +42,7 @@ export default function RootLayout() {
             persister: queryPersister,
             maxAge: PERSIST_MAX_AGE,
             buster: PERSIST_BUSTER,
-            dehydrateOptions: {
-              shouldDehydrateQuery: (query) =>
-                query.state.status === 'success' && !NON_PERSISTED_QUERY_ROOTS.has(String(query.queryKey[0])),
-            },
+            dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
           }}
         >
           <ThemeProvider>

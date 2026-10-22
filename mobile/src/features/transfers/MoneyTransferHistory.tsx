@@ -26,7 +26,8 @@ export function MoneyTransferHistory() {
   const { data, error, isPending, isFetching, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteQuery(moneyTransferHistoryQuery(userId));
 
-  const history = data?.pages.flat() ?? [];
+  // Offset pages shift when a new transfer arrives: a row can come back on the next page, so list it once.
+  const history = data ? [...new Map(data.pages.flat().map((entry) => [entry.id, entry])).values()] : [];
 
   if (isPending) {
     return (

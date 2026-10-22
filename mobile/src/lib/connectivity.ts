@@ -1,6 +1,8 @@
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { create } from 'zustand';
 
+import { toast } from './toast';
+
 /**
  * Offline when NetInfo knows the device is offline. While iOS re-checks
  * reachability (`isInternetReachable` null), the last answer stands, so a
@@ -36,14 +38,20 @@ export function isOffline(): boolean {
   return useConnectivityStore.getState().offline;
 }
 
+/** The web `connection-status` toast for a lost connection; it stays until the connection returns. */
+export function showOfflineToast() {
+  toast.error('Brak połączenia z internetem', { id: 'connection-status', duration: Number.POSITIVE_INFINITY });
+}
+
 /**
  * Wraps a pull-to-refresh handler. Offline, queries pause and the refetch would
- * keep the spinner up until the connection returns, so the pull does nothing
- * (the connection toast already says why).
+ * keep the spinner up until the connection returns, so the pull only shows the
+ * connection toast (it may have been swiped away, or the app started offline).
  */
 export function whenOnline(refresh: () => void): () => void {
   return () => {
-    if (!isOffline()) refresh();
+    if (isOffline()) showOfflineToast();
+    else refresh();
   };
 }
 

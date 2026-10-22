@@ -323,13 +323,14 @@ export const authActions = {
     if (userId) await fetchProfile(userId, true);
   },
 
-  updateProfileBalance(balance: number) {
+  /** Applies a write's new balance (and other changed columns) before the profile refetch lands. */
+  updateProfileBalance(balance: number, changes: Partial<Profile> = {}) {
     const { profile } = useAuthStore.getState();
     if (!profile) return;
     // Drop older profile requests so their pre-write balance can't land after this.
     profileRequestId += 1;
     inFlightProfileFetches.clear();
-    useAuthStore.setState({ profile: { ...profile, balance } });
+    useAuthStore.setState({ profile: { ...profile, ...changes, balance } });
     persistIdentity();
   },
 

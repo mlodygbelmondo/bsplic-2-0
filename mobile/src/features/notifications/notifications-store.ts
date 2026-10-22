@@ -51,11 +51,12 @@ function applyUnreadCountAction(action: UnreadCountAction) {
 
 async function reconcileUnreadCount(userId: string) {
   const requestId = ++countRequestId;
-  let count = 0;
+  let count: number;
   try {
     count = await fetchUnreadNotificationsCount(userId);
   } catch {
-    count = 0;
+    // Every resubscribe recounts: a failed count keeps the current badge instead of clearing it.
+    return;
   }
   if (requestId !== countRequestId || useNotificationsStore.getState().userId !== userId) return;
   applyUnreadCountAction({ type: 'reconcile', count });

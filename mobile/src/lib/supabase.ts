@@ -31,6 +31,16 @@ export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseKey,
     autoRefreshToken: true,
     detectSessionInUrl: false,
   },
+  db: {
+    // expo/fetch requests never time out on their own, so a hung database would
+    // keep spinners and buttons busy forever. Postgres cancels statements after
+    // 8 s and PostgREST waits ~10 s for a pool connection, so 20 s only cuts off
+    // requests that would never answer.
+    timeout: 20_000,
+    // postgrest-js retries failed GETs 3 more times (1, 2, 4 s); React Query's
+    // single retry already covers transient failures.
+    retry: false,
+  },
 });
 
 // Refresh tokens only while the app is in the foreground (Supabase guidance

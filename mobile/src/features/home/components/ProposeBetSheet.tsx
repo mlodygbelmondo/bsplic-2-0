@@ -178,6 +178,8 @@ export function ProposeBetSheet() {
       variant="dialog"
       accessibilityLabel="Zaproponuj zakład"
       style={[styles.card, { width: dialogWidth }]}
+      // While the proposal is sent the dialog stays open, so its success closes this dialog and nothing else.
+      dismissible={!loading}
     >
       <ScrollView
         ref={scrollRef}
@@ -362,6 +364,7 @@ export function ProposeBetSheet() {
           accessibilityRole="button"
           accessibilityLabel="Zamknij"
           hitSlop={14}
+          disabled={loading}
           onPress={() => close()}
           style={styles.close}
         >

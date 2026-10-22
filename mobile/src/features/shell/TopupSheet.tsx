@@ -4,6 +4,7 @@ import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { authActions, useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
+import { getErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
@@ -30,18 +31,20 @@ export function TopupSheet() {
       const { data, error } = await supabase.rpc('secure_daily_topup', { p_user_id: userId });
       if (error) {
         haptics.error();
-        toast.error(error.message || TOPUP_ERROR_MESSAGE);
+        toast.error(getErrorMessage(error, TOPUP_ERROR_MESSAGE));
         return;
       }
-      // The RPC returns the new balance: show it right away, then refetch the
-      // profile so `last_topup_at` locks the chip until tomorrow.
-      if (typeof data === 'number') authActions.updateProfileBalance(data);
-      await authActions.refreshProfile();
+      // The RPC returns the new balance: show it and lock the chip until tomorrow
+      // right away, then confirm both with a background profile refetch.
+      if (typeof data === 'number') {
+        authActions.updateProfileBalance(data, { last_topup_at: new Date().toISOString() });
+      }
       haptics.success();
       toast.success('💰 Doładowano 100 zł. Wróć jutro po więcej!');
       close();
-    } catch {
-      toast.error(TOPUP_ERROR_MESSAGE);
+      void authActions.refreshProfile();
+    } catch (error) {
+      toast.error(getErrorMessage(error, TOPUP_ERROR_MESSAGE));
     } finally {
       setTopupLoading(false);
     }
@@ -53,6 +56,8 @@ export function TopupSheet() {
       variant="dialog"
       accessibilityLabel="💰 Doładuj portfel"
       style={[styles.card, { width: width - 20 }]}
+      // While the top-up runs the dialog stays open, so its success closes this dialog and nothing else.
+      dismissible={!topupLoading}
     >
       <Text size="lg" weight="600" align="center" accessibilityRole="header" style={styles.title}>
         💰 Doładuj portfel
@@ -82,6 +87,7 @@ export function TopupSheet() {
         accessibilityRole="button"
         accessibilityLabel="Zamknij"
         hitSlop={14}
+        disabled={topupLoading}
         onPress={() => close()}
         style={styles.close}
       >

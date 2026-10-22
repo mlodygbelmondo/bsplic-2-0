@@ -6,11 +6,11 @@ import { COMPRESSION_FAILED, compressImage } from './compressImage';
 
 export const PROFILE_AVATARS_BUCKET = 'profile-avatars';
 
-/** Web limits passed to `compressImageFile` for avatars. */
+/** Web limits passed to `compressImageFile` for avatars; the hard cap is the bucket's 140 000 B limit. */
 const AVATAR_COMPRESSION = {
   maxDimension: 640,
   targetBytes: 135 * 1024,
-  absoluteMaxBytes: 140 * 1024,
+  absoluteMaxBytes: 140_000,
   minDimension: 256,
 } as const;
 

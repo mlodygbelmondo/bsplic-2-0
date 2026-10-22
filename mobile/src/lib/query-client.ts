@@ -3,6 +3,7 @@ import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query'
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { isOffline, subscribeOffline } from './connectivity';
+import { serializeQueryCache } from './query-persistence';
 import { kv } from './storage';
 
 /**
@@ -37,19 +38,6 @@ export const PAGE_DATA_QUERY_OPTIONS = {
   refetchOnMount: 'always',
 } as const;
 
-/**
- * Queries whose key starts with one of these are never persisted: admin data,
- * live casino rounds and in-progress games must always load fresh (web rule).
- */
-export const NON_PERSISTED_QUERY_ROOTS = new Set<string>([
-  // Admin actions settle real bets: never act on a list restored from disk.
-  'admin',
-  'roulette-live',
-  'blackjack-live',
-  'jackpot-live',
-  'slots-live',
-]);
-
 export const queryPersister = createSyncStoragePersister({
   storage: {
     getItem: (key) => kv.getString(key) ?? null,
@@ -60,6 +48,7 @@ export const queryPersister = createSyncStoragePersister({
   },
   key: 'bsplic.query-cache',
   throttleTime: 1500,
+  serialize: serializeQueryCache,
 });
 
 export const PERSIST_MAX_AGE = 24 * 60 * 60_000;
