@@ -132,12 +132,17 @@ function RootNavigator() {
     >
       <Stack.Protected guard={signedIn || authLoading}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="profile/[userId]" />
-        <Stack.Screen name="social/[itemType]/[itemId]" />
+        {/* One screen per player / item / round: a double tap or a link back to it reuses the open one. */}
+        <Stack.Screen name="profile/[userId]" dangerouslySingular={(_, params) => String(params.userId)} />
+        <Stack.Screen
+          name="social/[itemType]/[itemId]"
+          dangerouslySingular={(_, params) => `${params.itemType}/${params.itemId}`}
+        />
         <Stack.Screen name="replay" />
         <Stack.Screen name="admin" />
         <Stack.Screen
           name="jackpot/draw/[roundId]"
+          dangerouslySingular={(_, params) => String(params.roundId)}
           options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
         />
         <Stack.Screen dangerouslySingular name="sheets/menu" options={overlayScreen} />

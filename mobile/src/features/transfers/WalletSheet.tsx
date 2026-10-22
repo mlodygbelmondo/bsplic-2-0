@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { WalletCards, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 
 import { useBalance, useProfile } from '@/features/auth/auth-store';
 import { haptics } from '@/lib/haptics';
@@ -33,13 +33,6 @@ export function WalletSheet() {
   const balance = Number(useBalance());
   const [tab, setTab] = useState<WalletTab>(params.tab === 'history' ? 'history' : 'send');
   const [submitting, setSubmitting] = useState(false);
-
-  // A transfer in flight cannot be dismissed (web ignores close while submitting).
-  useEffect(() => {
-    if (!submitting) return;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
-    return () => subscription.remove();
-  }, [submitting]);
 
   return (
     <OverlayScreen

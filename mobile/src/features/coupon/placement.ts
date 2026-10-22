@@ -1,5 +1,7 @@
 import type { CouponItem } from '@/types/database';
 import { getErrorMessage, isOutcomeUnknown } from '@/lib/errors';
+import { pluralPl } from '@/lib/format';
+import { floorMoney, roundMoney } from '@/lib/money';
 
 /**
  * Pure coupon placement rules, ported from the web's `useCouponPlacement`
@@ -28,8 +30,6 @@ export interface PlaceCouponParams {
 }
 
 export type PlaceCouponSecure = (params: PlaceCouponParams) => Promise<string>;
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 export function parseStake(value: string): number {
   const parsed = Number(value);
@@ -99,14 +99,12 @@ export function doubleStake(stake: string): string {
 
 /** Web `Max` preset: the balance floored to cents. */
 export function maxStakeFor(balance: number): string {
-  return (Math.floor(balance * 100) / 100).toString();
+  return floorMoney(balance).toString();
 }
 
-/** Drawer header label, exactly as the web counts it. */
+/** Drawer header label. */
 export function eventsLabel(count: number): string {
-  if (count === 1) return 'zdarzenie';
-  if (count < 5) return 'zdarzenia';
-  return 'zdarzeń';
+  return pluralPl(count, ['zdarzenie', 'zdarzenia', 'zdarzeń']);
 }
 
 /** Stake inputs accept the Polish decimal comma from the native keypad. */

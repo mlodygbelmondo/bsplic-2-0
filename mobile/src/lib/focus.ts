@@ -69,10 +69,13 @@ export function useTrackVisibleRoutes() {
  * True while the screen is on view: focused, or covered only by a sheet
  * (coupon, menu, wallet…), which leaves it visible around the sheet. Closing
  * a sheet then does not reopen channels or refetch the screen under it.
+ * Focus counts at once: the store fills a commit after a screen mounts.
  */
 export function useScreenVisible(): boolean {
+  const focused = useIsFocused();
   const { key } = useRoute();
-  return useVisibleRoutesStore((s) => s.keys.has(key));
+  const underSheet = useVisibleRoutesStore((s) => s.keys.has(key));
+  return focused || underSheet;
 }
 
 /** True while the screen is on view (see `useScreenVisible`) and the app is in the foreground. */

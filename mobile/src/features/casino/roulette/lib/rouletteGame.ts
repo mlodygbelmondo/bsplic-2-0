@@ -6,6 +6,8 @@ import type {
   RouletteRoundParticipant,
   RouletteTableRound,
 } from '@/types/database';
+import { pluralPl } from '@/lib/format';
+import { floorMoney, roundMoney } from '@/lib/money';
 
 import { getRouletteBetValueOptions, getRouletteColor, getRoulettePayoutMultiplier } from './roulette';
 
@@ -57,12 +59,12 @@ export function getRouletteStakeStatusLine(
 /** Web `adjustStake`: halves or doubles, never below 0.01, rounded to cents. */
 export function adjustRouletteStake(stake: string, multiplier: number): string {
   const nextStake = Math.max(0.01, (Number(stake) || 0) * multiplier);
-  return String(Math.round(nextStake * 100) / 100);
+  return String(roundMoney(nextStake));
 }
 
 /** Web `setMaxStake`: the whole balance floored to cents, at least 0.01. */
 export function getMaxRouletteStake(balance: number): string {
-  return String(Math.max(0.01, Math.floor(balance * 100) / 100));
+  return String(Math.max(0.01, floorMoney(balance)));
 }
 
 /** Decimal keyboards type a comma in Polish; the stake keeps a dot like the web number input. */
@@ -188,7 +190,7 @@ export function getRouletteShareContent(payout: number, winningNumber: number | 
 export function getRepeatBetsLabel(count: number, isRepeating: boolean): string {
   return isRepeating
     ? `Stawianie ${count} ${count === 1 ? 'ostatniego zakładu' : 'ostatnich zakładów'}`
-    : `Powtórz ${count} ${count === 1 ? 'ostatni zakład' : 'ostatnich zakładów'}`;
+    : `Powtórz ${count} ${pluralPl(count, ['ostatni zakład', 'ostatnie zakłady', 'ostatnich zakładów'])}`;
 }
 
 /** Color dot of a bet chip: numbers and colors have one, parity and range do not. */

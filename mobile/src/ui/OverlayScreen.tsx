@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,7 +50,7 @@ interface OverlayScreenProps {
   /** Popover only: window position of the card's top edge and its horizontal placement. */
   anchor?: { top: number; left: number };
   accessibilityLabel?: string;
-  /** False while a write is in flight: the backdrop stops closing the overlay. */
+  /** False while a write is in flight: the backdrop and Android back stop closing the overlay. */
   dismissible?: boolean;
   children: ReactNode;
 }
@@ -68,11 +68,31 @@ export function OverlayScreen({
   const insets = useSafeAreaInsets();
   const progress = useSharedValue(0);
   const closing = useRef(false);
+  const mounted = useRef(true);
   const drawerWidth = Math.min(width * 0.86, 384);
 
   useEffect(() => {
     progress.set(withTiming(1, { duration: TIMING[variant].open, easing: EASE }));
   }, [progress, variant]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // A write in flight cannot be dismissed (web ignores close while submitting).
+  useEffect(() => {
+    if (dismissible) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [dismissible]);
+
+  // Gone already (popped another way): popping now would close whatever is under it.
+  const finishIfMounted = (after: (() => void) | undefined, pop: boolean) => {
+    if (mounted.current) finish(after, pop);
+  };
 
   const close: Close = (after, options) => {
     if (closing.current) return;
@@ -80,7 +100,7 @@ export function OverlayScreen({
     const pop = options?.pop ?? true;
     progress.set(
       withTiming(0, { duration: TIMING[variant].close, easing: EASE }, (finished) => {
-        if (finished) scheduleOnRN(finish, after, pop);
+        if (finished) scheduleOnRN(finishIfMounted, after, pop);
       }),
     );
   };

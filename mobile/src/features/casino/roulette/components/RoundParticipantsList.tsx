@@ -2,6 +2,7 @@ import { Users } from 'lucide-react-native';
 import { memo } from 'react';
 import { View } from 'react-native';
 
+import { pluralPl } from '@/lib/format';
 import { createStyles } from '@/theme';
 import { Avatar, Text } from '@/ui';
 import type { RouletteRoundParticipant } from '@/types/database';
@@ -66,7 +67,7 @@ function ParticipantRow({ participant }: { participant: RouletteRoundParticipant
               {participant.username}
             </Text>
             <Text style={styles.betCount}>
-              {participant.bet_count} {participant.bet_count === 1 ? 'zakład' : 'zakłady'}
+              {participant.bet_count} {pluralPl(participant.bet_count, ['zakład', 'zakłady', 'zakładów'])}
             </Text>
           </View>
         </View>

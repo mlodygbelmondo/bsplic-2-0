@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { memo, useEffect, useState } from 'react';
+import { memo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
-import { useScreenActive } from '@/lib/focus';
+import { useMinuteNow } from '@/lib/minute-clock';
 import { createStyles } from '@/theme';
 import type { SocialStory } from '@/types/database';
 import { Text } from '@/ui';
@@ -15,7 +15,7 @@ import { getSocialImageUrl } from '../images';
 import { parseSocialContent } from '../lib/content';
 import type { SocialStoryProfile } from '../lib/feedList';
 import { storyComposerHandler } from './storyComposerHandler';
-import { STORY_CLOCK_MS, getActiveStories } from './storyFormat';
+import { getActiveStories } from './storyFormat';
 import { StoryImage } from './StoryImage';
 
 export type { SocialStoryProfile } from '../lib/feedList';
@@ -43,16 +43,8 @@ export const SocialStories = memo(function SocialStories({
   disabled,
 }: SocialStoriesProps) {
   const styles = useStyles();
-  const [now, setNow] = useState(() => Date.now());
-  const activeStories = getActiveStories(stories, now);
-  const screenActive = useScreenActive();
-
-  // Expired stories drop off while the strip is on view.
-  useEffect(() => {
-    if (!screenActive) return;
-    const interval = setInterval(() => setNow(Date.now()), STORY_CLOCK_MS);
-    return () => clearInterval(interval);
-  }, [screenActive]);
+  // Expired stories drop off on the social screen's minute clock.
+  const activeStories = getActiveStories(stories, useMinuteNow());
 
   return (
     <ScrollView

@@ -1,3 +1,5 @@
+import { roundMoney } from '@/lib/money';
+
 interface CouponLegForDisplay {
   oddsAtTime: number;
   result?: 'pending' | 'won' | 'lost' | 'refund';
@@ -31,7 +33,6 @@ interface CouponStatusInput {
 }
 
 const isPositiveNumber = (value: number) => Number.isFinite(value) && value > 0;
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 export function getDisplayedCouponOdds({ totalOdds, legs }: CouponDisplayInput): number {
   if (legs.length > 1 && legs.some((leg) => leg.result === 'refund')) {

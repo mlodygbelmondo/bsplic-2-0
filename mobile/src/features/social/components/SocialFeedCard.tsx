@@ -109,7 +109,9 @@ export const SocialFeedCard = memo(function SocialFeedCard({
       .then((copied) => {
         if (!copied) return;
         haptics.success();
-        router.navigate('/');
+        // From the item page, pop back to the tabs instead of pushing a second copy.
+        if (detail) router.dismissTo('/');
+        else router.navigate('/');
       })
       .finally(() => setCopying(false));
   };

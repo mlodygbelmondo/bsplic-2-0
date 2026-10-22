@@ -1,6 +1,7 @@
 import { AccessibilityInfo } from 'react-native';
 
 import { authActions, useAuthStore } from '@/features/auth/auth-store';
+import { roundMoney } from '@/lib/money';
 import { callRpc } from '@/lib/rpc';
 import { toast } from '@/lib/toast';
 import type { RouletteColor } from '@/types/database';
@@ -69,7 +70,7 @@ export async function repeatRouletteBets() {
   const { lastSettled, isRepeating } = useRouletteSession.getState();
   if (!controller || !lastSettled || isRepeating) return;
 
-  const totalStake = lastSettled.bets.reduce((sum, bet) => sum + bet.stake, 0);
+  const totalStake = lastSettled.bets.reduce((sum, bet) => roundMoney(sum + bet.stake), 0);
   if (totalStake > balance()) {
     toast.error('Saldo jest za małe, aby powtórzyć zakłady.');
     return;

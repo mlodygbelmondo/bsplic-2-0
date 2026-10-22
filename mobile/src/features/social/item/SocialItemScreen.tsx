@@ -110,7 +110,8 @@ function ItemScroll({
       <Pressable
         accessibilityRole="link"
         hitSlop={8}
-        onPress={() => router.navigate('/social')}
+        // Pops back to the tabs; a navigate would push a second copy of them.
+        onPress={() => router.dismissTo('/social')}
         style={styles.back}
       >
         {({ pressed }) => (

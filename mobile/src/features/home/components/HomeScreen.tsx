@@ -1,5 +1,6 @@
 import type { FlashListRef } from '@shopify/flash-list';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useScrollToTop } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import {
@@ -52,7 +53,7 @@ export function HomeScreen() {
   const hasBeenFocused = useHasBeenFocused();
   const screenActive = useScreenActive();
   const lite = useLiteMotion();
-  // Tabs stay mounted: the cards' decorative loops stop while another tab or a sheet covers home.
+  // Tabs stay mounted: the cards' decorative loops stop while another tab or a full-screen route covers home.
   const stillCards = lite || !screenActive;
   const reducedMotion = useReducedMotion();
   const storedCategory = useHomePreferences((s) => s.category);
@@ -105,6 +106,8 @@ export function HomeScreen() {
   // downward scroll, comes back on an upward one and follows pull-to-refresh.
   const listRef = useAnimatedRef<FlashListRef<HomeRow>>();
   const scrollY = useScrollOffset(listRef);
+  // Tapping the active tab scrolls up (the native effect only finds a list that comes first).
+  useScrollToTop(listRef);
   const contentHeight = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const chrome = useSharedValue<ScrollChromeState>(INITIAL_SCROLL_CHROME_STATE);

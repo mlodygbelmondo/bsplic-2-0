@@ -15,13 +15,12 @@ export const useMinuteNow = () => useMinuteClockStore((s) => s.now);
 
 /**
  * Ticks on each full minute while the calling screen is visible, and catches up
- * at once when it becomes visible again. The value is the start of the minute,
- * so coming back within the same minute re-renders nothing.
+ * at once when it becomes visible again.
  */
 export function useMinuteClockTicker(active: boolean) {
   useEffect(() => {
     if (!active) return;
-    const tick = () => useMinuteClockStore.setState({ now: Math.floor(Date.now() / TICK_MS) * TICK_MS });
+    const tick = () => useMinuteClockStore.setState({ now: Date.now() });
     tick();
     let interval: ReturnType<typeof setInterval> | undefined;
     const timeout = setTimeout(() => {

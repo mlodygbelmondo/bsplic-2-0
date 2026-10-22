@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef, type ViewToken } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useScrollToTop } from 'expo-router';
 import { ArrowUp } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import {
@@ -78,6 +78,8 @@ function SocialFeedBody() {
   const [chrome] = useState(createFeedChromeStore);
   const [visibility] = useState(createFeedVisibilityStore);
   const listRef = useRef<FlashListRef<SocialFeedItem>>(null);
+  // Tapping the active tab scrolls up (the native effect only finds a list that comes first).
+  useScrollToTop(listRef);
   const scrollYRef = useRef(0);
   const chromeStateRef = useRef<ScrollChromeState | undefined>(undefined);
 

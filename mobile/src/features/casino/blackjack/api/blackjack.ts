@@ -1,3 +1,4 @@
+import { roundMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -153,7 +154,7 @@ function normalizeState(raw: unknown): BlackjackGameState {
   const insuranceStatus = row.insurance_status ?? 'unavailable';
   const insuranceStake =
     insuranceStatus === 'offered' && rawInsuranceStake === 0
-      ? Math.round((Number(row.initial_stake) / 2) * 100) / 100
+      ? roundMoney(Number(row.initial_stake) / 2)
       : rawInsuranceStake;
 
   return {
@@ -190,7 +191,7 @@ function normalizeTableInfo(raw: RawBlackjackTableInfo): BlackjackTableInfo {
 
 /** The server requires `ROUND(stake, 2) = stake`. */
 export function roundStake(stake: number): number {
-  return Math.round(stake * 100) / 100;
+  return roundMoney(stake);
 }
 
 export async function getBlackjackTableInfo({ userId }: { userId: string }): Promise<BlackjackTableInfo> {

@@ -65,6 +65,13 @@ describe('getNextFeedOffset', () => {
     const first = [makePostFeedItem({ id: 'new' }), ...makePostPage(50)];
     expect(getNextFeedOffset(first, [first])).toBe(51);
   });
+
+  it('counts rows repeated by a page read after new items once', () => {
+    const first = [makePostFeedItem({ id: 'new-1' }), makePostFeedItem({ id: 'new-2' }), ...makePostPage(50)];
+    // Read at offset 50 after the two new items: it starts with post-48 and post-49 again.
+    const second = makePostPage(50, 48);
+    expect(getNextFeedOffset(second, [first, second])).toBe(100);
+  });
 });
 
 describe('mergeFeedItemIntoPages', () => {
@@ -132,6 +139,33 @@ describe('mergeFreshFirstPage', () => {
 
     expect(ids).not.toContain('post-3');
     expect(ids).toContain('post-49');
+    expect(ids).toHaveLength(101);
+  });
+
+  it('takes the fresh page as the first page when only it is loaded, keeping items that arrived meanwhile', () => {
+    const atRequest = pages(makePostPage(50, 0));
+    const data = pages([makePostFeedItem({ id: 'live-1' }), ...makePostPage(50, 0)]);
+    // post-10 was deleted, so the fresh page ends with post-50, which was never loaded.
+    const fresh = [...makePostPage(10, 0), ...makePostPage(40, 11)];
+
+    const merged = mergeFreshFirstPage(data, fresh, feedItemKeys(atRequest));
+    const ids = merged.pages.flat().map((item) => item.id);
+
+    expect(ids[0]).toBe('live-1');
+    expect(ids[1]).toBe('post-0');
+    expect(ids).not.toContain('post-10');
+    expect(ids[ids.length - 1]).toBe('post-50');
+    // The page stays full, so older items keep loading.
+    expect(getNextFeedOffset(merged.pages[0], merged.pages)).toBe(51);
+  });
+
+  it('places new items in front of the loaded item that follows them when more pages are loaded', () => {
+    const data = pages(makePostPage(50, 0), makePostPage(50, 50));
+    const fresh = [...makePostPage(5, 0), makePostFeedItem({ id: 'late-1' }), ...makePostPage(44, 5)];
+
+    const ids = mergeFreshFirstPage(data, fresh, feedItemKeys(data)).pages.flat().map((item) => item.id);
+
+    expect(ids.slice(4, 7)).toEqual(['post-4', 'late-1', 'post-5']);
     expect(ids).toHaveLength(101);
   });
 

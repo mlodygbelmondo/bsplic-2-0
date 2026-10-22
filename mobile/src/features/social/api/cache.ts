@@ -94,18 +94,24 @@ export function trimFeedCache(userId: string | null | undefined) {
 export async function refreshFeedFirstPage(userId: string | null | undefined): Promise<number> {
   const key = socialKeys.feed(userId);
   // A page load in flight would write its pages over the merge when it lands: let it land first.
-  const feedQuery = queryClient.getQueryCache().find<FeedPages>({ queryKey: key, exact: true });
-  if (feedQuery?.state.fetchStatus === 'fetching') {
-    await feedQuery.fetch(undefined, { cancelRefetch: false }).catch(() => undefined);
-  }
+  const settlePageLoad = async () => {
+    const feedQuery = queryClient.getQueryCache().find<FeedPages>({ queryKey: key, exact: true });
+    if (feedQuery?.state.fetchStatus === 'fetching') {
+      await feedQuery.fetch(undefined, { cancelRefetch: false }).catch(() => undefined);
+    }
+  };
+  await settlePageLoad();
   const atRequest = queryClient.getQueryData<FeedPages>(key);
   if (!atRequest) return 0;
   const loadedAtRequest = feedItemKeys(atRequest);
   const fresh = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, 0, userId);
+  await settlePageLoad();
   const previous = queryClient.getQueryData<FeedPages>(key);
   if (!previous) return 0;
-  queryClient.setQueryData<FeedPages>(key, mergeFreshFirstPage(previous, fresh, loadedAtRequest));
-  return fresh.filter((item) => findFeedItem(previous, getFeedItemKey(item)) === undefined).length;
+  const merged = mergeFreshFirstPage(previous, fresh, loadedAtRequest);
+  queryClient.setQueryData<FeedPages>(key, merged);
+  const before = feedItemKeys(previous);
+  return [...feedItemKeys(merged)].filter((itemKey) => !before.has(itemKey)).length;
 }
 
 // ── Comments ──────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CouponItem } from '@/types/database';
 
-import { doubleStake, eventsLabel, normalizeStakeInput, submitCoupon, type SubmitCouponInput } from './placement';
+import { doubleStake, eventsLabel, maxStakeFor, normalizeStakeInput, submitCoupon, type SubmitCouponInput } from './placement';
 
 function createCouponItem(id: string, odds: number): CouponItem {
   return {
@@ -203,5 +203,14 @@ describe('coupon stake helpers', () => {
     expect(eventsLabel(1)).toBe('zdarzenie');
     expect(eventsLabel(3)).toBe('zdarzenia');
     expect(eventsLabel(5)).toBe('zdarzeń');
+    expect(eventsLabel(12)).toBe('zdarzeń');
+    expect(eventsLabel(22)).toBe('zdarzenia');
+  });
+});
+
+describe('maxStakeFor', () => {
+  it('stakes the whole balance when it is whole cents', () => {
+    expect(maxStakeFor(0.29)).toBe('0.29');
+    expect(maxStakeFor(4.35)).toBe('4.35');
   });
 });

@@ -1,6 +1,7 @@
 import { authActions, useAuthStore } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE } from '@/lib/connectivity';
 import { haptics } from '@/lib/haptics';
+import { roundMoney } from '@/lib/money';
 import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
 
@@ -23,7 +24,6 @@ interface UseCouponPlacementResult {
   totalStake: number;
 }
 
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 /** Balance and history change after a placement; refresh them in the background. */
 function refreshAfterPlacement(userId: string, balanceBefore: number, chargedStake: number) {

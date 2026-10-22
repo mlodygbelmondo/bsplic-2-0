@@ -32,7 +32,12 @@ export function NotFoundScreen() {
           variant="gradient"
           accessibilityLabel="Wróć na stronę główną"
           label="Wróć na stronę główną"
-          onPress={() => router.replace(signedIn ? '/' : '/sign-in')}
+          onPress={() => {
+            if (!signedIn) router.replace('/sign-in');
+            // Pops back to the tabs when they are under this screen instead of stacking a second copy.
+            else if (router.canDismiss()) router.dismissTo('/');
+            else router.replace('/');
+          }}
           style={styles.button}
         />
       </View>

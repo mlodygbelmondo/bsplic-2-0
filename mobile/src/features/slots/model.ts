@@ -5,6 +5,8 @@
  * (`casino_slot_spin` / `casino_slot_bonus_spin`) decides every outcome.
  */
 
+import { roundMoney } from '@/lib/money';
+
 export type SlotGame = 'bandit' | 'candy' | 'ember' | 'tide';
 
 export const SLOT_GAMES = {
@@ -297,7 +299,7 @@ export function parseStakeInput(value: string): number | null {
 
 /** Stake after the − / + buttons (web keeps at least 1). */
 export function steppedStake(parsed: number | null, delta: -1 | 1): string {
-  return String(Math.max(1, (parsed ?? (delta < 0 ? 1 : 0)) + delta));
+  return String(Math.max(1, roundMoney((parsed ?? (delta < 0 ? 1 : 0)) + delta)));
 }
 
 export const SLOT_ERROR_MESSAGES: Record<string, string> = {

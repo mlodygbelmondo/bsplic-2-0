@@ -49,12 +49,14 @@ export function flattenFeedPages(data: FeedPages): SocialFeedItem[] {
 }
 
 /**
- * Offset of the next page: everything loaded so far, including items that
- * realtime prepended (they pushed older rows down on the server too).
+ * Offset of the next page: every distinct item loaded so far, including items
+ * that realtime prepended (they pushed older rows down on the server too). A
+ * page read after such rows were added repeats the rows they pushed down;
+ * those count once.
  */
 export function getNextFeedOffset(lastPage: SocialFeedItem[], allPages: SocialFeedItem[][]): number | undefined {
   if (lastPage.length < SOCIAL_FEED_PAGE_SIZE) return undefined;
-  return allPages.reduce((total, page) => total + page.length, 0);
+  return new Set(allPages.flatMap((page) => page.map(getFeedItemKey))).size;
 }
 
 /** Maps every loaded item; returning null removes it. Pages that do not change keep their identity. */
@@ -96,13 +98,18 @@ export function feedItemKeys(data: FeedPages): Set<string> {
 
 /**
  * Merges a freshly read first page into the loaded pages after a realtime gap,
- * so catching up is one request however far the user scrolled. Loaded items
- * take their fresh copy and new ones go on top in feed order. Items that were
- * loaded when the request started and are missing from the fresh page were
- * removed if they sat above the last item it still holds (anywhere, when the
- * fresh page is the whole feed); items that arrived during the request stay.
- * Without any overlap (more new items than a page) the fresh page replaces
- * everything, since the items between would be missing.
+ * so catching up is one request however far the user scrolled. With only the
+ * first page loaded, the fresh page replaces it (keeping items that arrived
+ * during the request on top). Otherwise loaded items take their fresh copy
+ * and new ones go in front of the loaded item that
+ * follows them in the fresh page. New items past the last loaded one are left
+ * to the next page load, which reaches them by offset (unless the fresh page
+ * is the whole feed). Items that were loaded when the request started and are
+ * missing from the fresh page were removed if they sat above the last item it
+ * still holds (anywhere, when the fresh page is the whole feed); items that
+ * arrived during the request stay. Without any overlap (more new items than a
+ * page) the fresh page replaces everything, since the items between would be
+ * missing.
  */
 export function mergeFreshFirstPage(
   data: FeedPages,
@@ -112,27 +119,57 @@ export function mergeFreshFirstPage(
   const freshByKey = new Map(fresh.map((item) => [getFeedItemKey(item), item]));
   const loadedKeys = data.pages.flatMap((page) => page.map(getFeedItemKey));
   const loaded = new Set(loadedKeys);
-  const added = fresh.filter((item) => !loaded.has(getFeedItemKey(item)));
   const complete = fresh.length < SOCIAL_FEED_PAGE_SIZE;
-  if (!complete && added.length === fresh.length) {
+  if (!complete && fresh.every((item) => !loaded.has(getFeedItemKey(item)))) {
     return { pages: [fresh], pageParams: data.pageParams.slice(0, 1) };
   }
+  if (!complete && data.pages.length === 1) {
+    const arrived = data.pages[0].filter((item) => {
+      const key = getFeedItemKey(item);
+      return !loadedAtRequest.has(key) && !freshByKey.has(key);
+    });
+    return { pages: [[...arrived, ...fresh]], pageParams: data.pageParams.slice(0, 1) };
+  }
+  const insertBefore = new Map<string, SocialFeedItem[]>();
+  let pending: SocialFeedItem[] = [];
+  for (const item of fresh) {
+    const key = getFeedItemKey(item);
+    if (!loaded.has(key)) pending.push(item);
+    else if (pending.length > 0) {
+      insertBefore.set(key, pending);
+      pending = [];
+    }
+  }
+  const tail = complete ? pending : [];
   let lastCovered = loadedKeys.length;
   if (!complete) {
     lastCovered -= 1;
     while (lastCovered >= 0 && !freshByKey.has(loadedKeys[lastCovered])) lastCovered -= 1;
   }
   let position = -1;
-  const updated = mapFeedPages(data, (item) => {
-    position += 1;
-    const key = getFeedItemKey(item);
-    const freshItem = freshByKey.get(key);
-    if (freshItem) return freshItem;
-    return position < lastCovered && loadedAtRequest.has(key) ? null : item;
+  let changed = false;
+  const pages = data.pages.map((page, pageIndex) => {
+    const isLast = pageIndex === data.pages.length - 1;
+    let pageChanged = isLast && tail.length > 0;
+    const next: SocialFeedItem[] = [];
+    for (const item of page) {
+      position += 1;
+      const key = getFeedItemKey(item);
+      const before = insertBefore.get(key);
+      if (before) {
+        next.push(...before);
+        pageChanged = true;
+      }
+      const kept = freshByKey.get(key) ?? (position < lastCovered && loadedAtRequest.has(key) ? null : item);
+      if (kept !== item) pageChanged = true;
+      if (kept) next.push(kept);
+    }
+    if (isLast) next.push(...tail);
+    if (!pageChanged) return page;
+    changed = true;
+    return next;
   });
-  if (added.length === 0) return updated;
-  const [first, ...rest] = updated.pages;
-  return { ...updated, pages: [[...added, ...first], ...rest] };
+  return changed ? { ...data, pages } : data;
 }
 
 /** Keeps only the first page (the web caches and refreshes just the first 50 items). */

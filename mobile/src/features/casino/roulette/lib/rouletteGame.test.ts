@@ -242,7 +242,8 @@ describe('copy helpers', () => {
 
   it('labels the repeat button by bet count', () => {
     expect(getRepeatBetsLabel(1, false)).toBe('Powtórz 1 ostatni zakład');
-    expect(getRepeatBetsLabel(3, false)).toBe('Powtórz 3 ostatnich zakładów');
+    expect(getRepeatBetsLabel(3, false)).toBe('Powtórz 3 ostatnie zakłady');
+    expect(getRepeatBetsLabel(5, false)).toBe('Powtórz 5 ostatnich zakładów');
     expect(getRepeatBetsLabel(1, true)).toBe('Stawianie 1 ostatniego zakładu');
   });
 });

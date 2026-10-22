@@ -30,6 +30,7 @@ export function formatNotificationTime(dateStr: string, now: number = Date.now()
   if (hours < 24) return `${hours} godz. temu`;
 
   const days = Math.floor(hours / 24);
+  if (days === 1) return '1 dzień temu';
   if (days < 7) return `${days} dni temu`;
 
   return new Date(dateStr).toLocaleDateString('pl-PL');
