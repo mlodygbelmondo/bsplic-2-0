@@ -90,28 +90,45 @@ export function mergeFeedItemIntoPages(data: FeedPages, nextItem: SocialFeedItem
   return { ...data, pages: [[nextItem, ...first], ...rest] };
 }
 
+export function feedItemKeys(data: FeedPages): Set<string> {
+  return new Set(data.pages.flatMap((page) => page.map(getFeedItemKey)));
+}
+
 /**
  * Merges a freshly read first page into the loaded pages after a realtime gap,
  * so catching up is one request however far the user scrolled. Loaded items
- * take their fresh copy, ones above the last item the fresh page still holds
- * but missing from it were removed, and new ones go on top in feed order. A
- * single page is simply replaced; without any overlap (more new items than a
- * page) the fresh page replaces everything, since the items between would be missing.
+ * take their fresh copy and new ones go on top in feed order. Items that were
+ * loaded when the request started and are missing from the fresh page were
+ * removed if they sat above the last item it still holds (anywhere, when the
+ * fresh page is the whole feed); items that arrived during the request stay.
+ * Without any overlap (more new items than a page) the fresh page replaces
+ * everything, since the items between would be missing.
  */
-export function mergeFreshFirstPage(data: FeedPages, fresh: SocialFeedItem[]): FeedPages {
+export function mergeFreshFirstPage(
+  data: FeedPages,
+  fresh: SocialFeedItem[],
+  loadedAtRequest: ReadonlySet<string>,
+): FeedPages {
   const freshByKey = new Map(fresh.map((item) => [getFeedItemKey(item), item]));
   const loadedKeys = data.pages.flatMap((page) => page.map(getFeedItemKey));
   const loaded = new Set(loadedKeys);
   const added = fresh.filter((item) => !loaded.has(getFeedItemKey(item)));
-  if (data.pages.length <= 1 || added.length === fresh.length) {
+  const complete = fresh.length < SOCIAL_FEED_PAGE_SIZE;
+  if (!complete && added.length === fresh.length) {
     return { pages: [fresh], pageParams: data.pageParams.slice(0, 1) };
   }
-  let lastCovered = loadedKeys.length - 1;
-  while (lastCovered >= 0 && !freshByKey.has(loadedKeys[lastCovered])) lastCovered -= 1;
+  let lastCovered = loadedKeys.length;
+  if (!complete) {
+    lastCovered -= 1;
+    while (lastCovered >= 0 && !freshByKey.has(loadedKeys[lastCovered])) lastCovered -= 1;
+  }
   let position = -1;
   const updated = mapFeedPages(data, (item) => {
     position += 1;
-    return freshByKey.get(getFeedItemKey(item)) ?? (position < lastCovered ? null : item);
+    const key = getFeedItemKey(item);
+    const freshItem = freshByKey.get(key);
+    if (freshItem) return freshItem;
+    return position < lastCovered && loadedAtRequest.has(key) ? null : item;
   });
   if (added.length === 0) return updated;
   const [first, ...rest] = updated.pages;

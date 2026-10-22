@@ -61,10 +61,11 @@ function DialogClose() {
 function ReactorsBody({ target, initial }: { target: ReactorsTarget; initial: ReactionType | null }) {
   const styles = useStyles();
   const currentUserId = useUserId();
-  const { data: reactors, isPending } = useQuery(reactorsQuery(target));
+  const { data: reactors, isPending, isError } = useQuery(reactorsQuery(target));
   const [selected, setSelected] = useState<ReactionType | null>(null);
 
   if (isPending) return <Text color="mutedForeground">Ładowanie...</Text>;
+  if (isError && !reactors) return <Text color="mutedForeground">Nie udało się wczytać reakcji</Text>;
   if (!reactors || reactors.length === 0) return <Text color="mutedForeground">Brak reakcji</Text>;
 
   const byType = new Map<ReactionType, ReactorUser[]>();

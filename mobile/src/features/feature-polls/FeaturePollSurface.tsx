@@ -8,7 +8,7 @@ import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { useBootVisible } from '@/features/boot/boot-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
 import { useModalRouteOpen } from '@/lib/focus';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isTransportFailure } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
@@ -80,7 +80,11 @@ export function FeaturePollSurface() {
           queryClient.setQueryData(queryKey, null);
         }}
         // "Already voted" or "poll closed" (e.g. answered on the web): a refetch closes the dialog.
-        onVoteFailed={() => void queryClient.invalidateQueries({ queryKey: featurePollQueries.available(userId).queryKey })}
+        // Not after a network failure: a failing refetch would hide the poll and lose the choice.
+        onVoteFailed={(error) => {
+          if (isTransportFailure(error)) return;
+          void queryClient.invalidateQueries({ queryKey: featurePollQueries.available(userId).queryKey });
+        }}
       />
     </DialogModal>
   );
@@ -95,7 +99,7 @@ function FeaturePollForm({
   poll: AvailableFeaturePoll;
   loadingPoll: boolean;
   onVoted: () => void;
-  onVoteFailed: () => void;
+  onVoteFailed: (error: unknown) => void;
 }) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -151,7 +155,7 @@ function FeaturePollForm({
     } catch (error: unknown) {
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się zapisać głosu'));
-      onVoteFailed();
+      onVoteFailed(error);
     } finally {
       setSubmitting(false);
     }

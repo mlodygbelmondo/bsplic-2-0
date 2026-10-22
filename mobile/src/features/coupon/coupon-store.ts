@@ -82,6 +82,12 @@ export const couponActions = {
     useCouponStore.setState(({ items }) => ({ items: items.filter((i) => i.bet.id !== betId) }));
   },
 
+  /** Removes these exact selections; a pick changed meanwhile (new object) stays. */
+  removeItems(removed: CouponItem[]) {
+    const set = new Set(removed);
+    useCouponStore.setState(({ items }) => ({ items: items.filter((item) => !set.has(item)) }));
+  },
+
   clearCoupon() {
     useCouponStore.setState({ items: [], preferredCouponType: null });
   },

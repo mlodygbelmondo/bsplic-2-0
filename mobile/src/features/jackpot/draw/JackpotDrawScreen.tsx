@@ -91,7 +91,7 @@ export function JackpotDrawScreen() {
   const foregroundRef = useRef<() => void>(() => undefined);
 
   const draw = localDraw ?? query.data ?? null;
-  const loading = poolId !== null && query.isPending && query.fetchStatus !== 'idle';
+  const loading = poolId !== null && query.isPending && query.fetchStatus === 'fetching';
   useBootHold(loading);
 
   const setPhaseState = (next: ReplayPhase) => {
@@ -275,19 +275,11 @@ export function JackpotDrawScreen() {
     </>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.page}>
-        {background}
-        <View style={[styles.loading, { marginTop: insets.top }]} accessibilityRole="progressbar">
-          <SpinningLoader size={1.25 * REM} color={DRAW_COLORS.goldSoft} />
-          <Text style={styles.loadingText}>Ładowanie losowania</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (!draw) {
+  if (loading || !draw) {
+    // The modal has no swipe-to-dismiss: the back button stays while it loads or fails.
+    let message = 'Nie znaleziono tego losowania.';
+    if (query.isPending && query.fetchStatus === 'paused') message = 'Brak połączenia. Wczytamy losowanie, gdy wrócisz online.';
+    else if (query.isError) message = 'Nie udało się wczytać losowania.';
     return (
       <View style={styles.page}>
         {background}
@@ -295,9 +287,25 @@ export function JackpotDrawScreen() {
           <View style={styles.topbar}>
             <BackButton />
           </View>
-          <View style={styles.loading}>
-            <Text style={styles.loadingText}>Nie znaleziono tego losowania.</Text>
-          </View>
+          {loading ? (
+            <View style={styles.loading} accessibilityRole="progressbar">
+              <SpinningLoader size={1.25 * REM} color={DRAW_COLORS.goldSoft} />
+              <Text style={styles.loadingText}>Ładowanie losowania</Text>
+            </View>
+          ) : (
+            <View style={styles.message}>
+              <Text style={[styles.loadingText, styles.messageText]}>{message}</Text>
+              {query.isError ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void query.refetch()}
+                  style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+                >
+                  <Text style={styles.loadingText}>Spróbuj ponownie</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -513,6 +521,16 @@ const styles = StyleSheet.create({
     gap: 0.6 * REM,
   },
   loadingText: { color: DRAW_COLORS.goldSoft, fontSize: 0.86 * REM, lineHeight: 0.86 * REM * 1.5, fontWeight: '800' },
+  message: { minHeight: 18 * REM, alignItems: 'center', justifyContent: 'center', gap: REM, paddingHorizontal: 1.5 * REM },
+  messageText: { textAlign: 'center' },
+  retry: {
+    paddingHorizontal: REM,
+    paddingVertical: 0.5 * REM,
+    borderRadius: 0.6 * REM,
+    borderWidth: 1,
+    borderColor: DRAW_COLORS.goldSoft,
+  },
+  retryPressed: { opacity: 0.7 },
   topbar: {
     minHeight: 2.2 * REM,
     flexDirection: 'row',

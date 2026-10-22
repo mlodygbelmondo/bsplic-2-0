@@ -121,6 +121,12 @@ function NotificationsPanel() {
         <Text size="xs" color="mutedForeground" style={styles.stateText}>
           Ładowanie...
         </Text>
+      ) : listQuery.isError && notifications.length === 0 ? (
+        <Pressable accessibilityRole="button" onPress={() => void listQuery.refetch()} style={styles.stateText}>
+          <Text size="xs" color="mutedForeground">
+            Nie udało się wczytać powiadomień. Dotknij, aby spróbować ponownie.
+          </Text>
+        </Pressable>
       ) : notifications.length === 0 ? (
         <Text size="xs" color="mutedForeground" style={styles.stateText}>
           Brak powiadomień

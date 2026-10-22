@@ -5,6 +5,7 @@ import { memo, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { PREFETCH_PRESS_DELAY_MS, prefetchPublicProfile } from '@/features/profile/api/profileQueries';
+import { useScreenActive } from '@/lib/focus';
 import { createStyles } from '@/theme';
 import type { SocialStory } from '@/types/database';
 import { Text } from '@/ui';
@@ -44,11 +45,14 @@ export const SocialStories = memo(function SocialStories({
   const styles = useStyles();
   const [now, setNow] = useState(() => Date.now());
   const activeStories = getActiveStories(stories, now);
+  const screenActive = useScreenActive();
 
+  // Expired stories drop off while the strip is on view.
   useEffect(() => {
+    if (!screenActive) return;
     const interval = setInterval(() => setNow(Date.now()), STORY_CLOCK_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [screenActive]);
 
   return (
     <ScrollView

@@ -21,6 +21,7 @@ import { PERSIST_BUSTER, queryClient, queryPersister } from '@/lib/query-client'
 import { PERSIST_MAX_AGE, shouldPersistQuery } from '@/lib/query-persistence';
 import { ThemeProvider, useTheme } from '@/theme';
 import { formSheet, overlayScreen, sheetDefaults } from '@/lib/sheet-options';
+import { useTrackVisibleRoutes } from '@/lib/focus';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ fade: true, duration: 200 });
@@ -110,6 +111,7 @@ function SignedInSurfaces() {
 }
 
 function RootNavigator() {
+  useTrackVisibleRoutes();
   const signedIn = useAuthStore((s) => s.user !== null);
   // Until the stored session is read, keep the signed-in routes open so a
   // cold-start deep link is not redirected away; the boot overlay covers it.

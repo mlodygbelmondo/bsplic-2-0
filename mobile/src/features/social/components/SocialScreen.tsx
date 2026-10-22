@@ -1,6 +1,6 @@
 import { FlashList, type FlashListRef, type ViewToken } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowUp } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import {
@@ -19,7 +19,7 @@ import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
 import { getErrorMessage } from '@/lib/errors';
-import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
+import { useHasBeenFocused, useScreenActive, useScreenVisible } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
 import { useMinuteClockTicker } from '@/lib/minute-clock';
 import { getNextScrollChromeState, type ScrollChromeState } from '@/lib/scroll-chrome';
@@ -73,7 +73,7 @@ function SocialFeedBody() {
   const filter = parseFeedFilter(useLocalSearchParams<{ filter?: string }>().filter);
   const feed = useSocialFeed(userId, filter);
   // The tab stays mounted: resubscribing on focus refetches the stories.
-  const storiesQuery = useQuery({ ...socialStoriesQuery(), subscribed: useIsFocused() });
+  const storiesQuery = useQuery({ ...socialStoriesQuery(), subscribed: useScreenVisible() });
   useMinuteClockTicker(useScreenActive());
   const [chrome] = useState(createFeedChromeStore);
   const [visibility] = useState(createFeedVisibilityStore);

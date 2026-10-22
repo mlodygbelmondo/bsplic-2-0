@@ -8,6 +8,7 @@ import {
   isAkoItem,
   mapFeedPages,
   mergeFeedItemIntoPages,
+  feedItemKeys,
   mergeFreshFirstPage,
   parseFeedFilter,
   trimFeedToFirstPage,
@@ -107,7 +108,7 @@ describe('mergeFreshFirstPage', () => {
       ...makePostPage(47, 1),
     ];
 
-    const merged = mergeFreshFirstPage(data, fresh);
+    const merged = mergeFreshFirstPage(data, fresh, feedItemKeys(data));
 
     expect(merged.pages).toHaveLength(2);
     expect(merged.pages[0].slice(0, 3).map((item) => item.id)).toEqual(['new-1', 'new-2', 'post-0']);
@@ -127,23 +128,36 @@ describe('mergeFreshFirstPage', () => {
       ...makePostPage(45, 4),
     ];
 
-    const ids = mergeFreshFirstPage(data, fresh).pages.flat().map((item) => item.id);
+    const ids = mergeFreshFirstPage(data, fresh, feedItemKeys(data)).pages.flat().map((item) => item.id);
 
     expect(ids).not.toContain('post-3');
     expect(ids).toContain('post-49');
     expect(ids).toHaveLength(101);
   });
 
-  it('replaces a single loaded page with the fresh one', () => {
+  it('matches a fresh page shorter than a page size exactly: it is the whole feed', () => {
+    const data = pages(makePostPage(3));
     const fresh = [makePostFeedItem({ id: 'new-1' }), ...makePostPage(1, 1)];
-    const merged = mergeFreshFirstPage(pages(makePostPage(3)), fresh);
+    const merged = mergeFreshFirstPage(data, fresh, feedItemKeys(data));
     expect(merged.pages).toEqual([fresh]);
     expect(merged.pageParams).toEqual([0]);
   });
 
+  it('keeps items that arrived while the fresh page was loading', () => {
+    const atRequest = pages(makePostPage(3));
+    // A realtime insert landed on top after the request started.
+    const data = pages([makePostFeedItem({ id: 'live-1' }), ...makePostPage(3)]);
+    const fresh = makePostPage(3);
+
+    const ids = mergeFreshFirstPage(data, fresh, feedItemKeys(atRequest)).pages.flat().map((item) => item.id);
+
+    expect(ids).toEqual(['live-1', 'post-0', 'post-1', 'post-2']);
+  });
+
   it('starts over from the fresh page when it shares no item with the loaded pages', () => {
     const fresh = makePostPage(50, 200);
-    const merged = mergeFreshFirstPage(pages(makePostPage(50, 0), makePostPage(50, 50)), fresh);
+    const data = pages(makePostPage(50, 0), makePostPage(50, 50));
+    const merged = mergeFreshFirstPage(data, fresh, feedItemKeys(data));
     expect(merged.pages).toEqual([fresh]);
     expect(merged.pageParams).toEqual([0]);
   });

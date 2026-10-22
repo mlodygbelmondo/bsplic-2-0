@@ -71,6 +71,9 @@ interface BetFeedListProps {
   loadingMore: boolean;
   hasRegularBets: boolean;
   onLoadMore: () => void;
+  /** The first page failed: the empty list offers a retry instead of "no bets". */
+  loadFailed: boolean;
+  onRetry: () => void;
   refreshing: boolean;
   onRefresh: () => void;
   contentHeight: SharedValue<number>;
@@ -97,6 +100,8 @@ export function BetFeedList({
   loadingMore,
   hasRegularBets,
   onLoadMore,
+  loadFailed,
+  onRetry,
   refreshing,
   onRefresh,
   contentHeight,
@@ -180,14 +185,34 @@ export function BetFeedList({
         </Animated.View>
       }
       ListEmptyComponent={
-        <Animated.View style={[styles.empty, dimStyle]}>
-          <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>
-            Brak dostępnych zakładów
-          </RNText>
-          <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptySubtitle}>
-            Wróć później lub zmień kategorię
-          </RNText>
-        </Animated.View>
+        loadFailed ? (
+          <View style={styles.empty}>
+            <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>
+              Nie udało się wczytać zakładów
+            </RNText>
+            <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptySubtitle}>
+              Sprawdź połączenie i spróbuj ponownie.
+            </RNText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRetry}
+              style={({ pressed }) => [styles.loadMore, styles.retry, pressed && styles.loadMorePressed]}
+            >
+              <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.loadMoreText}>
+                Spróbuj ponownie
+              </RNText>
+            </Pressable>
+          </View>
+        ) : (
+          <Animated.View style={[styles.empty, dimStyle]}>
+            <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptyTitle}>
+              Brak dostępnych zakładów
+            </RNText>
+            <RNText maxFontSizeMultiplier={MAX_FONT_SCALE} style={styles.emptySubtitle}>
+              Wróć później lub zmień kategorię
+            </RNText>
+          </Animated.View>
+        )
       }
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
@@ -215,6 +240,7 @@ const useStyles = createStyles(({ colors, radius }) => ({
     alignItems: 'center',
   },
   loadMoreSpaced: { marginTop: 10 },
+  retry: { marginTop: 16, alignSelf: 'center' },
   loadMorePressed: { backgroundColor: colors.muted },
   loadMoreBusy: { opacity: 0.7 },
   loadMoreText: { fontFamily: 'Inter', fontSize: 14, lineHeight: 20, fontWeight: '500', color: colors.foreground },

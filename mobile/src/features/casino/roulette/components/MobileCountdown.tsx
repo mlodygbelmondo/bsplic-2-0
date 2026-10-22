@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { useScreenActive } from '@/lib/focus';
 import { createStyles } from '@/theme';
 import { Text } from '@/ui';
 
@@ -27,15 +28,17 @@ export const MobileCountdown = memo(function MobileCountdown() {
     state.currentRound ? getRouletteCountdownTargetMs(state.currentRound) : null,
   );
   const [seconds, setSeconds] = useState(() => secondsLeft(targetMs));
+  // Off screen or in the background nothing shows it; it catches up when back.
+  const active = useScreenActive();
 
   useEffect(() => {
     // Re-render only when the displayed second changes.
     const update = () => setSeconds(secondsLeft(targetMs));
     update();
-    if (!targetMs) return;
+    if (!targetMs || !active) return;
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [targetMs]);
+  }, [targetMs, active]);
 
   const label = isIdle ? 'Czeka na zakład' : phase === 'spinning' ? 'Wynik za' : 'Spin za';
   const countdown = isIdle ? '--:--' : formatRouletteCountdown(seconds * 1000);

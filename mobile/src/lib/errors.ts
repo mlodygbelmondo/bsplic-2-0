@@ -17,7 +17,7 @@ const errorMessageOf = (error: unknown): string | null =>
     : null;
 
 /** The request failed in transit or the backend could not run it. */
-const isTransportFailure = (error: unknown): boolean => {
+export const isTransportFailure = (error: unknown): boolean => {
   const message = errorMessageOf(error);
   if (message === null) return false;
   const code = (error as { code?: unknown }).code;
@@ -28,7 +28,7 @@ const isTransportFailure = (error: unknown): boolean => {
 // The request never left the device (offline, server unreachable) or the
 // database never ran it (pool timeout, cancelled statement, no database).
 const NOT_RUN =
-  /appears to be offline|could not connect to the server|hostname could not be found|connection pool|statement timeout|could not connect with the database/i;
+  /appears to be offline|could not connect to the server|hostname could not be found|unable to resolve host|failed to connect to|connection pool|statement timeout|could not connect with the database/i;
 
 /**
  * A write failed in transit in a way that leaves its outcome unknown: a timeout,

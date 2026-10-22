@@ -16,10 +16,12 @@ import { useBootHold } from '@/features/boot/boot-store';
 import { CouponBar } from '@/features/coupon/CouponBar';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
+import { getErrorMessage } from '@/lib/errors';
 import { useHasBeenFocused, useScreenActive } from '@/lib/focus';
 import { useMinuteClockTicker } from '@/lib/minute-clock';
 import { useLiteMotion, useReducedMotion } from '@/lib/motion';
 import { getNextScrollChromeState, INITIAL_SCROLL_CHROME_STATE, type ScrollChromeState } from '@/lib/scroll-chrome';
+import { toast } from '@/lib/toast';
 import { createStyles } from '@/theme';
 import type { Category } from '@/types/database';
 import { ScreenBackground } from '@/ui';
@@ -155,7 +157,11 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = () => {
     setRefreshing(true);
-    void Promise.all([betsQuery.refetch(), categoriesQuery.refetch()]).finally(() => setRefreshing(false));
+    void Promise.all([betsQuery.refetch(), categoriesQuery.refetch()])
+      .then(([bets]) => {
+        if (bets.isError) toast.error(getErrorMessage(bets.error, 'Nie udało się odświeżyć zakładów'));
+      })
+      .finally(() => setRefreshing(false));
   };
 
   const handleLoadMore = () => {
@@ -181,6 +187,8 @@ export function HomeScreen() {
             loadingMore={betsQuery.isFetchingNextPage}
             hasRegularBets={(sections?.sortedBets.length ?? 0) > 0}
             onLoadMore={handleLoadMore}
+            loadFailed={betsQuery.isError && !sections}
+            onRetry={whenOnline(() => void betsQuery.refetch())}
             refreshing={refreshing}
             onRefresh={whenOnline(handleRefresh)}
             contentHeight={contentHeight}

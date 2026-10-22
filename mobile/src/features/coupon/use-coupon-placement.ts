@@ -92,10 +92,10 @@ export function useCouponPlacement(
 
     if (result.status === 'placed') {
       refreshAfterPlacement(user.id, balance, result.chargedStake);
-      // Keep selections added on Home while the placement was in flight.
-      const submittedIds = new Set(submittedItems.map((item) => item.bet.id));
-      if (useCouponStore.getState().items.every((item) => submittedIds.has(item.bet.id))) couponActions.clearCoupon();
-      else submittedIds.forEach(couponActions.removeItem);
+      // Keep selections added or changed on Home while the placement was in flight.
+      const submitted = new Set(submittedItems);
+      if (useCouponStore.getState().items.every((item) => submitted.has(item))) couponActions.clearCoupon();
+      else couponActions.removeItems(submittedItems);
       haptics.success();
       onSuccess();
       toast.success('Kupon postawiony pomyślnie!');
@@ -103,7 +103,8 @@ export function useCouponPlacement(
     }
 
     if (result.placedBetIds.length > 0) {
-      result.placedBetIds.forEach(couponActions.removeItem);
+      const placed = new Set(result.placedBetIds);
+      couponActions.removeItems(submittedItems.filter((item) => placed.has(item.bet.id)));
       refreshAfterPlacement(user.id, balance, result.chargedStake);
     } else {
       // After a timeout the server may still have placed it: show the real balance and history.

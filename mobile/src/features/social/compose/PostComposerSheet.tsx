@@ -140,7 +140,15 @@ export function PostComposerSheet() {
           style={styles.textarea}
         />
 
-        {image ? <ImagePreview image={image} onRemove={() => postDraftActions.setImage(null)} /> : null}
+        {image ? (
+          <ImagePreview
+            image={image}
+            onRemove={() => {
+              // The draft in flight must match the published one, so it resets on success.
+              if (!usePostDraftStore.getState().submitting) postDraftActions.setImage(null);
+            }}
+          />
+        ) : null}
 
         {activeMention ? <MentionSuggestions loading={loading} users={suggestions} onSelect={handleMentionSelect} /> : null}
 

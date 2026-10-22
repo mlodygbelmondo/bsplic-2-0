@@ -1,6 +1,9 @@
-import { useIsFocused, useSegments } from 'expo-router';
+import { useIsFocused, useRootNavigationState, useRoute, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
+import { create } from 'zustand';
+
+import { collectVisibleRouteKeys } from './visible-routes';
 
 /**
  * True while the app is in the foreground. iOS `inactive` (Control Center,
@@ -52,9 +55,29 @@ export function useModalRouteOpen(): boolean {
   return open || dismissing;
 }
 
-/** True while the screen is focused and the app is in the foreground. */
+const useVisibleRoutesStore = create<{ keys: ReadonlySet<string> }>(() => ({ keys: new Set() }));
+
+/** Mounted once in the root layout: publishes which routes are on screen. */
+export function useTrackVisibleRoutes() {
+  const state = useRootNavigationState();
+  useEffect(() => {
+    useVisibleRoutesStore.setState({ keys: collectVisibleRouteKeys(state) });
+  }, [state]);
+}
+
+/**
+ * True while the screen is on view: focused, or covered only by a sheet
+ * (coupon, menu, wallet…), which leaves it visible around the sheet. Closing
+ * a sheet then does not reopen channels or refetch the screen under it.
+ */
+export function useScreenVisible(): boolean {
+  const { key } = useRoute();
+  return useVisibleRoutesStore((s) => s.keys.has(key));
+}
+
+/** True while the screen is on view (see `useScreenVisible`) and the app is in the foreground. */
 export function useScreenActive(): boolean {
-  const focused = useIsFocused();
+  const visible = useScreenVisible();
   const appActive = useAppActive();
-  return focused && appActive;
+  return visible && appActive;
 }

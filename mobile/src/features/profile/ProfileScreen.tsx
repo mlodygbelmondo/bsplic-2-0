@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useIsFocused, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
@@ -11,7 +11,7 @@ import { ReplayLaunchCard } from '@/features/replay/ReplayLaunchCard';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { useIsOffline, whenOnline } from '@/lib/connectivity';
 import { env } from '@/lib/env';
-import { useHasBeenFocused } from '@/lib/focus';
+import { useHasBeenFocused, useScreenVisible } from '@/lib/focus';
 import { createStyles, useTheme } from '@/theme';
 import type { Badge } from '@/types/database';
 import { ScreenBackground } from '@/ui';
@@ -93,8 +93,8 @@ function OwnProfileContent() {
   const history = useProfileHistory(userId);
   const avatar = useAvatarUpload(userId, offline);
 
-  // Tabs stay mounted: resubscribing on focus refetches (`refetchOnMount: 'always'`), like a web page visit.
-  const focused = useIsFocused();
+  // Tabs stay mounted: resubscribing when on view refetches (`refetchOnMount: 'always'`), like a web page visit.
+  const focused = useScreenVisible();
   const badgesQuery = useQuery({
     ...profileBadgesQueryOptions(userId ?? ''),
     enabled: Boolean(userId),

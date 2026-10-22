@@ -67,6 +67,8 @@ export function MoneyTransferSend({
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  // The last send may have gone through: a retry with the same key must reach the server.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const [rules, setRules] = useState<MoneyTransferRules | null>(null);
   const [rulesError, setRulesError] = useState<string | null>(null);
   const [rulesRequest, setRulesRequest] = useState(0);
@@ -191,6 +193,7 @@ export function MoneyTransferSend({
       return;
     }
     setIdempotencyKey(randomUUID());
+    setUnconfirmed(false);
     setConfirming(true);
   };
 
@@ -200,7 +203,8 @@ export function MoneyTransferSend({
       toast.error(OFFLINE_WRITE_MESSAGE);
       return;
     }
-    const validationError = getValidationError();
+    // The balance already reflects a transfer that went through: only the server knows.
+    const validationError = unconfirmed ? null : getValidationError();
     if (validationError) {
       setConfirming(false);
       setIdempotencyKey(null);
@@ -219,6 +223,7 @@ export function MoneyTransferSend({
         idempotencyKey,
       });
 
+      setUnconfirmed(false);
       authActions.updateProfileBalance(transfer.balance_after);
       haptics.success();
       toast.success(`Wysłano ${formatMoney(amount)} zł do @${selectedRecipient.username}`);
@@ -230,8 +235,10 @@ export function MoneyTransferSend({
       haptics.error();
       // A timeout or dropped connection may still have sent it. The key stays, so
       // sending again from this screen cannot transfer twice.
+      const unknown = isOutcomeUnknown(error);
+      if (unknown) setUnconfirmed(true);
       toast.error(
-        isOutcomeUnknown(error)
+        unknown
           ? 'Nie udało się potwierdzić transferu. Sprawdź historię, zanim wyślesz go ponownie.'
           : getErrorMessage(error, 'Nie udało się wykonać transferu'),
       );
@@ -278,6 +285,7 @@ export function MoneyTransferSend({
           onPress={() => {
             setConfirming(false);
             setIdempotencyKey(null);
+            setUnconfirmed(false);
           }}
           style={({ pressed }) => [styles.back, (pressed || submitting) && styles.backDim]}
         >

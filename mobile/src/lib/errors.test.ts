@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getErrorMessage } from './errors';
+import { getErrorMessage, isOutcomeUnknown } from './errors';
 
 describe('getErrorMessage', () => {
   it('shows a server message as is', () => {
@@ -51,5 +51,30 @@ describe('getErrorMessage', () => {
 
   it('falls back when there is no message', () => {
     expect(getErrorMessage('boom', 'Coś poszło nie tak')).toBe('Coś poszło nie tak');
+  });
+});
+
+describe('isOutcomeUnknown', () => {
+  it('treats timeouts and dropped connections as unknown', () => {
+    expect(isOutcomeUnknown(new Error('AbortError: fetch failed: Fetch request has been canceled'))).toBe(true);
+    expect(isOutcomeUnknown(new Error('fetch failed: The network connection was lost.'))).toBe(true);
+    expect(
+      isOutcomeUnknown(new Error("fetch failed: The operation couldn't be completed. Software caused connection abort")),
+    ).toBe(true);
+    expect(isOutcomeUnknown({ message: '<html><body>502 Bad Gateway</body></html>' })).toBe(true);
+  });
+
+  it('treats requests that never ran as definite failures', () => {
+    expect(isOutcomeUnknown(new Error('fetch failed: The Internet connection appears to be offline.'))).toBe(false);
+    expect(isOutcomeUnknown(new Error('fetch failed: Could not connect to the server.'))).toBe(false);
+    expect(isOutcomeUnknown(new Error('fetch failed: Unable to resolve host "example.supabase.co"'))).toBe(false);
+    expect(isOutcomeUnknown({ message: 'Timed out acquiring connection from connection pool.', code: 'PGRST003' })).toBe(
+      false,
+    );
+    expect(isOutcomeUnknown({ message: 'canceling statement due to statement timeout', code: '57014' })).toBe(false);
+  });
+
+  it('treats server rejections as definite failures', () => {
+    expect(isOutcomeUnknown({ message: 'Niewystarczające saldo', code: 'P0001' })).toBe(false);
   });
 });

@@ -29,6 +29,8 @@ import { isFeedItemType } from '../lib/routes';
  * comments open. Seeded from the feed on press-in, refreshed in the
  * background; pull to refresh re-reads the item and its comments.
  */
+const NOT_FOUND_BODY = 'Ten wpis mógł zostać usunięty albo nie masz do niego dostępu.';
+
 export function SocialItemScreen() {
   const styles = useStyles();
   const params = useLocalSearchParams<{ itemType?: string; itemId?: string }>();
@@ -38,7 +40,7 @@ export function SocialItemScreen() {
   return (
     <View style={styles.page}>
       <AppHeader back />
-      {itemType && itemId ? <SocialItemBody itemType={itemType} itemId={itemId} /> : <ItemScroll state={<NotFound />} />}
+      {itemType && itemId ? <SocialItemBody itemType={itemType} itemId={itemId} /> : <ItemScroll state={<Message title="Nie znaleziono wpisu" body={NOT_FOUND_BODY} />} />}
     </View>
   );
 }
@@ -52,7 +54,8 @@ function SocialItemBody({ itemType, itemId }: { itemType: FeedItemType; itemId: 
     placeholderData: () => getCachedFeedItem(userId, itemType, itemId),
   });
   const [refreshing, setRefreshing] = useState(false);
-  useBootHold(query.isPending);
+  const paused = query.isPending && query.fetchStatus === 'paused';
+  useBootHold(query.isPending && !paused);
 
   useEffect(() => {
     if (query.error) toast.error(getErrorMessage(query.error, 'Nie udało się załadować wpisu'));
@@ -63,10 +66,23 @@ function SocialItemBody({ itemType, itemId }: { itemType: FeedItemType; itemId: 
     return Promise.all([query.refetch(), reloadComments(itemType, itemId)]).finally(() => setRefreshing(false));
   };
 
+  // Placeholder data only covers the first load: after a failed one, keep showing the cached copy.
+  const item = query.data ?? (query.isError ? getCachedFeedItem(userId, itemType, itemId) : undefined);
   let state;
-  if (query.isPending) state = <Loading />;
-  else if (query.data) state = <SocialFeedCard item={query.data} currentUserId={userId} detail />;
-  else state = <NotFound />;
+  if (item) state = <SocialFeedCard item={item} currentUserId={userId} detail />;
+  else if (paused) state = <Message title="Brak połączenia" body="Wczytamy wpis, gdy wrócisz online." />;
+  else if (query.isPending) state = <Loading />;
+  else if (query.isError) {
+    state = (
+      <Message
+        title="Nie udało się wczytać wpisu"
+        body="Sprawdź połączenie i spróbuj ponownie."
+        onRetry={() => void query.refetch()}
+      />
+    );
+  } else {
+    state = <Message title="Nie znaleziono wpisu" body={NOT_FOUND_BODY} />;
+  }
 
   return <ItemScroll state={state} refreshing={refreshing} onRefresh={query.isPending ? undefined : () => void refresh()} />;
 }
@@ -119,12 +135,21 @@ function Loading() {
   );
 }
 
-function NotFound() {
+function Message({ title, body, onRetry }: { title: string; body: string; onRetry?: () => void }) {
   const styles = useStyles();
   return (
     <View style={styles.notFound}>
-      <Text style={styles.notFoundTitle}>Nie znaleziono wpisu</Text>
-      <Text style={styles.notFoundBody}>Ten wpis mógł zostać usunięty albo nie masz do niego dostępu.</Text>
+      <Text style={styles.notFoundTitle}>{title}</Text>
+      <Text style={styles.notFoundBody}>{body}</Text>
+      {onRetry ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={whenOnline(onRetry)}
+          style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
+        >
+          <Text style={styles.retryText}>Spróbuj ponownie</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -153,4 +178,14 @@ const useStyles = createStyles(() => ({
   },
   notFoundTitle: { textAlign: 'center', fontSize: 18, lineHeight: 28, fontWeight: '600', color: social.foreground },
   notFoundBody: { marginTop: 4, textAlign: 'center', fontSize: 14, lineHeight: 20, color: social.mutedForeground },
+  retry: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: social.border,
+  },
+  retryPressed: { backgroundColor: social.background },
+  retryText: { fontSize: 14, lineHeight: 20, fontWeight: '500', color: social.foreground },
 }));

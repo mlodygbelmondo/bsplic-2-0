@@ -1,14 +1,15 @@
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { useIsFocused } from 'expo-router';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { whenOnline } from '@/lib/connectivity';
-import { useHasBeenFocused } from '@/lib/focus';
+import { getErrorMessage } from '@/lib/errors';
+import { useHasBeenFocused, useScreenVisible } from '@/lib/focus';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { ScreenBackground, SectionLoader, Text } from '@/ui';
 import { rankingsQuery } from './api/queries';
@@ -42,9 +43,9 @@ function RankingsBody() {
   const [rankingType, setRankingType] = useState<RankingType>('sportsbook');
   const [pullRefreshing, setPullRefreshing] = useState(false);
 
-  // The tab stays mounted: resubscribing on focus refetches, like a web page visit.
-  const focused = useIsFocused();
-  const { data: rankings, error, isLoading, isFetching, refetch } = useQuery({
+  // The tab stays mounted: resubscribing when it comes on view refetches, like a web page visit.
+  const focused = useScreenVisible();
+  const { data: rankings, error, isPending, isFetching, refetch } = useQuery({
     ...rankingsQuery(rankingType),
     subscribed: focused,
   });
@@ -57,7 +58,11 @@ function RankingsBody() {
 
   const handleRefresh = () => {
     setPullRefreshing(true);
-    void refetch().finally(() => setPullRefreshing(false));
+    void refetch()
+      .then((result) => {
+        if (result.isError) toast.error(getErrorMessage(result.error, 'Nie udało się odświeżyć rankingu'));
+      })
+      .finally(() => setPullRefreshing(false));
   };
 
   const header = (
@@ -128,7 +133,8 @@ function RankingsBody() {
   );
 
   let emptyState: ReactElement;
-  if (isLoading) {
+  // Pending includes paused (offline): the loader says so instead of a false "no data".
+  if (isPending) {
     emptyState = <SectionLoader label="Wczytywanie rankingu..." />;
   } else if (error) {
     emptyState = (

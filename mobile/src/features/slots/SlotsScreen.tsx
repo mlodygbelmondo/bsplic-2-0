@@ -82,6 +82,7 @@ interface Playback {
 }
 
 const IDLE_PLAYBACK: Playback = { result: null, stateUpdatedAt: 0, frameIndex: 0, animating: false };
+const HISTORY_PLACEHOLDERS = ['first', 'second', 'third'];
 
 function SlotMachine({ game }: { game: SlotGame }) {
   const styles = useStyles();
@@ -471,7 +472,14 @@ function SlotMachine({ game }: { game: SlotGame }) {
           ) : null}
           <View style={styles.history}>
             <Text style={styles.historyTitle}>Ostatnie obroty</Text>
-            {history.length === 0 ? (
+            {state.isPending ? (
+              // Rows the history usually fills, so it does not push the page down when it arrives.
+              HISTORY_PLACEHOLDERS.map((key) => (
+                <View key={key} style={styles.historyRow}>
+                  <Text style={[styles.historyStake, styles.historyPlaceholder]}> </Text>
+                </View>
+              ))
+            ) : history.length === 0 ? (
               <Text style={styles.historyEmpty}>Brak obrotów</Text>
             ) : (
               history.slice(0, 3).map((item) => (
@@ -713,6 +721,7 @@ const useStyles = createStyles(() => ({
   history: { marginTop: 18 },
   historyTitle: { fontSize: 11, lineHeight: 16.5, color: SLOT_COLORS.dim, marginBottom: 10 },
   historyEmpty: { fontSize: 12, lineHeight: 20.4, color: SLOT_COLORS.muted },
+  historyPlaceholder: { opacity: 0 },
   historyRow: {
     flexDirection: 'row',
     alignItems: 'center',

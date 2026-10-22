@@ -11,6 +11,7 @@ import {
 import { rankingsQuery } from '@/features/rankings/api/queries';
 import { trimFeedCache } from '@/features/social/api/cache';
 import { socialFeedQuery, socialStoriesQuery } from '@/features/social/api/queries';
+import { isOffline } from '@/lib/connectivity';
 import { queryClient } from '@/lib/query-client';
 
 // Port of the web `prefetchPageData` (`src/lib/boot/preload.ts`): once the
@@ -24,6 +25,8 @@ const CRITICAL_TIMEOUT_MS = 3000;
 interface PrefetchTask {
   queryKey: QueryKey;
   run: () => Promise<void>;
+  /** Not awaited before the boot overlay lifts (never persisted, so it would delay every cold start). */
+  background?: boolean;
 }
 
 function prefetch<TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
@@ -51,7 +54,7 @@ function getPageDataTasks(userId: string): PrefetchTask[] {
     prefetch(casinoHistoryPreviewQueryOptions(userId)),
     prefetch(rankingsQuery('sportsbook')),
     prefetch(rouletteHistoryQuery()),
-    prefetch(blackjackSnapshotQuery(userId)),
+    { ...prefetch(blackjackSnapshotQuery(userId)), background: true },
   ];
 }
 
@@ -61,7 +64,13 @@ function getPageDataTasks(userId: string): PrefetchTask[] {
  * after CRITICAL_TIMEOUT_MS.
  */
 export function prefetchPageData(userId: string, onProgress: (fraction: number) => void): Promise<unknown> {
-  const tasks = getPageDataTasks(userId).filter((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  // Offline nothing can load: the requests would only pause and hold the overlay for the whole budget.
+  if (isOffline()) return Promise.resolve();
+  const missing = getPageDataTasks(userId).filter((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  for (const task of missing) {
+    if (task.background) void task.run().catch((error: unknown) => console.warn('Boot preload task failed:', error));
+  }
+  const tasks = missing.filter((task) => !task.background);
   if (tasks.length === 0) return Promise.resolve();
   let settled = 0;
   const all = Promise.allSettled(

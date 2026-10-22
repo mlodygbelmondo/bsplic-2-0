@@ -91,7 +91,14 @@ export async function repeatRouletteBets() {
     toast.success(lastSettled.bets.length === 1 ? 'Zakład powtórzony!' : 'Zakłady powtórzone!');
   } catch (error) {
     casinoHaptics.error();
-    toast.error(getErrorMessage(error, 'Nie udało się powtórzyć zakładów.'));
+    // Bets before the failing one were accepted; a dropped connection may have placed that one too.
+    toast.error(
+      isOutcomeUnknown(error)
+        ? 'Nie udało się potwierdzić zakładów. Sprawdź swoje zakłady, zanim powtórzysz je ponownie.'
+        : getErrorMessage(error, 'Nie udało się powtórzyć zakładów.'),
+    );
+    void controller.syncFreshSnapshot().catch(() => undefined);
+    void authActions.refreshProfile();
   } finally {
     useRouletteSession.setState({ isRepeating: false });
   }
