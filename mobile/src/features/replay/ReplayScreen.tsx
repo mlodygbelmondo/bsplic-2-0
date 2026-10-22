@@ -43,13 +43,9 @@ export function ReplayScreen() {
   useBootHold(loading);
 
   const refresh = () => void history.refetch();
-  const onPull = async () => {
+  const onPull = () => {
     setPulling(true);
-    try {
-      await history.refetch();
-    } finally {
-      setPulling(false);
-    }
+    void history.refetch().finally(() => setPulling(false));
   };
 
   return (

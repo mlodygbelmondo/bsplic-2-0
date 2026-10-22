@@ -92,3 +92,17 @@ export function recoveryLinkKey(link: RecoveryLink): string {
       return 'none';
   }
 }
+
+/** The `sub` (user id) claim of a JWT, or null when it cannot be read. */
+export function readJwtSubject(token: string): string | null {
+  const payload = token.split('.')[1];
+  if (!payload) return null;
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const claims: unknown = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
+    const sub = claims && typeof claims === 'object' ? (claims as { sub?: unknown }).sub : undefined;
+    return typeof sub === 'string' ? sub : null;
+  } catch {
+    return null;
+  }
+}

@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
-import { authActions, useAuthStore, useProfile, useUserId } from '@/features/auth/auth-store';
+import { authActions, useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { derivePlayerCardDisplayModel } from '@/features/player-card/displayModel';
 import { PlayerCardHero } from '@/features/player-card/PlayerCardHero';
 import { ReplayLaunchCard } from '@/features/replay/ReplayLaunchCard';
@@ -74,7 +75,19 @@ function UsernameProfileContent({ username }: { username: string }) {
 
 function OwnProfileContent() {
   const userId = useUserId();
-  const profile = useProfile();
+  // Only the fields shown here: balance updates must not re-render the profile.
+  const profile = useAuthStore(
+    useShallow((s) =>
+      s.profile
+        ? {
+            username: s.profile.username,
+            created_at: s.profile.created_at,
+            avatar_url: s.profile.avatar_url,
+            current_streak: s.profile.current_streak,
+          }
+        : null,
+    ),
+  );
   const profileStatus = useAuthStore((s) => s.profileStatus);
   const offline = useIsOffline();
   const history = useProfileHistory(userId);
@@ -219,16 +232,12 @@ function RefreshableScroll({ onRefresh, children }: { onRefresh: () => Promise<u
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    try {
-      await onRefresh();
-    } catch (error) {
+    return onRefresh()
       // Each query keeps its cached data and shows its own error state.
-      console.warn('Profile refresh failed', error);
-    } finally {
-      setRefreshing(false);
-    }
+      .catch((error: unknown) => console.warn('Profile refresh failed', error))
+      .finally(() => setRefreshing(false));
   };
 
   return (

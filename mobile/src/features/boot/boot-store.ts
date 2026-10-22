@@ -12,10 +12,10 @@ import { create } from 'zustand';
 
 export type BootPhase = 'app' | 'session' | 'assets' | 'done';
 
-const MIN_VISIBLE_MS = 1000;
-const REOPEN_MIN_VISIBLE_MS = 900;
+const MIN_VISIBLE_MS = 700;
+const REOPEN_MIN_VISIBLE_MS = 700;
 const MAX_VISIBLE_MS = 9000;
-const SETTLE_MS = 160;
+const SETTLE_MS = 100;
 const COMPLETE_MS = 260;
 const STATUS_ROTATE_MS = 2100;
 const TRICKLE_MS = 450;

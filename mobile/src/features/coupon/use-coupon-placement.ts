@@ -66,23 +66,20 @@ export function useCouponPlacement(
     }
 
     const balance = Number(profile.balance);
-    let result: Awaited<ReturnType<typeof submitCoupon>>;
-    try {
-      result = await submitCoupon(
-        {
-          userId: user.id,
-          balance,
-          activeTab,
-          stake,
-          singleStakes,
-          items: useCouponStore.getState().items,
-        },
-        placeCouponSecure,
-        () => couponSheetActions.setPlacing(true),
-      );
-    } finally {
-      couponSheetActions.setPlacing(false);
-    }
+    // `.finally` instead of try/finally: React Compiler skips hooks containing try/finally.
+    // submitCoupon is async, so this always settles and the placing flag always resets.
+    const result = await submitCoupon(
+      {
+        userId: user.id,
+        balance,
+        activeTab,
+        stake,
+        singleStakes,
+        items: useCouponStore.getState().items,
+      },
+      placeCouponSecure,
+      () => couponSheetActions.setPlacing(true),
+    ).finally(() => couponSheetActions.setPlacing(false));
 
     if (result.status === 'invalid') {
       haptics.warning();

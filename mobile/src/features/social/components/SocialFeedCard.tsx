@@ -99,17 +99,16 @@ export const SocialFeedCard = memo(function SocialFeedCard({
   const commentsLoaded = commentsQuery.isSuccess;
   const ako = isAkoItem(item);
 
-  const handleCopy = async () => {
+  const handleCopy = () => {
     if (copying) return;
     setCopying(true);
-    try {
-      if (await copyCouponToSlip(item)) {
+    void copyCouponToSlip(item)
+      .then((copied) => {
+        if (!copied) return;
         haptics.success();
         router.navigate('/');
-      }
-    } finally {
-      setCopying(false);
-    }
+      })
+      .finally(() => setCopying(false));
   };
 
   const handleReact = (emoji: ReactionType) => {

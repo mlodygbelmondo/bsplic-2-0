@@ -24,13 +24,29 @@ export function useHasBeenFocused(): boolean {
   return seen;
 }
 
+/** How long a closed sheet keeps animating away; UIKit refuses new presentations meanwhile. */
+const MODAL_DISMISS_MS = 600;
+
 /**
- * True while a sheet or modal route is presented. An RN `Modal` cannot present
- * over it (UIKit refuses and RN never retries), so global dialogs wait.
+ * True while a sheet or modal route is presented, and briefly after it closes.
+ * An RN `Modal` cannot present over it (UIKit refuses and RN never retries),
+ * so global dialogs wait.
  */
 export function useModalRouteOpen(): boolean {
   const [root] = useSegments();
-  return root === 'sheets' || root === 'jackpot';
+  const open = root === 'sheets' || root === 'jackpot';
+  const [dismissing, setDismissing] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setDismissing(!open);
+  }
+  useEffect(() => {
+    if (!dismissing) return;
+    const timer = setTimeout(() => setDismissing(false), MODAL_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [dismissing]);
+  return open || dismissing;
 }
 
 /** True while the screen is focused and the app is in the foreground. */

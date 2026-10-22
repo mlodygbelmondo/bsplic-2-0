@@ -35,9 +35,6 @@ startAuth();
 // player's music, like web audio in iOS Safari.
 void setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' }).catch(() => undefined);
 
-// A cold-start deep link (e.g. a shared post) opens on top of the tabs, so back leads home.
-export const unstable_settings = { anchor: '(tabs)' };
-
 const TOAST_SHADOW = '0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)';
 
 export default function RootLayout() {

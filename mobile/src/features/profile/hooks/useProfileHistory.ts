@@ -95,6 +95,19 @@ export function useProfileHistory(targetUserId: string | null): ProfileHistorySt
     subscribed: focused,
   });
 
+  // A refreshed preview shifts the offsets the extra pages were loaded at, so
+  // drop those pages (a web revisit reloads the page and shows the preview too).
+  const [sportsbookBase, setSportsbookBase] = useState(sportsbookPreview.dataUpdatedAt);
+  const [casinoBase, setCasinoBase] = useState(casinoPreview.dataUpdatedAt);
+  if (sportsbookBase !== sportsbookPreview.dataUpdatedAt) {
+    setSportsbookBase(sportsbookPreview.dataUpdatedAt);
+    if (more.coupons.length > 0) setMore((prev) => ({ ...prev, coupons: [], couponsAvailable: null }));
+  }
+  if (casinoBase !== casinoPreview.dataUpdatedAt) {
+    setCasinoBase(casinoPreview.dataUpdatedAt);
+    if (more.casino.length > 0) setMore((prev) => ({ ...prev, casino: [], casinoAvailable: null }));
+  }
+
   useEffect(() => {
     if (sportsbookPreview.error) console.error('Failed to load sportsbook history', sportsbookPreview.error);
   }, [sportsbookPreview.error]);

@@ -57,8 +57,8 @@ function BootOverlayContent() {
     if (leaving) {
       opacity.set(
         withDelay(
-          260,
-          withTiming(0, { duration: duration(450) }, (finished) => {
+          120,
+          withTiming(0, { duration: duration(350) }, (finished) => {
             if (finished) scheduleOnRN(onBootOverlayHidden);
           }),
         ),

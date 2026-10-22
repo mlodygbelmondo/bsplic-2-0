@@ -1,9 +1,10 @@
-import type { Session, User } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type Session, type User } from '@supabase/supabase-js';
 import { create } from 'zustand';
+import { shallow } from 'zustand/shallow';
 
-import { queryClient } from '@/lib/query-client';
+import { queryClient, queryPersister } from '@/lib/query-client';
 import { readJson, writeJson, kv, secureKv } from '@/lib/storage';
-import { supabase } from '@/lib/supabase';
+import { AUTH_STORAGE_KEY, supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import type { Profile } from '@/types/database';
 
@@ -85,8 +86,11 @@ function fetchProfile(userId: string, fresh = false): Promise<void> {
         throw profileResult.error ?? new Error('Profile not found');
       }
       const roles = rolesResult.data ?? [];
+      const previous = useAuthStore.getState().profile;
+      const next = profileResult.data as Profile;
       useAuthStore.setState({
-        profile: profileResult.data as Profile,
+        // An unchanged row keeps its object, so profile subscribers skip the re-render.
+        profile: previous && shallow(previous, next) ? previous : next,
         profileStatus: 'ready',
         isAdmin: roles.some((row) => row.role === 'admin'),
         isModerator: roles.some((row) => row.role === 'moderator'),
@@ -112,14 +116,20 @@ function fetchProfile(userId: string, fresh = false): Promise<void> {
   return load;
 }
 
-function applyAuthSession(session: Session | null) {
+/** Drops cached data from memory and disk at once (the persister's own save is throttled). */
+function clearQueryCache() {
+  queryClient.clear();
+  void queryPersister.removeClient();
+}
+
+function applyAuthSession(session: Session | null, { fromTimeout = false } = {}) {
   const previousUserId = useAuthStore.getState().user?.id;
   const nextUser = session?.user ?? null;
 
   if (nextUser) {
     const patch: Partial<AuthState> = { session, user: nextUser, loading: false };
     // Another account took over without a sign-out (a recovery link): drop the previous user's data.
-    if (previousUserId && previousUserId !== nextUser.id) queryClient.clear();
+    if (previousUserId && previousUserId !== nextUser.id) clearQueryCache();
     if (previousUserId !== nextUser.id) {
       // Seed from the identity cache so a signed-in cold start renders the
       // first screen immediately instead of waiting for the profile query.
@@ -138,11 +148,23 @@ function applyAuthSession(session: Session | null) {
     useAuthStore.setState(patch);
     void fetchProfile(nextUser.id);
   } else {
-    if (previousUserId) {
-      queryClient.clear();
-    }
+    // No session (signed out, or the stored one was revoked or expired): whoever
+    // owned the restored cache is gone. A slow-start timeout keeps it, since the
+    // session may still arrive.
+    if (previousUserId || !fromTimeout) clearQueryCache();
     clearProfileState();
     useAuthStore.setState({ session: null, user: null, loading: false });
+  }
+}
+
+/** The session supabase-js stored last run, read synchronously (it may be expired). */
+function readStoredSession(): Session | null {
+  try {
+    const raw = secureKv.getString(AUTH_STORAGE_KEY);
+    const session = raw ? (JSON.parse(raw) as Partial<Session>) : null;
+    return session?.access_token && session.refresh_token && session.user?.id ? (session as Session) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -154,8 +176,21 @@ export function startAuth() {
   started = true;
   let hasAuthSignal = false;
 
-  supabase.auth.onAuthStateChange((_event, session) => {
+  // Signed-in cold start: render at once from the stored session and the cached
+  // identity instead of waiting for a token refresh. supabase-js refreshes in
+  // the background and every request waits for it; a revoked session still
+  // ends in SIGNED_OUT.
+  const stored = readStoredSession();
+  if (stored && readJson<CachedIdentity>(IDENTITY_CACHE_KEY)?.userId === stored.user.id) {
     hasAuthSignal = true;
+    applyAuthSession(stored);
+  }
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    hasAuthSignal = true;
+    // INITIAL_SESSION is null when the stored token could not be refreshed yet
+    // (offline); supabase-js keeps it and retries. A real sign-out is SIGNED_OUT.
+    if (event === 'INITIAL_SESSION' && !session && useAuthStore.getState().user) return;
     // Defer out of the auth callback (supabase-js deadlocks if another auth
     // call runs inside it).
     setTimeout(() => applyAuthSession(session), 0);
@@ -164,15 +199,17 @@ export function startAuth() {
   const timeoutId = setTimeout(() => {
     if (!hasAuthSignal) {
       console.warn('Supabase auth bootstrap timed out; showing logged-out UI.');
-      applyAuthSession(null);
+      applyAuthSession(null, { fromTimeout: true });
     }
   }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
   supabase.auth
     .getSession()
-    .then(({ data: { session } }) => {
+    .then(({ data: { session }, error }) => {
       clearTimeout(timeoutId);
       hasAuthSignal = true;
+      // Offline with an expired token: stay on the stored session until a refresh succeeds.
+      if (!session && error && isAuthRetryableFetchError(error) && useAuthStore.getState().user) return;
       applyAuthSession(session);
     })
     .catch((error: unknown) => {
@@ -206,13 +243,12 @@ export const authActions = {
       if (error) {
         // Offline with an expired token, supabase-js gives up before removing the
         // stored session, and the next refresh would sign the user back in.
-        supabase.auth.stopAutoRefresh();
         secureKv.clearAll();
       }
     } finally {
       // The SIGNED_OUT event clears state too; do it eagerly so the UI never
       // shows the previous user's data after a failed network sign-out.
-      queryClient.clear();
+      clearQueryCache();
       clearProfileState();
       useAuthStore.setState({ session: null, user: null });
     }

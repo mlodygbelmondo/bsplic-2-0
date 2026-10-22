@@ -15,7 +15,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from 'zustand';
 
-import { useProfile, useUserId } from '@/features/auth/auth-store';
+import { useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { AppHeader } from '@/features/shell/AppHeader';
 import { getErrorMessage } from '@/lib/errors';
 import { useHasBeenFocused } from '@/lib/focus';
@@ -65,7 +65,9 @@ function SocialFeedBody() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
   const userId = useUserId();
-  const profile = useProfile();
+  // Narrow selectors: balance updates (casino, bets) must not re-render the feed.
+  const username = useAuthStore((s) => s.profile?.username ?? null);
+  const avatarUrl = useAuthStore((s) => s.profile?.avatar_url ?? null);
   const filter = parseFeedFilter(useLocalSearchParams<{ filter?: string }>().filter);
   const feed = useSocialFeed(userId, filter);
   // The tab stays mounted: resubscribing on focus refetches the stories.
@@ -126,14 +128,14 @@ function SocialFeedBody() {
           <PostComposer
             onSubmit={publishPost}
             currentUserId={userId}
-            currentUsername={profile?.username ?? undefined}
-            currentUserAvatarUrl={profile?.avatar_url}
+            currentUsername={username ?? undefined}
+            currentUserAvatarUrl={avatarUrl}
           />
           <SocialStories
             stories={storiesQuery.data ?? []}
             profileFallbacks={getStoryProfiles(items)}
-            currentUsername={profile?.username ?? 'Ty'}
-            currentAvatarUrl={profile?.avatar_url ?? null}
+            currentUsername={username ?? 'Ty'}
+            currentAvatarUrl={avatarUrl}
             onCreateStory={publishStory}
           />
         </>

@@ -70,13 +70,9 @@ function NotificationsPanel() {
     close(() => router.push(getNotificationLink(notification) as Href));
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    try {
-      await listQuery.refetch();
-    } finally {
-      setRefreshing(false);
-    }
+    return listQuery.refetch().finally(() => setRefreshing(false));
   };
 
   return (

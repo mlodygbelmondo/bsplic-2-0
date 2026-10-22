@@ -7,6 +7,12 @@ import { trimFeedCache } from '../api/cache';
 import { socialFeedQuery } from '../api/queries';
 import { filterFeedItems, type FeedFilter } from '../lib/feedList';
 
+async function refetchFirstPage(userId: string | null, refetch: () => Promise<{ isError: boolean; error: unknown }>) {
+  trimFeedCache(userId);
+  const result = await refetch();
+  if (result.isError) toast.error(getErrorMessage(result.error, 'Nie udało się odświeżyć aktywności'));
+}
+
 /**
  * Feed paging for the Social tab (web `SocialPage` `loadFeed`/`loadMoreFeed`).
  * Like the web, only the first 50 items are cached between visits: the cache
@@ -42,15 +48,9 @@ export function useSocialFeed(userId: string | null, filter: FeedFilter) {
     if (shouldAutoLoad) void fetchNextPage();
   }, [shouldAutoLoad, fetchNextPage]);
 
-  const refresh = async () => {
+  const refresh = () => {
     setRefreshing(true);
-    try {
-      trimFeedCache(userId);
-      const result = await query.refetch();
-      if (result.isError) toast.error(getErrorMessage(result.error, 'Nie udało się odświeżyć aktywności'));
-    } finally {
-      setRefreshing(false);
-    }
+    return refetchFirstPage(userId, () => query.refetch()).finally(() => setRefreshing(false));
   };
 
   return {

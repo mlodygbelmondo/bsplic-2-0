@@ -108,11 +108,17 @@
         }
       ],
       "expo-image",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-audio",
         {
-          "microphonePermission": false
+          "microphonePermission": false,
+          "enableBackgroundPlayback": false
         }
       ],
       "expo-web-browser",
@@ -121,7 +127,7 @@
         "expo-image-picker",
         {
           "photosPermission": "BSPLIC potrzebuje dostępu do zdjęć, aby ustawić avatar i dodać zdjęcie do posta.",
-          "cameraPermission": "BSPLIC potrzebuje dostępu do aparatu, aby zrobić zdjęcie profilowe lub dodać zdjęcie do posta.",
+          "cameraPermission": false,
           "microphonePermission": false
         }
       ],

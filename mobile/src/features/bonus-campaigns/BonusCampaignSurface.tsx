@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authActions, useAuthStore, useUserId } from '@/features/auth/auth-store';
 import { useBootVisible } from '@/features/boot/boot-store';
 import { DialogModal, PressScale, Text } from '@/ui';
+import { featurePollQueries } from '@/features/feature-polls/feature-poll-api';
 import { useFeaturePollOpen } from '@/features/feature-polls/feature-poll-store';
 import { useQueryErrorToast } from '@/features/feature-polls/use-query-error-toast';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
@@ -79,6 +80,11 @@ export function BonusCampaignSurface() {
     enabled: userId !== null && hasProfile,
   });
   useQueryErrorToast(query.error, query.errorUpdatedAt, 'Nie udało się sprawdzić dostępnych bonusów');
+  // Read the poll in this render too: the poll store updates one render late, and
+  // presenting both native modals at once makes UIKit drop one of them.
+  const pollPending = Boolean(
+    useQuery({ ...featurePollQueries.available(userId ?? ''), enabled: false }).data,
+  );
   const [claiming, setClaiming] = useState(false);
   const [dismissedModal, setDismissedModal] = useState(false);
   const [confettiRun, setConfettiRun] = useState(0);
@@ -168,7 +174,7 @@ export function BonusCampaignSurface() {
       ) : null}
 
       <DialogModal
-        visible={modalOpen && !bootVisible && !pollOpen && !modalRouteOpen}
+        visible={modalOpen && !bootVisible && !pollOpen && !pollPending && !modalRouteOpen}
         onRequestClose={() => {
           if (!claiming) handleCloseModal();
         }}

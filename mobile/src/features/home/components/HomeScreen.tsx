@@ -49,6 +49,8 @@ export function HomeScreen() {
   const hasBeenFocused = useHasBeenFocused();
   const screenActive = useScreenActive();
   const lite = useLiteMotion();
+  // Tabs stay mounted: the cards' decorative loops stop while another tab or a sheet covers home.
+  const stillCards = lite || !screenActive;
   const reducedMotion = useReducedMotion();
   const storedCategory = useHomePreferences((s) => s.category);
   const sort = useHomePreferences((s) => s.sort);
@@ -150,13 +152,9 @@ export function HomeScreen() {
   }, [listKey, scrollY]);
 
   const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setRefreshing(true);
-    try {
-      await Promise.all([betsQuery.refetch(), categoriesQuery.refetch()]);
-    } finally {
-      setRefreshing(false);
-    }
+    void Promise.all([betsQuery.refetch(), categoriesQuery.refetch()]).finally(() => setRefreshing(false));
   };
 
   const handleLoadMore = () => {
@@ -186,7 +184,7 @@ export function HomeScreen() {
             onRefresh={handleRefresh}
             contentHeight={contentHeight}
             viewportHeight={viewportHeight}
-            lite={lite}
+            lite={stillCards}
             reducedMotion={reducedMotion}
           />
           <HomeFilterBar

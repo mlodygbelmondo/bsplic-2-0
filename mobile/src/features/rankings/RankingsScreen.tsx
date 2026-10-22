@@ -54,13 +54,9 @@ function RankingsBody() {
 
   const sorted = rankings ? sortRankings(rankings, sortBy) : [];
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setPullRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setPullRefreshing(false);
-    }
+    void refetch().finally(() => setPullRefreshing(false));
   };
 
   const header = (

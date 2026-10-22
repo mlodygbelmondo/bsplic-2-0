@@ -13,7 +13,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { useAuthStore } from './auth-store';
 import { AuthField } from './AuthField';
 import { AuthCard, AuthShell } from './AuthShell';
-import { parseRecoveryLink, parseRecoveryUrl, recoveryLinkKey, type RecoveryLink } from './recovery-link';
+import { parseRecoveryLink, parseRecoveryUrl, readJwtSubject, recoveryLinkKey, type RecoveryLink } from './recovery-link';
 import { MIN_PASSWORD_LENGTH, SHORT_PASSWORD_MESSAGE } from './validation';
 
 type Status = 'checking' | 'recovery' | 'invalid';
@@ -49,6 +49,11 @@ function establishRecoverySession(link: RecoveryLink): Promise<boolean> {
   if (!attempt) {
     attempt = (async () => {
       if (link.kind === 'tokens') {
+        // Anyone can craft a link with their own tokens: never let one switch a signed-in player to another account.
+        const signedInUserId = useAuthStore.getState().user?.id;
+        if (signedInUserId && readJwtSubject(link.accessToken) !== signedInUserId) {
+          throw new Error('The recovery link belongs to another account');
+        }
         const { error } = await supabase.auth.setSession({
           access_token: link.accessToken,
           refresh_token: link.refreshToken,

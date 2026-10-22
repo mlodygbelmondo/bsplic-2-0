@@ -28,6 +28,12 @@ export function useSlotGame(game: SlotGame) {
   const queryClient = useQueryClient();
   const key = pendingKey(userId ?? '', game);
   const [pending, setPending] = useState<PendingSpin | null>(() => parsePending(kv.getString(key)));
+  // The user id can arrive after mount (cold-start link): read that user's pending spin then.
+  const [pendingFor, setPendingFor] = useState(key);
+  if (pendingFor !== key) {
+    setPendingFor(key);
+    setPending(parsePending(kv.getString(key)));
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);

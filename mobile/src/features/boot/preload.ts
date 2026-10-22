@@ -17,7 +17,7 @@ import { queryClient } from '@/lib/query-client';
 // first screen has its data, fetch the first screen of every other section so
 // opening it later renders instantly. Artwork ships in the app bundle, so
 // there is no asset warm-up. The persisted cache already covers sections the
-// player has seen before; the overlay only waits when something is missing.
+// player has seen before, so only missing sections are fetched.
 
 const CRITICAL_TIMEOUT_MS = 3000;
 
@@ -56,13 +56,13 @@ function getPageDataTasks(userId: string): PrefetchTask[] {
 }
 
 /**
- * Fetches the first screen of every section for this player. Resolves right
- * away when everything is already cached (the fetches continue in the
- * background), otherwise when done or after CRITICAL_TIMEOUT_MS.
+ * Fetches the first screen of every section the cache does not have yet (the
+ * screens refresh cached data themselves when opened). Resolves when done or
+ * after CRITICAL_TIMEOUT_MS.
  */
 export function prefetchPageData(userId: string, onProgress: (fraction: number) => void): Promise<unknown> {
-  const tasks = getPageDataTasks(userId);
-  const missing = tasks.some((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  const tasks = getPageDataTasks(userId).filter((task) => queryClient.getQueryData(task.queryKey) === undefined);
+  if (tasks.length === 0) return Promise.resolve();
   let settled = 0;
   const all = Promise.allSettled(
     tasks.map((task) =>
@@ -75,7 +75,6 @@ export function prefetchPageData(userId: string, onProgress: (fraction: number) 
         }),
     ),
   );
-  if (!missing) return Promise.resolve();
   const budget = new Promise<void>((resolve) => setTimeout(resolve, CRITICAL_TIMEOUT_MS));
   return Promise.race([all, budget]);
 }

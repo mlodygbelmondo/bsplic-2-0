@@ -53,7 +53,8 @@ function BackButton() {
       accessibilityRole="button"
       accessibilityLabel="Wstecz"
       hitSlop={6}
-      onPress={() => router.back()}
+      // A screen opened by a cold-start link has nothing under it: go home instead.
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       style={({ pressed }) => [styles.iconButton, styles.backButton, pressed && styles.pressed]}
     >
       <ChevronLeft size={26} color={colors.navbarForeground} />

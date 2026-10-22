@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseParamString, parseRecoveryLink, parseRecoveryUrl } from './recovery-link';
+import { parseParamString, parseRecoveryLink, parseRecoveryUrl, readJwtSubject } from './recovery-link';
 
 const RECOVERY_HASH =
   'access_token=eyJ.a.b&expires_at=1792000000&expires_in=3600&refresh_token=r3fr35h&token_type=bearer&type=recovery';
@@ -67,5 +67,20 @@ describe('parseRecoveryUrl', () => {
 describe('parseParamString', () => {
   it('decodes percent and plus encoding and keeps the first duplicate', () => {
     expect(parseParamString('a=1%2F2&b=x+y&a=3&flag')).toEqual({ a: '1/2', b: 'x y', flag: '' });
+  });
+});
+
+describe('readJwtSubject', () => {
+  // Payload: {"sub":"4f9c2b1e-7a3d-4c55-9e1f-0b2a6d8c3e71","role":"authenticated","exp":1800000000,"n":"żółć?>"}
+  const PAYLOAD =
+    'eyJzdWIiOiI0ZjljMmIxZS03YTNkLTRjNTUtOWUxZi0wYjJhNmQ4YzNlNzEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6MTgwMDAwMDAwMCwibiI6IsW8w7PFgsSHPz4ifQ';
+
+  it('reads the user id from an unpadded base64url payload', () => {
+    expect(readJwtSubject(`eyJhbGciOiJIUzI1NiJ9.${PAYLOAD}.signature`)).toBe('4f9c2b1e-7a3d-4c55-9e1f-0b2a6d8c3e71');
+  });
+
+  it('returns null for tokens it cannot read', () => {
+    expect(readJwtSubject('not-a-jwt')).toBeNull();
+    expect(readJwtSubject('a.%%%.c')).toBeNull();
   });
 });

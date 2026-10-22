@@ -9,6 +9,7 @@ import { create } from 'zustand';
 import { holdBoot } from '@/features/boot/boot-store';
 import { env } from '@/lib/env';
 import { useAppActive } from '@/lib/focus';
+import { kv } from '@/lib/storage';
 import { createMaintenanceModeChecker, MAINTENANCE_CHECK_INTERVAL_MS, MAINTENANCE_STATUS_PATH } from './maintenance';
 
 /** The first check may keep the boot overlay up this long, never longer. */
@@ -18,12 +19,17 @@ const checkMaintenanceMode = createMaintenanceModeChecker({
   endpoint: `${env.webUrl}${MAINTENANCE_STATUS_PATH}`,
 });
 
-const useMaintenanceStore = create<{ active: boolean }>(() => ({ active: false }));
+/** Last answer, so a cold start only waits for the check when maintenance was on. */
+const LAST_STATE_KEY = 'bsplic.maintenance.active';
+
+const useMaintenanceStore = create<{ active: boolean }>(() => ({ active: kv.getBoolean(LAST_STATE_KEY) === true }));
 
 async function refreshMaintenanceMode() {
   const maintenanceMode = await checkMaintenanceMode();
   // `null` = failed or overlapping check: keep the current state (fail open).
-  if (maintenanceMode !== null && maintenanceMode !== useMaintenanceStore.getState().active) {
+  if (maintenanceMode === null) return;
+  kv.set(LAST_STATE_KEY, maintenanceMode);
+  if (maintenanceMode !== useMaintenanceStore.getState().active) {
     useMaintenanceStore.setState({ active: maintenanceMode });
   }
 }
@@ -40,6 +46,11 @@ export function MaintenanceGate() {
   const appActive = useAppActive();
 
   useEffect(() => {
+    // Maintenance was off last time: check without holding the boot overlay.
+    if (kv.getBoolean(LAST_STATE_KEY) === false) {
+      void refreshMaintenanceMode();
+      return;
+    }
     // Hold the boot overlay for the first answer so a cold start during
     // maintenance shows the maintenance page instead of flashing the app.
     const release = holdBoot();

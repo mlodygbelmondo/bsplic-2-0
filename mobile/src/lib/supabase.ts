@@ -5,8 +5,12 @@ import type { Database } from './database.types';
 import { env } from './env';
 import { secureKv } from './storage';
 
+/** supabase-js's default session key, named explicitly so boot can read the stored session synchronously. */
+export const AUTH_STORAGE_KEY = `sb-${new URL(env.supabaseUrl).hostname.split('.')[0]}-auth-token`;
+
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseKey, {
   auth: {
+    storageKey: AUTH_STORAGE_KEY,
     storage: {
       getItem: (key) => secureKv.getString(key) ?? null,
       setItem: (key, value) => secureKv.set(key, value),

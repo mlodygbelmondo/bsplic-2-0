@@ -63,14 +63,15 @@ export function useDailyJackpot() {
   const active = useScreenActive();
   const restoring = useIsRestoring();
   const balance = Number(useBalance());
-  const queryKey = jackpotStateQueryKey(useUserId());
+  const userId = useUserId();
+  const queryKey = jackpotStateQueryKey(userId);
   const [buying, setBuying] = useState(false);
   const buyingRef = useRef(false);
 
   const query = useQuery({
     queryKey,
     queryFn: () => fetchJackpotState(queryKey),
-    enabled: hasBeenFocused,
+    enabled: hasBeenFocused && userId !== null,
     // Inactive (other tab, app in background): no polling; re-activation refetches overdue data.
     subscribed: active,
     staleTime: JACKPOT_POLL_MS,

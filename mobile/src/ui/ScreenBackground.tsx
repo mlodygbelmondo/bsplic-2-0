@@ -59,6 +59,9 @@ function AmbientLayers() {
       cancelAnimation(rise);
       return;
     }
+    // Restart from the beginning: a loop resumed mid-way would jump back to the paused value each cycle.
+    drift.set(0);
+    rise.set(0);
     drift.set(withRepeat(withTiming(1, { duration: 32000, easing: Easing.inOut(Easing.ease) }), -1, true));
     rise.set(withRepeat(withTiming(1, { duration: 80000, easing: Easing.linear }), -1, false));
     return () => {
