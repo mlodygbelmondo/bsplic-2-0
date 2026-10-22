@@ -469,6 +469,23 @@ describe('blackjack game actions', () => {
     expect(state().isResolving).toBe(false);
     expect(state().actionMessage).toBeNull();
   });
+
+  it('reloads the game and balance after a rejected action, e.g. when another device finished it', async () => {
+    const { game, api, deps, state } = setup();
+    api.getCurrentGame.mockResolvedValueOnce(playingGame()).mockResolvedValueOnce(null);
+    api.hit.mockRejectedValue(new Error('Gra została już zakończona'));
+    game.start();
+    await flush();
+    deps.refreshProfile.mockClear();
+
+    await game.hit();
+    await flush();
+
+    expect(deps.onError).toHaveBeenCalledWith('Gra została już zakończona');
+    expect(api.getCurrentGame).toHaveBeenCalledTimes(2);
+    expect(deps.refreshProfile).toHaveBeenCalled();
+    expect(state().status).not.toBe('playing');
+  });
 });
 
 describe('blackjack game cache on unmount', () => {

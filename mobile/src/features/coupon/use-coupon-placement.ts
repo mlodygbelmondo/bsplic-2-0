@@ -84,6 +84,8 @@ export function useCouponPlacement(
     if (result.status === 'invalid') {
       haptics.warning();
       toast.error(result.message);
+      // A stale balance (topped up on another device) would keep failing the local check.
+      void authActions.refreshProfile();
       return;
     }
 

@@ -356,6 +356,7 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
     set({ isResolving: true, actionMessage: spec.message });
     if (spec.chip) deps.sound('chip');
 
+    let rejected = false;
     try {
       const next = await spec.call({ gameId: previous.gameId, userId });
       if (!alive) {
@@ -370,10 +371,13 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
         if (spec.refreshWhenOpen) await deps.refreshProfile();
       }
     } catch (error) {
+      rejected = true;
       if (alive) deps.onError(messageOf(error, spec.fallback));
     } finally {
       set({ isResolving: false, actionMessage: null });
     }
+    // The game may have moved on elsewhere (another device): reload it and the balance.
+    if (rejected) requestResume();
   }
 
   /** Card sound plus a haptic tick, or a bust haptic when the acted hand went over 21. */
@@ -439,6 +443,7 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
       if (s.isLoading || s.isSyncing || s.isDealing || s.isResolving || s.isRevealing) return;
       set({ isDealing: true, actionMessage: 'Rozdawanie kart...' });
       deps.sound('chip');
+      let rejected = false;
       try {
         const next = await api.placeBet({ userId, stake: amount });
         if (!alive) {
@@ -454,10 +459,13 @@ export function createBlackjackGame(deps: BlackjackGameDeps) {
           await deps.refreshProfile();
         }
       } catch (error) {
+        rejected = true;
         if (alive) deps.onError(messageOf(error, 'Nie udało się rozpocząć gry'));
       } finally {
         set({ isDealing: false, actionMessage: null });
       }
+      // A balance or game changed elsewhere: reload both.
+      if (rejected) requestResume();
     },
 
     hit: () =>

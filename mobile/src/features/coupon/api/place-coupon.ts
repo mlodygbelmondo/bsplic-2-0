@@ -5,7 +5,8 @@ import type { PlaceCouponParams } from '../placement';
 
 /**
  * `place_bet_secure` (web `placeCouponSecure`). The server re-validates every
- * rule; its RAISE text is thrown verbatim so the toast shows it.
+ * rule; its error is thrown as is (RAISE text for the toast, code to tell a
+ * rejection from an unknown outcome).
  */
 export async function placeCouponSecure({ userId, totalOdds, stake, items }: PlaceCouponParams): Promise<string> {
   const p_items = items.map((item) => ({
@@ -22,6 +23,6 @@ export async function placeCouponSecure({ userId, totalOdds, stake, items }: Pla
     p_items: p_items as unknown as Json,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
   return data;
 }

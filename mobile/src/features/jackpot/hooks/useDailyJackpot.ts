@@ -108,6 +108,7 @@ export function useDailyJackpot() {
     let purchasedCount = 0;
     const purchasedLabels: string[] = [];
 
+    let rejected = false;
     try {
       await queryClient.cancelQueries({ queryKey });
       for (let index = 0; index < count; index += 1) {
@@ -128,15 +129,18 @@ export function useDailyJackpot() {
       toast.success(getPurchaseToastMessage(purchasedLabels, purchasedCount));
       return true;
     } catch (error) {
+      rejected = true;
       if (purchasedCount > 0) toast.success(getPurchaseToastMessage(purchasedLabels, purchasedCount));
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się kupić ticketu'));
+      // Tickets or balance may have changed elsewhere (another device): show the server's view.
+      void queryClient.invalidateQueries({ queryKey });
       return false;
     } finally {
       buyingRef.current = false;
       setBuying(false);
-      // A failed balance refresh is retried by the next profile load; the purchase already succeeded.
-      if (purchasedCount > 0) void authActions.refreshProfile().catch(() => undefined);
+      // A failed balance refresh is retried by the next profile load.
+      if (purchasedCount > 0 || rejected) void authActions.refreshProfile().catch(() => undefined);
     }
   };
 

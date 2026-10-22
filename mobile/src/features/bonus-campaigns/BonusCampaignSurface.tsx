@@ -81,10 +81,10 @@ export function BonusCampaignSurface() {
   });
   useQueryErrorToast(query.error, query.errorUpdatedAt, 'Nie udało się sprawdzić dostępnych bonusów');
   // Read the poll in this render too: the poll store updates one render late, and
-  // presenting both native modals at once makes UIKit drop one of them.
-  const pollPending = Boolean(
-    useQuery({ ...featurePollQueries.available(userId ?? ''), enabled: false }).data,
-  );
+  // presenting both native modals at once makes UIKit drop one of them. Polls are
+  // not persisted, so until the poll check answers the bonus waits for it.
+  const pollQuery = useQuery({ ...featurePollQueries.available(userId ?? ''), enabled: false });
+  const pollPending = pollQuery.isPending || Boolean(pollQuery.data);
   const [claiming, setClaiming] = useState(false);
   const [dismissedModal, setDismissedModal] = useState(false);
   const [confettiRun, setConfettiRun] = useState(0);

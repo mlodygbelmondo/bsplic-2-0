@@ -228,6 +228,8 @@ export function MoneyTransferSend({
     } catch (error) {
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się wykonać transferu'));
+      // The balance may have changed elsewhere (another device): show the server's.
+      void authActions.refreshProfile();
     } finally {
       setSubmitting(false);
       onSubmittingChange(false);

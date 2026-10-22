@@ -78,10 +78,17 @@ function fetchProfile(userId: string, fresh = false): Promise<void> {
     useAuthStore.setState({ profileStatus: 'loading' });
   }
 
-  const load = Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('user_roles').select('role').eq('user_id', userId),
-  ])
+  const load = supabase.auth
+    .getSession()
+    .then(({ data }) => {
+      // Without a session (expired token, refresh failed) both reads would run as anon
+      // and come back without roles: keep the cached profile until the token refreshes.
+      if (!data.session) throw new Error('No session for the profile fetch');
+      return Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('user_roles').select('role').eq('user_id', userId),
+      ]);
+    })
     .then(([profileResult, rolesResult]) => {
       if (profileRequestId !== requestId) return;
       if (profileResult.error || !profileResult.data) {

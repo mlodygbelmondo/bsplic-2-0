@@ -1,6 +1,6 @@
 import { AccessibilityInfo } from 'react-native';
 
-import { useAuthStore } from '@/features/auth/auth-store';
+import { authActions, useAuthStore } from '@/features/auth/auth-store';
 import { callRpc } from '@/lib/rpc';
 import { toast } from '@/lib/toast';
 import type { RouletteColor } from '@/types/database';
@@ -51,6 +51,8 @@ export async function submitRouletteBet() {
   } catch (error) {
     casinoHaptics.error();
     toast.error(getErrorMessage(error, 'Nie udało się przyjąć zakładu.'));
+    // The balance may have changed elsewhere (another device): show the server's.
+    void authActions.refreshProfile();
   }
 }
 

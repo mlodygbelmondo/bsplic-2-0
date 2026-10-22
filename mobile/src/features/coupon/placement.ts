@@ -1,5 +1,5 @@
 import type { CouponItem } from '@/types/database';
-import { getErrorMessage, isTransportFailure } from '@/lib/errors';
+import { getErrorMessage, isOutcomeUnknown } from '@/lib/errors';
 
 /**
  * Pure coupon placement rules, ported from the web's `useCouponPlacement`
@@ -206,7 +206,7 @@ export async function submitCoupon(
     return {
       status: 'failed',
       // A timeout or dropped connection leaves the outcome unknown: the server may have placed it.
-      message: isTransportFailure(error)
+      message: isOutcomeUnknown(error)
         ? UNCONFIRMED_PLACEMENT_MESSAGE
         : getErrorMessage(error, 'Nie udało się postawić kuponu'),
       placedBetIds,

@@ -75,11 +75,13 @@ function UnknownGame() {
 
 interface Playback {
   result: SlotSpin | null;
+  /** The state query's `dataUpdatedAt` when `result` arrived: a later state update supersedes the spin. */
+  stateUpdatedAt: number;
   frameIndex: number;
   animating: boolean;
 }
 
-const IDLE_PLAYBACK: Playback = { result: null, frameIndex: 0, animating: false };
+const IDLE_PLAYBACK: Playback = { result: null, stateUpdatedAt: 0, frameIndex: 0, animating: false };
 
 function SlotMachine({ game }: { game: SlotGame }) {
   const styles = useStyles();
@@ -113,9 +115,12 @@ function SlotMachine({ game }: { game: SlotGame }) {
   }, []);
 
   const { result, frameIndex, animating } = playback;
-  // The last confirmed spin takes precedence over an older state refetch.
-  const freeSpins = result?.freeSpins ?? state.data?.freeSpins ?? 0;
-  const bonusStake = result?.stake ?? state.data?.bonusStake;
+  // The last confirmed spin wins over state fetched before it. Every spin refetches the
+  // state (cancelling older fetches), so state that arrives later is the server's latest,
+  // e.g. a bonus played out on another device while this screen sat in the background.
+  const latestSpin = result && state.dataUpdatedAt <= playback.stateUpdatedAt ? result : null;
+  const freeSpins = latestSpin?.freeSpins ?? state.data?.freeSpins ?? 0;
+  const bonusStake = latestSpin?.stake ?? state.data?.bonusStake;
   const view = deriveMachine({
     stakeInput,
     freeSpins,
@@ -198,7 +203,12 @@ function SlotMachine({ game }: { game: SlotGame }) {
       return;
     }
     const foreground = AppState.currentState !== 'background';
-    setPlayback({ result: next, frameIndex: foreground ? 0 : next.frames.length - 1, animating: foreground });
+    setPlayback({
+      result: next,
+      stateUpdatedAt: state.dataUpdatedAt,
+      frameIndex: foreground ? 0 : next.frames.length - 1,
+      animating: foreground,
+    });
     if (!foreground) localLock.current = false;
     setSession((previous) => addToSession(previous, next.net));
     if (foreground) {

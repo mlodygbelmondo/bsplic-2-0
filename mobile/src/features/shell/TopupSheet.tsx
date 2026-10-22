@@ -32,6 +32,8 @@ export function TopupSheet() {
       if (error) {
         haptics.error();
         toast.error(getErrorMessage(error, TOPUP_ERROR_MESSAGE));
+        // E.g. already claimed on another device: refresh so the chip locks.
+        void authActions.refreshProfile();
         return;
       }
       // The RPC returns the new balance: show it and lock the chip until tomorrow

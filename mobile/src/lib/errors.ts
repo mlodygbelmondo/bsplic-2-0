@@ -16,13 +16,27 @@ const errorMessageOf = (error: unknown): string | null =>
     ? error.message
     : null;
 
-/** The request failed in transit or the backend could not run it: a write's outcome may be unknown. */
-export const isTransportFailure = (error: unknown): boolean => {
+/** The request failed in transit or the backend could not run it. */
+const isTransportFailure = (error: unknown): boolean => {
   const message = errorMessageOf(error);
   if (message === null) return false;
   const code = (error as { code?: unknown }).code;
   if (typeof code === 'string' && BACKEND_UNAVAILABLE_CODES.has(code)) return true;
   return NETWORK_FAILURE.test(message);
+};
+
+// The request timed out or the connection dropped mid-flight, or a gateway gave
+// up waiting: the server may still have run it. Pool timeouts (PGRST003),
+// cancelled statements (57014) and "offline" mean it did not run.
+const OUTCOME_UNKNOWN = /aborted|canceled|cancelled|timed out|connection was lost|upstream|<html|<!doctype/i;
+
+/** A write failed in a way that leaves its outcome unknown. */
+export const isOutcomeUnknown = (error: unknown): boolean => {
+  const message = errorMessageOf(error);
+  if (message === null) return false;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === 'string' && BACKEND_UNAVAILABLE_CODES.has(code)) return false;
+  return OUTCOME_UNKNOWN.test(message);
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {

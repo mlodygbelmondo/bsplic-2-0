@@ -155,6 +155,19 @@ describe('submitCoupon', () => {
       chargedStake: 0,
     });
   });
+
+  it('reports a plain failure when the database never ran the placement', async () => {
+    placeCouponSecure
+      .mockRejectedValueOnce({ message: 'Timed out acquiring connection from connection pool.', code: 'PGRST003' })
+      .mockRejectedValueOnce(new Error('Error: fetch failed: The Internet connection appears to be offline.'));
+    const ako = input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] });
+
+    const poolTimeout = await submitCoupon(ako, placeCouponSecure);
+    const offline = await submitCoupon(ako, placeCouponSecure);
+
+    expect(poolTimeout).toMatchObject({ status: 'failed', message: 'Nie udało się postawić kuponu' });
+    expect(offline).toMatchObject({ status: 'failed', message: 'Nie udało się postawić kuponu' });
+  });
 });
 
 describe('coupon stake helpers', () => {
