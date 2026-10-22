@@ -14,8 +14,9 @@ import {
 
 import { authActions } from '@/features/auth/auth-store';
 import { OFFLINE_WRITE_MESSAGE, useIsOffline } from '@/lib/connectivity';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isOutcomeUnknown } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
+import { queryClient } from '@/lib/query-client';
 import { toast } from '@/lib/toast';
 import { alpha, createStyles, useTheme } from '@/theme';
 import { Avatar, Text } from '@/ui';
@@ -227,9 +228,16 @@ export function MoneyTransferSend({
       });
     } catch (error) {
       haptics.error();
-      toast.error(getErrorMessage(error, 'Nie udało się wykonać transferu'));
+      // A timeout or dropped connection may still have sent it. The key stays, so
+      // sending again from this screen cannot transfer twice.
+      toast.error(
+        isOutcomeUnknown(error)
+          ? 'Nie udało się potwierdzić transferu. Sprawdź historię, zanim wyślesz go ponownie.'
+          : getErrorMessage(error, 'Nie udało się wykonać transferu'),
+      );
       // The balance may have changed elsewhere (another device): show the server's.
       void authActions.refreshProfile();
+      void queryClient.invalidateQueries({ queryKey: ['money-transfer-history'] });
     } finally {
       setSubmitting(false);
       onSubmittingChange(false);

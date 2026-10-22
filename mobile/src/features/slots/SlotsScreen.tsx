@@ -88,7 +88,7 @@ function SlotMachine({ game }: { game: SlotGame }) {
   const look = GAME_STYLES[game];
   const config = SLOT_GAMES[game];
   const theme = SLOT_THEMES[game];
-  const { state, spin, busy, pending, error, balance } = useSlotGame(game);
+  const { state, spin, readStateUpdatedAt, busy, pending, error, balance } = useSlotGame(game);
   const reducedMotion = useReducedMotion();
   const liteMotion = useLiteMotion();
   const offline = useIsOffline();
@@ -205,7 +205,8 @@ function SlotMachine({ game }: { game: SlotGame }) {
     const foreground = AppState.currentState !== 'background';
     setPlayback({
       result: next,
-      stateUpdatedAt: state.dataUpdatedAt,
+      // State that landed while the spin was in flight was read before it: the spin still wins.
+      stateUpdatedAt: readStateUpdatedAt(),
       frameIndex: foreground ? 0 : next.frames.length - 1,
       animating: foreground,
     });

@@ -66,6 +66,7 @@ export function useCouponPlacement(
     }
 
     const balance = Number(profile.balance);
+    const submittedItems = useCouponStore.getState().items;
     // `.finally` instead of try/finally: React Compiler skips hooks containing try/finally.
     // submitCoupon is async, so this always settles and the placing flag always resets.
     const result = await submitCoupon(
@@ -75,7 +76,7 @@ export function useCouponPlacement(
         activeTab,
         stake,
         singleStakes,
-        items: useCouponStore.getState().items,
+        items: submittedItems,
       },
       placeCouponSecure,
       () => couponSheetActions.setPlacing(true),
@@ -91,7 +92,10 @@ export function useCouponPlacement(
 
     if (result.status === 'placed') {
       refreshAfterPlacement(user.id, balance, result.chargedStake);
-      couponActions.clearCoupon();
+      // Keep selections added on Home while the placement was in flight.
+      const submittedIds = new Set(submittedItems.map((item) => item.bet.id));
+      if (useCouponStore.getState().items.every((item) => submittedIds.has(item.bet.id))) couponActions.clearCoupon();
+      else submittedIds.forEach(couponActions.removeItem);
       haptics.success();
       onSuccess();
       toast.success('Kupon postawiony pomyślnie!');

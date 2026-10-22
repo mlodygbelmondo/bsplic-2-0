@@ -156,6 +156,22 @@ describe('submitCoupon', () => {
     });
   });
 
+  it('treats a connection dropped by suspending the app as an unknown outcome', async () => {
+    placeCouponSecure.mockRejectedValueOnce(
+      new Error("fetch failed: The operation couldn't be completed. Software caused connection abort"),
+    );
+
+    const result = await submitCoupon(
+      input({ activeTab: 'ako', stake: '10', items: [createCouponItem('bet-1', 2), createCouponItem('bet-2', 3)] }),
+      placeCouponSecure,
+    );
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      message: 'Nie udało się potwierdzić kuponu. Sprawdź historię w profilu, zanim postawisz go ponownie.',
+    });
+  });
+
   it('reports a plain failure when the database never ran the placement', async () => {
     placeCouponSecure
       .mockRejectedValueOnce({ message: 'Timed out acquiring connection from connection pool.', code: 'PGRST003' })

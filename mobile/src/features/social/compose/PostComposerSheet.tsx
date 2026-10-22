@@ -43,7 +43,7 @@ export function PostComposerSheet() {
   const offline = useIsOffline();
   const content = usePostDraftStore((state) => state.content);
   const image = usePostDraftStore((state) => state.image);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = usePostDraftStore((state) => state.submitting);
   const [picking, setPicking] = useState(false);
   const [caretPosition, setCaretPosition] = useState(content.length);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -65,8 +65,8 @@ export function PostComposerSheet() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
+    if (!canSubmit || usePostDraftStore.getState().submitting) return;
+    postDraftActions.setSubmitting(true);
     try {
       const submit = postDraftActions.getSubmitHandler() ?? publishPost;
       await submit(trimmed, image ?? undefined);
@@ -80,7 +80,7 @@ export function PostComposerSheet() {
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się opublikować posta'));
     } finally {
-      setSubmitting(false);
+      postDraftActions.setSubmitting(false);
     }
   };
 

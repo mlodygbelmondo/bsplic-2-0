@@ -71,7 +71,9 @@ export function WalletSheet() {
               <Pressable
                 key={value}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
+                // Leaving the send form mid-transfer would drop its retry key.
+                accessibilityState={{ selected: active, disabled: submitting }}
+                disabled={submitting}
                 hitSlop={{ top: 6, bottom: 6 }}
                 onPress={() => {
                   if (active) return;

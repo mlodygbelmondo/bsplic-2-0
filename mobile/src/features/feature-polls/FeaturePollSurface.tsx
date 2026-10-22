@@ -79,6 +79,8 @@ export function FeaturePollSurface() {
           void queryClient.cancelQueries({ queryKey });
           queryClient.setQueryData(queryKey, null);
         }}
+        // "Already voted" or "poll closed" (e.g. answered on the web): a refetch closes the dialog.
+        onVoteFailed={() => void queryClient.invalidateQueries({ queryKey: featurePollQueries.available(userId).queryKey })}
       />
     </DialogModal>
   );
@@ -88,10 +90,12 @@ function FeaturePollForm({
   poll,
   loadingPoll,
   onVoted,
+  onVoteFailed,
 }: {
   poll: AvailableFeaturePoll;
   loadingPoll: boolean;
   onVoted: () => void;
+  onVoteFailed: () => void;
 }) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -147,6 +151,7 @@ function FeaturePollForm({
     } catch (error: unknown) {
       haptics.error();
       toast.error(getErrorMessage(error, 'Nie udało się zapisać głosu'));
+      onVoteFailed();
     } finally {
       setSubmitting(false);
     }

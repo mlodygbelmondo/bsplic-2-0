@@ -8,7 +8,7 @@ import type { CouponItem } from '@/types/database';
 import { Text } from '@/ui';
 
 import { couponActions } from './coupon-store';
-import { couponSheetActions, useCouponSingleStake } from './coupon-sheet-store';
+import { couponSheetActions, useCouponPlacing, useCouponSingleStake } from './coupon-sheet-store';
 import { StakeInput } from './StakeInput';
 
 interface CouponItemCardProps {
@@ -30,6 +30,8 @@ export const CouponItemCard = memo(function CouponItemCard({
   const { colors } = useTheme();
   const betId = item.bet.id;
   const stake = useCouponSingleStake(betId);
+  // A removed or re-staked selection would still be placed as submitted.
+  const placing = useCouponPlacing();
 
   return (
     <View style={styles.card}>
@@ -51,6 +53,7 @@ export const CouponItemCard = memo(function CouponItemCard({
             <StakeInput
               variant="single"
               value={stake}
+              editable={!placing}
               onChangeValue={(value) => couponSheetActions.setSingleStake(betId, value)}
               onSubmitEditing={onSubmitStake}
               placeholder="0.00"
@@ -66,6 +69,8 @@ export const CouponItemCard = memo(function CouponItemCard({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Usuń zdarzenie"
+        accessibilityState={{ disabled: placing }}
+        disabled={placing}
         hitSlop={11}
         onPress={() => {
           haptics.selection();

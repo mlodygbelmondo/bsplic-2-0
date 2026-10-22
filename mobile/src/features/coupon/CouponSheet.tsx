@@ -103,13 +103,15 @@ export function CouponSheet() {
     void placeBet();
   };
 
+  // The coupon in flight is the one shown: no edits until the placement settles.
   const selectTab = (tab: CouponTab) => {
-    if (tab === activeTab) return;
+    if (tab === activeTab || placing) return;
     haptics.selection();
     couponSheetActions.setActiveTab(tab);
   };
 
   const clearCoupon = () => {
+    if (placing) return;
     const clearedItems = useCouponStore.getState().items;
     couponActions.clearCoupon();
     // Web renders a plain toast() without an icon, the action on the same row.

@@ -25,18 +25,21 @@ const isTransportFailure = (error: unknown): boolean => {
   return NETWORK_FAILURE.test(message);
 };
 
-// The request timed out or the connection dropped mid-flight, or a gateway gave
-// up waiting: the server may still have run it. Pool timeouts (PGRST003),
-// cancelled statements (57014) and "offline" mean it did not run.
-const OUTCOME_UNKNOWN = /aborted|canceled|cancelled|timed out|connection was lost|upstream|<html|<!doctype/i;
+// The request never left the device (offline, server unreachable) or the
+// database never ran it (pool timeout, cancelled statement, no database).
+const NOT_RUN =
+  /appears to be offline|could not connect to the server|hostname could not be found|connection pool|statement timeout|could not connect with the database/i;
 
-/** A write failed in a way that leaves its outcome unknown. */
+/**
+ * A write failed in transit in a way that leaves its outcome unknown: a timeout,
+ * a dropped connection (also iOS killing the socket when the app is suspended),
+ * a gateway giving up. Any transport failure counts unless it surely did not run.
+ */
 export const isOutcomeUnknown = (error: unknown): boolean => {
-  const message = errorMessageOf(error);
-  if (message === null) return false;
+  if (!isTransportFailure(error)) return false;
   const code = (error as { code?: unknown }).code;
   if (typeof code === 'string' && BACKEND_UNAVAILABLE_CODES.has(code)) return false;
-  return OUTCOME_UNKNOWN.test(message);
+  return !NOT_RUN.test(errorMessageOf(error) ?? '');
 };
 
 export const getErrorMessage = (error: unknown, fallback: string): string => {

@@ -49,7 +49,8 @@ export function ProposalsTab() {
     mutationFn: acceptProposal,
     onSuccess: (_data, params) => {
       toast.success('Propozycja zaakceptowana');
-      setEditing(null);
+      // Another proposal's editor opened meanwhile stays open.
+      setEditing((current) => (current?.id === params.p_proposal_id ? null : current));
       removeFromList(params.p_proposal_id);
     },
     onError: (error) => {
@@ -79,7 +80,11 @@ export function ProposalsTab() {
   const openEditor = (proposal: ProposalRow) => setEditing(createProposalEditor(proposal));
 
   const submitEditor = () => {
-    if (!editing || accept.isPending) return;
+    if (!editing) return;
+    if (accept.isPending) {
+      toast.error('Poczekaj, aż zakończy się poprzednia akceptacja');
+      return;
+    }
     const result = buildAcceptProposalParams(editing);
     if (!result.ok) {
       toast.error(result.error);

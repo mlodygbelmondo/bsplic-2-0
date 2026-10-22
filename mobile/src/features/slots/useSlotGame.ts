@@ -88,5 +88,8 @@ export function useSlotGame(game: SlotGame) {
     }
   };
 
-  return { state, spin, busy, pending, error, balance: Number(balance) };
+  /** When the cached state last changed; read after a spin, when older fetches are already cancelled. */
+  const readStateUpdatedAt = () => queryClient.getQueryState(slotStateQuery(userId, game).queryKey)?.dataUpdatedAt ?? 0;
+
+  return { state, spin, readStateUpdatedAt, busy, pending, error, balance: Number(balance) };
 }

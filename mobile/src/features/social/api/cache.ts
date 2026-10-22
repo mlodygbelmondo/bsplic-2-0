@@ -94,6 +94,11 @@ export async function refreshFeedFirstPage(userId: string | null | undefined): P
   const key = socialKeys.feed(userId);
   if (!queryClient.getQueryData<FeedPages>(key)) return 0;
   const fresh = await fetchSocialFeed(SOCIAL_FEED_PAGE_SIZE, 0, userId);
+  // A page load in flight would write its pages over the merge when it lands: let it land first.
+  const feedQuery = queryClient.getQueryCache().find<FeedPages>({ queryKey: key, exact: true });
+  if (feedQuery?.state.fetchStatus === 'fetching') {
+    await feedQuery.fetch(undefined, { cancelRefetch: false }).catch(() => undefined);
+  }
   const previous = queryClient.getQueryData<FeedPages>(key);
   if (!previous) return 0;
   queryClient.setQueryData<FeedPages>(key, mergeFreshFirstPage(previous, fresh));

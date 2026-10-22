@@ -117,6 +117,23 @@ describe('mergeFreshFirstPage', () => {
     expect(merged.pages[1]).toBe(data.pages[1]);
   });
 
+  it('drops loaded items the fresh page no longer holds above its last known item', () => {
+    const data = pages(makePostPage(50, 0), makePostPage(50, 50));
+    // post-3 was deleted during the gap; post-49 was pushed below the fresh page by the new items.
+    const fresh = [
+      makePostFeedItem({ id: 'new-1' }),
+      makePostFeedItem({ id: 'new-2' }),
+      ...makePostPage(3, 0),
+      ...makePostPage(45, 4),
+    ];
+
+    const ids = mergeFreshFirstPage(data, fresh).pages.flat().map((item) => item.id);
+
+    expect(ids).not.toContain('post-3');
+    expect(ids).toContain('post-49');
+    expect(ids).toHaveLength(101);
+  });
+
   it('replaces a single loaded page with the fresh one', () => {
     const fresh = [makePostFeedItem({ id: 'new-1' }), ...makePostPage(1, 1)];
     const merged = mergeFreshFirstPage(pages(makePostPage(3)), fresh);

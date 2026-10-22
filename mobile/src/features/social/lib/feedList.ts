@@ -93,18 +93,26 @@ export function mergeFeedItemIntoPages(data: FeedPages, nextItem: SocialFeedItem
 /**
  * Merges a freshly read first page into the loaded pages after a realtime gap,
  * so catching up is one request however far the user scrolled. Loaded items
- * take their fresh copy and new ones go on top in feed order. A single page is
- * simply replaced; without any overlap (more new items than a page) the fresh
- * page replaces everything, since the items between would be missing.
+ * take their fresh copy, ones above the last item the fresh page still holds
+ * but missing from it were removed, and new ones go on top in feed order. A
+ * single page is simply replaced; without any overlap (more new items than a
+ * page) the fresh page replaces everything, since the items between would be missing.
  */
 export function mergeFreshFirstPage(data: FeedPages, fresh: SocialFeedItem[]): FeedPages {
   const freshByKey = new Map(fresh.map((item) => [getFeedItemKey(item), item]));
-  const loaded = new Set(data.pages.flatMap((page) => page.map(getFeedItemKey)));
+  const loadedKeys = data.pages.flatMap((page) => page.map(getFeedItemKey));
+  const loaded = new Set(loadedKeys);
   const added = fresh.filter((item) => !loaded.has(getFeedItemKey(item)));
   if (data.pages.length <= 1 || added.length === fresh.length) {
     return { pages: [fresh], pageParams: data.pageParams.slice(0, 1) };
   }
-  const updated = mapFeedPages(data, (item) => freshByKey.get(getFeedItemKey(item)) ?? item);
+  let lastCovered = loadedKeys.length - 1;
+  while (lastCovered >= 0 && !freshByKey.has(loadedKeys[lastCovered])) lastCovered -= 1;
+  let position = -1;
+  const updated = mapFeedPages(data, (item) => {
+    position += 1;
+    return freshByKey.get(getFeedItemKey(item)) ?? (position < lastCovered ? null : item);
+  });
   if (added.length === 0) return updated;
   const [first, ...rest] = updated.pages;
   return { ...updated, pages: [[...added, ...first], ...rest] };

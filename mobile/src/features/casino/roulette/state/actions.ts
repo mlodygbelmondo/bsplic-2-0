@@ -4,7 +4,7 @@ import { authActions, useAuthStore } from '@/features/auth/auth-store';
 import { callRpc } from '@/lib/rpc';
 import { toast } from '@/lib/toast';
 import type { RouletteColor } from '@/types/database';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isOutcomeUnknown } from '@/lib/errors';
 
 import { casinoHaptics, playCasinoWinChime } from '../../shared/audio';
 import { getRouletteColor, validateRouletteBetInput } from '../lib/roulette';
@@ -36,10 +36,10 @@ export async function submitRouletteBet() {
   const controller = activeController;
   if (!controller || rouletteTableStore.getState().isPlacingBet) return;
   const { betType, betValue, stake } = useRouletteSession.getState();
+  const roundIdAtSubmit = rouletteTableStore.getState().currentRound?.id ?? null;
 
   try {
     const payload = validateRouletteBetInput({ betType, betValue, stake, balance: balance() });
-    const roundIdAtSubmit = rouletteTableStore.getState().currentRound?.id ?? null;
     const acceptedBet = await controller.placeBet(payload);
     if (acceptedBet?.round_id) {
       rouletteSession.trackBetRound(acceptedBet.round_id);
@@ -50,7 +50,15 @@ export async function submitRouletteBet() {
     toast.success(queuedForNextRound ? 'Zakład czeka na następną rundę!' : 'Zakład przyjęty do wspólnej rundy!');
   } catch (error) {
     casinoHaptics.error();
-    toast.error(getErrorMessage(error, 'Nie udało się przyjąć zakładu.'));
+    if (isOutcomeUnknown(error)) {
+      // A timeout or dropped connection may still have placed it: show the table as
+      // the server has it and announce a win on this round.
+      toast.error('Nie udało się potwierdzić zakładu. Sprawdź swoje zakłady, zanim postawisz go ponownie.');
+      if (roundIdAtSubmit) rouletteSession.trackBetRound(roundIdAtSubmit);
+      void controller.syncFreshSnapshot().catch(() => undefined);
+    } else {
+      toast.error(getErrorMessage(error, 'Nie udało się przyjąć zakładu.'));
+    }
     // The balance may have changed elsewhere (another device): show the server's.
     void authActions.refreshProfile();
   }

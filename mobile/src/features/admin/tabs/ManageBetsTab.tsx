@@ -123,7 +123,10 @@ export function ManageBetsTab() {
       return;
     }
     // One settlement at a time: a second request would share the in-progress flag.
-    if (resolvingBetId) return;
+    if (resolvingBetId) {
+      toast.error('Poczekaj, aż zakończy się poprzednie rozliczenie');
+      return;
+    }
     setResolvingBetId(bet.id);
     const isCorrection = Boolean(bet.winning_option);
     try {
@@ -142,7 +145,8 @@ export function ManageBetsTab() {
         toast.success(isCorrection ? 'Korekta wyniku zapisana' : 'Wynik ogłoszony!');
         if (!isCorrection) fireConfetti();
       }
-      setResolve(closeSession);
+      // Another bet's sheet opened meanwhile stays open.
+      setResolve((previous) => (previous?.bet.id === bet.id ? closeSession(previous) : previous));
       void refreshBets();
     } catch (err: unknown) {
       haptics.error();
